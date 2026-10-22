@@ -1,0 +1,9 @@
+#fails ok: in the definition of bad-composition: refl var (inr tt) does not prove Id Over.Term[R, Over.added[R] Over.empty[R]] (Over.ends[R, Over.added[R] Over.empty[R]] (reflD (var (inr tt)))).2 (Over.ends[R, Over.added[R] Over.empty[R]] (reflD (cst R.z))).1 not convertible (no constant unfolded):  var (inr tt)   /=   (Over.ends[R, Over.added[R] Over.empty[R]] (reflD (cst R.z))).1
+#fails ok: in the definition of forged-certificate: refl R.o does not prove Id R.R R.o (R.add R.z (R.mul R.z R.z)) not convertible (no constant unfolded):  R.o   /=   R.add R.z (R.mul R.z R.z)
+#fails ok: in the definition of false-reflection: type mismatch for  zero-collapses expected : Id R.R R.o R.z inferred : Id Over.algebra[R, Over.base[R], Over.empty[R], Over.presentation[R], R.z, cst R.z, refl R.z].ring.R Over.algebra[R, Over.base[R], Over.empty[R], Over.presentation[R], R.z, cst R.z, refl R.z].ring.o Over.algebra[R, Over.base[R], Over.empty[R], Over.presentation[R], R.z, cst R.z, refl R.z].ring.z (no constant unfolded; they are not convertible)
+#fails ok: in the definition of false-zero-retraction: type mismatch for  C.identity C.base expected : Over.Hom[R] Over.algebra[R, Over.base[R], Over.empty[R], Over.presentation[R], R.z, cst R.z, refl R.z] Over.base[R] inferred : Over.Hom[R] Over.base[R] Over.base[R] (no constant unfolded; they are not convertible)
+#fails ok: in the definition of false-nilpotence: refl R.z does not prove Id R.R (Over.power[R] R.o (suc zero)) R.z not convertible (no constant unfolded):  R.z   /=   Over.power[R] R.o (suc zero)
+#fails ok: in the definition of forget-denominator: type mismatch for  w expected : Size.Factors[A] e inferred : Size.ScalarFactor[A] e t (no constant unfolded; they are not convertible)
+All.seg: 4982 declarations, 0 failed, 3.00 s
+split conversion fallback (PRIMREC.md 5.3): 5266
+OK

@@ -1,0 +1,182 @@
+-- GUaFull.seg (inside IvBase.FaU, any base; Step 3): the universal datum
+-- at full points.  For any s : D -> CU (the full points of GDr), U moved
+-- along inclR o s is the universal B side (BU , eqU) moved along s, the
+-- fibres of SA read in BU (toB o ph):
+--
+--   (inclR o s)*(U) = s*(BU , AU' , alU , eqU)
+--
+-- U is ExtBig's structure moved once (GUaUniv.UV); the two moves compose
+-- (GTransferEqTwice); at a full point extEquiv's extension is eqU's
+-- translated (GExtFullPt), so the composite move is s*(eqU) by
+-- GTransferEq.unique.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Trees[a] ;
+open Arith[a] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open GLine[a] ;
+module GE1 = GFibE[a+] ;
+module GX = GEqExt[a] ;
+module L = GPre[a+].PS ;
+module LP = GPre[a+] ;
+
+module FM (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE)
+  (kU0 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e0)
+  (kU1 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e1)
+  (kU0e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].SFm.SF].KESI kU0)
+  (kU1e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].SFm.SF].KESI kU1) (D : PCtx) (s : GSmall.XSub[D, GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl].CU.resCtx]) {
+  module UV = GUaUniv.UV[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e] ;
+  module UB = UV.UB ;
+  module CU = UB.CU ;
+  module XS = UV.XS ;
+  module CM = UV.CM ;
+  module FU = UV.FU ;
+  module E3u = GExt3[a+].ExtB3[UB.GDr, UB.AU, UB.psiU, UB.BU, UB.alU] ;
+  module E4u = GExt4[a+].ExtB4[UB.GDr, UB.AU, UB.psiU, UB.BU, UB.alU] ;
+  module EDu = GExt[a+].ExtDef[UB.GDr, UB.AU, UB.psiU] ;
+  module E1 = GExtEquiv[a+].ExtEq[UB.GDr, UB.AU, UB.psiU, UB.BU, UB.alU, FU.FA1.fibAt, FU.EQm.eqU.1] ;
+
+  -- the map into GDr
+  yd' : GSmall.XSub[D, UB.GDr] = GXsubEq.xoL D CU.resCtx UB.GDr CU.inclR s ;
+
+  -- (inclR o s)*(U)
+  module X2 = GXsubEq.XE[UB.GDr, XS.SA, UV.AUs, UV.alSA, UV.eSA, UV.keSA, D, yd'] ;
+
+  -- ... is ExtBig's structure moved along inclR o s through ph
+  module TW = GTransferEqTwice[a+, a+, a, a+].TrEqTwice[UB.GDr, UB.ExtBig, UB.AU, UV.EM.extMap, UV.E3.extEquiv,
+    UB.GDr, GSmall.up UB.GDr XS.SA, GSmall.up UB.GDr UV.AUs, UV.alSA,
+    \ W x -> x, \ V W g d -> refl (UB.GDr.act V W g d),
+    XS.phS, XS.psS, \ W d b -> CM.At[W, d].ph-ps b, \ W d b -> CM.At[W, d].ps-ph b,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, UV.PhNA, UV.PhNB, UV.TM.alSq,
+    D, X2.Bs, X2.As, X2.alS, yd'.nt, yd'.nt-nat,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, X2.PhNA, X2.PhNB, X2.TM.alSq] ;
+
+  ----------------------------------------------------------------------
+  -- s*(BU , eqU): the fibres of SA read in BU
+
+  phBR (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (X2.Bs.tob W d)) : V1.Ix (UB.BU.tob W (s.nt W d)) =
+    (E3u.toB W ((s.nt W d).1, XS.phS W (s.nt W d).1 b) (s.nt W d).2).2 ;
+  psBR (W : Ob) (d : W0.Ix (D.ob W)) (b : V1.Ix (UB.BU.tob W (s.nt W d))) : W0.Ix (X2.Bs.tob W d) =
+    XS.psS W (s.nt W d).1 (E3u.fromB W (s.nt W d, b)).2 ;
+
+  phB-psBR (W : Ob) (d : W0.Ix (D.ob W)) (b : V1.Ix (UB.BU.tob W (s.nt W d))) : Id (V1.Ix (UB.BU.tob W (s.nt W d))) (phBR W d (psBR W d b)) b =
+    UB.TBU.pr-inj W (s.nt W d) (phBR W d (psBR W d b)) b
+      (transH (E3u.toB-cong W ((s.nt W d).1, XS.phS W (s.nt W d).1 (psBR W d b))
+                 (E3u.fromB W (s.nt W d, b))
+                 (apH (\ z -> ((s.nt W d).1, z)) (CM.At[W, (s.nt W d).1].ph-ps (E3u.fromB W (s.nt W d, b)).2)) (s.nt W d).2 (s.nt W d).2)
+              (E3u.toB-fromB W (s.nt W d, b))) ;
+
+  psB-phBR (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (X2.Bs.tob W d)) : Id (W0.Ix (X2.Bs.tob W d)) (psBR W d (phBR W d b)) b =
+    transH (apH (XS.psS W (s.nt W d).1)
+              (LP.TyL[UB.GDr, UB.ExtBig].pr-inj W (s.nt W d).1
+                 (E3u.fromB W (E3u.toB W ((s.nt W d).1, XS.phS W (s.nt W d).1 b) (s.nt W d).2)).2 (XS.phS W (s.nt W d).1 b)
+                 (E3u.fromB-toB W ((s.nt W d).1, XS.phS W (s.nt W d).1 b) (s.nt W d).2)))
+           (CM.At[W, (s.nt W d).1].ps-ph b) ;
+
+  module TBs = GPR.TyL[D, X2.Bs] ;
+  module TAs = GPR.TyL[D, X2.As] ;
+  module TAU' = LP.TyL[CU.resCtx, UB.AU'] ;
+
+  PhNBR (V W : Ob) (g : Hom V W) (w : TBs.EI W)
+    : Id (UB.TBU.EI V) (s.nt V (TBs.E.act V W g w).1, phBR V (TBs.E.act V W g w).1 (TBs.E.act V W g w).2)
+                       (UB.TBU.E.act V W g (s.nt W w.1, phBR W w.1 w.2)) =
+    transH (E3u.toB-cong V ((s.nt V (TBs.E.act V W g w).1).1, XS.phS V (s.nt V (TBs.E.act V W g w).1).1 (TBs.E.act V W g w).2)
+              (LP.TyL[UB.GDr, UB.ExtBig].E.act V W g ((s.nt W w.1).1, XS.phS W (s.nt W w.1).1 w.2))
+              (TW.PhNB12 V W g w) (s.nt V (TBs.E.act V W g w).1).2 (CU.full-act V W g (s.nt W w.1).1 (s.nt W w.1).2))
+      (E3u.toB-act V W g ((s.nt W w.1).1, XS.phS W (s.nt W w.1).1 w.2) (s.nt W w.1).2 (CU.full-act V W g (s.nt W w.1).1 (s.nt W w.1).2)) ;
+
+  PhNAR (V W : Ob) (g : Hom V W) (w : TAs.EI W)
+    : Id (TAU'.EI V) (s.nt V (TAs.E.act V W g w).1, (TAs.E.act V W g w).2) (TAU'.E.act V W g (s.nt W w.1, w.2)) =
+    EDu.toEA-inj V (s.nt V (TAs.E.act V W g w).1, (TAs.E.act V W g w).2) (TAU'.E.act V W g (s.nt W w.1, w.2))
+      (transH (TW.PhNA12 V W g w)
+        (symH (apH (EDu.toEA V) (TAU'.pr-tact V W g (s.nt W w.1) (CU.resCtx.act V W g (s.nt W w.1)) (refl (CU.resCtx.act V W g (s.nt W w.1))) w.2)))) ;
+
+  alSqR (W : Ob) (w : TBs.EI W)
+    : Id (TAU'.EI W) (s.nt W (X2.alS.mE W w).1, (X2.alS.mE W w).2) (UB.alU.mE W (s.nt W w.1, phBR W w.1 w.2)) =
+    EDu.toEA-inj W (s.nt W (X2.alS.mE W w).1, (X2.alS.mE W w).2) (UB.alU.mE W (s.nt W w.1, phBR W w.1 w.2))
+      (transH (TW.alSq12 W w)
+        (transH (symH (apH (E4u.extE W) (E3u.fromB-toB W ((s.nt W w.1).1, XS.phS W (s.nt W w.1).1 w.2) (s.nt W w.1).2)))
+                (E4u.extE-B W (s.nt W w.1, phBR W w.1 w.2)))) ;
+
+  opaque phB-psBR ; opaque psB-phBR ; opaque PhNBR ; opaque PhNAR ; opaque alSqR ;
+
+  module R = GTransferEq[a+, a, a+].TrEq[D, X2.Bs, X2.As, X2.alS, CU.resCtx, UB.BU, UB.AU', UB.alU, s.nt, s.nt-nat,
+    phBR, psBR, phB-psBR, psB-phBR,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, PhNAR, PhNBR, FU.EQm.eqU.1, alSqR] ;
+
+  ----------------------------------------------------------------------
+  -- the composite move is s*(eqU)
+
+  -- fibre elements: the move to BU is the move to ExtBig read in alpha
+  mvF-rel (X : Ob) (v : R.HD.TF.EI X)
+    : Id (R.HG.TF.EI X) (R.mvF X v) (E1.toFA X (TW.T12.mvF X v) (s.nt X v.1.1).2) =
+    E1.FA.fibE-eq X (R.mvF X v) (E1.toFA X (TW.T12.mvF X v) (s.nt X v.1.1).2)
+      (EDu.toEA-inj X (R.PhA X v.1) (E1.toFA X (TW.T12.mvF X v) (s.nt X v.1.1).2).1
+         (symH (E1.toFA-pt X (TW.T12.mvF X v) (s.nt X v.1.1).2)))
+      (symH (E1.toFA-B X (TW.T12.mvF X v) (s.nt X v.1.1).2))
+      (\ W f i -> EDu.toEA-inj W (R.PhA W (R.HD.fibL X v W f i)) (E1.FA.fibL X (E1.toFA X (TW.T12.mvF X v) (s.nt X v.1.1).2) W f i)
+         (symH (E1.toFA-L X (TW.T12.mvF X v) (s.nt X v.1.1).2 W f i))) ;
+
+  -- fromFA is opaque: its point is read through fromFA-pt
+  qf (X : Ob) (v' : E1.FA.TF.EI X) (q : IsT (CU.full X v'.1.1.1)) : IsT (CU.full X (E1.fromFA X v').1.1) =
+    CU.full-eq X v'.1.1.1 (E1.fromFA X v').1.1 (apH (\ z -> z.1) (symH (E1.fromFA-pt X v'))) q ;
+
+  toFA-fromFA (X : Ob) (v' : E1.FA.TF.EI X) (q : IsT (CU.full X v'.1.1.1))
+    : Id (E1.FA.TF.EI X) (E1.toFA X (E1.fromFA X v') (qf X v' q)) v' =
+    E1.fromFA-inj X (E1.toFA X (E1.fromFA X v') (qf X v' q)) v' (E1.fromFA-toFA X (E1.fromFA X v') (qf X v' q)) ;
+
+  opaque mvF-rel ; opaque toFA-fromFA ;
+
+  module HY (X : Ob) (x : R.HD.TA.EI X) (p : R.PD.Partial[X, x]) {
+    w : LP.TyL[UB.GDr, UB.AU].EI X = TW.T12.PhA X x ;
+    q : IsT (CU.full X w.1) = (s.nt X x.1).2 ;
+    p' : E1.PX.Partial[X, w] = TW.T12.mapP X x p ;
+    module FP = GExtFullPt[a+].At[UB.GDr, UB.AU, UB.psiU, UB.BU, UB.alU, FU.FA1.fibAt, FU.EQm.eqU.1, X, w, p', q] ;
+
+    mpEq : Id (R.PG.Partial[X, R.PhA X x]) (E1.Tr[X, w, q].TrP p') (R.mapP X x p) =
+      R.PG.partExtH X (R.PhA X x) (R.PhA X x) (refl (R.PhA X x)) (E1.Tr[X, w, q].TrP p') (R.mapP X x p)
+        (refl p.pr) (\ l -> refl (p.ps l).pQ)
+        (\ l V g i i' -> transH (E1.toFA-cong V (TW.T12.mvF V ((p.ps l).pv V g i)) (TW.T12.mvF V ((p.ps l).pv V g i'))
+                                   (apH (TW.T12.mvF V) (R.PD.pv-irr X x (p.ps l) V g i i'))
+                                   (E1.Tr[X, w, q].qv (p'.ps l) V g i) (s.nt V ((p.ps l).pv V g i').1.1).2)
+                                (symH (mvF-rel V ((p.ps l).pv V g i')))) ;
+
+    hyp : Id (R.HG.TF.EI X) (R.mvF X (x, TW.T12.trEq.kop X x p)) (R.u0 X x p) =
+      transH (mvF-rel X (x, TW.T12.trEq.kop X x p))
+       (transH (E1.toFA-cong X (TW.T12.mvF X (x, TW.T12.trEq.kop X x p)) (TW.T12.u0 X x p) (TW.T12.kopMv X x p) q q)
+        (transH (E1.toFA-cong X (TW.T12.u0 X x p) (E1.fromFA X (E1.kE X w q p')) FP.extEqFull q (qf X (E1.kE X w q p') q))
+         (transH (toFA-fromFA X (E1.kE X w q p') q)
+                 (apH {R.PG.Partial[X, R.PhA X x]} {R.HG.TF.EI X} (\ z -> (R.PhA X x, FU.EQm.eqU.1.kop X (R.PhA X x) z)) mpEq)))) ;
+  } ;
+
+  fullMove : Id (GEquiv[a].EquivOp D X2.Bs X2.As X2.alS) TW.T12.trEq R.trEq = R.unique TW.T12.trEq (\ X x p -> HY[X, x, p].hyp) ;
+
+  -- the result, as data
+  res : Id (GXsubEq.ES D) X2.es (X2.tri, (R.trEq, R.trKesi FU.EQm.eqU.2)) =
+    apH {GX.EqDat[D].EqOn X2.tri} {GXsubEq.ES D} (\ z -> (X2.tri, z))
+      (Sigma-eq (GEquiv[a].EquivOp D X2.Bs X2.As X2.alS)
+         (\ k -> GCofEsi[a].PartialsEsi[R.HD.EA, R.HD.FibT].KESI k)
+         X2.TE.trEq R.trEq (X2.TE.trKesi UV.keSA) (R.trKesi FU.EQm.eqU.2)
+         (transH TW.twice fullMove) (GCofEsi[a].PartialsEsi[R.HD.EA, R.HD.FibT].isProp-KESI R.trEq)) ;
+
+  opaque fullMove ; opaque res ;
+} ;

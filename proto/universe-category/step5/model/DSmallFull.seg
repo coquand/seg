@@ -1,0 +1,84 @@
+-- DSmallFull.seg: smallCl-full for the universe of Delta.  At a full point
+-- x = (w , fu) of GDr, the small Ext along the Yoneda map of w, with the
+-- pulled-back horn filling (DSmallCl.smallCl), is B's code.
+--
+--   fillEq    at rho, the pulled-back filler is psBR of El's filler at the
+--             code c rho (DGlueCl's full case, chosen at yx rho)
+--   St        along tyEq (GUaFullT: E1 = E2 fibrewise by phBR) the fillers
+--             are El's at the same code on the same data (hdE)
+--   then      clSub-id, the codes along yx are B's at x moved (codeEq),
+--             and El along a Yoneda code with tautCl is the code
+--             (DTautYon.tautCl-yon)
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ;
+module DBm = DeltaBase[a] ;
+module DB = DBm.DB ;
+module PS = DB.GPre[a].PS ;
+module DCl = DeltaClassifier[a] ;
+module DU = DCl.DU ;
+module YO = DB.GYon[a] ;
+module DF = DeltaForall[a].DFaU ;
+
+module SF
+  (kU0 : DB.GLine[a+].LineFibP[DB.GFam[a+].famPath, DU.UCtx, DU.EGen].FibAt DB.e0)
+  (kU1 : DB.GLine[a+].LineFibP[DB.GFam[a+].famPath, DU.UCtx, DU.EGen].FibAt DB.e1)
+  (kU0e : DB.GCofEsi[a+].PartialsEsi[DB.GLine[a+].EndKit[DB.GFam[a+].famPath, DU.UCtx, DU.EGen, DB.e0].TV.E,
+            DB.GLine[a+].EndKit[DB.GFam[a+].famPath, DU.UCtx, DU.EGen, DB.e0].SFm.SF].KESI kU0)
+  (kU1e : DB.GCofEsi[a+].PartialsEsi[DB.GLine[a+].EndKit[DB.GFam[a+].famPath, DU.UCtx, DU.EGen, DB.e1].TV.E,
+            DB.GLine[a+].EndKit[DB.GFam[a+].famPath, DU.UCtx, DU.EGen, DB.e1].SFm.SF].KESI kU1)
+  (cE : DB.GFibE[a+].FE[DU.UCtx, DU.EGen].Comp) (eE : DB.GFibE[a+].FE[DU.UCtx, DU.EGen].ESIC cE)
+  (r : Nat) (X : Nat)
+  (w : DB.GExtBig.UB[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A, r].Pr X)
+  (fu : IsT (DB.GExtBig.UB[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A, r].CU.full X w)) {
+  module SC0 = DSmallCl[a].SC[kU0, kU1, kU0e, kU1e, r] ;
+  module FT0 = DF.GUaFullT.FT[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A, cE, eE, r,
+    kU0, kU1, kU0e, kU1e, X, w, fu] ;
+  module TC = DTautCl[a].TA[cE, eE] ;
+  module XS = SC0.XS ;
+
+  yd' : DB.GSmall.XSub[YO.yP X, SC0.UB.GDr] = FT0.FMx.yd' ;
+  c1 : DCl.ClD (YO.yP X) FT0.E1 = SC0.smallCl (YO.yP X) yd' ;
+
+  module At (m k : Nat) (hk : IsT (leb k (suc m))) (rho : Hom (lin (suc m)) (lin X))
+    (h : DHornFib[a, a].DH[YO.yP X, FT0.E1].HornData m k rho) {
+    h' : DHornFib[a, a+].DH[SC0.UB.GDr, SC0.UB.ExtBig].HornData m k (yd'.nt (suc m) rho) =
+      SC0.PA[YO.yP X, yd'].P.mv (m, k) rho h ;
+    module Fu = SC0.GC.Full[m, k, hk, (FT0.yx.nt (suc m) rho).1, (FT0.yx.nt (suc m) rho).2, h'] ;
+    z : W0.Ix (DU.fib0 (suc m) (FT0.c (suc m) rho)) = Fu.r.1 ;
+
+    -- the pulled-back filler is psBR of El's filler
+    fillEq : Id (W0.Ix (FT0.E1.tob (suc m) rho)) (c1 m k hk rho h).1 (FT0.FMx.psBR (suc m) rho z) =
+      apH (XS.psS (suc m) (yd'.nt (suc m) rho))
+        (transH (SC0.GC.TX.pr-inj (suc m) (yd'.nt (suc m) rho) (SC0.GC.clExt m k hk (yd'.nt (suc m) rho) h').1 Fu.res.1
+                   (apH {SC0.GC.HX.Ext m k (yd'.nt (suc m) rho) h'} {SC0.GC.TX.EI (suc m)} (\ e -> (yd'.nt (suc m) rho, e.1))
+                      (SC0.GC.clExt-full m k hk (yd'.nt (suc m) rho) (FT0.yx.nt (suc m) rho).2 h')))
+                (SC0.GC.TX.pr-inj (suc m) (yd'.nt (suc m) rho) Fu.res.1 (FT0.E3u.fromB (suc m) (FT0.yx.nt (suc m) rho, z)).2 Fu.res-E)) ;
+
+    -- the data El fills on, both ways
+    module TT = TC.T[YO.yP X, FT0.c, FT0.cnat] ;
+    T : PS.PTy[YO.yP X] = PS.subTy (YO.yP X) (YO.yP X) FT0.E2 (PS.idS (YO.yP X)) ;
+    module TR = DClT[a].TrT[YO.yP X, FT0.E1] ;
+    hT : DHornFib[a, a].DH[YO.yP X, T].HornData m k rho = TR.trH T FT0.TP.tyEq m k rho h ;
+
+    dL : TC.HEl.HornData m k (FT0.c (suc m) rho) = SC0.PB.mv (m, k) (FT0.yx.nt (suc m) rho) Fu.hd ;
+    dR : TC.HEl.HornData m k (FT0.c (suc m) rho) =
+      TT.mv m k rho (DCl.Sub[YO.yP X, YO.yP X, PS.idS (YO.yP X), FT0.E2, TC.tautCl (YO.yP X) FT0.c FT0.cnat].mv m k rho hT) ;
+
+    -- the statement along tyEq, in three steps
+    cTf : W0.Ix (DU.fib0 (suc m) (FT0.c (suc m) rho)) =
+      (DCl.clSubD (YO.yP X) (YO.yP X) (PS.idS (YO.yP X)) FT0.E2 (TC.tautCl (YO.yP X) FT0.c FT0.cnat) m k hk rho hT).1 ;
+
+    opaque fillEq ;
+  } ;
+} ;

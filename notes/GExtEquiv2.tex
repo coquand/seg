@@ -1,0 +1,278 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.6cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{xcolor}
+\newcommand{\seg}[1]{\textcolor{gray}{\texttt{\small #1}}}
+\newcommand{\Hom}{\mathrm{Hom}}
+\newcommand{\I}{\mathbb{I}}
+\newcommand{\Ext}{\mathrm{Ext}}
+\newcommand{\ext}{\mathrm{ext}}
+\newcommand{\glue}{\mathrm{glue}}
+\newcommand{\Fib}{\mathrm{Fib}}
+\newcommand{\full}{\mathrm{full}}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{lemma}[definition]{Lemma}
+\newtheorem{construction}[definition]{Construction}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\title{The filling step of Theorem 7:\\ $\ext(\alpha)$ is an equivalence\\[2pt]
+\large the mathematics of \texttt{seg/model/GExtEquiv2.seg}}
+\date{15 October 2026}
+\author{}
+
+\begin{document}
+\maketitle
+
+\noindent
+This note states, as a mathematical argument, what the file
+\texttt{GExtEquiv2.seg} proves. It follows the cleaned definition, in which
+a cofibration is a single decidable sieve rather than a list of generators;
+the file is being brought in line with it. Each paragraph corresponds to a group of
+declarations of the file; their names are given in grey. A declaration
+marked \texttt{opaque} in the file is a lemma here: after it is stated,
+only its statement is used.
+
+\section*{Setting}
+
+The base is a small category $\mathcal C$ with an object $[1]$ and, for
+every object $X$, two maps $e_0,e_1:X\to[1]$, natural in $X$ (the constant
+maps at the end points). We write $\I=y[1]$ for the presheaf represented by
+$[1]$, so that $\I(W)=\Hom(W,[1])$. We do not assume that $\mathcal C$ has
+products: posets
+and $\Delta$ are both instances. For each object $X$ there is a set
+$\Phi(X)$ of decidable sieves on $X$, stable under precomposition. A map
+$f:V\to X$ \emph{lands in} $Q\in\Phi(X)$ if $f\in Q$.
+
+\begin{itemize}
+\item $G$ is a presheaf (the context) and $A$ is a type over $G$. We write
+  $A(X,\rho)$ for its fibre at $\rho\in G(X)$, and $E_A$ for the total
+  presheaf of the pairs $(\rho,a)$.
+\item A \emph{cofibration} $\psi$ over $G$ is a decidable sieve
+  $\psi_\rho\in\Phi(X)$ for each $\rho\in G(X)$, natural in $\rho$:
+  $\psi_{\rho f}=f^*\psi_\rho$. The sets $\Phi(X)$ are closed under finite
+  unions. The point $\rho$ is \emph{full}, written $\full(X,\rho)$, if
+  $\mathrm{id}_X\in\psi_\rho$. By naturality, a map $f:W\to X$ is full
+  (meaning $\rho f$ is full) exactly when $f\in\psi_\rho$. Being full is a
+  proposition.
+\item $G|\psi$ is the context of the full points. $B$ is a type over
+  $G|\psi$, and $\alpha:B\to A|\psi$ is a map over $G|\psi$.
+\end{itemize}
+
+\paragraph{Lines.}
+A \emph{line in $A$ over $\rho\in G(X)$} is a family
+$\ell(W,f,j)\in E_A(W)$, for $f:W\to X$ and $j\in\I(W)$, which lies over
+$\rho f$ and is natural:
+\[
+\ell(W,f,j)\cdot g=\ell(V,fg,jg)\qquad(g:V\to W).
+\]
+It is thus a map $yX\times\I\to E_A$ over $\rho$, which is how the
+family path object is defined without products in $\mathcal C$. Its ends are
+$\ell(e_0)=\ell(X,\mathrm{id},e_0)$ and
+$\ell(e_1)=\ell(X,\mathrm{id},e_1)$. This is the family path object
+(\seg{GFam.famPath}). The \emph{constant line} at $\rho$ is the line of the
+base $G$ given by $(W,f,j)\mapsto\rho f$ (\seg{constF}).
+
+\paragraph{Fibres and equivalences.}
+Let $m:B\to A$ be a map over a context $D$. For $w\in E_A(X)$, an element of
+the \emph{fibre} $\Fib_m(X,w)$ is a pair $(b,\ell)$. Here $b\in B$ lies over
+the point of $w$, and $\ell$ is a line in $A$ over that point with
+$\ell(e_0)=m(b)$ and $\ell(e_1)=w$ (\seg{GEquiv.HFib}: \seg{fibB},
+\seg{fibL}, \seg{fibL-0}, \seg{fibL-1}).
+
+An \emph{equivalence structure} on $m$ (\seg{EquivOp}) extends every partial
+element of a fibre to a total one. The extension agrees with the sides
+(\seg{kside}), is uniform (\seg{kunif}), and is the value of any side that
+contains the identity (\seg{kfull}).
+
+\paragraph{The data.}
+The file works with the following data.
+\begin{itemize}
+\item An equivalence structure $e_\alpha$ on $\alpha$ (\seg{eal}).
+\item A filling structure $k_A$ for $A$ at $e_1$ (\seg{kA : FibAt e1}). It
+  extends a partial line in $A$, over a line of $G$, whose end at $e_1$ is
+  given totally, to a total line with the same end. Uniformity and
+  agreement with the sides are as above.
+\end{itemize}
+
+\paragraph{$\Ext(\alpha)$.}
+Let $\rho\in G(X)$. If $\rho$ is full, $\Ext(\alpha)(X,\rho)=B(X,\rho)$.
+Otherwise it is the set of pairs $(a,b)$ (\seg{GExt}, \seg{Pairs}) where:
+\begin{itemize}
+\item $a\in A(X,\rho)$;
+\item $b$ assigns to each full $f:W\to X$ an element $b_f\in B(W,\rho f)$;
+\item $b$ is natural: $b_f\cdot\chi=b_{f\chi}$;
+\item $\alpha(b_f)=a\cdot f$.
+\end{itemize}
+The map $\glue$ sends such a pair to $\Ext(\alpha)(X,\rho)$ in both cases.
+If $\rho$ is full, it takes $b_{\mathrm{id}}$. The map
+$\ext:\Ext(\alpha)\to A$ satisfies $\ext(\glue(a,b))=a$
+(\seg{glue-ext}). Because $\glue$ handles both cases, the argument below
+never needs to ask whether $\rho$ is full.
+
+\section*{The problem}
+
+Fix $X$ and $w=(\rho,a)\in E_A(X)$. Let $p$ be a partial element of
+$\Fib_{\ext}(X,w)$. It has sides $Q'_0,\dots,Q'_{n-1}\in\Phi(X)$ and
+values $p_l(V,f)\in\Fib_{\ext}(V,wf)$ for $f$ landing in $Q'_l$. These
+values are natural in $f$ and agree on overlaps.
+
+We construct an element $v_0\in\Fib_{\ext}(X,w)$ (\seg{v0}). In
+\texttt{GExtEquiv3} it is shown that $v_0$ extends $p$ and is uniform; this
+proves that $\ext(\alpha)$ is an equivalence (half of Theorem 7). The idea
+is a single filling in $A$, over the constant line at $\rho$. One family of
+sides comes from $p$. The other comes from extending, with $e_\alpha$, what
+$p$ says at the full maps.
+
+\section*{The argument}
+
+\begin{construction}[$\theta$, \seg{th}]
+Let $f:W\to X$ be full. Restrict $p$ along $f$. At a full point, a fibre
+element of $\ext$ is a fibre element of $\alpha$: on the $B$ side,
+$\Ext(\alpha)$ is $B$ there (\seg{toFA}, \seg{Tr}). This gives a partial
+element of $\Fib_\alpha(W,wf)$. Let
+\[
+\theta_f\in\Fib_\alpha(W,wf)
+\]
+be its extension by $e_\alpha$ (\seg{kE}).
+\end{construction}
+
+\begin{lemma}[\seg{th-nat}, \seg{th-full}, \seg{th-cong}]\label{lem:theta}
+\leavevmode
+\begin{enumerate}
+\item $\theta$ is natural: $\theta_f\cdot\chi=\theta_{f\chi}$ for
+  $\chi:W'\to W$.
+\item If $f$ lands in $Q'_l$, then $\theta_f$ is $p_l(W,f)$ read as a fibre
+  element of $\alpha$.
+\item $\theta_f$ does not depend on the proof that $f$ is full.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+\begin{enumerate}
+\item Restricting the translated partial element along $\chi$ gives the
+  translation of the restricted one. The claim then follows from the
+  uniformity of $e_\alpha$ (\seg{kE-act}).
+\item Along $f$, the side $Q'_l$ contains the identity of $W$
+  (\seg{lands-idr}). An extension is the value of a side that contains the
+  identity (\seg{kE-full}). Restricting along the identity changes nothing
+  (\seg{pv-hom}).
+\item Being full is a proposition.
+\end{enumerate}
+\end{proof}
+
+\begin{construction}[the base point, \seg{x0}]
+The line of $G$ is the constant line at $\rho$. Its prescribed total end at
+$e_1$ is $w$ (\seg{x0-E}). Its restriction along $f$ ends at $wf$
+(\seg{x0-act}).
+\end{construction}
+
+\begin{construction}[the sides]
+\leavevmode
+\begin{enumerate}
+\item[(S1)] For each side $Q'_l$ of $p$, take the line of $p_l(V,f)$
+  (\seg{S1}). It lies over $\rho f$, ends at $wf$ at $e_1$ by
+  \seg{fibL-1}, and is natural in $f$.
+\item[(S2)] On the sieve $\psi_\rho$, take the image in $A$ of the line
+  of $\theta_f$ (\seg{S2}). It is defined because every $f\in\psi_\rho$ is
+  full. The line lies over $\rho f$ and ends at $wf$. It is natural in $f$
+  by Lemma~\ref{lem:theta}(1).
+\end{enumerate}
+\end{construction}
+
+\begin{lemma}[compatibility: \seg{c11}, \seg{c22}, \seg{c12}]
+The sides (S1) and (S2) agree wherever two of them are both defined.
+\end{lemma}
+
+\begin{proof}
+Two elements over the same point, whose lines take the same values, are
+equal (\seg{tsEq}). So it is enough to compare lines.
+\begin{itemize}
+\item Two sides (S1): this is the compatibility of $p$.
+\item The side (S2) with itself: this is Lemma~\ref{lem:theta}(3).
+\item One side of each kind: $f$ lands in $Q'_l$ and in $\psi_\rho$. By
+  Lemma~\ref{lem:theta}(2), $\theta_f$ is $p_l(V,f)$, and the line of a
+  translated fibre element is the line it came from (\seg{toFA-L}).
+\end{itemize}
+\end{proof}
+
+The sides are joined into one partial line $J$ with $n+1$ sides
+(\seg{GCofib.Join}).
+
+\begin{construction}[the filler, \seg{fill}]
+Let $F=k_A(x_0,J)$. This is a line in $A$ over the constant line at $\rho$.
+Its values are $F(W,f,j)\in A(W,\rho f)$ (\seg{Fv}, \seg{Fn}, \seg{Fpt}).
+\end{construction}
+
+\begin{lemma}[\seg{F1}, \seg{F-S1}, \seg{F-S2}, \seg{F0-act}]\label{lem:F}
+\leavevmode
+\begin{enumerate}
+\item $F(e_1)=w$.
+\item On $Q'_l$, $F$ is the line of $p_l$.
+\item On $\psi_\rho$, $F$ is the line of $\theta$.
+\item $F(e_0)\cdot f=F(W,f,e_0)$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+Items 1 to 3 hold because $k_A$ keeps the given end and agrees with the
+sides (\seg{Fside}), and because the joined partial line restricts to the
+sides of $p$ and to the side $\psi_\rho$ (\seg{J.atL}, \seg{J.atR}). Item 4 is the naturality of
+$F$.
+\end{proof}
+
+\begin{construction}[the pair, \seg{u}]
+Let $a_0=F(e_0)\in A(X,\rho)$ (\seg{a0}). For full $f$, let $b_f$ be the
+$B$ component of $\theta_f$ (\seg{bE}). Then $u=(a_0,b)$ is a pair
+(\seg{mkPairs}):
+\begin{itemize}
+\item $b$ is natural by Lemma~\ref{lem:theta}(1) (\seg{pnat0});
+\item $\alpha(b_f)=a_0\cdot f$ (\seg{pal0}) by the chain
+\[
+\alpha(b_f)\overset{\text{fibre}}{=}\text{line of }\theta_f\text{ at }e_0
+\overset{\text{L.\ref{lem:F}(3)}}{=}F(W,f,e_0)
+\overset{\text{L.\ref{lem:F}(4)}}{=}a_0\cdot f,
+\]
+where Lemma~\ref{lem:F}(3) applies because the full map $f$ lies in
+$\psi_\rho$.
+\end{itemize}
+\end{construction}
+
+\begin{construction}[the fibre element, \seg{v0}]
+Let $v_0=(\glue(u),F)$. It lies in $\Fib_{\ext}(X,w)$. Indeed $F$ is a line
+over $\rho$, with
+\[
+F(e_0)=a_0=\ext(\glue(u))\quad(\seg{u-ext},\ \seg{F0})
+\qquad\text{and}\qquad
+F(e_1)=w\quad(\text{Lemma~\ref{lem:F}(1)}).
+\]
+\end{construction}
+
+\begin{remark}
+The box proof (\texttt{ExtEquiv2}, \texttt{ExtKit}) filled a box over the
+cylinder $X\times[1]$, an object of $\mathcal C$ for posets. Here a single partial \emph{line} over the constant
+line is filled. So the argument uses only the presheaf $yX\times\I$, never a product in
+$\mathcal C$, and it applies
+both to posets and to $\Delta$. No $\forall$ along the interval is needed,
+because the line of $G$ is constant: the side (S2) is $\psi_\rho$
+itself. That quantifier enters only in the
+composition part of Theorem 7 (step~5).
+\end{remark}
+
+\section*{Correspondence}
+
+\begin{center}
+\begin{tabular}{ll}
+mathematics & \texttt{GExtEquiv2.seg}\\\hline
+$\theta_f$; Lemma~\ref{lem:theta} & \texttt{th}; \texttt{th-nat}, \texttt{th-full}, \texttt{th-cong}\\
+base point (constant line, end $w$) & \texttt{cL}, \texttt{x0}, \texttt{x0-E}, \texttt{x0-act}\\
+sides (S1), (S2) & \texttt{S1[l].SO}, \texttt{S2.SO} (\texttt{GMapLine.LineSide})\\
+compatibility & \texttt{tsEq}, \texttt{c11}, \texttt{c22}, \texttt{c12}; \texttt{J}\\
+filler $F$; Lemma~\ref{lem:F} & \texttt{fill}, \texttt{Fv}; \texttt{F1}, \texttt{Fside}, \texttt{F-S1}, \texttt{F-S2}, \texttt{F0-act}\\
+the pair $u$ & \texttt{a0}, \texttt{bE}, \texttt{pal0}, \texttt{pnat0}, \texttt{u}\\
+$v_0$ & \texttt{u-ext}, \texttt{gb}, \texttt{F0}, \texttt{v0}
+\end{tabular}
+\end{center}
+
+\end{document}

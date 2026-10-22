@@ -1,0 +1,38 @@
+-- DUaOp.seg (inside Classical.Cl): the univalence operation of the
+-- universe of Delta, from the universal datum (GUaOpN, in
+-- DeltaForall.DFaU) at DeltaClassifier.DU (cours6: Sigma (X : U)
+-- Equiv (X , A) is contractible, uniformly), used on one-sided partial
+-- elements (GCofOne.Wrap: a list of sides is its union), so that it does
+-- not see an inserted empty side:
+--
+--   cE, eE, kU*   El's fibrancy (DeltaElFib.elFibEL; its fillers, GFibFill)
+--   smallCl, -sub DSmallCl (one horn filling on the universal Ext, pulled back)
+--   smallCl-full  DSmallFull2
+--
+-- Classical only through elFibEL (DeltaHornBox.decDeg).
+
+level a ;
+open Base ;
+module DBm = DeltaBase[a] ;
+module DB = DBm.DB ;
+module DCl = DeltaClassifier[a] ;
+module DU = DCl.DU ;
+module YO = DB.GYon[a] ;
+module DF = DeltaForall[a].DFaU ;
+
+elF : DB.GFibE[a+].FibEL DU.UCtx = DeltaElFib[a].elFibEL ;
+cE : DB.GFibE[a+].FE[DU.UCtx, DU.EGen].Comp = elF.2.1 ;
+eE : DB.GFibE[a+].FE[DU.UCtx, DU.EGen].ESIC cE = elF.2.2 ;
+
+module FF = DBm.DCn.GFibFill[a+].FibFill[DU.UCtx, DU.EGen, cE, eE] ;
+
+module UAN = DF.GUaOpN.UaN[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A, cE, eE, FF.k0, FF.k1, FF.k0e, FF.k1e,
+  \ r D al -> DSmallCl[a].SC[FF.k0, FF.k1, FF.k0e, FF.k1e, r].smallCl D al,
+  \ r D D' t al -> DSmallCl[a].SC[FF.k0, FF.k1, FF.k0e, FF.k1e, r].smallCl-sub D D' t al,
+  \ r X w fu -> DSmallFull2[a].SF2[FF.k0, FF.k1, FF.k0e, FF.k1e, cE, eE, r, X, w, fu].smallCl-full] ;
+
+-- ... on the union of the sides
+module W = DB.GCofOne[a+].Un[DBm.DS.bigU, DBm.DS.bigU-in, DBm.DS.bigU-out].One[DU.UCtx, DB.GUnivEq.UaU[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A].UaTy].Wrap[UAN.ua] ;
+
+-- univalence of the universe of Delta
+ua : DB.GCofib[a+].Partials[DU.UCtx, DB.GUnivEq.UaU[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A].UaTy].ContrOp = W.contr ;

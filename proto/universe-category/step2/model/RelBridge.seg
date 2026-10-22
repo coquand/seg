@@ -1,0 +1,37 @@
+-- RelBridge.seg: MODEL/Univ/RelBridge.agda.  UnivOp.RelG's H3Ty/H4Ty are
+-- RelGen's, for RelG's maps.  Stated once on variables (UData d' d),
+-- where the comparison is cheap; applying it at an instance compares
+-- RelGen's terms with RelGen's.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+open BaseP.GYon[a] ;
+open Cofib[a] ; open GP ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open UMapOver[a] ;
+open UnivOp[a] ;
+
+module RB (Y X : Ob) (h : Hom Y X) (A' : PTy[yP Y]) (A : PTy[yP X]) (psY : GP.Cof[yP Y]) (psX : GP.Cof[yP X]) (d' : UDataOn[Y, A', psY]) (d : UDataOn[X, A, psX])
+  (mAof : (rf : RelPre[Y, X, h, psY, psX].RFull)
+          -> EMap[RelPre[Y, X, h, psY, psX].G', RelPre[Y, X, h, psY, psX].G, RelPre[Y, X, h, psY, psX].sR rf,
+                  subTy (GP.CofL[yP Y, psY].resCtx) (yP Y) A' (GP.CofL[yP Y, psY].inclR),
+                  subTy (GP.CofL[yP X, psX].resCtx) (yP X) A (GP.CofL[yP X, psX].inclR)])
+  (rf : RelPre[Y, X, h, psY, psX].RFull) (Po : RelG[Y, X, h, A', A, psY, psX, d', d, mAof].PoTy rf) {
+  module RGd = RelG[Y, X, h, A', A, psY, psX, d', d, mAof] ;
+  module RP = RelPre[Y, X, h, psY, psX] ;
+  module RGg = RelGen[a].RG[RP.G', RP.G, RP.sR rf, d'.Bf.1, RGd.AL', d.Bf.1, RGd.AG, d'.beta, d.beta, RGd.mBE rf Po, (mAof rf).mE] ;
+
+  h3 (H : RGg.H3Ty) : RGd.RG[rf, Po].H3Ty = H ;
+
+  h4 (H : RGg.H4Ty d'.eB d.eB) : RGd.RG[rf, Po].H4Ty = H ;
+} ;

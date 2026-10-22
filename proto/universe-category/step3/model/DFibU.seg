@@ -1,0 +1,46 @@
+-- DFibU.seg (inside Classical.Cl): the universe of Delta is fibrant.
+--   uaKesi   the univalence operation (DUaOp.ua) ignores an inserted empty
+--            side (GUaOp10, at DUaOp's parameters)
+--   fibU     Comp(1, U) from ua, its ESI from uaKesi (GCompU5.FibU): U is a
+--            FibEL over any context
+-- Classical only through elFibEL (DeltaHornBox.decDeg).
+
+level a ;
+open Base ;
+module DBm = DeltaBase[a] ;
+module DB = DBm.DB ;
+module DCl = DeltaClassifier[a] ;
+module DU = DCl.DU ;
+module YO = DB.GYon[a] ;
+module DF = DeltaForall[a].DFaU ;
+open DUaOp[a] ;
+-- it does not see an inserted empty side (GUaOp10)
+module UK = DF.GUaOp10.UaK[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A,
+  cE, eE, FF.k0, FF.k1, FF.k0e, FF.k1e,
+  TC.tautCl, glueCl,
+  \ G A psi B al hB c e D' s psi' fullS c' e' FS -> DGlueClSub[a].GS[G, A, psi, B, al, hB, c, e, D', s, psi', fullS].Sb[c', e', FS].clExt-sub,
+  TC.tautCl-sub, TY.tautCl-yon,
+  \ X F p l0 il0 -> DClFull[a].CF[YO.yP X,
+      DF.GUaOp4.U4[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X' A -> DCl.encClD (YO.yP X') A, cE, eE, FF.k0, FF.k1, FF.k0e, FF.k1e,
+                   X, F, p, TC.tautCl, glueCl, l0, il0].O2.AX,
+      DF.GUaOp4.U4[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X' A -> DCl.encClD (YO.yP X') A, cE, eE, FF.k0, FF.k1, FF.k0e, FF.k1e,
+                   X, F, p, TC.tautCl, glueCl, l0, il0].O1.psi,
+      DF.GUaOp4.U4[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X' A -> DCl.encClD (YO.yP X') A, cE, eE, FF.k0, FF.k1, FF.k0e, FF.k1e,
+                   X, F, p, TC.tautCl, glueCl, l0, il0].G.B,
+      DF.GUaOp4.U4[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X' A -> DCl.encClD (YO.yP X') A, cE, eE, FF.k0, FF.k1, FF.k0e, FF.k1e,
+                   X, F, p, TC.tautCl, glueCl, l0, il0].O2.al',
+      DF.GUaOp4.U4[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X' A -> DCl.encClD (YO.yP X') A, cE, eE, FF.k0, FF.k1, FF.k0e, FF.k1e,
+                   X, F, p, TC.tautCl, glueCl, l0, il0].O3.hB,
+      DF.GUaOp4.U4[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X' A -> DCl.encClD (YO.yP X') A, cE, eE, FF.k0, FF.k1, FF.k0e, FF.k1e,
+                   X, F, p, TC.tautCl, glueCl, l0, il0].O2.EF.extFib.2.1,
+      DF.GUaOp4.U4[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X' A -> DCl.encClD (YO.yP X') A, cE, eE, FF.k0, FF.k1, FF.k0e, FF.k1e,
+                   X, F, p, TC.tautCl, glueCl, l0, il0].O2.EF.extFib.2.2,
+      DF.GUaOp4.U4[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X' A -> DCl.encClD (YO.yP X') A, cE, eE, FF.k0, FF.k1, FF.k0e, FF.k1e,
+                   X, F, p, TC.tautCl, glueCl, l0, il0].fl].clFull] ;
+
+uaKesi : DB.GCofEsi[a+].PartialsEsi[DU.UCtx, DB.GUnivEq.UaU[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A].UaTy].KESI ua = UK.uaKesi ;
+
+-- the universe of Delta is fibrant (GCompU5: Comp(1, U) from ua, ESI from uaKesi)
+fibU (G : DB.GPre[a+].PS.PCtx) : DB.GFibE[a+].FibEL G =
+  DBm.DCn.GCompU5.FibU[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A, cE, eE, ua, uaKesi, G].fibU ;
+

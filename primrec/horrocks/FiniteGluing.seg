@@ -1,0 +1,48 @@
+-- Gluing compatible numerators after clearing a common denominator.
+-- Applies to polynomial coefficients via AlgebraLinear.
+level l ; open Ring[l] ; open Presentations[l] ;
+module Over (A : CRing) (D : FiniteLinear[l].Over[A].Module) {
+ open A ; open RL[A] ; open D ;
+ module S = FiniteIdeal[l].Sums[A] ;
+ module V = FiniteLinear[l].Over[A].In[D] ;
+ sum-coefficients : (n : Nat) (a : Fin n -> R) (v : D.V) ->
+  Id D.V (V.sum n (\ i -> scale (a i) v)) (scale (S.sum n a) v) = split {
+  zero -> \ a v -> sym (scalar-zero v) ;
+  suc n | ih -> \ a v ->
+   trans (ap (plusV (scale (a (inr tt)) v)) (ih (\ i -> a (inl i)) v))
+    (sym (scalar-add (a (inr tt)) (S.sum n (\ i -> a (inl i))) v)) } ;
+ commute (a b : R) (v : D.V) :
+  Id D.V (scale a (scale b v)) (scale b (scale a v)) =
+  trans (sym (scalar-mul a b v))
+   (trans (ap (\ c -> scale c v) (mulC a b)) (scalar-mul b a v)) ;
+ module At (n : Nat) (s c : Fin n -> R) (cover : Id R (S.lin n c s) o) {
+  reconstruct (v : D.V) : Id D.V (V.lin n c (\ i -> scale (s i) v)) v =
+   trans (V.sum-cong n (\ i -> scale (c i) (scale (s i) v))
+     (\ i -> scale (mul (c i) (s i)) v)
+     (\ i -> sym (scalar-mul (c i) (s i) v)))
+    (trans (sum-coefficients n (\ i -> mul (c i) (s i)) v)
+     (trans (ap (\ a -> scale a v) cover) (scalar-one v))) ;
+  module Compatible (h : Fin n -> D.V)
+   (overlap : (i j : Fin n) -> Id D.V (scale (s i) (h j)) (scale (s j) (h i))) {
+   glued : D.V = V.lin n c h ;
+   restrict (i : Fin n) : Id D.V (scale (s i) glued) (h i) =
+    trans (sym (V.sum-scale (s i) n (\ j -> scale (c j) (h j))))
+     (trans (V.sum-cong n
+       (\ j -> scale (s i) (scale (c j) (h j)))
+       (\ j -> scale (c j) (scale (s j) (h i)))
+       (\ j -> trans (commute (s i) (c j) (h j)) (ap (scale (c j)) (overlap i j))))
+      (reconstruct (h i))) ;
+   unique (v : D.V) (local : (i : Fin n) -> Id D.V (scale (s i) v) (h i)) :
+    Id D.V v glued =
+    trans (sym (reconstruct v))
+     (V.sum-cong n (\ i -> scale (c i) (scale (s i) v)) (\ i -> scale (c i) (h i))
+      (\ i -> ap (scale (c i)) (local i))) ;
+  } ;
+  detect-zero (v : D.V) (vanish : (i : Fin n) -> Id D.V (scale (s i) v) zeroV) :
+   Id D.V v zeroV =
+   trans (sym (reconstruct v))
+    (trans (V.sum-cong n (\ i -> scale (c i) (scale (s i) v)) (\ i -> zeroV)
+      (\ i -> trans (ap (scale (c i)) (vanish i)) (vector-zero (c i))))
+     (V.sum-zero n)) ;
+ } ;
+} ;

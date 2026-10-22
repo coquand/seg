@@ -1,0 +1,149 @@
+-- GExtComp6.seg (inside IvBase.FaU, any base; line form of ExtEsi1..3 /
+-- ExtThm7's esiExt).  The line ESI of Theorem 7's composition: an empty
+-- side inserted into the problem is not seen by the composite, if it is
+-- not seen by the fillers kA, kB, kA1 nor by eal (their KESI):
+--   BI   the B-fillers (beta) ignore it (kB's KESI);
+--   the unglued partial line is an insertion (MapIns), the delta sides do
+--   not change, so the joined A line is an insertion (joinIns) and the
+--   A-filler, hence w1, does not change (kA's KESI);
+--   the partial fibre element over w1 is an insertion (joinIns), so the
+--   extension does not change (extEquiv's KESI, GExtEquiv4).
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[lv] ;
+open PR.PS ;
+module GP = GCofib[lv] ;
+open GLine[lv] ;
+
+module C6 (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (eS eT : IPt) (kAS : LineFibP[GFam[lv].famPath, G, A].FibAt eS)
+  (kBS : LineFibP[GFam[lv].famPath, GP.CofL[G, psi].resCtx, B].FibAt eS)
+  (kA1 : LineFibP[GFam[lv].famPath, G, A].FibAt e1)
+  (eal : GEquiv[lv].EquivOp GP.CofL[G, psi].resCtx B (subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR) al)
+  (kASe : GCofEsi[lv].PartialsEsi[EndKit[GFam[lv].famPath, G, A, eS].TV.E, EndKit[GFam[lv].famPath, G, A, eS].SFm.SF].KESI kAS)
+  (kBSe : GCofEsi[lv].PartialsEsi[EndKit[GFam[lv].famPath, GP.CofL[G, psi].resCtx, B, eS].TV.E,
+            EndKit[GFam[lv].famPath, GP.CofL[G, psi].resCtx, B, eS].SFm.SF].KESI kBS)
+  (kA1e : GCofEsi[lv].PartialsEsi[EndKit[GFam[lv].famPath, G, A, e1].TV.E, EndKit[GFam[lv].famPath, G, A, e1].SFm.SF].KESI kA1)
+  (keal : GCofEsi[lv].PartialsEsi[GExt[lv].ExtDef[G, A, psi].EA', GEquiv[lv].HFib[GP.CofL[G, psi].resCtx, B,
+            subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR, al].FibT].KESI eal) {
+  open GP.CofL[G, psi] ;
+  open GExt[lv].ExtDef[G, A, psi] ;
+  open ExtB[B, al] ;
+  open GExt2[lv].ExtB2[G, A, psi, B, al] ;
+  open GExt3[lv].ExtB3[G, A, psi, B, al] ;
+  open GExt4[lv].ExtB4[G, A, psi, B, al] ;
+  open GExtComp1[lv].C1[G, A, psi, B, al, eS, kBS] ;
+  open GExtComp2[lv].C2[G, A, psi, B, al, eS, kAS, kBS] ;
+  open GExtComp3[lv].C3[G, A, psi, B, al, eS, eT, kAS, kBS, kA1, eal] ;
+  module C4' = GExtComp4[lv].C4[G, A, psi, B, al, eS, eT, kAS, kBS, kA1, eal] ;
+  module E4 = GExtEquiv4[lv].ExtEq4[G, A, psi, B, al, kA1, eal, kA1e, keal] ;
+
+  module PEX' = GCofEsi[lv].PartialsEsi[KX.TV.E, KX.SFm.SF] ;
+  module PEB = GCofEsi[lv].PartialsEsi[KB.TV.E, KB.SFm.SF] ;
+  module PEA' = GCofEsi[lv].PartialsEsi[KA.TV.E, KA.SFm.SF] ;
+  module PEF = GCofEsi[lv].PartialsEsi[EA, FX.FibT] ;
+  module MI = GCofEsi[lv].MapIns[KX.TV.E, KA.TV.E, KX.SFm.SF, KA.SFm.SF, ML.tvS, ML.tsM, ML.tsM-pt, ML.tsM-act] ;
+
+  ----------------------------------------------------------------------
+  -- the B-filler ignores an inserted empty side
+
+  module BI (X : Ob) (x : KX.TV.EI X) (k : Nat) (p p' : KX.PT.Partial[X, x]) (ins : PEX'.InsP[X, x, k, p, p']) (fl : FlTy X x) {
+    module B0 = Beta[X, x, p, fl] ;
+    module B1 = Beta[X, x, p', fl] ;
+
+    insB : PEB.InsP[X, B0.xB, k, B0.pB, B1.pB] =
+      new PEB.InsP[X, B0.xB, k, B0.pB, B1.pB, ins.insp-r, ins.insp-k, ins.insp-e, ins.insp-Q,
+        \ n h h' V f i i' ->
+          LB.ts-ext V (B1.SB[p'.ps (Arith[a].skipN k n, h')].v V f i) (B0.SB[p.ps (n, h)].v V f i')
+            (transH (B1.SB[p'.ps (Arith[a].skipN k n, h')].ppt V f i) (symH (B0.SB[p.ps (n, h)].ppt V f i')))
+            (\ W g j -> transH (B1.SV[V, f, (p'.ps (Arith[a].skipN k n, h')).pv V f i, (p'.ps (Arith[a].skipN k n, h')).ppt V f i].sv-lev W g j)
+               (transH (toB-cong W (lvX V ((p'.ps (Arith[a].skipN k n, h')).pv V f i) W g j) (lvX V ((p.ps (n, h)).pv V f i') W g j)
+                          (apH (\ u -> lvX V u W g j) (ins.insp-v n h h' V f i i'))
+                          (B1.SV[V, f, (p'.ps (Arith[a].skipN k n, h')).pv V f i, (p'.ps (Arith[a].skipN k n, h')).ppt V f i].qv W g j)
+                          (B0.SV[V, f, (p.ps (n, h)).pv V f i', (p.ps (n, h)).ppt V f i'].qv W g j))
+                       (symH (B0.SV[V, f, (p.ps (n, h)).pv V f i', (p.ps (n, h)).ppt V f i'].sv-lev W g j))))] ;
+
+    FBv-ins (W : Ob) (g : Hom W X) (j : Hom W Iv) : Id (TB.EI W) (B1.FBv W g j) (B0.FBv W g j) =
+      apH (\ z -> z.1.1.1 W g j) (kBSe X B0.xB k B0.pB B1.pB insB) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- the composite ignores an inserted empty side
+
+  module CI (X : Ob) (x : KX.TV.EI X) (k : Nat) (p p' : KX.PT.Partial[X, x]) (ins : PEX'.InsP[X, x, k, p, p']) {
+    module PB0 = Pb[X, x, p] ;
+    module PB1 = Pb[X, x, p'] ;
+    module CX0 = Cop[X, x, p] ;
+    module CX1 = Cop[X, x, p'] ;
+
+    -- the unglued partial line
+    mI : PEA'.InsP[X, PB0.xA, k, PB0.pA, PB1.pA] = MI.mapIns X x k p p' ins ;
+
+    module ISA = PEA'.InsSides[X, PB0.xA, k, PB0.pA, PB1.pA, mI] ;
+    module ISX = PEX'.InsSides[X, x, k, p, p', ins] ;
+
+    -- the B-fillers on delta
+    FBvD (d : Fin (forallUn r)) (V : Ob) (f : Hom V X) (i : Lands V X (PB0.dl d) f) (i' : Lands V X (PB0.dl d) f)
+      (W : Ob) (g : Hom W V) (j : Hom W Iv)
+      : Id (TB.EI W) (PB1.BW[d, V, f, i].BB.FBv W g j) (PB0.BW[d, V, f, i'].BB.FBv W g j) =
+      transH (BI[V, KX.TV.E.act V X f x, k, KX.PT.restrictP V X f x p, KX.PT.restrictP V X f x p', PEX'.insR V X f x k p p' ins,
+                 PB1.flAt V f (PB1.hOf d V f i)].FBv-ins W g j)
+        (FBv-cong V (KX.TV.E.act V X f x) (KX.TV.E.act V X f x) (refl (KX.TV.E.act V X f x))
+           (KX.PT.restrictP V X f x p) (KX.PT.restrictP V X f x p) (refl (KX.PT.restrictP V X f x p))
+           (PB1.flAt V f (PB1.hOf d V f i)) (PB0.flAt V f (PB0.hOf d V f i')) W g j) ;
+
+    eVR (d : Fin (forallUn r)) (V : Ob) (f : Hom V X) (i : Lands V X (PB0.dl d) f) (i' : Lands V X (PB0.dl d) f)
+      : Id (KA.TS.EI V) (PB1.SD[d].LS.sv V f i) (PB0.SD[d].LS.sv V f i') =
+      LA.ts-ext V (PB1.SD[d].LS.sv V f i) (PB0.SD[d].LS.sv V f i')
+        (transH (PB1.SD[d].LS.sv-pt V f i) (symH (PB0.SD[d].LS.sv-pt V f i')))
+        (\ W g j -> transH (PB1.SD[d].LS.sv-lev V f i W g j)
+           (transH (apH (\ z -> toEA W (al.mE W z)) (FBvD d V f i i' W g j)) (symH (PB0.SD[d].LS.sv-lev V f i' W g j)))) ;
+
+    insJ : PEA'.InsPH[X, PB0.xA, PB1.xA, k, PB0.J.part, PB1.J.part] =
+      PEA'.joinIns X PB0.xA PB1.xA k p.pr (forallUn r) ins.insp-k (\ l -> PB0.pA.ps l) (\ d -> PB0.SD[d].LS.side)
+        PB0.pA.pcs PB0.c12 PB0.c22 (\ d -> PB1.SD[d].LS.side) PB1.c22 (\ d -> refl (PB0.dl d)) eVR p'.pr (symH ins.insp-r)
+        (\ l -> PB1.pA.ps l) PB1.pA.pcs PB1.c12 ISA.eE ISA.eQL ISA.eVL ;
+
+    -- the A-filler, hence w1, does not change
+    fillA-eq : Id (KA.TS.EI X) (PB1.xA, PB1.fill) (PB0.xA, PB0.fill) =
+      PEA'.kesiH kAS kASe X PB0.xA PB1.xA (refl PB0.xA) k PB0.J.part PB1.J.part insJ ;
+
+    w1-eq : Id (TA.EI X) CX1.w1 CX0.w1 = apH (\ u -> u.2.1.1.1 X (idH X) (ptH X eT)) fillA-eq ;
+
+    wfE (V : Ob) (f : Hom V X) : Id (TA.EI V) (TA.E.act V X f CX1.w1) (TA.E.act V X f CX0.w1) = apH (TA.E.act V X f) w1-eq ;
+
+    -- the partial fibre element over w1 is an insertion
+    eVL2 (m : Fin p.pr) (m' : Fin p'.pr) (P : Id Nat m'.1 (Arith[a].skipN k m.1)) (V : Ob) (f : Hom V X)
+      (i : Lands V X (p'.ps m').pQ f) (i' : Lands V X (p.ps m).pQ f) : Id (FX.TF.EI V) (CX1.fe1 m' V f i) (CX0.fe1 m V f i') =
+      cfib-eq V (TA.E.act V X f CX1.w1) (TA.E.act V X f CX0.w1) (wfE V f) (CX1.el1 m' V f i) (CX0.el1 m V f i')
+        (apH (\ u -> lvX V u V (idH V) (ptH V eT)) (ISX.eVL m m' P V f i i')) (CX1.eq1 m' V f i) (CX0.eq1 m V f i') ;
+
+    eVR2 (d : Fin (forallUn r)) (V : Ob) (f : Hom V X) (i : Lands V X (PB0.dl d) f) (i' : Lands V X (PB0.dl d) f)
+      : Id (FX.TF.EI V) (CX1.fe2 d V f i) (CX0.fe2 d V f i') =
+      cfib-eq V (TA.E.act V X f CX1.w1) (TA.E.act V X f CX0.w1) (wfE V f) (CX1.el2 d V f i) (CX0.el2 d V f i')
+        (apH (fromB V) (FBvD d V f i i' V (idH V) (ptH V eT))) (CX1.eq2 d V f i) (CX0.eq2 d V f i') ;
+
+    insP : PEF.InsPH[X, CX0.w1, CX1.w1, k, CX0.J2.part, CX1.J2.part] =
+      PEF.joinIns X CX0.w1 CX1.w1 k p.pr (forallUn r) ins.insp-k CX0.S1 CX0.S2 CX0.c11 CX0.c12 CX0.c22
+        CX1.S2 CX1.c22 (\ d -> refl (PB0.dl d)) eVR2 p'.pr (symH ins.insp-r)
+        CX1.S1 CX1.c11 CX1.c12 ISX.eE ISX.eQL eVL2 ;
+
+    -- so the extension, and the composite, do not change
+    vE-eq : Id (FX.TF.EI X) CX1.vE CX0.vE =
+      PEF.kesiH E3.extEquiv E4.extEquiv-kesi X CX0.w1 CX1.w1 w1-eq k CX0.J2.part CX1.J2.part insP ;
+
+    res : Id (TX.T X (x.1.1 X (idH X) (ptH X eT))) CX1.cop CX0.cop =
+      TX.pr-inj X (x.1.1 X (idH X) (ptH X eT)) CX1.cop CX0.cop
+        (transH CX1.cop-E (transH (apH (FX.fibB X) vE-eq) (symH CX0.cop-E))) ;
+  } ;
+
+  extCesi : CC.CESI C4'.extCompAt = \ X x k p p' ins -> CI[X, x, k, p, p', ins].res ;
+} ;

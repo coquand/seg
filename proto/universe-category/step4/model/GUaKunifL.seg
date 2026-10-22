@@ -1,0 +1,40 @@
+-- GUaKunifL.seg (inside IvBase.FaU; Step 3 probe, M3): the classifier
+-- parameter of GUaKunif for the poset universe U_L: the code of the small
+-- Ext along al is its fibration (GExtSmall.extFib), natural by extFibSub.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+module GE1 = GFibE[a+] ;
+open GLine[a] ;
+
+module KL
+  (kU0 : GLine[a+].LineFibP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen].FibAt e0)
+  (kU1 : GLine[a+].LineFibP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen].FibAt e1)
+  (kU0e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0].SFm.SF].KESI kU0)
+  (kU1e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1].SFm.SF].KESI kU1) {
+  module XSr (r : Nat) {
+    module XS = GExtSmall.XS[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, r, kU0, kU1, kU0e, kU1e] ;
+  } ;
+
+  smallCl (r : Nat) (D : PCtx) (al : GSmall.XSub[D, GExtBig.UB[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, r].GDr])
+    : GUnivL.ClL D (GSmall.xsub D GExtBig.UB[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, r].GDr XSr[r].XS.SA al) =
+    (XSr[r].XS.extFib D al).2 ;
+
+  smallCl-sub (r : Nat) (D D' : PCtx) (t : PSub[D', D]) (al : GSmall.XSub[D, GExtBig.UB[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, r].GDr])
+    : Id ((T : PTy[D']) * GUnivL.ClL D' T)
+         (subTy D' D (GSmall.xsub D GExtBig.UB[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, r].GDr XSr[r].XS.SA al) t,
+          GUnivL.clSubL D' D t (GSmall.xsub D GExtBig.UB[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, r].GDr XSr[r].XS.SA al) (smallCl r D al))
+         (GSmall.xsub D' GExtBig.UB[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, r].GDr XSr[r].XS.SA
+            (GSmall.xoS D' D GExtBig.UB[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, r].GDr al t),
+          smallCl r D' (GSmall.xoS D' D GExtBig.UB[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, r].GDr al t)) =
+    symH (XSr[r].XS.extFibSub D al D' t) ;
+} ;

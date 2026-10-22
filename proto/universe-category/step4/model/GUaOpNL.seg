@@ -1,0 +1,40 @@
+-- GUaOpNL.seg (inside IvBase.FaU; Step 3): the univalence operation from
+-- the universal datum (GUaOpN) at the poset classifier ClL: smallCl is the
+-- small Ext's fibration (GUaKunifL), smallCl-full is GUaFullL.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+module GE1 = GFibE[a+] ;
+open GLine[a] ;
+
+module UaNL
+  (kU0 : GLine[a+].LineFibP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen].FibAt e0)
+  (kU1 : GLine[a+].LineFibP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen].FibAt e1)
+  (kU0e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0].SFm.SF].KESI kU0)
+  (kU1e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1].SFm.SF].KESI kU1)
+  (cE : GE1.FE[GUnivL.UL.UCtx, GUnivL.UL.EGen].Comp)
+  (eE : GE1.FE[GUnivL.UL.UCtx, GUnivL.UL.EGen].ESIC cE)
+  (HU0 : Id (GLine[a+].CompAtP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0, e1].CompAt)
+            GLine[a+].CompAtP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0, e1].FromFib[kU0].ca cE.1)
+  (HU1 : Id (GLine[a+].CompAtP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1, e0].CompAt)
+            GLine[a+].CompAtP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1, e0].FromFib[kU1].ca cE.2)
+  (yon : (Z : Ob) (F1 : GUnivL.UL.U0 Z)
+     -> Id (GFibE[a].FibEL (yP Z))
+           GElC.ElC[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, cE, eE].Fam[yP Z, \ W g -> GUnivL.UL.uAct W Z g F1, \ Y' Y h g -> GUnivL.UL.uAct-o Y' Y Z g h F1].fib F1)
+{
+  module KL = GUaKunifL.KL[kU0, kU1, kU0e, kU1e] ;
+  module UO = GUaOpN.UaN[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, cE, eE, kU0, kU1, kU0e, kU1e, KL.smallCl, KL.smallCl-sub,
+    \ r X w fu -> GUaFullL.FL[kU0, kU1, kU0e, kU1e, cE, eE, HU0, HU1, yon, r, X, w, fu].smallCl-full] ;
+
+  -- univalence: Sigma (X : U) Equiv (X , A) is contractible, uniformly
+  ua : GCofib[a+].Partials[GUnivL.UL.UCtx, GUnivEq.UaU[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A].UaTy].ContrOp = UO.ua ;
+} ;

@@ -1,0 +1,15 @@
+-- PosetModel.seg: MODEL/Poset/Model.agda.  The presheaf model over finite
+-- non empty posets, with Unit, Sigma, Id and Pi: the general constructions
+-- of Presheaf*, applied to PosetCat.  No fibrancy yet (that is the
+-- composition structure).  (File renamed: Model is the enclosing segment.)
+
+level a ;
+module BaseP = Constr[a].PosB ;
+module PC = Presheaf[a, a].Psh[BaseP.BC] ;
+
+PosetCwF : CwF.CwF[a+] = PC.PCwF ;
+
+PosetUnit : CwF.Formers[a+, PosetCwF].UnitStr = PresheafFormers[a, a].PFormers[BaseP.BC].PUnit ;
+PosetSig : CwF.Formers[a+, PosetCwF].SigStr = PresheafFormers[a, a].PFormers[BaseP.BC].PSig ;
+PosetId : CwF.Formers[a+, PosetCwF].IdStr = PresheafFormers[a, a].PFormers[BaseP.BC].PId ;
+PosetPi : CwF.Formers[a+, PosetCwF].PiStr = PresheafPi[a, a].PPi[BaseP.BC].PPi ;

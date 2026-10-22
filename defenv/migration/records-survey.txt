@@ -1,0 +1,121 @@
+CwF.CwF
+    head:    l
+    fields:  Ctx Sub isSetSub id o o-idl o-idr o-assoc nil eps eps-uniq Ty isSetTy subT subT-id subT-o El isSetEl subt subt-id subt-o ext p q lift sec lift-id lift-o p-lift p-sec sec-o lift-p-sec-q q-lift q-sec
+    derived: 3
+    uses:    type 3, new 1, module 0
+CwF.Formers.IdStr
+    head:    
+    fields:  IdT IdT-nat IdT-iso IdT-iso-nat
+    derived: 0
+    uses:    type 2, new 1, module 0
+CwF.Formers.PiStr
+    head:    
+    fields:  Pi Pi-nat Pi-iso Pi-iso-nat
+    derived: 0
+    uses:    type 1, new 1, module 0
+CwF.Formers.SigStr
+    head:    
+    fields:  Sig Sig-nat Sig-iso Sig-iso-nat
+    derived: 1
+    uses:    type 1, new 1, module 0
+CwF.Formers.TwoStr
+    head:    
+    fields:  Two Two-nat Btrue Bfalse Btrue-nat Bfalse-nat Two-elim Two-beta Two-elim-nat
+    derived: 3
+    uses:    type 1, new 0, module 0
+CwF.Formers.UnitStr
+    head:    
+    fields:  Unit Unit-nat Unit-iso Unit-iso-nat
+    derived: 0
+    uses:    type 1, new 1, module 0
+CwF.Formers.ZeroStr
+    head:    
+    fields:  Zero Zero-nat Zero-elim Zero-elim-nat
+    derived: 1
+    uses:    type 1, new 0, module 0
+Model.CBase.CB.CCof.Cof
+    head:    G
+    fields:  cQ cnat
+    derived: 0
+    uses:    type 21, new 1, module 0
+Model.CBase.CB.CExt.LD
+    head:    X
+    fields:  aV fl bV aW aR alW bR
+    derived: 0
+    uses:    type 2, new 1, module 0
+Model.CBase.CB.CHtpyOps.HEq
+    head:    G A B f
+    fields:  inv hl hr
+    derived: 0
+    uses:    type 3, new 2, module 0
+Model.CBase.CB.CHtpyOps.NMap
+    head:    G A B
+    fields:  nfun nnat
+    derived: 0
+    uses:    type 38, new 3, module 0
+Model.CBase.CB.CId.DConj
+    head:    
+    fields:  dconj dc-in dc-out
+    derived: 0
+    uses:    type 15, new 4, module 0
+Model.CBase.CB.CPartial.PMap
+    head:    D B A
+    fields:  mE mpt mnat
+    derived: 0
+    uses:    type 77, new 13, module 0
+Model.CBase.CB.CPartial.Partials.Side
+    head:    X x
+    fields:  pQ pv ppt pnat
+    derived: 0
+    uses:    type 410, new 31, module 0
+Model.CBase.CB.CPartial.Rel.RC
+    head:    
+    fields:  kop kside kunif
+    derived: 0
+    uses:    type 31, new 17, module 0
+Model.CBase.CB.CSmall.SPTy
+    head:    G
+    fields:  tob tact tact-id tact-o
+    derived: 0
+    uses:    type 11, new 3, module 0
+Model.CBase.CB.CSmall.XSub
+    head:    D G
+    fields:  nt nt-nat
+    derived: 0
+    uses:    type 45, new 5, module 0
+Model.CDGlue.PL.PLine
+    head:    S
+    fields:  v vpt vnat
+    derived: 0
+    uses:    type 53, new 5, module 0
+Model.CLocD.NatMap
+    head:    G A B
+    fields:  nfun nnat
+    derived: 0
+    uses:    type 31, new 4, module 0
+Model.Presheaf.Psh.PCtx
+    head:    
+    fields:  ob act act-id act-o
+    derived: 0
+    uses:    type 766, new 10, module 0
+Model.Presheaf.Psh.PEl
+    head:    G A
+    fields:  eob enat
+    derived: 0
+    uses:    type 182, new 21, module 0
+Model.Presheaf.Psh.PSub
+    head:    D G
+    fields:  nt nt-nat
+    derived: 0
+    uses:    type 229, new 23, module 0
+Model.Presheaf.Psh.PTy
+    head:    G
+    fields:  tob tact tact-id tact-o
+    derived: 0
+    uses:    type 886, new 5, module 0
+Model.SmallCat.SmallCat
+    head:    
+    fields:  obV homV idC oC oC-idl oC-idr oC-assoc
+    derived: 0
+    uses:    type 4, new 1, module 0
+24 segments used as records

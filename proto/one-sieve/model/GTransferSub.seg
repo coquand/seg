@@ -1,0 +1,252 @@
+-- GTransferSub.seg (inside IvBase, any base): transfer along a
+-- substitution covered by a transport.  For Q : B[s] = B (types over D)
+-- and a fibre map ph that is the transport along Q (Hph: lifting along s
+-- the transported point gives (s d , ph d b)), the composition of B moved
+-- along (s , ph) by GTransfer.Tr is GSubst's substituted composition, as
+-- pairs (type , composition) (trSub; by J on Q: at refl, ph is the identity
+-- pointwise and Tr's moved problem is MorP's).
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+open GLine[a] ;
+
+module TrSub (D G : PCtx) (s : PSub[D, G]) (B0 : PTy[G]) (c : GFibE[a].FE[G, B0].Comp) {
+  B2 : PTy[D] = subTy D G B0 s ;
+  module SC0 = GSubst[a].SubC[D, G, s, B0, e0, e1, c.1] ;
+  module SC1 = GSubst[a].SubC[D, G, s, B0, e1, e0, c.2] ;
+  module TB0 = PR.TyL[G, B0] ;
+  module TL = GEqLaws[a].TriL[D] ;
+
+  ClTy (T : PTy[D]) : U a+ = GFibE[a].FE[D, T].Comp ;
+
+  scomp : ClTy B2 = (SC0.compAt, SC1.compAt) ;
+
+  PhTy (B : PTy[D]) : U a+ = (W : Ob) (d : W0.Ix (D.ob W)) -> W0.Ix (B.tob W d) -> W0.Ix (B0.tob W (s.nt W d)) ;
+  PsTy (B : PTy[D]) : U a+ = (W : Ob) (d : W0.Ix (D.ob W)) -> W0.Ix (B0.tob W (s.nt W d)) -> W0.Ix (B.tob W d) ;
+
+  module At (ph ps : (W : Ob) (d : W0.Ix (D.ob W)) -> W0.Ix (B0.tob W (s.nt W d)) -> W0.Ix (B0.tob W (s.nt W d)))
+    (ph-ps : (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B0.tob W (s.nt W d))) -> Id (W0.Ix (B0.tob W (s.nt W d))) (ph W d (ps W d b)) b)
+    (ps-ph : (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B0.tob W (s.nt W d))) -> Id (W0.Ix (B0.tob W (s.nt W d))) (ps W d (ph W d b)) b)
+    (PhN : (V W : Ob) (g : Hom V W) (w : PR.TyL[D, B2].EI W)
+       -> Id (TB0.EI V) (s.nt V (PR.TyL[D, B2].E.act V W g w).1, ph V (PR.TyL[D, B2].E.act V W g w).1 (PR.TyL[D, B2].E.act V W g w).2)
+                        (TB0.E.act V W g (s.nt W w.1, ph W w.1 w.2)))
+    (Hph : (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B0.tob W (s.nt W d))) -> Id (TB0.EI W) (s.nt W d, b) (s.nt W d, ph W d b)) {
+    phId (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B0.tob W (s.nt W d))) : Id (W0.Ix (B0.tob W (s.nt W d))) b (ph W d b) =
+      TB0.pr-inj W (s.nt W d) b (ph W d b) (Hph W d b) ;
+
+    psId (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B0.tob W (s.nt W d))) : Id (W0.Ix (B0.tob W (s.nt W d))) (ps W d b) b =
+      transH (phId W d (ps W d b)) (ph-ps W d b) ;
+
+    module Dir (e e' : IPt) (c0 : CompAtP[GFam[a].famPath, G, B0, e, e'].CompAt) {
+    module SC = GSubst[a].SubC[D, G, s, B0, e, e', c0] ;
+    module MP = SC.M.MP ;
+    module TR = GTransfer[a, a, a].Tr[D, B2, G, B0, s.nt, s.nt-nat, ph, ps, ph-ps, ps-ph, PhN, e, e', c0] ;
+    module M = TR.M ;
+
+    tvEq (X : Ob) (w : MP.CD.TV.EI X) : Id (MP.CG.TV.EI X) (M.tvN X w) (MP.tvN X w) =
+      MP.CG.EK.tv-eq X (M.tvN X w) (MP.tvN X w)
+        (MP.FAG.FG.fam-eq X (M.tvN X w).1 (MP.tvN X w).1 (\ W f i -> refl (s.nt W (w.1.1 W f i))))
+        (symH (Hph X (w.1.1 X (idH X) (ptH X e)) w.2)) ;
+
+    tsEq (W : Ob) (u : MP.CD.TS.EI W) : Id (MP.CG.TS.EI W) (M.tsN W u) (MP.tsN W u) =
+      MP.LG.ts-ext W (M.tsN W u) (MP.tsN W u)
+        (transH M.TSN[W, u].res-pt
+          (transH (tvEq W u.1) (symH (MP.CG.EK.mkTS-pt W (MP.tvN W u.1) MP.TSN[W, u].lineG (refl (MP.MC.mapF W u.1.1)) MP.TSN[W, u].qN))))
+        (\ V g j -> transH (M.TSN[W, u].res-lev V g j)
+           (transH (symH (Hph V (u.2.1.1.1 V g j).1 (u.2.1.1.1 V g j).2)) (symH (MP.TSN[W, u].res-lev V g j)))) ;
+
+    mpEq (X : Ob) (w : MP.CD.TV.EI X) (p : MP.CD.PT.Partial[X, w])
+      : Id (MP.CG.PT.Partial[X, MP.tvN X w])
+           (subst (MP.CG.TV.EI X) (\ z -> MP.CG.PT.Partial[X, z]) (M.tvN X w) (MP.tvN X w) (tvEq X w) (M.mapP X w p))
+           (MP.MN.mapP X w p) =
+      MP.CG.PT.partExtH X (M.tvN X w) (MP.tvN X w) (tvEq X w) (M.mapP X w p) (MP.MN.mapP X w p) (refl p.pr)
+        (\ l -> refl (p.ps l).pQ)
+        (\ l W f i i' -> transH (apH (M.tsN W) (MP.CD.PT.pv-irr X w (p.ps l) W f i i')) (tsEq W ((p.ps l).pv W f i'))) ;
+
+    copEq (X : Ob) (w : MP.CD.TV.EI X) (p : MP.CD.PT.Partial[X, w])
+      : Id (W0.Ix (B0.tob X (s.nt X (w.1.1 X (idH X) (ptH X e'))))) (TR.cop X w p) (SC.compAt.cop X w p) =
+      transH (psId X (w.1.1 X (idH X) (ptH X e')) (c0.cop X (M.tvN X w) (M.mapP X w p)))
+        (TB0.pr-inj X (s.nt X (w.1.1 X (idH X) (ptH X e'))) (c0.cop X (M.tvN X w) (M.mapP X w p)) (SC.compAt.cop X w p)
+           (apH (TR.KD0'.endE X)
+              (MP.CG.cop-cong c0 X (M.tvN X w) (MP.tvN X w) (tvEq X w) (M.mapP X w p) (MP.MN.mapP X w p) (mpEq X w p)))) ;
+
+    ceq : Id (CompAtP[GFam[a].famPath, D, B2, e, e'].CompAt) TR.compAt SC.compAt = MP.CD.CompAt-ext TR.compAt SC.compAt copEq ;
+
+    opaque tvEq ; opaque tsEq ; opaque mpEq ; opaque copEq ;
+    } ;
+
+    module D0 = Dir[e0, e1, c.1] ;
+    module D1 = Dir[e1, e0, c.2] ;
+
+    res : Id ((T : PTy[D]) * ClTy T) (B2, (D0.TR.compAt, D1.TR.compAt)) (B2, scomp) =
+      apH {ClTy B2} {(T : PTy[D]) * ClTy T} (\ z -> (B2, z))
+        (transH (apH {CompAtP[GFam[a].famPath, D, B2, e0, e1].CompAt} {ClTy B2} (\ z -> (z, D1.TR.compAt)) D0.ceq)
+                (apH {CompAtP[GFam[a].famPath, D, B2, e1, e0].CompAt} {ClTy B2} (\ z -> (SC0.compAt, z)) D1.ceq)) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- along any Q, by J
+
+  HphTy (B : PTy[D]) (Q : Id (PTy[D]) B B2) (ph : PhTy B) : U a+ =
+    (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B.tob W d))
+    -> Id (TB0.EI W) ((liftP D G B0 s).nt W (TL.trE W B B2 Q (d, b))) (s.nt W d, ph W d b) ;
+
+  MotTy (B : PTy[D]) (Q2 : Id (PTy[D]) B2 B) : U a+ =
+    (ph : PhTy B) (ps : PsTy B)
+    (ph-ps : (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B0.tob W (s.nt W d))) -> Id (W0.Ix (B0.tob W (s.nt W d))) (ph W d (ps W d b)) b)
+    (ps-ph : (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B.tob W d)) -> Id (W0.Ix (B.tob W d)) (ps W d (ph W d b)) b)
+    (PhN : (V W : Ob) (g : Hom V W) (w : PR.TyL[D, B].EI W)
+       -> Id (TB0.EI V) (s.nt V (PR.TyL[D, B].E.act V W g w).1, ph V (PR.TyL[D, B].E.act V W g w).1 (PR.TyL[D, B].E.act V W g w).2)
+                        (TB0.E.act V W g (s.nt W w.1, ph W w.1 w.2)))
+    (Hph : HphTy B (symH Q2) ph)
+    -> Id ((T : PTy[D]) * ClTy T)
+         (B, (GTransfer[a, a, a].Tr[D, B, G, B0, s.nt, s.nt-nat, ph, ps, ph-ps, ps-ph, PhN, e0, e1, c.1].compAt,
+              GTransfer[a, a, a].Tr[D, B, G, B0, s.nt, s.nt-nat, ph, ps, ph-ps, ps-ph, PhN, e1, e0, c.2].compAt))
+                                  (B2, scomp) ;
+
+  main (B : PTy[D]) (Q2 : Id (PTy[D]) B2 B) : MotTy B Q2 =
+    idJ (PTy[D]) B2 MotTy (\ ph ps ph-ps ps-ph PhN Hph -> At[ph, ps, ph-ps, ps-ph, PhN, Hph].res) B Q2 ;
+
+  ssym (B : PTy[D]) (Q : Id (PTy[D]) B B2) : Id (Id (PTy[D]) B B2) (symH (symH Q)) Q =
+    idJ (PTy[D]) B (\ T Q3 -> Id (Id (PTy[D]) B T) (symH (symH Q3)) Q3) (refl (refl B)) B2 Q ;
+
+  -- the lemma
+  trSub (B : PTy[D]) (Q : Id (PTy[D]) B B2) (ph : PhTy B) (ps : PsTy B)
+    (ph-ps : (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B0.tob W (s.nt W d))) -> Id (W0.Ix (B0.tob W (s.nt W d))) (ph W d (ps W d b)) b)
+    (ps-ph : (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B.tob W d)) -> Id (W0.Ix (B.tob W d)) (ps W d (ph W d b)) b)
+    (PhN : (V W : Ob) (g : Hom V W) (w : PR.TyL[D, B].EI W)
+       -> Id (TB0.EI V) (s.nt V (PR.TyL[D, B].E.act V W g w).1, ph V (PR.TyL[D, B].E.act V W g w).1 (PR.TyL[D, B].E.act V W g w).2)
+                        (TB0.E.act V W g (s.nt W w.1, ph W w.1 w.2)))
+    (Hph : HphTy B Q ph)
+    : Id ((T : PTy[D]) * ClTy T)
+         (B, (GTransfer[a, a, a].Tr[D, B, G, B0, s.nt, s.nt-nat, ph, ps, ph-ps, ps-ph, PhN, e0, e1, c.1].compAt,
+              GTransfer[a, a, a].Tr[D, B, G, B0, s.nt, s.nt-nat, ph, ps, ph-ps, ps-ph, PhN, e1, e0, c.2].compAt))
+                                 (B2, scomp) =
+    main B (symH Q) ph ps ph-ps ps-ph PhN
+      (\ W d b -> transH (apH (\ q -> (liftP D G B0 s).nt W (TL.trE W B B2 q (d, b))) (ssym B Q)) (Hph W d b)) ;
+
+  opaque main ; opaque trSub ;
+
+  ----------------------------------------------------------------------
+  -- as fibrant types: line ESI is a proposition
+
+  isProp-ESIC (T : PTy[D]) (c2 : ClTy T) : isProp (GFibE[a].FE[D, T].ESIC c2) =
+    isProp-Sigma (GFibE[a].FE[D, T].C01.CESI c2.1) (\ z -> GFibE[a].FE[D, T].C10.CESI c2.2)
+      (GFibE[a].FE[D, T].C01.isProp-CESI c2.1) (\ z -> GFibE[a].FE[D, T].C10.isProp-CESI c2.2) ;
+
+  fibEq (esi : GFibE[a].FE[G, B0].ESIC c) (B : PTy[D]) (c' : ClTy B) (e' : GFibE[a].FE[D, B].ESIC c')
+    (P : Id ((T : PTy[D]) * ClTy T) (B, c') (B2, scomp))
+    : Id (GFibE[a].FibEL D) (B, (c', e')) (GSubst[a].subFibEL D G s (B0, (c, esi))) =
+    idJ ((T : PTy[D]) * ClTy T) (B, c')
+      (\ z Q -> (e2 : GFibE[a].FE[D, z.1].ESIC z.2) -> Id (GFibE[a].FibEL D) (B, (c', e')) (z.1, (z.2, e2)))
+      (\ e2 -> apH {GFibE[a].FE[D, B].ESIC c'} {GFibE[a].FibEL D} (\ x -> (B, (c', x))) (isProp-ESIC B c' e' e2))
+      (B2, scomp) P (GSubst[a].subFibEL D G s (B0, (c, esi))).2.2 ;
+
+  opaque fibEq ;
+} ;
+
+------------------------------------------------------------------------
+-- along the identity: Tr along (id , the transport along Q : B = B0) is
+-- B0's own composition (J on Q; at refl ph is the identity pointwise)
+
+module TrId (D : PCtx) (B0 : PTy[D]) (c : GFibE[a].FE[D, B0].Comp) {
+  module TB0 = PR.TyL[D, B0] ;
+  module TL = GEqLaws[a].TriL[D] ;
+
+  ClTy (T : PTy[D]) : U a+ = GFibE[a].FE[D, T].Comp ;
+
+  idNat (V W : Ob) (g : Hom V W) (d : W0.Ix (D.ob W)) : Id (W0.Ix (D.ob V)) (D.act V W g d) (D.act V W g d) = refl (D.act V W g d) ;
+
+  module At (ph ps : (W : Ob) (d : W0.Ix (D.ob W)) -> W0.Ix (B0.tob W d) -> W0.Ix (B0.tob W d))
+    (ph-ps : (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B0.tob W d)) -> Id (W0.Ix (B0.tob W d)) (ph W d (ps W d b)) b)
+    (ps-ph : (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B0.tob W d)) -> Id (W0.Ix (B0.tob W d)) (ps W d (ph W d b)) b)
+    (PhN : (V W : Ob) (g : Hom V W) (w : TB0.EI W)
+       -> Id (TB0.EI V) (D.act V W g w.1, ph V (D.act V W g w.1) (TB0.E.act V W g w).2) (TB0.E.act V W g (w.1, ph W w.1 w.2)))
+    (Hph : (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B0.tob W d)) -> Id (TB0.EI W) (d, b) (d, ph W d b)) {
+    phId (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B0.tob W d)) : Id (W0.Ix (B0.tob W d)) b (ph W d b) =
+      TB0.pr-inj W d b (ph W d b) (Hph W d b) ;
+
+    psId (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B0.tob W d)) : Id (W0.Ix (B0.tob W d)) (ps W d b) b =
+      transH (phId W d (ps W d b)) (ph-ps W d b) ;
+
+    module Dir (e e' : IPt) (c0 : CompAtP[GFam[a].famPath, D, B0, e, e'].CompAt) {
+      module TR = GTransfer[a, a, a].Tr[D, B0, D, B0, \ W d -> d, idNat, ph, ps, ph-ps, ps-ph, PhN, e, e', c0] ;
+      module M = TR.M ;
+
+
+      copEq (X : Ob) (w : TR.CD.TV.EI X) (p : TR.CD.PT.Partial[X, w])
+        : Id (W0.Ix (B0.tob X (w.1.1 X (idH X) (ptH X e')))) (TR.cop X w p) (c0.cop X w p) =
+        transH (psId X (w.1.1 X (idH X) (ptH X e')) (c0.cop X (M.tvN X w) (M.mapP X w p)))
+          (TB0.pr-inj X (w.1.1 X (idH X) (ptH X e')) (c0.cop X (M.tvN X w) (M.mapP X w p)) (c0.cop X w p)
+             (apH (TR.KD0'.endE X)
+                (GProbEq[a].ProbEq[D, B0, e, e', X].cop-eq c0 (M.tvN X w) w (\ W f i -> refl (w.1.1 W f i)) (symH (Hph X (w.1.1 X (idH X) (ptH X e)) w.2))
+                   (M.mapP X w p) p (refl p.pr) (\ k -> refl (p.ps k).pQ)
+                   (\ k W f i i' V g j -> transH (M.TSN[W, (p.ps k).pv W f i].res-lev V g j)
+                      (transH (symH (Hph V (((p.ps k).pv W f i).2.1.1.1 V g j).1 (((p.ps k).pv W f i).2.1.1.1 V g j).2))
+                              (apH (\ u -> GFam[a].famConn.levA D B0 W (TR.CD.EK.lineL W u) V g j)
+                                 (TR.CD.PT.pv-irr X w (p.ps k) W f i i'))))))) ;
+
+      ceq : Id (CompAtP[GFam[a].famPath, D, B0, e, e'].CompAt) TR.compAt c0 = TR.CD.CompAt-ext TR.compAt c0 copEq ;
+
+      opaque copEq ;
+    } ;
+
+    module D0 = Dir[e0, e1, c.1] ;
+    module D1 = Dir[e1, e0, c.2] ;
+
+    res : Id ((T : PTy[D]) * ClTy T) (B0, (D0.TR.compAt, D1.TR.compAt)) (B0, c) =
+      apH {ClTy B0} {(T : PTy[D]) * ClTy T} (\ z -> (B0, z))
+        (transH (apH {CompAtP[GFam[a].famPath, D, B0, e0, e1].CompAt} {ClTy B0} (\ z -> (z, D1.TR.compAt)) D0.ceq)
+                (apH {CompAtP[GFam[a].famPath, D, B0, e1, e0].CompAt} {ClTy B0} (\ z -> (c.1, z)) D1.ceq)) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- along any Q : B = B0, by J
+
+  PhTy (B : PTy[D]) : U a+ = (W : Ob) (d : W0.Ix (D.ob W)) -> W0.Ix (B.tob W d) -> W0.Ix (B0.tob W d) ;
+  PsTy (B : PTy[D]) : U a+ = (W : Ob) (d : W0.Ix (D.ob W)) -> W0.Ix (B0.tob W d) -> W0.Ix (B.tob W d) ;
+
+  HphTy (B : PTy[D]) (Q : Id (PTy[D]) B B0) (ph : PhTy B) : U a+ =
+    (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B.tob W d)) -> Id (TB0.EI W) (TL.trE W B B0 Q (d, b)) (d, ph W d b) ;
+
+  MotTy (B : PTy[D]) (Q2 : Id (PTy[D]) B0 B) : U a+ =
+    (ph : PhTy B) (ps : PsTy B)
+    (ph-ps : (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B0.tob W d)) -> Id (W0.Ix (B0.tob W d)) (ph W d (ps W d b)) b)
+    (ps-ph : (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B.tob W d)) -> Id (W0.Ix (B.tob W d)) (ps W d (ph W d b)) b)
+    (PhN : (V W : Ob) (g : Hom V W) (w : PR.TyL[D, B].EI W)
+       -> Id (TB0.EI V) ((PR.TyL[D, B].E.act V W g w).1, ph V (PR.TyL[D, B].E.act V W g w).1 (PR.TyL[D, B].E.act V W g w).2)
+                        (TB0.E.act V W g (w.1, ph W w.1 w.2)))
+    (Hph : HphTy B (symH Q2) ph)
+    -> Id ((T : PTy[D]) * ClTy T)
+          (B, (GTransfer[a, a, a].Tr[D, B, D, B0, \ W d -> d, idNat, ph, ps, ph-ps, ps-ph, PhN, e0, e1, c.1].compAt,
+               GTransfer[a, a, a].Tr[D, B, D, B0, \ W d -> d, idNat, ph, ps, ph-ps, ps-ph, PhN, e1, e0, c.2].compAt))
+          (B0, c) ;
+
+  main (B : PTy[D]) (Q2 : Id (PTy[D]) B0 B) : MotTy B Q2 =
+    idJ (PTy[D]) B0 MotTy (\ ph ps ph-ps ps-ph PhN Hph -> At[ph, ps, ph-ps, ps-ph, PhN, Hph].res) B Q2 ;
+
+  ssym (B : PTy[D]) (Q : Id (PTy[D]) B B0) : Id (Id (PTy[D]) B B0) (symH (symH Q)) Q =
+    idJ (PTy[D]) B (\ T Q3 -> Id (Id (PTy[D]) B T) (symH (symH Q3)) Q3) (refl (refl B)) B0 Q ;
+
+  trId (B : PTy[D]) (Q : Id (PTy[D]) B B0) (ph : PhTy B) (ps : PsTy B)
+    (ph-ps : (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B0.tob W d)) -> Id (W0.Ix (B0.tob W d)) (ph W d (ps W d b)) b)
+    (ps-ph : (W : Ob) (d : W0.Ix (D.ob W)) (b : W0.Ix (B.tob W d)) -> Id (W0.Ix (B.tob W d)) (ps W d (ph W d b)) b)
+    (PhN : (V W : Ob) (g : Hom V W) (w : PR.TyL[D, B].EI W)
+       -> Id (TB0.EI V) ((PR.TyL[D, B].E.act V W g w).1, ph V (PR.TyL[D, B].E.act V W g w).1 (PR.TyL[D, B].E.act V W g w).2)
+                        (TB0.E.act V W g (w.1, ph W w.1 w.2)))
+    (Hph : HphTy B Q ph)
+    : Id ((T : PTy[D]) * ClTy T)
+         (B, (GTransfer[a, a, a].Tr[D, B, D, B0, \ W d -> d, idNat, ph, ps, ph-ps, ps-ph, PhN, e0, e1, c.1].compAt,
+              GTransfer[a, a, a].Tr[D, B, D, B0, \ W d -> d, idNat, ph, ps, ph-ps, ps-ph, PhN, e1, e0, c.2].compAt))
+         (B0, c) =
+    main B (symH Q) ph ps ph-ps ps-ph PhN
+      (\ W d b -> transH (apH (\ q -> TL.trE W B B0 q (d, b)) (ssym B Q)) (Hph W d b)) ;
+
+  opaque main ; opaque trId ;
+} ;

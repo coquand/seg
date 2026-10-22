@@ -1,0 +1,114 @@
+-- GCompU3.seg (inside IvBase.Cn): the fibrancy of the universe from
+-- univalence (G7), part 3: the side value.  For a line of codes l at W,
+-- with codes FS at src d and FT at tgt d, El along the codes of l at an
+-- end is that code's type (ElCong by pev's naturality, then elYon: QB,
+-- QA).  The side value is the R-presentation (GUnivEq.UaU.R) of
+-- (FT , FS , transport): the data dat, with FS's and FT's classifiers
+-- moved back along QB / QA (so its codes are FS and FT: cPB, cPA).
+-- Naturality along y h (rEq) is comb of natDat and the codes' naturality.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+module L1 = GPre[a+].PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open Trees[a] ;
+open Arith[a] ;
+open GLine[a] ;
+
+
+
+-- a classifier moved back along a path of types
+pairBack (G : PCtx) (C : PTy[G] -> U a+) (A A' : PTy[G]) (Q : Id (PTy[G]) A A') (c : C A')
+  : Id ((T : PTy[G]) * C T) (A, subst (PTy[G]) C A' A (symH Q) c) (A', c) =
+  idJ (PTy[G]) A (\ A2 Q2 -> (c2 : C A2) -> Id ((T : PTy[G]) * C T) (A, subst (PTy[G]) C A2 A (symH Q2) c2) (A2, c2))
+    (\ c2 -> refl (A, c2)) A' Q c ;
+
+opaque pairBack ;
+
+module SV (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GFibE[a+].FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GFibE[a+].FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE)
+  (d : Bool) {
+  module S = GCompU1.SD[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, d] ;
+  module UA = GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module EC = S.EC ;
+  module UU = S.UU ;
+
+  module Ln (W : Ob) (l : V1.Ix (S.PU.ob W)) {
+    module L = S.Ln[W, l] ;
+
+    -- the codes of l at its ends
+    Fe (e : IPt) : UU.U0 W = (GFam[a+].famPath.pev UU.UCtx e).nt W l ;
+
+    cYnat (e : IPt) (Y' Y : Ob) (h : Hom Y' Y) (g : Hom Y W)
+      : Id (UU.U0 Y') (UU.uAct Y' W (compH Y' Y W g h) (Fe e)) (UU.uAct Y' Y h (UU.uAct Y W g (Fe e))) =
+      UU.uAct-o Y' Y W g h (Fe e) ;
+
+    module YB = EC.Yon[W, Fe (src d), cYnat (src d)] ;
+    module YA = EC.Yon[W, Fe (tgt d), cYnat (tgt d)] ;
+    module CB = EC.ElCong[yP W, L.cod (src d), YB.cY, L.codN (src d), cYnat (src d),
+      \ V g -> (GFam[a+].famPath.pev UU.UCtx (src d)).nt-nat V W g l] ;
+    module CA = EC.ElCong[yP W, L.cod (tgt d), YA.cY, L.codN (tgt d), cYnat (tgt d),
+      \ V g -> (GFam[a+].famPath.pev UU.UCtx (tgt d)).nt-nat V W g l] ;
+
+    QB : Id (PTy[yP W]) L.FB.ElTy (Fe (src d)).1 = transH CB.elCong YB.elYon ;
+    QA : Id (PTy[yP W]) L.FA.ElTy (Fe (tgt d)).1 = transH CA.elCong YA.elYon ;
+
+    clB : Cl (yP W) L.FB.ElTy = subst (PTy[yP W]) (Cl (yP W)) (Fe (src d)).1 L.FB.ElTy (symH QB) (Fe (src d)).2 ;
+    clA : Cl (yP W) L.FA.ElTy = subst (PTy[yP W]) (Cl (yP W)) (Fe (tgt d)).1 L.FA.ElTy (symH QA) (Fe (tgt d)).2 ;
+
+    cPB : Id ((T : PTy[yP W]) * Cl (yP W) T) (L.FB.ElTy, clB) (Fe (src d)) = pairBack (yP W) (Cl (yP W)) L.FB.ElTy (Fe (src d)).1 QB (Fe (src d)).2 ;
+    cPA : Id ((T : PTy[yP W]) * Cl (yP W) T) (L.FA.ElTy, clA) (Fe (tgt d)) = pairBack (yP W) (Cl (yP W)) L.FA.ElTy (Fe (tgt d)).1 QA (Fe (tgt d)).2 ;
+
+    -- the side value, as R
+    r : UA.R W = ((L.dat, clB), clA) ;
+  } ;
+
+  -- naturality along y h
+  module Nat (W' W : Ob) (h : Hom W' W) (l : V1.Ix (S.PU.ob W)) {
+    module LW = Ln[W, l] ;
+    module LW' = Ln[W', S.PU.act W' W h l] ;
+    module NN = GCompU2.N[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, d, W', W, h, l] ;
+
+    codeN (e : IPt) : Id (UU.U0 W') (UU.uAct W' W h (LW.Fe e)) (LW'.Fe e) =
+      symH ((GFam[a+].famPath.pev UU.UCtx e).nt-nat W' W h l) ;
+
+    P2B : Id ((T : PTy[yP W']) * Cl (yP W') T)
+               (subTy (yP W') (yP W) LW.L.FB.ElTy (yH W' W h), clSub (yP W') (yP W) (yH W' W h) LW.L.FB.ElTy LW.clB)
+               (LW'.L.FB.ElTy, LW'.clB) =
+      transH (apH {(T : PTy[yP W]) * Cl (yP W) T} {(T : PTy[yP W']) * Cl (yP W') T}
+                 (\ z -> (subTy (yP W') (yP W) z.1 (yH W' W h), clSub (yP W') (yP W) (yH W' W h) z.1 z.2)) LW.cPB)
+        (transH (codeN (src d)) (symH LW'.cPB)) ;
+
+    P2A : Id ((T : PTy[yP W']) * Cl (yP W') T)
+               (subTy (yP W') (yP W) LW.L.FA.ElTy (yH W' W h), clSub (yP W') (yP W) (yH W' W h) LW.L.FA.ElTy LW.clA)
+               (LW'.L.FA.ElTy, LW'.clA) =
+      transH (apH {(T : PTy[yP W]) * Cl (yP W) T} {(T : PTy[yP W']) * Cl (yP W') T}
+                 (\ z -> (subTy (yP W') (yP W) z.1 (yH W' W h), clSub (yP W') (yP W) (yH W' W h) z.1 z.2)) LW.cPA)
+        (transH (codeN (tgt d)) (symH LW'.cPA)) ;
+
+    rEq : Id (UA.R W') (UA.rAct W' W (yH W' W h) LW.r) LW'.r =
+      GUnivEq.comb (yP W') (UA.R1 W') (\ y -> y.1.1.2.1) (Cl (yP W'))
+        (UA.rAct W' W (yH W' W h) LW.r).1 LW'.r.1 (UA.rAct W' W (yH W' W h) LW.r).2 LW'.r.2
+        (GUnivEq.comb (yP W') (UA.EqS W') (\ ue -> ue.1.1) (Cl (yP W'))
+           (GEqLaws[a].eqDSub (yP W') (yP W) (yH W' W h) LW.L.dat.1 LW.L.dat.2) LW'.L.dat
+           (clSub (yP W') (yP W) (yH W' W h) LW.L.FB.ElTy LW.clB) LW'.clB
+           NN.natDat P2B)
+        P2A ;
+
+    opaque P2B ; opaque P2A ; opaque rEq ;
+  } ;
+} ;

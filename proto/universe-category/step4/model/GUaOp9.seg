@@ -1,0 +1,112 @@
+-- GUaOp9.seg (inside IvBase.FaU, any base): the univalence operation, as
+-- a contractibility structure on UaTy (cours6: Sigma (X : U) Equiv (X , A)
+-- is contractible, uniformly and strictly).
+--   kop     GUaOp3 (glue the sides' data, Ext, ext and extEquiv along elYon)
+--   kunif   GUaOp8 (OutNat + the inputs of p|h are the substituted ones)
+--   kside   kunif along f, then kfull at p|f, whose side l contains id
+-- Parameters of the classifier: tautCl (+ -sub, -yon), glueCl (+ -sub),
+-- and clFullOp (over a full psi the glue classifier is the substituted
+-- one), supplied by the instance.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open Trees[a] ;
+open Arith[a] ;
+module GP = GCofib[a] ;
+module GE1 = GFibE[a+] ;
+module GX = GEqExt[a] ;
+open GLine[a] ;
+
+module UaOp (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE) 
+  (kU0 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e0)
+  (kU1 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e1)
+  (kU0e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].SFm.SF].KESI kU0)
+  (kU1e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].SFm.SF].KESI kU1)
+  (tautCl : (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].U0 Y)
+     (cnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y))
+        -> Id (GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].U0 Y') (c Y' (D.act Y' Y h x))
+              (GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].uAct Y' Y h (c Y x)))
+     -> Cl D GElC.ElC[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE].Fam[D, c, cnat].ElTy)
+  (glueCl : (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+     (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+     (hB : Cl GP.CofL[G, psi].resCtx B)
+     (c : GFibE[a].FE[G, GExt2[a].ExtB2[G, A, psi, B, al].ExtT].Comp) (e : GFibE[a].FE[G, GExt2[a].ExtB2[G, A, psi, B, al].ExtT].ESIC c)
+     -> Cl G GExt2[a].ExtB2[G, A, psi, B, al].ExtT)
+  (glueCl-sub : (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+     (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+     (hB : Cl GP.CofL[G, psi].resCtx B)
+     (c : GFibE[a].FE[G, GExt2[a].ExtB2[G, A, psi, B, al].ExtT].Comp) (e : GFibE[a].FE[G, GExt2[a].ExtB2[G, A, psi, B, al].ExtT].ESIC c)
+     (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D'])
+     (fullS : (X : Ob) (d : W0.Ix (D'.ob X)) -> Id Bool (GP.CofL[D', psi'].full X d) (GP.CofL[G, psi].full X (s.nt X d)))
+     (c' : GFibE[a].FE[D', GExt2[a].ExtB2[D', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].A', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].psi', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].B', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].al'].ExtT].Comp)
+     (e' : GFibE[a].FE[D', GExt2[a].ExtB2[D', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].A', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].psi', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].B', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].al'].ExtT].ESIC c')
+     (FS : Id (GFibE[a].FibEL D') (GExt2[a].ExtB2[D', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].A', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].psi', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].B', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].al'].ExtT, (c', e'))
+                                (GSubst[a].subFibEL D' G s (GExt2[a].ExtB2[G, A, psi, B, al].ExtT, (c, e))))
+     -> Id ((T : PTy[D']) * Cl D' T)
+           (subTy D' G GExt2[a].ExtB2[G, A, psi, B, al].ExtT s, clSub D' G s GExt2[a].ExtB2[G, A, psi, B, al].ExtT (glueCl G A psi B al hB c e))
+           (GExt2[a].ExtB2[D', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].A', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].psi', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].B', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].al'].ExtT,
+            glueCl D' GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].A' GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].psi' GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].B' GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].al'
+              (clSub GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].CL'.resCtx GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].CL.resCtx GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].sR B hB) c' e'))
+  (tautCl-sub : (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].U0 Y)
+     (cnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y))
+        -> Id (GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].U0 Y') (c Y' (D.act Y' Y h x)) (GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].uAct Y' Y h (c Y x)))
+     (D' : PCtx) (s : PSub[D', D])
+     -> Id ((T : PTy[D']) * Cl D' T)
+           (subTy D' D GElC.ElC[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE].Fam[D, c, cnat].ElTy s, clSub D' D s GElC.ElC[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE].Fam[D, c, cnat].ElTy (tautCl D c cnat))
+           (GElC.ElC[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE].Fam[D', \ Y x -> c Y (s.nt Y x), \ Y' Y h x -> transH (apH (c Y') (s.nt-nat Y' Y h x)) (cnat Y' Y h (s.nt Y x))].ElTy,
+            tautCl D' (\ Y x -> c Y (s.nt Y x)) (\ Y' Y h x -> transH (apH (c Y') (s.nt-nat Y' Y h x)) (cnat Y' Y h (s.nt Y x)))))
+  (tautCl-yon : (Z : Ob) (F1 : GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].U0 Z)
+     -> Id ((T : PTy[yP Z]) * Cl (yP Z) T)
+           (GElC.ElC[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE].Fam[yP Z, \ W g -> GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].uAct W Z g F1, \ Y' Y h g -> GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].uAct-o Y' Y Z g h F1].ElTy,
+            tautCl (yP Z) (\ W g -> GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].uAct W Z g F1) (\ Y' Y h g -> GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].uAct-o Y' Y Z g h F1))
+           F1)
+  (clFullOp : (X : Ob) (F : GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].U0 X) (p : GCofib[a+].Partials[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].UaTy].Partial[X, F])
+     (l0 : Fin p.pr) (il0 : Lands X X (p.ps l0).pQ (idH X))
+     -> Id ((T : PTy[yP X]) * Cl (yP X) T) GUaOp4.U4[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e, X, F, p, tautCl, glueCl, l0, il0].O3.Bout
+           (GUaOp4.U4[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e, X, F, p, tautCl, glueCl, l0, il0].EFu.BF, clSub (yP X) GUaOp4.U4[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e, X, F, p, tautCl, glueCl, l0, il0].O1.D GUaOp4.U4[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e, X, F, p, tautCl, glueCl, l0, il0].EFu.sec GUaOp4.U4[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e, X, F, p, tautCl, glueCl, l0, il0].G.B GUaOp4.U4[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e, X, F, p, tautCl, glueCl, l0, il0].O3.hB)) {
+  module UA = GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module UU = UA.UU ;
+  module PPa = GCofib[a+].Partials[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].UaTy] ;
+  module TC = GPre[a+].TyL[UU.UCtx, UA.UaTy] ;
+
+  kop (X : Ob) (F : UU.U0 X) (p : PPa.Partial[X, F]) : UA.UaT0 X F = GUaOp3.U3[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e, X, F, p, tautCl, glueCl].kop ;
+
+  kunif (Y X : Ob) (h : Hom Y X) (F : UU.U0 X) (p : PPa.Partial[X, F])
+    : Id (TC.EI Y) (TC.E.act Y X h (F, kop X F p)) (UU.uAct Y X h F, kop Y (UU.uAct Y X h F) (PPa.restrictP Y X h F p)) =
+    GUaOp8.K8[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e, X, F, p, tautCl, glueCl, glueCl-sub, tautCl-sub, Y, h].kunifQ ;
+
+  -- the side l at f, as a side of p|f containing id
+  il0 (X : Ob) (F : UU.U0 X) (p : PPa.Partial[X, F]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+    : Lands W W (pre W X f (p.ps l).pQ) (idH W) =
+    pre-lands W W X f (p.ps l).pQ (idH W) (lands-eq W X (p.ps l).pQ f (compH W W X f (idH W)) (symH (comp-idr W X f)) i) ;
+
+  kside (X : Ob) (F : UU.U0 X) (p : PPa.Partial[X, F]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+    : Id (TC.EI W) (TC.E.act W X f (F, kop X F p)) ((p.ps l).pv W f i) =
+    transH (kunif W X f F p)
+      (transH (GUaOp5.U5[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e, W, UU.uAct W X f F, PPa.restrictP W X f F p, tautCl, glueCl,
+                 l, il0 X F p l W f i, tautCl-sub, tautCl-yon].kfull
+                 (clFullOp W (UU.uAct W X f F) (PPa.restrictP W X f F p) l (il0 X F p l W f i)))
+              (PPa.pv-hom X F (p.ps l) W (compH W W X f (idH W)) f (comp-idr W X f)
+                 (lands-pre W W X f (p.ps l).pQ (idH W) (il0 X F p l W f i)) i)) ;
+
+  -- univalence: Sigma (X : U) Equiv (X , A) is contractible, uniformly
+  ua : PPa.ContrOp = new PPa.ContrOp[kop, kside, \ Y X h F p -> kunif Y X h F p] ;
+} ;

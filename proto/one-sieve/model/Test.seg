@@ -1,0 +1,47 @@
+-- Test.seg: MODEL/Poset/Test.agda.  Closed computations, all by refl.
+
+level a ;
+open Base ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+
+two : Nat = suc (suc zero) ;
+l0 : Tree = leaf zero ;
+l1 : Tree = leaf (suc zero) ;
+l2 : Tree = leaf two ;
+l3 : Tree = leaf (suc two) ;
+
+-- [2] = {0 < 1 < 2}
+t1 : Id Bool (car (lin two) l2) true = refl true ;
+t2 : Id Bool (car (lin two) l3) false = refl false ;
+t3 : Id Bool (le (lin two) l0 l2) true = refl true ;
+t4 : Id Bool (le (lin two) l2 l1) false = refl false ;
+
+-- the prism [2] * [1]: (0,1) and (1,0) are incomparable
+t5 : Id Bool (le (prodP (lin two) Iv) (node l0 l1) (node l1 l0)) false = refl false ;
+t6 : Id Bool (le (prodP (lin two) Iv) (node l1 l0) (node l0 l1)) false = refl false ;
+t7 : Id Bool (le (prodP (lin two) Iv) (node l0 l0) (node l2 l1)) true = refl true ;
+
+-- the enumeration of [1] * [1] has the four points
+t8 : Id Tree (prodL (enum Iv) (enum Iv))
+             (node (node l1 l1) (node (node l1 l0) (node (node l0 l1) (node (node l0 l0) nilT)))) =
+  refl (prodL (enum Iv) (enum Iv)) ;
+
+-- the lower lid of [2] * [1] sends 1 to (1,0)
+t9 : Id Tree (app (lin two) (prodP (lin two) Iv) (lid (lin two) e0) (l1, refl true)).1 (node l1 l0) =
+  app-lid1 (lin two) e0 (l1, refl true) ;
+
+-- the subset {x >= 1} of [2] is found non empty, at its largest element
+pickT (X : Ob) (Q : Subset X) : Plus (SubPt X Q) ((s : El X) -> Id Bool (Q s) false) -> Tree = split {
+  inl w -> w.1.1 ;
+  inr k -> leaf zero } ;
+
+t10 : Id Tree (pickT (lin two) (\ x -> le (lin two) l1 x.1) (decSub (lin two) (\ x -> le (lin two) l1 x.1))) l2 =
+  refl l2 ;
+
+-- and a failing one: the lid does not send 1 to (0,0)
+#fails { bad9 : Id Tree (app (lin two) (prodP (lin two) Iv) (lid (lin two) e0) (l1, refl true)).1 (node l0 l0) =
+           refl (node l0 l0) ; } ;

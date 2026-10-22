@@ -1,0 +1,87 @@
+-- EsiPi.seg: MODEL/Lv/EsiPi.agda.  Pi preserves empty-side invariance,
+-- given that the composition of B does (nothing is needed of A: the filler
+-- of A has no sides).  A value of the composite at (f , v) is a composite
+-- of B over the box restricted along f; inserting an empty side in b
+-- inserts it in the restricted box (EsiRes) and in the box for B built
+-- over the filler of the argument (same filler, same lid, sides through
+-- apW).
+--
+-- Posets at a, presheaves at l.  Agda's anonymous module is the segment CI.
+
+level a l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+open Cat[a] ;
+open Constr[a] ;
+module PR = PreL[a, l] ;
+open PR.PS ;
+module BXm = Box[a, l] ;
+module FibM = Fib[a, l] ;
+module FPE = FibPiE[a, l] ;
+module FPi = FibPi[a, l] ;
+module ES = Esi[a, l] ;
+module ESR = EsiRes[a, l] ;
+
+module EsiPi (G : PCtx) (A : PTy[G]) (B : PTy[extP G A]) (eS eT : El Iv)
+  (F : FibM.FillDef[G, A].FillOp[eT]) (cB : BXm.Boxes[extP G A, B].CompOp[eS, eT])
+  (esiB : ES.EsiDef[extP G A, B].ESI eS eT cB) {
+  open FPE.PiE[G, A, B] ;
+  open FPi.PiComp[G, A, B, eS, eT, F, cB] ;
+  module EP = ES.EsiDef[G, P] ;
+  module EB = ES.EsiDef[GA, B] ;
+
+  -- the filler of a box with no sides depends only on its lid
+  aF-eq (K : Ob) (rho rho' : TA.Pt (prodP K Iv)) (a1 : BA.LidT eT K rho) (a1' : BA.LidT eT K rho')
+    (e : Id (TA.Pt (prodP K Iv)) rho' rho) (E : Id (TA.EI K) (BA.lidE eT K rho' a1') (BA.lidE eT K rho a1))
+    : Id (TB.Pt (prodP K Iv)) (rho', F.fop K (aBox K rho' a1')) (rho, F.fop K (aBox K rho a1)) =
+    idJ (TA.Pt (prodP K Iv)) rho'
+      (\ r2 e2 -> (a2 : BA.LidT eT K r2) -> Id (TA.EI K) (BA.lidE eT K rho' a1') (BA.lidE eT K r2 a2)
+         -> Id (TB.Pt (prodP K Iv)) (rho', F.fop K (aBox K rho' a1')) (r2, F.fop K (aBox K r2 a2)))
+      (\ a2 E2 -> apH (\ q -> (rho', F.fop K (aBox K rho' q))) (TA.pr-inj K (G.act K (prodP K Iv) (lid K eT) rho') a1' a2 E2))
+      rho e a1 E ;
+
+  module CI (K : Ob) (k : Nat) (bb bb' : BP.Box[eS, K]) (ins : EP.InsE[eS, K, k, bb, bb'])
+    (a1 : BA.LidT eT K bb.brho) (a1' : BA.LidT eT K bb'.brho)
+    (EL : Id (TA.EI K) (BA.lidE eT K bb'.brho a1') (BA.lidE eT K bb.brho a1)) {
+    module C0 = CB0[K, bb, a1] ;
+    module C1 = CB0[K, bb', a1'] ;
+
+    rB : Id (TB.Pt (prodP K Iv)) C1.rhoB C0.rhoB = aF-eq K bb.brho bb'.brho a1 a1' ins.ins-rho EL ;
+
+    insB : EB.InsE[eS, K, k, C0.bB, C1.bB] = new EB.InsE[eS, K, k, C0.bB, C1.bB,
+      ins.ins-r,
+      ins.ins-k,
+      rB,
+      apW-gen K C1.x0 C0.x0 C1.u0 C0.u0 ins.ins-lid K (idH K) C1.w0 C0.w0
+        (apH (TA.E.act K (prodP K Iv) (lid K eS)) rB) (G.act-id K C1.x0) (G.act-id K C0.x0),
+      ins.ins-e,
+      ins.ins-Q,
+      \ n h h' W psi i i' ->
+        apW-gen W (G.act W (prodP K Iv) psi bb'.brho) (G.act W (prodP K Iv) psi bb.brho)
+          ((bb'.bs (ES.skipN k n, h')).sv W psi i) ((bb.bs (n, h)).sv W psi i')
+          (ins.ins-v n h h' W psi i i') W (idH W) (C1.wOf W psi) (C0.wOf W psi)
+          (apH (TA.E.act W (prodP K Iv) psi) rB)
+          (G.act-id W (G.act W (prodP K Iv) psi bb'.brho)) (G.act-id W (G.act W (prodP K Iv) psi bb.brho))] ;
+
+    cE-ins : Id (TB.EI K) (cE K bb' a1') (cE K bb a1) =
+      transH (cE-def K bb' a1') (transH (esiB K k C0.bB C1.bB insB) (symH (cE-def K bb a1))) ;
+  } ;
+
+  esiPi : EP.ESI eS eT piComp = \ X k b b' ins ->
+    piE-eq X (BP.topE eT X b'.brho (copPi X b')) (BP.topE eT X b.brho (copPi X b))
+      (apH (G.act X (prodP X Iv) (lid X eT)) ins.ins-rho)
+      (\ K f v v' R ->
+        transH (copPi-val X b' K f v)
+         (transH (CI[K, k, BP.restrict eS K X f b, BP.restrict eS K X f b', ESR.EsiRes[G, P].insRes eS K X f k b b' ins,
+                     aK X b K f v', aK X b' K f v,
+                     transH (aK-E X b' K f v) (transH R (symH (aK-E X b K f v')))].cE-ins)
+                 (symH (copPi-val X b K f v')))) ;
+} ;
+
+esiPiC (G : PCtx) (A : PTy[G]) (B : PTy[extP G A]) (cA : BXm.Boxes[G, A].Comp) (cB : BXm.Boxes[extP G A, B].Comp)
+  (eB : ES.EsiDef[extP G A, B].ESIC cB)
+  : ES.EsiDef[G, FPE.PiE[G, A, B].P].ESIC (FPi.piCompC G A B cA cB) =
+  (EsiPi[G, A, B, e0, e1, (FibM.FillB[G, A].comp-to-fill cA).2, cB.1, eB.1].esiPi,
+   EsiPi[G, A, B, e1, e0, (FibM.FillB[G, A].comp-to-fill cA).1, cB.2, eB.2].esiPi) ;

@@ -1,0 +1,105 @@
+-- GTE6.seg (inside IvBase.Cn): transport along a line, part 6: paths
+-- between two moving ends, composed along a line (the setting of the path
+-- part of TranspP, in line form).
+--
+-- K2: the points (g , c0 , c1), g in G, c0 c1 in A over g.  The path type
+-- over K2: paths in A over the point g (s constant along the path), from
+-- c0 (at e0) to c1 (at e1) (GPath.PathOverE, dd = true).  PC2: its
+-- composition from src d to tgt d (from A's ca), GPathComp.PathOverComp.
+--
+--   mk3 u u' P     the point of K2 from two elements of A over equal points
+--   mk3-act        mk3 commutes with the actions
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module K2P (G : PCtx) (A : PTy[G]) (d : Bool) (ca : CompAtP[GFam[lv].famPath, G, A, src d, tgt d].CompAt) {
+  module FM = GFam[lv] ;
+  module TA = GPR.TyL[G, A] ;
+  module GL = GPR.PshL[G] ;
+
+  EA : PCtx = TA.E ;
+  A1 : PTy[EA] = subTy EA G A (pP G A) ;
+  K2 : PCtx = extP EA A1 ;
+  module FK2 = FM.FC[K2] ;
+
+  s (X : Ob) (y : W0.Ix (K2.ob X)) (W : Ob) (f : Hom W X) (i : Hom W Iv) : W0.Ix (G.ob W) = G.act W X f y.1.1 ;
+
+  sN (J I : Ob) (h : Hom J I) (x : W0.Ix (K2.ob I)) (y : W0.Ix (K2.ob J)) (e : Id (W0.Ix (K2.ob J)) (K2.act J I h x) y)
+    (W : Ob) (f : Hom W J) (i : Hom W Iv) : Id (W0.Ix (G.ob W)) (s I x W (compH W J I h f) i) (s J y W f i) =
+    transH (symH (GL.actC W J I h f x.1.1)) (apH (\ z -> G.act W J f z.1.1) e) ;
+
+  sF (X : Ob) (y : W0.Ix (K2.ob X)) (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+    : Id (W0.Ix (G.ob V)) (G.act V W g (s X y W f i)) (s X y V (compH V W X f g) (compH V W Iv i g)) =
+    GL.actC V W X f g y.1.1 ;
+
+  -- the ends c0 and c1, read in E
+  aE (W : Ob) (y : W0.Ix (K2.ob W)) : TA.EI W = y.1 ;
+  bE (W : Ob) (y : W0.Ix (K2.ob W)) : TA.EI W = (y.1.1, y.2) ;
+
+  aE-act (W X : Ob) (f : Hom W X) (x : W0.Ix (K2.ob X)) : Id (TA.EI W) (TA.E.act W X f (aE X x)) (aE W (K2.act W X f x)) =
+    refl (TA.E.act W X f x.1) ;
+
+  bE-act (W X : Ob) (f : Hom W X) (x : W0.Ix (K2.ob X)) : Id (TA.EI W) (TA.E.act W X f (bE X x)) (bE W (K2.act W X f x)) =
+    apH {W0.Ix (A.tob W (G.act W X f x.1.1))} {TA.EI W} (\ v -> (G.act W X f x.1.1, v))
+      (tact-irr G A W X f x.1.1 (G.act W X f x.1.1) (refl (G.act W X f x.1.1))
+         (ntEq EA G (pP G A) W X f x.1 (EA.act W X f x.1) (refl (EA.act W X f x.1))) x.2) ;
+
+  opaque bE-act ;
+
+  aE-pt (W : Ob) (y : W0.Ix (K2.ob W)) : Id (W0.Ix (G.ob W)) (aE W y).1 (s W y W (idH W) (ptH W (src true))) =
+    symH (G.act-id W y.1.1) ;
+  bE-pt (W : Ob) (y : W0.Ix (K2.ob W)) : Id (W0.Ix (G.ob W)) (bE W y).1 (s W y W (idH W) (ptH W (tgt true))) =
+    symH (G.act-id W y.1.1) ;
+
+  module PC2 = GPathComp[lv].PathOverComp[K2, G, A, true, s, sN, sF, aE, bE, aE-act, bE-act, aE-pt, bE-pt, src d, tgt d, ca] ;
+  module PT2 = PC2.PT ;
+
+  ----------------------------------------------------------------------
+  -- points of K2 from two elements over equal points
+
+  mk3 (W : Ob) (u u' : TA.EI W) (P : Id (W0.Ix (G.ob W)) u'.1 u.1) : W0.Ix (K2.ob W) =
+    (u, TA.coeT W u'.1 u.1 P u'.2) ;
+
+  -- the second end of mk3 is u'
+  mk3-b (W : Ob) (u u' : TA.EI W) (P : Id (W0.Ix (G.ob W)) u'.1 u.1) : Id (TA.EI W) (bE W (mk3 W u u' P)) u' =
+    symH (TA.pr-coe W u'.1 u.1 P u'.2) ;
+
+  -- a point of K2 is determined by its two ends
+  k2Ext (W : Ob) (y y' : W0.Ix (K2.ob W)) (P : Id (TA.EI W) (aE W y) (aE W y')) (Q : Id (TA.EI W) (bE W y) (bE W y'))
+    : Id (W0.Ix (K2.ob W)) y y' =
+    idJ (TA.EI W) y.1
+      (\ z P2 -> (c : W0.Ix (A.tob W z.1)) -> Id (TA.EI W) (bE W y) (z.1, c) -> Id (W0.Ix (K2.ob W)) y (z, c))
+      (\ c Q2 -> apH {W0.Ix (A.tob W y.1.1)} {W0.Ix (K2.ob W)} (\ v -> (y.1, v)) (TA.pr-inj W y.1.1 y.2 c Q2))
+      y'.1 P y'.2 Q ;
+
+  opaque k2Ext ;
+
+  -- a line in K2 from two natural families in E over the same line in G
+  module Ln3 (X : Ob) (u u' : (W : Ob) -> Hom W X -> Hom W Iv -> TA.EI W)
+    (un : (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv) -> Id (TA.EI V) (TA.E.act V W g (u W f i)) (u V (compH V W X f g) (compH V W Iv i g)))
+    (un' : (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv) -> Id (TA.EI V) (TA.E.act V W g (u' W f i)) (u' V (compH V W X f g) (compH V W Iv i g)))
+    (P : (W : Ob) (f : Hom W X) (i : Hom W Iv) -> Id (W0.Ix (G.ob W)) (u' W f i).1 (u W f i).1) {
+    v3 (W : Ob) (f : Hom W X) (i : Hom W Iv) : W0.Ix (K2.ob W) = mk3 W (u W f i) (u' W f i) (P W f i) ;
+
+    vn (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+      : Id (W0.Ix (K2.ob V)) (K2.act V W g (v3 W f i)) (v3 V (compH V W X f g) (compH V W Iv i g)) =
+      k2Ext V (K2.act V W g (v3 W f i)) (v3 V (compH V W X f g) (compH V W Iv i g))
+        (un V W g f i)
+        (transH (symH (bE-act V W g (v3 W f i)))
+          (transH (apH (TA.E.act V W g) (mk3-b W (u W f i) (u' W f i) (P W f i)))
+            (transH (un' V W g f i) (symH (mk3-b V (u V (compH V W X f g) (compH V W Iv i g)) (u' V (compH V W X f g) (compH V W Iv i g))
+                                                  (P V (compH V W X f g) (compH V W Iv i g))))))) ;
+
+    line : W0.Ix (FK2.ob X) = (v3, vn) ;
+  } ;
+} ;

@@ -1,0 +1,477 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.6cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{enumitem}
+\usepackage{xr}
+\externaldocument[M-]{model}
+\externaldocument[L-]{localisation}
+\setlist{itemsep=1pt,topsep=3pt}
+
+\newcommand{\C}{\mathcal{C}}
+\newcommand{\Path}{\mathrm{Path}}
+\newcommand{\U}{\mathsf{U}}
+\newcommand{\El}{\mathsf{El}}
+\newcommand{\id}{\mathrm{id}}
+\newcommand{\D}{\mathsf{D}}
+\newcommand{\cosk}{\mathrm{cosk}}
+\newcommand{\Lam}{\Lambda}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\title{Finite approximations of the localisation\\[3pt]
+\large a complement to \emph{The localisation of the poset model}}
+\author{}
+\date{21 October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+For a type $A$ of the poset model, $\D_NA$ is defined as $\D A$
+(\texttt{localisation.tex}) with the families indexed only by the maps
+$[k]\to X$ with $k\le N$. We show that $\D_N A=\D(K_NA)$, where $K_NA$ is
+the $N$-coskeleton of $A$: a type over the posets whose restriction to the
+linear posets is the simplicial coskeleton of $i^*A$. So $\D_NA$ is fibrant
+when $A$ is, by Theorem~\ref{L-thm:DA} of \texttt{localisation.tex}
+applied to $K_NA$. Spheres of dimension at least $N$ have unique fillers
+in $\D_NA$, and $\D A$ is the strict limit of the tower $(\D_NA)_N$; it is
+also the internal limit. The truncation level is shifted by one: $\D_0A$
+is the propositional truncation of $A$ and $\D_1A$ its set truncation, and
+in general $\D_{n+1}$ is the candidate for $n$-truncation. The maps of the
+tower are not fibrations.
+\end{abstract}
+
+%======================================================================
+\section{The coskeleton}\label{sec:cosk}
+
+We use the notation of \texttt{localisation.tex}: $\C$ is the category of
+finite non-empty posets, $\Delta\subseteq\C$ the linear posets
+$[n]=\{0<\dots<n\}$, $\Delta_+\subseteq\Delta$ the strictly monotone maps,
+and $i^*$ the restriction to $\Delta$.
+
+\begin{definition}
+Let $N\ge-1$ and let $A$ be a type over $\Gamma$. For $\rho\in\Gamma(X)$,
+$K_NA(X,\rho)$ is the set of families $c(f)\in A([k],\rho f)$, for all
+$k\le N$ and $f:[k]\to X$, such that $c(f)\,g=c(fg)$ for every
+$g:[j]\to[k]$ with $j\le N$. Restriction along $X'\to X$ is precomposition.
+The map $\eta:A\to K_NA$ is $\eta(a)(f)=af$, and $K_MA\to K_NA$, for
+$N\le M$, forgets the values above $N$.
+\end{definition}
+
+The family and the condition are coded, so $K_NA$ is a type. On a linear
+poset, $K_NA([m],\tau)$ is the set of maps from the $N$-skeleton of
+$\Delta[m]$ to $i^*A$ over $\tau$: such a map is determined by its values
+on the simplices of dimension at most $N$, and these are natural along all
+maps. So $i^*K_NA$ is the $N$-coskeleton of $i^*A$. For $N=-1$ the
+families are empty and $K_{-1}A=1$.
+
+\begin{lemma}\label{lem:cosk}
+\leavevmode
+\begin{enumerate}
+\item For $m\le N$, $\eta:A([m],\tau)\to K_NA([m],\tau)$ is a bijection,
+  with inverse $c\mapsto c(\id)$.
+\item For $m>N$, restriction to the faces is a bijection from
+  $K_NA([m],\tau)$ to the compatible families of elements of
+  $K_NA([m-1],\tau d_i)$, $0\le i\le m$.
+\item A fibration structure on $A$ gives a horn filling operation on
+  $i^*K_NA$.
+\item On a linear poset, $A$ is the limit of the tower
+  $\cdots\to K_{N+1}A\to K_NA\to\cdots\to K_{-1}A$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+(1) For $m\le N$ the identity of $[m]$ is one of the indices, and
+$c(g)=c(\id)\,g$.
+
+(2) A map $[k]\to[m]$ with $k\le N<m$ misses a point of $[m]$, so it
+factors through a face $d_i$. If it factors through $d_i$ and $d_j$, it
+factors through their intersection, on which compatible faces agree.
+
+(3) Let $h$ be a horn of $i^*K_NA$ on $\Lam^k[m+1]$. If $m\le N$, its faces
+read at the identity are elements of $A([m])$, and two of them agree on
+their common face, by the naturality of $h$ and (1). The construction of
+Lemma~\ref{L-lem:comp-horn} uses only these faces and their agreement: it
+reads them on the poset horn and composes in $A$. Its filler $a$ gives the
+filler $\eta(a)$. If $m>N$, a map $[j]\to[m+1]$ with $j\le N$ misses at least
+two vertices, hence a vertex different from $k$, so it lies in the horn,
+and $h$ read at these maps is the filler.
+
+(4) By (1).
+\end{proof}
+
+The count in (3) is elementary: a monotone sequence on $[0,j]$ with values
+at most $M$ and $j<M$ misses a value at most $M$; applied to the
+composite with the degeneracy at $k$, this gives a vertex $y\ne k$
+missed by the map.
+
+%======================================================================
+\section{The approximations $\D_N$}\label{sec:DN}
+
+\begin{definition}
+For a type $A$ over $\Gamma$ and $N\ge-1$, $\D_NA=\D(K_N A)$.
+\end{definition}
+
+\begin{proposition}\label{prop:DN}
+$\D_NA(X,\rho)$ is in bijection with the set of families $w(f)\in
+A([k],\rho f)$, for $k\le N$ and $f:[k]\to X$, with $w(f)\,g=w(fg)$ for
+every strictly monotone $g:[m]\to[k]$. The bijection commutes with
+restriction.
+\end{proposition}
+
+\begin{proof}
+Given $u\in\D_NA(X,\rho)$, put $w(f)=u(f)(\id)$; it is natural along strict
+maps, by the naturality of $u$ and of $u(f)$. Conversely, given $w$, put
+$u(f)(g)=w(fm)\,\sigma$, where $g=m\sigma$ is the image factorisation of
+$g:[j]\to[k]$, $m$ strict and $\sigma$ surjective. Two factorisations are
+compared by a strict map $\mu$ (Eilenberg--Zilber): for $g$ and $gt$,
+$\sigma t=\mu\sigma'$ and $m'=m\mu$, which gives the naturality of $u(f)$
+along every $t$; for $g$ and $sg$ with $s$ strict, $\sigma=\mu\sigma'$ and
+$m\mu=sm'$, which gives the naturality of $u$ along $s$. Below $N$ the value
+$w(fm)\sigma$ is $w(f)\,m\sigma=w(f)g$, so the two maps are inverse.
+\end{proof}
+
+So $\D_NA$ is $\D A$ with the indices restricted to $[0],\dots,[N]$, and
+$\D A=\D_\infty A$.
+
+\begin{corollary}\label{cor:fib}
+If $A$ is fibrant, so is $\D_NA$, naturally in $\Gamma$.
+\end{corollary}
+
+\begin{proof}
+By Lemma~\ref{lem:cosk}(3) and Theorem~\ref{L-thm:DA} applied to $K_NA$.
+Naturality is obtained on the universal family, as in
+Theorem~\ref{L-thm:DA}: $K_N$ preserves cartesian maps, as $\D$ does, so
+$\D_N(c^*\El)\to\D_N\El$ is cartesian over $c$, and these maps compose.
+\end{proof}
+
+\begin{example}\label{ex:low}
+\leavevmode
+\begin{itemize}
+\item $\D_{-1}A=1$.
+\item $\D_0A(X,\rho)=\prod_{x\in X}A([0],\rho x)$, since the only strictly
+  monotone map $[0]\to[0]$ is the identity. Any two elements $u,v$ at $X$
+  are the ends of a line, namely the element of $\D_0A$ at $X\times[1]$
+  equal to $u$ on $X\times\{0\}$ and to $v$ on $X\times\{1\}$. So $\D_0A$
+  is a proposition, with an element over $\rho$ exactly when every $A([0],\rho x)$
+  has one: the propositional truncation of $A$, with no higher inductive
+  type.
+\item $i^*K_1A$ has the points and the edges of $i^*A$, and every
+  compatible boundary of dimension $\ge2$ has a unique filler. Its
+  connected components are those of $i^*A$, and its loops are all
+  homotopic to the constant ones: $\D_1A$ is the candidate set truncation.
+\end{itemize}
+\end{example}
+
+\begin{remark}
+The fibre of $\D_NA$ at $X=[0]$ is not the truncation of the fibre of $A$.
+It is the set of maps from the $N$-skeleton of the semi-simplicial set
+with one simplex in each dimension, which has the homotopy type of a
+sphere when $N$ is odd. This does not matter, because the homotopy type
+of a $\D$-modal type is read on its restriction to $\Delta$.
+\end{remark}
+
+%======================================================================
+\section{Truncation level and limit}\label{sec:trunc}
+
+\begin{proposition}\label{prop:cosk}
+For $m>N$, restriction to the faces is a bijection from $\D_NA([m],\rho)$ to
+the compatible families of elements of $\D_NA([m-1],\rho d_i)$. So
+$i^*\D_NA$ has unique fillers for all spheres of dimension at least $N$.
+\end{proposition}
+
+\begin{proof}
+By Proposition~\ref{prop:DN}, as in Lemma~\ref{lem:cosk}(2): a map
+$[k]\to[m]$ with $k\le N<m$ misses a point, so it factors through a face.
+\end{proof}
+
+In a Kan complex with this property, the homotopy groups $\pi_k$ vanish
+for $k\ge N$. A class in $\pi_k$ is a $k$-simplex with boundary at the base
+point, and the sphere of dimension $k\ge N$ formed by this simplex and
+degenerate ones has a filler, which is a homotopy to the base point.
+Classically, $i^*A\to\cosk_Ni^*A$ is moreover a bijection on $\pi_k$ for
+$k<N$, since these use simplices of dimension at most $k+1\le N$ only. So
+$\D_{n+1}A$ is the candidate $n$-truncation of $\D A$.
+
+\begin{proposition}\label{prop:lim}
+$\D A$ is the limit of the tower $\cdots\to\D_{N+1}A\to\D_NA\to
+\cdots\to\D_{-1}A=1$.
+\end{proposition}
+
+\begin{proof}
+By Proposition~\ref{prop:DN}, a compatible sequence of elements of the
+$\D_NA(X,\rho)$ is a family indexed by all the maps $[k]\to X$, natural
+along the strictly monotone maps, that is, an element of $\D A(X,\rho)$.
+
+\end{proof}
+
+\begin{remark}\label{rem:notfib}
+The maps of the tower are not fibrations. A line of $\D_0A$ at $[0]$ is an
+element at $[1]$, that is, two points $a,b$ of $A([0])$. A lift to $\D_1A$
+starting from a point of $\D_1A$ over $a$ gives an element of $\D_1A([1])$,
+and in particular an edge of $i^*A$ from $a$ to $b$. If $a$ and $b$ lie in
+different components, there is none. The limit is therefore a strict
+limit, not the limit of a tower of fibrations. The same holds for the
+coskeletal tower of a Kan complex, which converges strictly although its
+maps are not Kan fibrations. Internally nothing is lost: every map is
+equivalent to the projection of the family of its fibres, so the internal
+tower $\D_{N+1}A\to\D_NA$ is a tower of fibrations up to equivalence. What
+does not hold automatically is that the strict limit computes the internal limit.
+\end{remark}
+
+%======================================================================
+\section{Convergence}\label{sec:conv}
+
+Write $C=i^*A$ and $C_N=i^*K_NA$, the $N$-coskeleton of $C$, so that
+$\D_NA=\D(K_NA)$. Each $C_N$ has a horn filling operation
+(Lemma~\ref{lem:cosk}(3)).
+In dimensions $\le N$ the simplices of $C_N$ are those of $C$, and in higher
+dimensions they are determined by their boundaries. For a poset $P$ we
+identify $P$ with its nerve, so that $\Delta[m]\times\Delta[1]^k$ is the
+poset $[m]\times[1]^k$. A map $P\to C_N$ over $\rho$ is an element of
+$K_NA(P,\rho)$, since both are the maps from the $N$-skeleton of $P$ to $C$.
+
+\begin{lemma}\label{lem:box}
+Let $T$ be a simplicial set with a horn filling operation, $P$ a finite
+poset, $S\subseteq P$ a simplicial subset and $e\in\{0,1\}$. Every map
+$P\times\{e\}\cup S\times\Delta[1]\to T$ extends to $P\times\Delta[1]$.
+In particular every open box of $\Delta[m]\times\Delta[1]^k$, $k\ge1$, has a
+filler in $T$.
+\end{lemma}
+
+\begin{proof}
+\emph{Prisms over a simplex.} A problem at $n$ is a map
+$b:\Delta[n]\times\{e\}\cup Q\times\Delta[1]\to T$ with $Q\subseteq\Delta[n]$; its
+restriction along $d_i$ is a problem at $n-1$. By recursion on $n$ we choose a
+filler $F(b)$ with $F(b)\,d_i=F(b\,d_i)$. If $Q$ contains the identity,
+$F(b)=b$. Otherwise the fillers $F(b\,d_i)$ agree on the common faces, since
+$F(b\,d_i)\,d_j=F(b\,d_id_j)$, and $\partial\Delta[n]\times\Delta[1]\cup
+\Delta[n]\times\{e\}$ is given. The non-degenerate $(n+1)$-simplices of
+$\Delta[n]\times\Delta[1]$ are the shuffles
+\[
+P_k=\bigl((0,0),\dots,(k,0),(k,1),\dots,(n,1)\bigr),\qquad 0\le k\le n.
+\]
+The face $d_k$ of $P_k$ is the face $d_k$ of $P_{k-1}$, the face $d_{k+1}$ of
+$P_k$ is the face $d_{k+1}$ of $P_{k+1}$, and the other faces of $P_k$ lie in
+$\partial\Delta[n]\times\Delta[1]$, apart from $d_{n+1}P_n=\Delta[n]\times\{0\}$
+and $d_0P_0=\Delta[n]\times\{1\}$. For $e=0$ fill $P_n,P_{n-1},\dots,P_0$ in
+this order: when $P_k$ is filled, all its faces but $d_k$ are known, so $P_k$
+is the filler of a horn on $\Lam^k[n+1]$. For $e=1$ fill $P_0,\dots,P_n$, each
+on $\Lam^{k+1}[n+1]$.
+
+\emph{Prisms over a poset.} For an injective $c:[n]\to P$ let $b_c$ be the
+problem at $n$ read along $c$, with $Q=c^*S$. Restriction along a face map
+gives $b_c\,d_i=b_{cd_i}$, so $F(b_c)\,\mu=F(b_{c\mu})$ for every injective
+$\mu$, since these are composites of face maps. A simplex $g:[W]\to P$ factors uniquely as
+$g=c\sigma$ with $c$ injective and $\sigma$ surjective (Eilenberg--Zilber), and
+we put $F(g,j)=F(b_c)(\sigma,j)$. If $k:[W']\to[W]$, the factorisation of
+$gk$ is $(c\mu)\sigma'$ with $\mu$ injective and $\mu\sigma'=\sigma k$, so
+$F(gk,jk)=F(b_c)(\mu\sigma',jk)=F(g,j)\,k$. If $g\in S$ then $c\in S$, since
+$c=g\delta$ for a section $\delta$ of $\sigma$; the identity is then in
+$c^*S$, and $F(g,j)=b_c(\sigma,j)$ is the given value. The same holds at
+$j=e$.
+
+\emph{Boxes.} An open box of $\Delta[m]\times\Delta[1]^k$ is the union of all the
+codimension-one faces except one face $x_l=1-e$ of the cube. Permuting the cube
+coordinates so that $l=k$, it is $P\times\{e\}\cup\partial P\times\Delta[1]$,
+where $P=[m]\times[1]^{k-1}$ and $\partial P$ is the union of the faces of $P$.
+\end{proof}
+
+The fillers are uniform along the face maps only, so no excluded middle is
+used. The prism over $P$ is filled simplex by simplex, without ordering
+the simplices of $P$. The shuffle order is used only inside each simplex.
+Let
+\[
+L=\Sigma\,(u:\textstyle\prod_N\D_NA)\,\prod_N\Path_{\D_NA}(r\,u_{N+1},u_N)
+\]
+be the internal limit, and $\varphi:\D A\to L$ the map
+$u\mapsto((r\,u)_N,\text{constant lines})$.
+
+\begin{theorem}\label{thm:conv}
+If $A$ is fibrant, $\varphi$ is a homotopy equivalence.
+\end{theorem}
+
+\begin{proof}[Construction]
+Let $\ell=(u_N,p_N)\in L(X)$. For $f:[m]\to X$ put $\sigma_N=u_N(f)$, and
+let $p_N(f)$ be the prism $\Delta[m]\times\Delta[1]\to C_N$ obtained by
+reading $p_N$ along $f\times[1]$ and extending by Eilenberg--Zilber, as in
+Theorem~\ref{L-thm:DA}. We define, by recursion on $m$, an
+$m$-simplex $\psi(f)$ of $C$, and for every $N\ge m$:
+\begin{itemize}
+\item a prism $H^N(f):\Delta[m]\times\Delta[1]\to C_N$ from $\psi(f)$ to
+  $\sigma_N$;
+\item a square $\Theta_N(f):\Delta[m]\times\Delta[1]^2\to C_N$ with edges
+  $H^{N+1}(f)$ and $H^N(f)$, $p_N(f)$, and the constant line at $\psi(f)$.
+\end{itemize}
+Each of these restricts along the face maps to the same datum at $fd_i$.
+For $N<m$ there is nothing to choose, since prisms and squares in $C_N$ of
+an $m$-simplex with $m>N$ are determined by their faces. All the open boxes
+below are filled by Lemma~\ref{lem:box}. Each lies in dimensions $\le m+1$, so in
+step 3, where $m+1\le N-1$, the box given in $C_{N-1}$ is a box of $C_N$, and
+the image in $C_{N-1}$ of the filled square is $\Theta_{N-1}(f)$. The boxes of
+steps 1 and 3 have dimension at most $N$, so they are boxes of $C$ itself, and
+only step 2 uses $C_m$. Steps 1 and 3 alone define $\psi(\ell)$; step 2 is
+needed only for the homotopy.
+\begin{enumerate}
+\item $H^{m+1}(f)$ is the filler of the open box with lid $\sigma_{m+1}$
+  and sides $H^{m+1}(fd_i)$. Its other end is $\psi(f)$. The box lies in
+  dimensions $\le m+1$, where $C_{m+1}$ is $C$, so $\psi(f)$ is a simplex
+  of $C$.
+\item $H^m(f)$ and $\Theta_m(f)$ fill, in $C_m$, the open box of the square
+  formed by $H^{m+1}(f)$, $p_m(f)$, the constant line, and the sides
+  $\Theta_m(fd_i)$.
+\item For $N\ge m+2$, $H^N(f)$ and $\Theta_{N-1}(f)$ fill, in $C_N$, the
+  open box formed by $H^{N-1}(f)$, $p_{N-1}(f)$, the constant line, and the
+  sides $\Theta_{N-1}(fd_i)$.
+\end{enumerate}
+The data of $fd_i$ used in each step have already been built. For $fd_i$,
+of dimension $m-1$, they come from its steps 1 and 3 with $N=m$ and
+$N=m+1$. The edges shared by a side and the rest of the box agree because
+they are themselves sides of earlier boxes. So $\psi(\ell)=(f\mapsto\psi(f))$
+is natural along the face maps, and is an element of $\D A(X)$. Each
+$(H^N,\Theta_N)$ is natural along the face maps, so it defines a line of
+$\D_NA$ and a square, read at the maps $(f,h):[k]\to X\times[1]$ through
+$\langle\id,h\rangle$, as in Lemma~\ref{L-lem:D-htpy}. These form a path
+$\varphi\psi(\ell)\simeq\ell$ in $L$. Everything at $f$ is computed from
+data along $f$, so the construction is natural in $X$ and in $\Gamma$.
+
+For $\psi\varphi\simeq\id$, let $u\in\D A(X)$ and run the construction on
+$\varphi(u)$. By the same recursion, using open boxes one dimension
+higher, build for each $f:[m]\to X$:
+\begin{itemize}
+\item a prism $G(f)$ in $C$ from $\psi\varphi(u)(f)$ to $u(f)$, with sides
+  $G(fd_i)$;
+\item for $N\ge m+1$, squares $\Xi^N(f)$ in $C_N$ between $H^N(f)$ and
+  $G(f)$, with constant top and bottom.
+\end{itemize}
+$G(f)$ and $\Xi^{m+1}(f)$ fill the box of $H^{m+1}(f)$ with sides
+$\Xi^{m+1}(fd_i)$. For $N\ge m+2$, $\Xi^N(f)$ fills, in $C_N$, the cube
+formed by $\Theta_{N-1}(f)$, $\Xi^{N-1}(f)$, constant faces, and the sides
+$\Xi^N(fd_i)$. Then $G$ is a line of $\D A$ from $\psi\varphi(u)$ to $u$.
+\end{proof}
+
+\begin{remark}
+Two features make the construction work.
+\begin{itemize}
+\item The value of $\psi(\ell)$ in dimension $m$ is taken at stage $m+1$,
+  never at a lower stage. In particular $u_0$ is never used, so the
+  obstruction of Remark~\ref{rem:notfib} does not arise.
+\item The squares $\Theta_N$ are part of the data and are built by box
+  filling. They are not obtained by concatenating the $p_N$. A
+  concatenation would not commute strictly with the faces: the face of
+  $(H\cdot p^{-1})\cdot p$ is not $H$.
+\end{itemize}
+The connectedness of the maps of the tower is witnessed by fillers of
+$C$ and of the $C_N$. So no choice principle is used, whereas the internal
+argument from towers of connected maps needs dependent choice.
+\end{remark}
+
+%======================================================================
+\section{The propositional truncation}\label{sec:prop}
+
+A type $B$ is a proposition if any two elements $w,w'$ of $B$ over the same
+point have a path, natural in the stage: an element of $B$ at $X\times[1]$
+equal to $w$ on $X\times\{0\}$ and to $w'$ on $X\times\{1\}$. This is a
+section of $\Pi(b\,b':B)\,\Path_B(b,b')$, read in the total presheaf.
+
+\begin{theorem}\label{thm:prop}
+Let $A$ be fibrant. Then $\D_0A$ is a fibrant $\D$-modal proposition, and
+for every fibrant $\D$-modal proposition $B$ and map $g:A\to B$ there is a
+map $\D_0A\to B$. So $A\to\D_0A$ is the propositional truncation in the
+$\D$-modal types.
+\end{theorem}
+
+\begin{proof}
+$\D_0A$ is fibrant by Corollary~\ref{cor:fib}, and modal since $\D C$ is
+modal whenever $i^*C$ has a horn filling operation, which holds for
+$C=K_0A$ (Lemma~\ref{lem:cosk}(3)). It is a proposition by
+Example~\ref{ex:low}: the path between $u$ and $v$ is $u$ on $X\times\{0\}$
+and $v$ on $X\times\{1\}$.
+
+A fibrant proposition $B$ has sphere fillers, uniform along the face maps.
+For $w\in\D_0B([k],\rho)$, that is $k+1$ vertices of $B$ over a simplex
+$\rho$ of the context, define $\mathrm{fl}(w)\in B([k],\rho)$ with faces
+$\mathrm{fl}(w\,d_i)$, by recursion on $k$. For $k=0$ it is the vertex. For
+$k+1$ the faces $s_i=\mathrm{fl}(w\,d_i)$ form a sphere. A filler $c$ of the
+horn $(s_i)_{i\ge1}$ (Lemma~\ref{L-lem:comp-horn}) lies over $\rho$; the box
+over $[k+1]$ with lid $c$ at $1$ and, on the boundary, the paths of $B$
+from the sphere to $c$ is filled by Lemma~\ref{lem:box}, and
+$\mathrm{fl}(w)$ is its other end. Then $f\mapsto\mathrm{fl}(w f)$ is a map
+$\D_0B\to\D B$, natural since $\mathrm{fl}$ depends only on $w f$. The map
+$\D_0A\to B$ is $p_B\circ\mathrm{fl}\circ\D_0 g$, with $p_B$ an inverse of
+$\eta_B$. The homotopies needed for the universal property are free,
+since $B$ is a proposition.
+\end{proof}
+
+For $n\ge0$ the same pattern needs sphere fillers in an $n$-truncated type
+for spheres of dimension $\ge n+1$, which requires relating iterated path
+types to spheres (Section~\ref{sec:remains}, item 1). The alternative
+induction through $\Path_{\D_{n+2}A}(\eta a,\eta b)\simeq\D_{n+1}\Path_{\D
+A}(\eta a,\eta b)$ needs, besides this comparison (a homotopy equivalence,
+not an isomorphism: the $(n+2)$-simplices of $\D_{n+2}A$ over a
+non-degenerate $(n+2)$-simplex of $X$ have no counterpart), the internal
+lemmas on connected maps, for which the model has no internal language.
+
+%======================================================================
+\section{What remains}\label{sec:remains}
+
+The statement \emph{every $\D$-modal type is the limit of its Postnikov
+tower} needs the following points beyond Sections~\ref{sec:cosk}--\ref{sec:conv}.
+\begin{enumerate}
+\item The comparison between the internal truncation level (iterated
+  identity types are propositions) and the unique filling of spheres of
+  Proposition~\ref{prop:cosk}, for fibrant types of the poset model.
+\item The universal property of $A\to\D_{n+1}A$ among the $\D$-modal
+  $n$-truncated types $B$. A natural route is to show that $\D B\to\D_{n+1}B$ is a
+  homotopy equivalence for such $B$, since spheres of dimension $>n$ bound
+  in $B$, and then to argue as in Proposition~\ref{L-prop:univ}. That
+  argument also needs $\eta_{\D_NA}\simeq\D_N\eta_A$, and the homotopy of
+  Lemma~\ref{L-lem:eta-path} does not restrict to $\D_N$: it reads $u$ at
+  dimensions up to $|B_0|+|A_1|-1$, which may exceed $N$.
+\item Whitehead's principle in the form: if $\alpha:A\to B$ is a map of
+  fibrant types and every $\D_N\alpha$ is a homotopy equivalence, then so is
+  $\D\alpha$. With Theorem~\ref{thm:conv} it reduces to the invariance of the
+  internal limit under a levelwise equivalence of towers. That invariance
+  is a statement of type theory with $\Pi$, $\Sigma$ and $\Path$, and needs
+  no property of the model.
+\end{enumerate}
+
+%======================================================================
+\appendix
+\section{Correspondence with the formalisation}
+
+\noindent Layer L9 of \texttt{seg/core}, over the poset instance.
+
+\medskip
+\begin{tabular}{p{4.3cm}p{9.6cm}}
+statement & files\\\hline
+$K_NA$, $\eta$, the restrictions & CCosk (KT, Res)\\
+Lemma~\ref{lem:cosk}(3) & CCoskHorn (HK; the count: pigN, InHorn); CLocHorn now reads a horn through its faces (FD, HSF, HPF, FaceFill), and HornOfFib is the instance for $i^*A$\\
+Definition of $\D_N$, Corollary~\ref{cor:fib} & CLocDN (DN.fib = Theorem~\ref{L-thm:DA} for $K_NA$); naturality: CCoskCart, CLocDNUniv\\
+Proposition~\ref{prop:DN} & CLocDNC (to, from, to-from, from-to, to-nat); CLocEZ.sN-le, r-le\\
+Proposition~\ref{prop:lim} & CLocDN (Lim: u, RN.res-u, uniq)\\
+Lemma~\ref{lem:box} & CBoxFill (BF: the problem at $c$, RS, the filled prisms fl, the map Fv with Fp, Fn, Fe, Fs); the factorisation: CBoxEZ (EZX, EZXK, EZXI; heights HLin, HProd); faces suffice: CFacesGen (CLocD.FacesGen is its instance); squares: CBoxSq\\
+Theorem~\ref{thm:conv}, the construction of $\psi$ & reading $u_N$, $p_N$ along $f$: CPostMap (DR, DRI, DRZ, DRP, DRId); sides of the boxes: CPostBdry (BG, BS; CFaceTwo, shared with CLocHorn); the open box of a square over a simplex, for any type with face-uniform fillers: CPostSq (SqE, SqS, SqZ); step 1: CPostStep1 (P1, S1); step 3: CPostStep3 (E3; S3, instance of SqS); dimension 0: CPostStep0; the recursion: CPostRec (Rec, SRec over the stages, ST from $m$ to $m+1$, FFS the agreement of faces, Drec, psi $\in\D A(X)$)\\
+Theorem~\ref{thm:prop} & IsPropE, D0P (D$_0$A a proposition), D0M (fibrant, modal; CLocUniv.dModalH, CLocEq.FibD): CTruncProp; SF (sphere filling fl, the map sN : $\D_0B\to\D B$), KMap ($K_N$ on maps), UP0.k ($\D_0A\to B$): CTruncFill\\
+Theorem~\ref{thm:conv}, $\varphi\psi\simeq\id$ & $\eta$ and the value at the identity (Lemma~\ref{lem:cosk}(1)): CCosk (etaE, ev, eta-ev, ev-eta); reading $p_N$ along $f\times[1]$ in $K_NA$: CPostK (DRK, DRKI, DRKE; along strict chains DRS, DRKS); step 2: CPostStep2 (E2; S2, S2z, instances of SqS, SqZ for $B=K_mA$ with the fillers of CCoskHorn); faces suffice below a bound: CFacesGen.SGB (SG is its instance); the lines: CPostLine (St2S, St2Z: step 2 at every simplex; the family val, natural along faces WF, along strict maps FG; DCN.line $\in\D_NA(X\times[1])$; end0, end1); the squares: CPostSquare (val2, DCS.sq $\in\D_NA((X\times[1])\times[1])$; edges sq-s0, sq-s1, sq-t0, sq-t1)
+\end{tabular}
+
+\medskip
+Not formalised: Lemma~\ref{lem:cosk}(2) and Proposition~\ref{prop:cosk},
+Example~\ref{ex:low} (except $\D_0A$ a proposition), Section~\ref{sec:remains}; of Theorem~\ref{thm:conv},
+the homotopy $\psi\varphi\simeq\id$ and the naturality of $\psi$ and of the
+homotopy in $X$. For $\varphi\psi\simeq\id$ the lines and squares are
+formalised with all their edges, at a fixed $(X,\ell)$; the internal limit $L$
+is not defined as a type, and the path in $L$ is given by these components.
+
+\end{document}

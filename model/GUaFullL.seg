@@ -1,0 +1,122 @@
+-- GUaFullL.seg (inside IvBase.FaU; Step 3): the classifier parameter
+-- smallCl-full for the poset universe U_L: at a full point x = (w , fu)
+-- of GDr, the small Ext's fibration along the Yoneda map of w is B's code.
+--
+--   Dir      (GUaFullL1) the composite: the small Ext's (Theorem 7 at a+, moved down
+--            along yx) at a problem is El's composite at the problem moved
+--            along the codes of B (C5's full case, the end of the
+--            transferred filler GTransferEnd.trEnd, HU0 / HU1)
+--   then     TrSub along the identity (the fibres of the small Ext read in
+--            El, phBR) and El along the codes of B is B's code (tcong,
+--            yon)
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Trees[a] ;
+open Arith[a] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open GLine[a] ;
+module GE1 = GFibE[a+] ;
+module L = GPre[a+].PS ;
+module LP = GPre[a+] ;
+module FMa = GFam[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+
+module FL
+  (kU0 : GLine[a+].LineFibP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen].FibAt e0)
+  (kU1 : GLine[a+].LineFibP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen].FibAt e1)
+  (kU0e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0].SFm.SF].KESI kU0)
+  (kU1e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1].SFm.SF].KESI kU1)
+  (cE : GE1.FE[GUnivL.UL.UCtx, GUnivL.UL.EGen].Comp)
+  (eE : GE1.FE[GUnivL.UL.UCtx, GUnivL.UL.EGen].ESIC cE)
+  (HU0 : Id (GLine[a+].CompAtP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0, e1].CompAt)
+            GLine[a+].CompAtP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0, e1].FromFib[kU0].ca cE.1)
+  (HU1 : Id (GLine[a+].CompAtP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1, e0].CompAt)
+            GLine[a+].CompAtP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1, e0].FromFib[kU1].ca cE.2)
+  (yon : (Z : Ob) (F1 : GUnivL.UL.U0 Z)
+     -> Id (GFibE[a].FibEL (yP Z))
+           GElC.ElC[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, cE, eE].Fam[yP Z, \ W g -> GUnivL.UL.uAct W Z g F1, \ Y' Y h g -> GUnivL.UL.uAct-o Y' Y Z g h F1].fib F1)
+  (X : Ob) (w : GExtBig.UB[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A].Pr X) (fu : IsT (GExtBig.UB[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A].CU.full X w)) {
+  module F1 = GUaFullL1.FL1[kU0, kU1, kU0e, kU1e, cE, eE, HU0, HU1, yon, X, w, fu] ;
+  module UU = F1.UU ;
+  module EC = F1.EC ;
+  module LC = F1.LC ;
+  module FMx = F1.FMx ;
+  module UB = F1.UB ;
+  module CU = F1.CU ;
+  module XS = F1.XS ;
+  module CM = F1.CM ;
+  module FU = F1.FU ;
+  module Fc = F1.Fc ;
+  module TE2 = F1.TE2 ;
+  module D01 = GUaFullL1b.FL1b[kU0, kU1, kU0e, kU1e, cE, eE, HU0, HU1, yon, X, w, fu].D01 ;
+  module D10 = GUaFullL1b.FL1b[kU0, kU1, kU0e, kU1e, cE, eE, HU0, HU1, yon, X, w, fu].D10 ;
+
+  yx : GSmall.XSub[yP X, CU.resCtx] = F1.FT0.yx ;
+  E1 : PTy[yP X] = F1.FT0.E1 ;
+  E2 : PTy[yP X] = F1.FT0.E2 ;
+  c (W : Ob) (f : Hom W X) : UU.U0 W = F1.FT0.c W f ;
+  cnat (Y' Y : Ob) (h : Hom Y' Y) (f : Hom Y X) : Id (UU.U0 Y') (c Y' (compH Y' Y X f h)) (UU.uAct Y' Y h (c Y f)) = F1.FT0.cnat Y' Y h f ;
+  PhNphi (V W : Ob) (g : Hom V W) (w : F1.TE1.EI W)
+    : Id (TE2.EI V) ((idS (yP X)).nt V (F1.TE1.E.act V W g w).1, FMx.phBR V (F1.TE1.E.act V W g w).1 (F1.TE1.E.act V W g w).2)
+                    (TE2.E.act V W g ((idS (yP X)).nt W w.1, FMx.phBR W w.1 w.2)) = F1.FT0.PhNphi V W g w ;
+
+  ----------------------------------------------------------------------
+  -- the fibres: the small Ext at a full point is El along the codes of B
+
+  module FT0 = F1.FT0 ;
+  module MH = FT0.MH ;
+  module TP = FT0.TP ;
+
+  module TS = GTransferSub.TrSub[yP X, yP X, idS (yP X), E2, Fc.fib.2.1] ;
+
+  Hph (W : Ob) (d : Hom W X) (b : W0.Ix (E1.tob W d))
+    : Id (TE2.EI W) ((liftP (yP X) (yP X) E2 (idS (yP X))).nt W (GEqLaws[a].TriL[yP X].trE W E1 (subTy (yP X) (yP X) E2 (idS (yP X))) TP.tyEq (d, b)))
+                    ((idS (yP X)).nt W d, FMx.phBR W d b) =
+    apH ((liftP (yP X) (yP X) E2 (idS (yP X))).nt W) (FT0.trEv W d b) ;
+
+  P1 : Id ((T : PTy[yP X]) * TS.ClTy T) (E1, (D01.T2.compAt, D10.T2.compAt)) (subTy (yP X) (yP X) E2 (idS (yP X)), TS.scomp) =
+    TS.trSub E1 TP.tyEq FMx.phBR FMx.psBR FMx.phB-psBR FMx.psB-phBR PhNphi Hph ;
+
+  P2 : Id ((T : PTy[yP X]) * TS.ClTy T) (E1, (D01.T1.compAt, D10.T1.compAt)) (E1, (D01.T2.compAt, D10.T2.compAt)) =
+    apH {TS.ClTy E1} {(T : PTy[yP X]) * TS.ClTy T} (\ z -> (E1, z))
+      (transH (apH {GLine[a].CompAtP[GFam[a].famPath, yP X, E1, e0, e1].CompAt} {TS.ClTy E1} (\ z -> (z, D10.T1.compAt)) D01.ceq)
+              (apH {GLine[a].CompAtP[GFam[a].famPath, yP X, E1, e1, e0].CompAt} {TS.ClTy E1} (\ z -> (D01.T2.compAt, z)) D10.ceq)) ;
+
+  opaque Hph ; opaque P1 ; opaque P2 ;
+
+  res1 : Id (GFibE[a].FibEL (yP X)) (XS.extFib (yP X) FMx.yd') (GSubst[a].subFibEL (yP X) (yP X) (idS (yP X)) Fc.fib) =
+    TS.fibEq Fc.fib.2.2 E1 (XS.extFib (yP X) FMx.yd').2.1 (XS.extFib (yP X) FMx.yd').2.2 (transH P2 P1) ;
+
+  ----------------------------------------------------------------------
+  -- El along the codes of B is B's code: the codes are B's at x moved
+  -- (bmap is natural), and El along a Yoneda code is the code (yon)
+
+  c' (W : Ob) (g : Hom W X) : UU.U0 W = FT0.c' W g ;
+  cnat' (Y' Y : Ob) (h : Hom Y' Y) (g : Hom Y X) : Id (UU.U0 Y') (c' Y' (compH Y' Y X g h)) (UU.uAct Y' Y h (c' Y g)) = FT0.cnat' Y' Y h g ;
+
+  fibCong : Id (GFibE[a].FibEL (yP X)) Fc.fib EC.Fam[yP X, c', cnat'].fib =
+    idJ ((Y : Ob) -> Hom Y X -> UU.U0 Y) c
+      (\ c2 P2 -> (cn2 : FT0.CnTy c2) -> Id (GFibE[a].FibEL (yP X)) Fc.fib EC.Fam[yP X, c2, cn2].fib)
+      (\ cn2 -> apH {FT0.CnTy c} {GFibE[a].FibEL (yP X)} (\ k -> EC.Fam[yP X, c, k].fib) (FT0.isProp-Cn c cnat cn2))
+      c' FT0.codeEq cnat' ;
+
+  opaque fibCong ;
+
+  Qy : Id (GSmall.XSub[yP X, UB.GDr]) (GUaUniv.YD[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A].yon X w) FMx.yd' = FT0.Qy ;
+
+  -- the result
+  smallCl-full : Id ((T : PTy[yP X]) * GUnivL.ClL (yP X) T)
+                    (GSmall.xsub (yP X) UB.GDr XS.SA (GUaUniv.YD[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A].yon X w), (XS.extFib (yP X) (GUaUniv.YD[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A].yon X w)).2)
+                    (UB.bmap.nt X (w, fu)) =
+    transH (apH (\ z -> XS.extFib (yP X) z) Qy)
+      (transH res1 (transH (symH (GFibLaws[a].subFibEL-id (yP X) Fc.fib)) (transH fibCong (yon X (UB.bmap.nt X (w, fu)))))) ;
+} ;

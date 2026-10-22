@@ -1,0 +1,135 @@
+-- GYonEq5.seg (inside IvBase, any base): an equivalence structure is
+-- determined by its restrictions along the Yoneda maps (YonDet).
+--   pull     a partial element of the fibres at (x , a) is one of the
+--            fibres of al[yPt x] at u0 = (id , a)   (as GYonEq1.Lx.Pl)
+--   read     the extension at (x , a) is the restricted extension at u0,
+--            lifted (FibIso.sG): Yoneda
+--   loop     along a loop of triples the moves do nothing (codes form a
+--            set), so ext-inv of an Id of restricted data gives equal
+--            extensions
+--   yd       equal restrictions along every yPt x give equal structures
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open GLine[a] ;
+module GCF = GCofib[a] ;
+module GCE = GCofEsi[a] ;
+module GQ = GEquiv[a] ;
+module GSB2 = GEquivSub2[a] ;
+module GX = GEqExt[a] ;
+module GL = GEqLaws[a] ;
+
+module YD (D : PCtx) (B A : PTy[D]) (al : PMap[D, B, A]) (e e' : GX.EqDat[D].EqOn (B, (A, al)))
+  (H : (Z : Ob) (x : W0.Ix (D.ob Z))
+       -> Id ((u : GX.EqDat[yP Z].Tri) * GX.EqDat[yP Z].EqOn u)
+             (GL.eqDSub (yP Z) D (yPt D Z x) (B, (A, al)) e) (GL.eqDSub (yP Z) D (yPt D Z x) (B, (A, al)) e')) {
+  module HG = GQ.HFib[D, B, A, al] ;
+  module TC = GPR.TyL[HG.EA, HG.FibT] ;
+  module TA = GPR.TyL[D, A] ;
+  module P = GCF.Partials[HG.EA, HG.FibT] ;
+
+  module At (Z : Ob) (x : W0.Ix (D.ob Z)) (a : TA.T Z x) (p : P.Partial[Z, (x, a)]) {
+    sg : PSub[yP Z, D] = yPt D Z x ;
+    module FI = GSB2.FibIso[yP Z, D, sg, B, A, al] ;
+    module S = FI.SC ;
+    module PD = GCF.Partials[FI.HD.EA, FI.HD.FibT] ;
+    module ES = GSB2.EqSub[yP Z, D, sg, B, A, al, e.1] ;
+    module ES' = GSB2.EqSub[yP Z, D, sg, B, A, al, e'.1] ;
+    module ED = GX.EqDat[yP Z] ;
+
+    -- the point (id , a) over x
+    a0 : W0.Ix (A.tob Z (D.act Z Z (idH Z) x)) = TA.coeT Z x (D.act Z Z (idH Z) x) (symH (D.act-id Z x)) a ;
+    u0 : W0.Ix (FI.HD.EA.ob Z) = (idH Z, a0) ;
+    p0 : Id (TA.EI Z) (FI.ls.nt Z u0) (x, a) = symH (TA.pr-coe Z x (D.act Z Z (idH Z) x) (symH (D.act-id Z x)) a) ;
+    pf (W : Ob) (f : Hom W Z) : Id (TA.EI W) (TA.E.act W Z f (x, a)) (FI.ls.nt W (FI.HD.EA.act W Z f u0)) =
+      transH (apH (TA.E.act W Z f) (symH p0)) (symH (FI.ls.nt-nat W Z f u0)) ;
+
+    -- p, pulled to the fibres over y Z
+    pv (s : P.PSide[Z, (x, a)]) (W : Ob) (f : Hom W Z) (i : Lands W Z s.pQ f) : S.TS.EI W =
+      (FI.HD.EA.act W Z f u0, TC.fromE W (FI.ls.nt W (FI.HD.EA.act W Z f u0)) (s.pv W f i) (transH (s.ppt W f i) (pf W f))) ;
+
+    pv-E (s : P.PSide[Z, (x, a)]) (W : Ob) (f : Hom W Z) (i : Lands W Z s.pQ f) : Id (TC.EI W) (S.mV W (pv s W f i)) (s.pv W f i) =
+      TC.fromE-eq W (FI.ls.nt W (FI.HD.EA.act W Z f u0)) (s.pv W f i) (transH (s.ppt W f i) (pf W f)) ;
+
+    pvD (s : P.PSide[Z, (x, a)]) (W : Ob) (f : Hom W Z) (i : Lands W Z s.pQ f) : FI.HD.TF.EI W = FI.r W (pv s W f i) ;
+
+    pside (s : P.PSide[Z, (x, a)]) : PD.PSide[Z, u0] =
+      new PD.PSide[Z, u0, s.pQ, pvD s,
+        \ W f i -> refl (FI.HD.EA.act W Z f u0),
+        \ W' W chi f i i' ->
+          transH (FI.rnat W' W chi (pv s W f i))
+            (apH (FI.r W')
+              (S.mV-inj W' (S.TS.E.act W' W chi (pv s W f i)) (pv s W' (compH W' W Z f chi) i')
+                (symH (FI.HD.EA.act-o W' W Z f chi u0))
+                (transH (S.mV-nat W' W chi (pv s W f i))
+                  (transH (apH (TC.E.act W' W chi) (pv-E s W f i))
+                    (transH (s.pnat W' W chi f i i') (symH (pv-E s W' (compH W' W Z f chi) i')))))))] ;
+
+    pull : PD.Partial[Z, u0] =
+      new PD.Partial[Z, u0, p.pr, \ l -> pside (p.ps l),
+        \ l j W f i i' -> apH (FI.r W)
+           (S.mV-inj W (pv (p.ps l) W f i) (pv (p.ps j) W f i') (refl (FI.HD.EA.act W Z f u0))
+              (transH (pv-E (p.ps l) W f i) (transH (p.pcs l j W f i i') (symH (pv-E (p.ps j) W f i')))))] ;
+
+    -- Yoneda: the extension at (x , a) is the restricted one at u0, lifted
+    module Rd (k : GQ.EquivOp D B A al) {
+      module E = GSB2.EqSub[yP Z, D, sg, B, A, al, k] ;
+
+      R : Id (P.Partial[Z, (x, a)]) (subst (TA.EI Z) (\ z -> P.Partial[Z, z]) (FI.ls.nt Z u0) (x, a) p0 (E.qP Z u0 pull)) p =
+        P.partExtH Z (FI.ls.nt Z u0) (x, a) p0 (E.qP Z u0 pull) p (refl p.pr) (\ l -> refl (p.ps l).pQ)
+          (\ l W f i i' -> transH (apH (S.mV W) (FI.sr W (pv (p.ps l) W f i)))
+             (transH (pv-E (p.ps l) W f i) (P.pv-irr Z (x, a) (p.ps l) W f i i'))) ;
+
+      read : Id (TC.EI Z) (FI.sG Z (u0, E.eqSub.kop Z u0 pull)) ((x, a), k.kop Z (x, a) p) =
+        transH (apH (FI.sG Z) (E.CR.kop-E Z u0 pull))
+          (transH (FI.sG-r Z (u0, E.CS.kop Z u0 (E.CR.MS.mapP Z u0 pull)))
+                  (P.kop-cong k Z (FI.ls.nt Z u0) (x, a) p0 (E.qP Z u0 pull) p R)) ;
+    } ;
+
+    -- along a loop of triples the moves do nothing
+    t1 : ED.Tri = (GL.eqDSub (yP Z) D sg (B, (A, al)) e).1 ;
+    Q : Id ((u : ED.Tri) * ED.EqOn u) (GL.eqDSub (yP Z) D sg (B, (A, al)) e) (GL.eqDSub (yP Z) D sg (B, (A, al)) e') = H Z x ;
+    Pl : Id ED.Tri t1 t1 = ap ((u : ED.Tri) * ED.EqOn u) ED.Tri (\ z -> z.1) (GL.eqDSub (yP Z) D sg (B, (A, al)) e) (GL.eqDSub (yP Z) D sg (B, (A, al)) e') Q ;
+
+    PsiId (V : Ob) (w : GPR.TyL[yP Z, t1.2.1].EI V) : Id (GPR.TyL[yP Z, t1.2.1].EI V) (ED.Psi t1 t1 Pl V w) w =
+      transH (ED.Psi-tob t1 t1 Pl V w) (ED.substLoop V t1.2.1.tob (apH (\ u -> u.2.1.tob) (symH Pl)) w) ;
+
+    PsiBId (V : Ob) (w : GPR.TyL[yP Z, t1.1].EI V) : Id (GPR.TyL[yP Z, t1.1].EI V) (ED.PsiB t1 t1 Pl V w) w =
+      transH (ED.PsiB-tob t1 t1 Pl V w) (ED.substLoop V t1.1.tob (apH (\ u -> u.1.tob) (symH Pl)) w) ;
+
+    PhiFId (V : Ob) (v : FI.HD.TF.EI V) : Id (FI.HD.TF.EI V) (ED.PhiF t1 t1 Pl V v) v =
+      FI.HD.fibE-eq V (ED.PhiF t1 t1 Pl V v) v
+        (transH (ED.PhiF-pt t1 t1 Pl V v) (PsiId V v.1))
+        (transH (ED.PhiF-B t1 t1 Pl V v) (PsiBId V (FI.HD.fibB V v)))
+        (\ W f i -> transH (ED.PhiF-L t1 t1 Pl V v W f i) (PsiId W (FI.HD.fibL V v W f i))) ;
+
+    mvPId : Id (PD.Partial[Z, u0]) (subst (FI.HD.TA.EI Z) (\ z -> PD.Partial[Z, z]) (ED.Psi t1 t1 Pl Z u0) u0 (PsiId Z u0)
+                                      (ED.mvP t1 t1 Pl Z u0 pull)) pull =
+      PD.partExtH Z (ED.Psi t1 t1 Pl Z u0) u0 (PsiId Z u0) (ED.mvP t1 t1 Pl Z u0 pull) pull (refl p.pr) (\ l -> refl (p.ps l).pQ)
+        (\ l W f i i' -> transH (PhiFId W ((pull.ps l).pv W f i)) (PD.pv-irr Z u0 (pull.ps l) W f i i')) ;
+
+    -- the restricted extensions agree, hence the extensions
+    kopR : Id (FI.HD.TF.EI Z) (u0, ES.eqSub.kop Z u0 pull) (u0, ES'.eqSub.kop Z u0 pull) =
+      symH (transH (symH (PhiFId Z (u0, ES'.eqSub.kop Z u0 pull)))
+             (transH (ED.ext-inv t1 t1 (GL.eqDSub (yP Z) D sg (B, (A, al)) e).2 (GL.eqDSub (yP Z) D sg (B, (A, al)) e').2 Q Z u0 pull)
+                     (PD.kop-cong ES.eqSub Z (ED.Psi t1 t1 Pl Z u0) u0 (PsiId Z u0) (ED.mvP t1 t1 Pl Z u0 pull) pull mvPId))) ;
+
+    kopEq : Id (TC.T Z (x, a)) (e.1.kop Z (x, a) p) (e'.1.kop Z (x, a) p) =
+      TC.pr-inj Z (x, a) (e.1.kop Z (x, a) p) (e'.1.kop Z (x, a) p)
+        (transH (symH Rd[e.1].read) (transH (apH (FI.sG Z) kopR) Rd[e'.1].read)) ;
+  } ;
+
+  yd : Id (GX.EqDat[D].EqOn (B, (A, al))) e e' =
+    Sigma-eq (GQ.EquivOp D B A al) (\ k -> GCE.PartialsEsi[HG.EA, HG.FibT].KESI k) e.1 e'.1 e.2 e'.2
+      (P.contr-ext e.1 e'.1 (\ Z w p -> At[Z, w.1, w.2, p].kopEq))
+      (GCE.PartialsEsi[HG.EA, HG.FibT].isProp-KESI e'.1) ;
+
+  opaque yd ;
+} ;

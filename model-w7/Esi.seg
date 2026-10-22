@@ -1,0 +1,169 @@
+-- Esi.seg: MODEL/Lv/Esi.agda (MODEL/Poset/Esi.agda is its instance at
+-- lzero).  Empty-side invariance (ESI) of a composition operation.
+--
+-- Box.restrict keeps the sides which become empty, and a CompOp may depend
+-- on them (and on the values of the subsets outside the carrier).  In [S]
+-- the sides of a box are non empty subsets and restriction drops the empty
+-- ones; a uniform composition in that sense is the same as a CompOp which
+-- is invariant under inserting an empty side, the boxes being compared on
+-- carrier points only.  This is what makes the top of the filler (MkFill)
+-- equal to the composite (fillTop), which Theorem 7 and the universe need.
+--
+--   skipN k n          the index of the old side n after inserting at k
+--   InsE[eS, X, k, b, b']   b' is b with an empty side inserted at k,
+--                      compared on carrier points, values in E (Agda's
+--                      record, a segment type)
+--   ESI co             cop b' = cop b (in E) whenever InsE k b b'
+--   FillTop.fillTop    ESI co => the top of the MkFill filler is cop b
+--
+-- Posets at a, presheaves at l.  Agda's anonymous module in FillTop is the
+-- segment FT; its dot patterns (h' = h) are transports along isProp-IsT'.
+
+level a l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+module W0 = V[l] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, l] ;
+open PR.PS ;
+module BXm = Box[a, l] ;
+module FibM = Fib[a, l] ;
+module CN = Conn[a] ;
+
+-- the position of the old side n once a side is inserted at k
+skipN : Nat -> Nat -> Nat = split {
+  zero -> \ n -> suc n ;
+  suc k -> split { zero -> zero ; suc n -> suc (skipN k n) } } ;
+
+module EsiDef (G : PCtx) (B : PTy[G]) {
+  open PR.TyL[G, B] ;
+  module BX = BXm.Boxes[G, B] ;
+
+  module InsE (eS : El Iv) (X : Ob) (k : Nat) (b b' : BX.Box[eS, X]) {
+    ins-r : Id Nat b'.br (suc b.br) ;
+    ins-k : IsT (leb k b.br) ;
+    ins-rho : Id (Pt (prodP X Iv)) b'.brho b.brho ;
+    ins-lid : Id (EI X) (BX.lidE eS X b'.brho b'.bu) (BX.lidE eS X b.brho b.bu) ;
+    -- the inserted side is empty
+    ins-e : (hk : IsT (ltb k b'.br)) (s : El X) -> Id Bool ((b'.bs (k, hk)).sQ s.1) false ;
+    -- the other sides are the old ones
+    ins-Q : (n : Nat) (h : IsT (ltb n b.br)) (h' : IsT (ltb (skipN k n) b'.br)) (s : El X)
+      -> Id Bool ((b'.bs (skipN k n, h')).sQ s.1) ((b.bs (n, h)).sQ s.1) ;
+    ins-v : (n : Nat) (h : IsT (ltb n b.br)) (h' : IsT (ltb (skipN k n) b'.br))
+      (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X (b'.bs (skipN k n, h')).sQ psi)
+      (i' : InQ W X (b.bs (n, h)).sQ psi)
+      -> Id (EI W) ((b'.bs (skipN k n, h')).svE W psi i) ((b.bs (n, h)).svE W psi i') ;
+  } ;
+
+  ESI (eS eT : El Iv) (co : BX.CompOp[eS, eT]) : U l =
+    (X : Ob) (k : Nat) (b b' : BX.Box[eS, X]) -> InsE[eS, X, k, b, b']
+    -> Id (EI X) (BX.topE eT X b'.brho (co.cop X b')) (BX.topE eT X b.brho (co.cop X b)) ;
+
+  -- ESI in both directions
+  ESIC (c : BX.Comp) : U l = ESI e0 e1 c.1 * ESI e1 e0 c.2 ;
+} ;
+
+------------------------------------------------------------------------
+-- With ESI, the top of the filler is the composite
+
+and-false : (c : Bool) -> Id Bool (and c false) false = split { true -> refl false ; false -> refl false } ;
+
+tgt-src : (d : Bool) -> Id Bool (eqN (CN.tN d) (CN.sN d)) false = split { true -> refl false ; false -> refl false } ;
+
+-- the connection after (lid tgt) * [1] is the identity
+CltG (X : Ob) (d : Bool) (t : Tree) : U a = (h : IsT (car (prodP X Iv) t))
+  -> Id Tree (app (prodP (prodP X Iv) Iv) (prodP X Iv) (CN.conn d X)
+                (app (prodP X Iv) (prodP (prodP X Iv) Iv) (cylH X (prodP X Iv) (lid X (CN.tgt d))) (t, h))).1 t ;
+
+cltA (X : Ob) (d : Bool) : (t : Tree) -> CltG X d t = split {
+  leaf n -> \ h -> absurd _ (false-true h) ;
+  node x r -> cltB X d x r } ;
+
+cltB (X : Ob) (d : Bool) (x : Tree) : (r : Tree) -> CltG X d (node x r) = split {
+  node i j -> \ h -> absurd _ (false-true (and-r (car X x) false h)) ;
+  leaf n -> cltC X x n d } ;
+
+cltC (X : Ob) (x : Tree) (n : Nat) : (d : Bool) -> CltG X d (node x (leaf n)) = split {
+  true -> \ h -> refl (node x (leaf n)) ;
+  false -> \ h -> refl (node x (leaf n)) } ;
+
+conn-lid-tgt (d : Bool) (X : Ob) (s : El (prodP X Iv))
+  : Id Tree (app (prodP (prodP X Iv) Iv) (prodP X Iv) (CN.conn d X)
+               (app (prodP X Iv) (prodP (prodP X Iv) Iv) (cylH X (prodP X Iv) (lid X (CN.tgt d))) s)).1 s.1 =
+  cltA X d s.1 s.2 ;
+
+module FillTop (G : PCtx) (A : PTy[G]) (d : Bool) (co : BXm.Boxes[G, A].CompOp[CN.src d, CN.tgt d])
+  (esi : EsiDef[G, A].ESI (CN.src d) (CN.tgt d) co) {
+  open PR.TyL[G, A] ;
+  module BX = BXm.Boxes[G, A] ;
+  module ED = EsiDef[G, A] ;
+  module MF = FibM.MkFill[G, A, d, co] ;
+  module GL = PR.PshL[G] ;
+
+  eS : El Iv = CN.src d ;
+  eT : El Iv = CN.tgt d ;
+
+  module FT (X : Ob) (b : BX.Box[eS, X]) {
+    Y : Ob = prodP X Iv ;
+    YI : Ob = prodP Y Iv ;
+    module FB = MF.FBox[X, b] ;
+
+    fb : BX.Box[eS, Y] = FB.fbox ;
+
+    rb : BX.Box[eS, X] = BX.restrict eS X Y (lid X eT) fb ;
+
+    module R = BX.Restrict[eS, X, Y, lid X eT] ;
+
+    insQ0 (n : Nat) (h : IsT (ltb n b.br)) (s : El X) : Id Bool ((rb.bs (suc n, h)).sQ s.1) ((b.bs (n, h)).sQ s.1) =
+      transH (Pre[X, Y, lid X eT, pre Y X (pX X) (b.bs (n, h)).sQ].pre-el s)
+             (Pre[Y, X, pX X, (b.bs (n, h)).sQ].pre-el (app X Y (lid X eT) s)) ;
+
+    insQ (n : Nat) (h : IsT (ltb n b.br)) (h' : IsT (ltb (suc n) (suc b.br))) (s : El X)
+      : Id Bool ((rb.bs (suc n, h')).sQ s.1) ((b.bs (n, h)).sQ s.1) =
+      transH (apH (\ k -> (rb.bs (suc n, k)).sQ s.1) (isProp-IsT' (ltb n b.br) h' h)) (insQ0 n h s) ;
+
+    insV0 (n : Nat) (h : IsT (ltb n b.br)) (W : Ob) (psi : Hom W Y) (i : InQ W X (rb.bs (suc n, h)).sQ psi)
+      (i' : InQ W X (b.bs (n, h)).sQ psi)
+      : Id (EI W) ((rb.bs (suc n, h)).svE W psi i) ((b.bs (n, h)).svE W psi i') =
+      transH (R.rsvE fb.brho (fb.bs (suc n, h)) W psi i)
+       (transH (FB.vAll-E (suc n, h) W (compH W Y YI (cylH X Y (lid X eT)) psi) (inQ-cyl W X Y (lid X eT) (fb.bs (suc n, h)).sQ psi i))
+               ((b.bs (n, h)).pw W (FB.cOf W (compH W Y YI (cylH X Y (lid X eT)) psi)) psi
+                  (\ s -> conn-lid-tgt d X (app W Y psi s))
+                  (FB.inQc (n, h) W (compH W Y YI (cylH X Y (lid X eT)) psi) (inQ-cyl W X Y (lid X eT) (fb.bs (suc n, h)).sQ psi i)) i')) ;
+
+    insV (n : Nat) (h : IsT (ltb n b.br)) (h' : IsT (ltb (suc n) (suc b.br)))
+      (W : Ob) (psi : Hom W Y) (i : InQ W X (rb.bs (suc n, h')).sQ psi) (i' : InQ W X (b.bs (n, h)).sQ psi)
+      : Id (EI W) ((rb.bs (suc n, h')).svE W psi i) ((b.bs (n, h)).svE W psi i') =
+      idJ (IsT (ltb n b.br)) h
+        (\ h2 e2 -> (W2 : Ob) (psi2 : Hom W2 Y) (i2 : InQ W2 X (rb.bs (suc n, h2)).sQ psi2) (i2' : InQ W2 X (b.bs (n, h)).sQ psi2)
+           -> Id (EI W2) ((rb.bs (suc n, h2)).svE W2 psi2 i2) ((b.bs (n, h)).svE W2 psi2 i2'))
+        (insV0 n h) h' (isProp-IsT' (ltb n b.br) h h') W psi i i' ;
+
+    insTop : ED.InsE[eS, X, zero, b, rb] = new ED.InsE[eS, X, zero, b, rb,
+      refl (suc b.br),
+      refl true,
+      transH (GL.actTri Y YI Y (CN.conn d X) (cylH X Y (lid X eT)) (idH Y) (\ s -> conn-lid-tgt d X s) b.brho) (G.act-id Y b.brho),
+      transH (R.ruE fb.brho fb.bu)
+       (transH (apH (E.act X Y (lid X eT)) (FibM.Kit[G, A].fromE-eq Y (G.act Y YI (lid Y eS) FB.rho') FB.uE' FB.upt))
+        (transH (PE.actC X Y X (pX X) (lid X eT) FB.uE)
+                (PE.actId X (compH X Y X (pX X) (lid X eT)) (\ s -> refl s.1) FB.uE))),
+      \ hk s -> transH (Pre[X, Y, lid X eT, CN.zQ d X].pre-el s)
+                       (transH (apH (and (car Y (node s.1 (leaf (CN.tN d))))) (tgt-src d)) (and-false (car Y (node s.1 (leaf (CN.tN d)))))),
+      \ n h h' s -> insQ n h h' s,
+      \ n h h' W psi i i' -> insV n h h' W psi i i'] ;
+
+    fillTop : Id (EI X) (E.act X Y (lid X eT) (b.brho, MF.fill X b)) (BX.topE eT X b.brho (co.cop X b)) =
+      transH (apH (E.act X Y (lid X eT)) (MF.fill-E X b))
+       (transH (co.cunif X Y (lid X eT) fb) (esi X zero b rb insTop)) ;
+  } ;
+
+  fillTop (X : Ob) (b : BX.Box[eS, X])
+    : Id (EI X) (E.act X (prodP X Iv) (lid X eT) (b.brho, MF.fill X b)) (BX.topE eT X b.brho (co.cop X b)) = FT[X, b].fillTop ;
+} ;

@@ -1,0 +1,125 @@
+-- DeltaBase.seg: the simplex category Delta as an instance of the base
+-- interface (IvBase.seg), and the line form of MkFill for SIMPLICIAL SETS.
+--
+--   objects   n : Nat, standing for the chain [n] = lin n
+--   maps      the monotone maps lin n -> lin m (the poset maps)
+--   interval  [1] = Iv, its points e0, e1, constant maps
+--   sieves    DECIDABLE SIEVES on [n] (Boolean predicates on maps into [n],
+--             closed under precomposition): canonical, a union is one sieve
+--   connections  cI d n i j = the poset connection at [n] (min / max)
+--
+-- No products of Delta are used: presheaves on Delta (simplicial sets) get
+-- their path object from DB.GFam (natural families over (f , i) : W -> X *
+-- Delta[1]), and composition in line form gives fibrancy (SSetFill).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ;
+open PosetConn[a] ;
+
+------------------------------------------------------------------------
+-- Sieves on [X]: DECIDABLE sieves (cours6), as Boolean predicates on the
+-- maps into [X] closed under precomposition.  Two sieves with the same
+-- maps are equal (funext), so a sieve is its own canonical presentation:
+-- a union is one sieve, and forall of a list of lines is one sieve
+-- (DeltaForall), which is what makes the constructions that compare
+-- partial elements side by side (Theorem 7's uniformity) presentation
+-- independent on Delta.
+
+-- the canonical decidable sieves (CSieve) of the category Delta
+module DS = CSieve[a].Sieves[W0.natV, \ n m -> homV (lin n) (lin m), \ n -> idH (lin n),
+  \ X Y Z g f -> compH (lin X) (lin Y) (lin Z) g f, \ L K J I f g h -> comp-assoc (lin L) (lin K) (lin J) (lin I) f g h] ;
+
+-- the sieve of the maps into [W] whose composite with k lands in a subset
+-- of the poset Y (decided by searching: allIn)
+isIn (V : Nat) (Y : Ob) (k : Hom (lin V) Y) (Q : Subset Y) : Bool = allIn (lin V) (PosetSub.pre (lin V) Y k Q) ;
+
+isIn-sound (V : Nat) (Y : Ob) (k : Hom (lin V) Y) (Q : Subset Y) (h : IsT (isIn V Y k Q)) : PosetSub.Lands (lin V) Y Q k =
+  PosB.lands-eq (lin V) Y Q (compH (lin V) (lin V) Y k (idH (lin V))) k (comp-idr (lin V) Y k)
+    (PosetSub.lands-pre (lin V) (lin V) Y k Q (idH (lin V)) (PosetSub.allS-sound (lin V) (PosetSub.pre (lin V) Y k Q) h)) ;
+
+isIn-complete (V : Nat) (Y : Ob) (k : Hom (lin V) Y) (Q : Subset Y) (i : PosetSub.Lands (lin V) Y Q k) : IsT (isIn V Y k Q) =
+  PosetSub.allS-complete (lin V) (PosetSub.pre (lin V) Y k Q)
+    (PosetSub.pre-lands (lin V) (lin V) Y k Q (idH (lin V))
+       (PosB.lands-eq (lin V) Y Q k (compH (lin V) (lin V) Y k (idH (lin V))) (symH (comp-idr (lin V) Y k)) i)) ;
+
+subS (W : Nat) (Y : Ob) (k : Hom (lin W) Y) (Q : Subset Y) : DS.Phi W =
+  (\ V g -> isIn V Y (compH (lin V) (lin W) Y k g) Q,
+   \ V' V g g' i -> isIn-complete V' Y (compH (lin V') (lin W) Y k (compH (lin V') (lin V) (lin W) g g')) Q
+       (PosB.lands-eq (lin V') Y Q (compH (lin V') (lin V) Y (compH (lin V) (lin W) Y k g) g') (compH (lin V') (lin W) Y k (compH (lin V') (lin V) (lin W) g g'))
+          (comp-assoc (lin V') (lin V) (lin W) Y k g g')
+          (PosetSub.lands-comp (lin V') (lin V) Y Q (compH (lin V) (lin W) Y k g) g' (isIn-sound V Y (compH (lin V) (lin W) Y k g) Q i)))) ;
+
+-- the two end points of [1]
+dptS (e : El Iv) : DS.Phi (suc zero) = subS (suc zero) Iv (idH Iv) (PosetSub.ptS e) ;
+
+dlands-pt (W : Nat) (e : El Iv) (g : Hom (lin W) Iv) (i : DS.Lands W (suc zero)  (dptS e) g) : Id (Hom (lin W) Iv) g (constH (lin W) Iv e) =
+  transH (symH (comp-idl (lin W) Iv g))
+    (PosetSub.lands-pt (lin W) e (compH (lin W) Iv Iv (idH Iv) g) (isIn-sound W Iv (compH (lin W) Iv Iv (idH Iv) g) (PosetSub.ptS e) i)) ;
+
+dpt-lands (W : Nat) (e : El Iv) : DS.Lands W (suc zero)  (dptS e) (constH (lin W) Iv e) =
+  isIn-complete W Iv (compH (lin W) Iv Iv (idH Iv) (constH (lin W) Iv e)) (PosetSub.ptS e)
+    (PosB.lands-eq (lin W) Iv (PosetSub.ptS e) (constH (lin W) Iv e) (compH (lin W) Iv Iv (idH Iv) (constH (lin W) Iv e))
+       (symH (comp-idl (lin W) Iv (constH (lin W) Iv e))) (PosetSub.pt-lands (lin W) e)) ;
+
+dpt-disj (W : Nat) (g : Hom (lin W) Iv) (i : DS.Lands W (suc zero)  (dptS e0) g) (i' : DS.Lands W (suc zero)  (dptS e1) g) : Empty =
+  PosetSub.pt-disj (lin W) (compH (lin W) Iv Iv (idH Iv) g)
+    (isIn-sound W Iv (compH (lin W) Iv Iv (idH Iv) g) (PosetSub.ptS e0) i)
+    (isIn-sound W Iv (compH (lin W) Iv Iv (idH Iv) g) (PosetSub.ptS e1) i') ;
+
+module DB = IvBase[a].IvBase[W0.natV, \ n m -> homV (lin n) (lin m),
+  \ n -> idH (lin n), \ X Y Z g f -> compH (lin X) (lin Y) (lin Z) g f,
+  \ J I f -> comp-idl (lin J) (lin I) f, \ J I f -> comp-idr (lin J) (lin I) f,
+  \ L K J I f g h -> comp-assoc (lin L) (lin K) (lin J) (lin I) f g h,
+  suc zero, El Iv, e0, e1, \ n e -> constH (lin n) Iv e, \ Y X f e -> constH-nat (lin Y) (lin X) f e,
+  DS.Phi, DS.pre, DS.Lands, DS.isProp-Lands, DS.lands-comp, DS.lands-pre, DS.pre-lands, DS.phi-ext,
+  DS.emptyS, DS.empty-lands,
+  dptS, dlands-pt, dpt-lands, dpt-disj,
+  DS.allS, DS.allS-sound, DS.allS-complete] ;
+
+-- the connections of the interval [1]: min / max, from the posets
+module DCn = DB.Cn[\ d W i j -> cIp d (lin W) i j,
+  \ d V W g i j -> cIp-nat d (lin V) (lin W) g i j,
+  \ d W i -> cIp-jsrc d (lin W) i, \ d W i -> cIp-jtgt d (lin W) i, \ d W j -> cIp-isrc d (lin W) j,
+  \ d W j -> cIp-itgt d (lin W) j] ;
+
+-- the two triangles of the prism Delta[1] * Delta[1], T1 = {x <= e},
+-- T2 = {e <= x}, as lines over X = [1] (the probes: DeltaForall)
+triQ (b : Bool) : Tree -> Bool = split {
+  leaf n -> false ;
+  node s t -> triN b s t }
+ where { triN (b : Bool) : Tree -> Tree -> Bool = split {
+           leaf m -> split { leaf n -> lebB b m n ; node u v -> false } ;
+           node u v -> \ t -> false } ;
+         lebB : Bool -> Nat -> Nat -> Bool = split { true -> \ m n -> leb m n ; false -> \ m n -> leb n m } ; } ;
+
+tri (b : Bool) : Subset (prodP (lin (suc zero)) Iv) = \ p -> triQ b p.1 ;
+
+-- the line of a subset of the cylinder [X] * [1]
+lineD (X : Nat) (Q : Subset (prodP (lin X) Iv)) : DB.PhiL X =
+  (\ W f j -> subS W (prodP (lin X) Iv) (pairH (lin X) Iv (lin W) f j) Q,
+   \ V W g f j -> DS.phi-ext V (DS.pre V W g (subS W (prodP (lin X) Iv) (pairH (lin X) Iv (lin W) f j) Q))
+                     (subS V (prodP (lin X) Iv) (pairH (lin X) Iv (lin V) (compH (lin V) (lin W) (lin X) f g) (compH (lin V) (lin W) Iv j g)) Q)
+       (\ V' g' i -> substH (\ k -> IsT (isIn V' (prodP (lin X) Iv) k Q))
+                       (transH (symH (comp-assoc (lin V') (lin V) (lin W) (prodP (lin X) Iv) (pairH (lin X) Iv (lin W) f j) g g'))
+                               (apH (\ k -> compH (lin V') (lin V) (prodP (lin X) Iv) k g') (pair-nat (lin V) (lin W) (lin X) Iv f j g))) i)
+       (\ V' g' i -> substH (\ k -> IsT (isIn V' (prodP (lin X) Iv) k Q))
+                       (symH (transH (symH (comp-assoc (lin V') (lin V) (lin W) (prodP (lin X) Iv) (pairH (lin X) Iv (lin W) f j) g g'))
+                                     (apH (\ k -> compH (lin V') (lin V) (prodP (lin X) Iv) k g') (pair-nat (lin V) (lin W) (lin X) Iv f j g)))) i)) ;
+
+------------------------------------------------------------------------
+-- Simplicial sets: composition in line form gives fibrancy
+
+module SSetFill (G : DB.GPre[a].PS.PCtx) (A : DB.GPre[a].PS.PTy[G]) (d : Bool)
+  (ca : DB.GLine[a].CompAtP[DB.GFam[a].famPath, G, A, DB.src d, DB.tgt d].CompAt) {
+  fibAt : DB.GLine[a].LineFibP[DB.GFam[a].famPath, G, A].FibAt (DB.src d) =
+    DCn.GFillFib[a].FillLineFib[DB.GFam[a].famPath, DB.GFam[a].famConn, G, A, d, ca].fibAt ;
+} ;

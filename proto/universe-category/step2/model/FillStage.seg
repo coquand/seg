@@ -1,0 +1,328 @@
+-- FillStage.seg: MODEL/Poset/FillStage.agda.  One dimension of the filling
+-- of Lemma 2.1, from the dimension below: a box over [N] either has a full
+-- side (Case 1: everything is read off that side) or not (Case 2: the
+-- recursion of FillCell).  The double-face fields of a dimension follow
+-- from its faces (Cross) and the functoriality of the restriction of boxes
+-- (restrict-o).
+--
+--   build n   all the dimensions, by induction
+--   cross n   the faces between dimensions n and n+1
+--
+-- Matches on  (r , e) : IxK k n  are the projections ix.1, ix.2; the
+-- records Stage and Cross are built with new.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module DD = D[a] ;
+open FillBase[a] ;
+
+ixPred (k n : Nat) (ix : IxK (suc k) (suc n)) : IxK k n = (ix.1, suc-inj _ _ ix.2) ;
+
+module FS (G : PCtx) (A : PTy[G]) (horn : Box[a, a].Horns[G, A].HornOp) {
+  open PR.TyL[G, A] ;
+  open DD.DT[G, A] ;
+  module FBm = FB[G, A] ;
+  open FBm ;
+  open FBm.RC ;
+  module FCm = FillCell[a].FC[G, A, horn] ;
+  open FCm ;
+
+  ----------------------------------------------------------------------
+  -- Case 2, read in E
+
+  module R2 (N : Nat) (low : LowI N) (b : BoxL N) {
+    open Col[N, low, b] ;
+    open Rec[N, low, b] ;
+
+    Pv (k : Nat) (ix : IxK k N) : T (lin (suc N)) (ctxP N b k) = (col k ix.1 ix.2).1 ;
+    Qv (k : Nat) (ix : IxK k (suc N)) : T (lin N) (ctxQ N b k) = (qdata k ix.1 ix.2).1 ;
+
+    ePv (k : Nat) (ix : IxK k N) : EI (lin (suc N)) = (ctxP N b k, Pv k ix) ;
+    eQv (k : Nat) (ix : IxK k (suc N)) : EI (lin N) = (ctxQ N b k, Qv k ix) ;
+
+    ePv-irr (k : Nat) (ix ix' : IxK k N) : Id (EI (lin (suc N))) (ePv k ix) (ePv k ix') = apH (ePv k) (isProp-IxK k N ix ix') ;
+    eQv-irr (k : Nat) (ix ix' : IxK k (suc N)) : Id (EI (lin N)) (eQv k ix) (eQv k ix') = apH (eQv k) (isProp-IxK k (suc N) ix ix') ;
+
+    pqC' (k : Nat) (ix : IxK k N) : (r : Nat) (e' : Id Nat (plus k r) (suc N))
+      -> Id (EI (lin N)) (E.act (lin N) (lin (suc N)) (dl N k) (ePv k ix)) (eQv k (r, e')) = split {
+      zero -> \ e' -> absurd _ (ltb-irr N (substH (\ v -> IsT (leb v N)) (transH (symH (plus-zero k)) e') (ixLe k N ix))) ;
+      suc r -> \ e' ->
+        transH (apH (E.act (lin N) (lin (suc N)) (dl N k)) (ePv-irr k ix (r, e'f k r e')))
+               (symH (qOf-E N b k (ixLe k N (r, e'f k r e')) (col k r (e'f k r e')).1)) } ;
+
+    pqC (k : Nat) (ix : IxK k N) (ix' : IxK k (suc N))
+      : Id (EI (lin N)) (E.act (lin N) (lin (suc N)) (dl N k) (ePv k ix)) (eQv k ix') = pqC' k ix ix'.1 ix'.2 ;
+
+    pq1C (k : Nat) (ix : IxK k N) (ix' : IxK (suc k) (suc N))
+      : Id (EI (lin N)) (E.act (lin N) (lin (suc N)) (dl N (suc k)) (ePv k ix)) (eQv (suc k) ix') =
+      transH (col k ix.1 ix.2).2.2.2 (eQv-irr (suc k) (ix.1, apH (\ m -> suc m) ix.2) ix') ;
+
+    qaux (k : Nat) (p : Id Nat (suc N) k)
+      : Id (EI (lin N)) (ctxQ N b k, (substH (\ k1 -> QData k1) p botQ).1) (ctxQ N b (suc N), botQ.1) =
+      idJ Nat (suc N) (\ k1 p1 -> Id (EI (lin N)) (ctxQ N b k1, (substH (\ k2 -> QData k2) p1 botQ).1) (ctxQ N b (suc N), botQ.1))
+          (refl (ctxQ N b (suc N), botQ.1)) k p ;
+
+    qbotC (ix : IxK (suc N) (suc N)) : Id (EI (lin N)) (eQv (suc N) ix) (botE N b) =
+      transH (eQv-irr (suc N) ix (zero, plus-zero (suc N)))
+             (transH (qaux (suc N) (symH (transH (symH (plus-zero (suc N))) (plus-zero (suc N)))))
+                     (symH (pr-coe (lin N) _ _ (eqBot N b) (b.bu.1 N (idH (lin N)))))) ;
+  } ;
+
+  module R2S (n : Nat) (S : Stage[n]) (b : BoxL (suc n)) {
+    open Col[suc n, S, b] ;
+    open Rec[suc n, S, b] ;
+    open R2[suc n, S, b] ;
+
+    pLoC (k y : Nat) (hy : IsT (leb y k)) (ix : IxK (suc k) (suc n)) (ix' : IxK k n)
+      : Id (EI (lin (suc n))) (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) y) (ePv (suc k) ix))
+                              (ctxP n (rB n y b) k, S.P (rB n y b) k ix') =
+      (col (suc k) ix.1 ix.2).2.1 k y (refl (suc k)) hy ix' ;
+
+    pHiC (k y : Nat) (hky : IsT (ltb k y)) (hy : IsT (leb y (suc n))) (ix : IxK k (suc n)) (ix' : IxK k n)
+      : Id (EI (lin (suc n))) (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) (suc y)) (ePv k ix))
+                              (ctxP n (rB n y b) k, S.P (rB n y b) k ix') =
+      (col k ix.1 ix.2).2.2.1 y hky hy ix' ;
+
+    qFC (k y : Nat) (hy : IsT (leb y (suc n))) (ix : IxK k (suc (suc n))) (ix' : IxK (qface y k) (suc n))
+      : Id (EI (lin n)) (E.act (lin n) (lin (suc n)) (dl n y) (eQv k ix))
+                        (ctxQ n (rB n y b) (qface y k), S.Q (rB n y b) (qface y k) ix') =
+      (qdata k ix.1 ix.2).2 y hy ix' ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- Case 1, read in E
+
+  module R1 (N : Nat) (b : BoxL N) (l : Fin b.br) (hl : IsT (allS (lin N) (b.bs l).sQ)) {
+
+    Pv (k : Nat) : T (lin (suc N)) (ctxP N b k) =
+      coeT (lin (suc N)) _ _ (C1-fst N b l hl (suc N) (pmap N k)) (C1 N b l hl (suc N) (pmap N k)).2 ;
+
+    Qv (k : Nat) : T (lin N) (ctxQ N b k) =
+      coeT (lin N) _ _ (C1-fst N b l hl N (qmap N k)) (C1 N b l hl N (qmap N k)).2 ;
+
+    ePv (k : Nat) : Id (EI (lin (suc N))) (ctxP N b k, Pv k) (C1 N b l hl (suc N) (pmap N k)) =
+      symH (pr-coe (lin (suc N)) _ _ (C1-fst N b l hl (suc N) (pmap N k)) (C1 N b l hl (suc N) (pmap N k)).2) ;
+
+    eQv (k : Nat) : Id (EI (lin N)) (ctxQ N b k, Qv k) (C1 N b l hl N (qmap N k)) =
+      symH (pr-coe (lin N) _ _ (C1-fst N b l hl N (qmap N k)) (C1 N b l hl N (qmap N k)).2) ;
+
+    -- a face of a chain of the prism
+    face (k y : Nat) (c : Hom (lin (suc N)) (PrN N)) (c' : Hom (lin N) (PrN N))
+      (p : PW (lin N) (PrN N) (compH (lin N) (lin (suc N)) (PrN N) c (dl N y)) c')
+      : Id (EI (lin N)) (E.act (lin N) (lin (suc N)) (dl N y) (C1 N b l hl (suc N) c)) (C1 N b l hl N c') =
+      transH (C1-compat N b l hl (suc N) N (dl N y) (dl-strict N y) c)
+             (C1-pw N b l hl N (compH (lin N) (lin (suc N)) (PrN N) c (dl N y)) c' p) ;
+
+    pq1 (k : Nat) (hk : IsT (leb k N))
+      : Id (EI (lin N)) (E.act (lin N) (lin (suc N)) (dl N k) (ctxP N b k, Pv k)) (ctxQ N b k, Qv k) =
+      transH (apH (E.act (lin N) (lin (suc N)) (dl N k)) (ePv k))
+             (transH (face k k (pmap N k) (qmap N k) (pw-p-face-k N k hk)) (symH (eQv k))) ;
+
+    pq2 (k : Nat) (hk : IsT (leb k N))
+      : Id (EI (lin N)) (E.act (lin N) (lin (suc N)) (dl N (suc k)) (ctxP N b k, Pv k)) (ctxQ N b (suc k), Qv (suc k)) =
+      transH (apH (E.act (lin N) (lin (suc N)) (dl N (suc k))) (ePv k))
+             (transH (face k (suc k) (pmap N k) (qmap N (suc k)) (pw-p-face-k1 N k hk)) (symH (eQv (suc k)))) ;
+
+    qbot : Id (EI (lin N)) (ctxQ N b (suc N), Qv (suc N)) (botE N b) = transH (eQv (suc N)) (symH (C1-bot N b l hl)) ;
+  } ;
+
+  module R1S (n : Nat) (S : Stage[n]) (b : BoxL (suc n)) (l : Fin b.br) (hl : IsT (allS (lin (suc n)) (b.bs l).sQ)) {
+    open R1[suc n, b, l, hl] ;
+
+    hl' (y : Nat) : IsT (allS (lin n) ((rB n y b).bs l).sQ) = allQ-pre n y (b.bs l).sQ hl ;
+
+    pLo (k y : Nat) (hy : IsT (leb y k)) (hk : IsT (leb (suc k) (suc n))) (ix' : IxK k n)
+      : Id (EI (lin (suc n))) (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) y) (ctxP (suc n) b (suc k), Pv (suc k)))
+                              (ctxP n (rB n y b) k, S.P (rB n y b) k ix') =
+      transH (apH (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) y)) (ePv (suc k)))
+       (transH (face (suc k) y (pmap (suc n) (suc k)) _ (pw-p-face-lo n k y hy hk))
+        (transH (symH (C1-rB n y b l hl (hl' y) (suc n) (pmap n k)))
+                (symH (S.fullP (rB n y b) (l, hl' y) k ix')))) ;
+
+    pHi (k y : Nat) (hky : IsT (ltb k y)) (hk : IsT (leb k n)) (ix' : IxK k n)
+      : Id (EI (lin (suc n))) (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) (suc y)) (ctxP (suc n) b k, Pv k))
+                              (ctxP n (rB n y b) k, S.P (rB n y b) k ix') =
+      transH (apH (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) (suc y))) (ePv k))
+       (transH (face k (suc y) (pmap (suc n) k) _ (pw-p-face-hi n k y hky hk))
+        (transH (symH (C1-rB n y b l hl (hl' y) (suc n) (pmap n k)))
+                (symH (S.fullP (rB n y b) (l, hl' y) k ix')))) ;
+
+    qF (k y : Nat) (ix' : IxK (qface y k) (suc n))
+      : Id (EI (lin n)) (E.act (lin n) (lin (suc n)) (dl n y) (ctxQ (suc n) b k, Qv k))
+                        (ctxQ n (rB n y b) (qface y k), S.Q (rB n y b) (qface y k) ix') =
+      transH (apH (E.act (lin n) (lin (suc n)) (dl n y)) (eQv k))
+       (transH (transH (C1-compat (suc n) b l hl (suc n) n (dl n y) (dl-strict n y) (qmap (suc n) k))
+                       (C1-pw (suc n) b l hl n _ _ (pw-q-face n y k)))
+        (transH (symH (C1-rB n y b l hl (hl' y) n (qmap n (qface y k))))
+                (symH (S.fullQ (rB n y b) (l, hl' y) (qface y k) ix')))) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- One dimension
+
+  Dec (N : Nat) (b : BoxL N) : U a = Plus' (Full N b) ((l : Fin b.br) -> Id Bool (allS (lin N) (b.bs l).sQ) false) ;
+
+  dec (N : Nat) (b : BoxL N) : Dec N b = searchFin b.br (\ l -> allS (lin N) (b.bs l).sQ) ;
+
+  module Gen (N : Nat) (low : LowI N) {
+
+    Pd (b : BoxL N) : (d : Dec N b) (k : Nat) -> IxK k N -> T (lin (suc N)) (ctxP N b k) = split {
+      inl' w -> \ k ix -> R1[N, b, w.1, w.2].Pv k ;
+      inr' no -> \ k ix -> R2[N, low, b].Pv k ix } ;
+
+    Qd (b : BoxL N) : (d : Dec N b) (k : Nat) -> IxK k (suc N) -> T (lin N) (ctxQ N b k) = split {
+      inl' w -> \ k ix -> R1[N, b, w.1, w.2].Qv k ;
+      inr' no -> \ k ix -> R2[N, low, b].Qv k ix } ;
+
+    P (b : BoxL N) (k : Nat) (ix : IxK k N) : T (lin (suc N)) (ctxP N b k) = Pd b (dec N b) k ix ;
+    Q (b : BoxL N) (k : Nat) (ix : IxK k (suc N)) : T (lin N) (ctxQ N b k) = Qd b (dec N b) k ix ;
+
+    pqD (b : BoxL N) : (d : Dec N b) (k : Nat) (ix : IxK k N) (ix' : IxK k (suc N))
+      -> Id (EI (lin N)) (E.act (lin N) (lin (suc N)) (dl N k) (ctxP N b k, Pd b d k ix)) (ctxQ N b k, Qd b d k ix') = split {
+      inl' w -> \ k ix ix' -> R1[N, b, w.1, w.2].pq1 k (ixLe k N ix) ;
+      inr' no -> \ k ix ix' -> R2[N, low, b].pqC k ix ix' } ;
+
+    pq1D (b : BoxL N) : (d : Dec N b) (k : Nat) (ix : IxK k N) (ix' : IxK (suc k) (suc N))
+      -> Id (EI (lin N)) (E.act (lin N) (lin (suc N)) (dl N (suc k)) (ctxP N b k, Pd b d k ix))
+                         (ctxQ N b (suc k), Qd b d (suc k) ix') = split {
+      inl' w -> \ k ix ix' -> R1[N, b, w.1, w.2].pq2 k (ixLe k N ix) ;
+      inr' no -> \ k ix ix' -> R2[N, low, b].pq1C k ix ix' } ;
+
+    qbotD (b : BoxL N) : (d : Dec N b) (ix : IxK (suc N) (suc N))
+      -> Id (EI (lin N)) (ctxQ N b (suc N), Qd b d (suc N) ix) (botE N b) = split {
+      inl' w -> \ ix -> R1[N, b, w.1, w.2].qbot ;
+      inr' no -> \ ix -> R2[N, low, b].qbotC ix } ;
+
+    fullPD (b : BoxL N) : (d : Dec N b) (w : Full N b) (k : Nat) (ix : IxK k N)
+      -> Id (EI (lin (suc N))) (ctxP N b k, Pd b d k ix) (C1w N b w (suc N) (pmap N k)) = split {
+      inl' w0 -> \ w k ix ->
+        transH (R1[N, b, w0.1, w0.2].ePv k) (C1-indep N b w0.1 w.1 w0.2 w.2 (suc N) (pmap N k)) ;
+      inr' no -> \ w k ix -> absurd _ (false-true (transH (symH (no w.1)) w.2)) } ;
+
+    fullQD (b : BoxL N) : (d : Dec N b) (w : Full N b) (k : Nat) (ix : IxK k (suc N))
+      -> Id (EI (lin N)) (ctxQ N b k, Qd b d k ix) (C1w N b w N (qmap N k)) = split {
+      inl' w0 -> \ w k ix ->
+        transH (R1[N, b, w0.1, w0.2].eQv k) (C1-indep N b w0.1 w.1 w0.2 w.2 N (qmap N k)) ;
+      inr' no -> \ w k ix -> absurd _ (false-true (transH (symH (no w.1)) w.2)) } ;
+  } ;
+
+  -- the faces, from dimension n+1 to dimension n
+  module GenS (n : Nat) (S : Stage[n]) {
+    open Gen[suc n, S] ;
+
+    pLoD (b : BoxL (suc n)) : (d : Dec (suc n) b) (k y : Nat) (hy : IsT (leb y k)) (ix : IxK (suc k) (suc n)) (ix' : IxK k n)
+      -> Id (EI (lin (suc n))) (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) y) (ctxP (suc n) b (suc k), Pd b d (suc k) ix))
+                               (ctxP n (rB n y b) k, S.P (rB n y b) k ix') = split {
+      inl' w -> \ k y hy ix ix' -> R1S[n, S, b, w.1, w.2].pLo k y hy (ixLe (suc k) (suc n) ix) ix' ;
+      inr' no -> \ k y hy ix ix' -> R2S[n, S, b].pLoC k y hy ix ix' } ;
+
+    pHiD (b : BoxL (suc n)) : (d : Dec (suc n) b) (k y : Nat) (hky : IsT (ltb k y)) (hy : IsT (leb y (suc n)))
+      (ix : IxK k (suc n)) (ix' : IxK k n)
+      -> Id (EI (lin (suc n))) (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) (suc y)) (ctxP (suc n) b k, Pd b d k ix))
+                               (ctxP n (rB n y b) k, S.P (rB n y b) k ix') = split {
+      inl' w -> \ k y hky hy ix ix' -> R1S[n, S, b, w.1, w.2].pHi k y hky (ixLe k n ix') ix' ;
+      inr' no -> \ k y hky hy ix ix' -> R2S[n, S, b].pHiC k y hky hy ix ix' } ;
+
+    qFD (b : BoxL (suc n)) : (d : Dec (suc n) b) (k y : Nat) (hy : IsT (leb y (suc n))) (ix : IxK k (suc (suc n)))
+      (ix' : IxK (qface y k) (suc n))
+      -> Id (EI (lin n)) (E.act (lin n) (lin (suc n)) (dl n y) (ctxQ (suc n) b k, Qd b d k ix))
+                         (ctxQ n (rB n y b) (qface y k), S.Q (rB n y b) (qface y k) ix') = split {
+      inl' w -> \ k y hy ix ix' -> R1S[n, S, b, w.1, w.2].qF k y ix' ;
+      inr' no -> \ k y hy ix ix' -> R2S[n, S, b].qFC k y hy ix ix' } ;
+
+    -- two faces of a restricted box commute
+    rB-rB (b : BoxL (suc (suc n))) (y z : Nat) (hyz : IsT (leb y z))
+      : Id (BoxL n) (rB n z (rB (suc n) y b)) (rB n y (rB (suc n) (suc z) b)) =
+      transH {BoxL n} (BX.restrict-o e0 (lin n) (lin (suc n)) (lin (suc (suc n))) (dl n z) (dl (suc n) y) b)
+       (transH {BoxL n} (BX.restrict-pw e0 (lin n) (lin (suc (suc n)))
+                  (compH (lin n) (lin (suc n)) (lin (suc (suc n))) (dl (suc n) y) (dl n z))
+                  (compH (lin n) (lin (suc n)) (lin (suc (suc n))) (dl (suc n) (suc z)) (dl n y))
+                  (pw-sym (lin n) (lin (suc (suc n)))
+                     (compH (lin n) (lin (suc n)) (lin (suc (suc n))) (dl (suc n) (suc z)) (dl n y))
+                     (compH (lin n) (lin (suc n)) (lin (suc (suc n))) (dl (suc n) y) (dl n z))
+                     (pw-dl-dl n y z hyz)) b)
+               (symH {BoxL n} (BX.restrict-o e0 (lin n) (lin (suc n)) (lin (suc (suc n))) (dl n y) (dl (suc n) (suc z)) b))) ;
+
+    eSP (b1 b2 : BoxL n) (e : Id (BoxL n) b1 b2) (k : Nat) (ix : IxK k n)
+      : Id (EI (lin (suc n))) (ctxP n b1 k, S.P b1 k ix) (ctxP n b2 k, S.P b2 k ix) =
+      apH (\ b0 -> (ctxP n b0 k, S.P b0 k ix)) e ;
+
+    ddLL (b : BoxL (suc (suc n))) : (j y z : Nat) (hyz : IsT (leb y z)) (hzj : IsT (ltb z j)) (ix : IxK j (suc n))
+      -> Id (EI (lin (suc n))) (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) z) (ctxP (suc n) (rB (suc n) y b) j, P (rB (suc n) y b) j ix))
+                               (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) y) (ctxP (suc n) (rB (suc n) (suc z) b) j, P (rB (suc n) (suc z) b) j ix)) = split {
+      zero -> \ y z hyz hzj ix -> absurd _ (false-true hzj) ;
+      suc j' -> \ y z hyz hzj ix ->
+        transH (pLoD (rB (suc n) y b) (dec (suc n) (rB (suc n) y b)) j' z hzj ix (ixPred j' n ix))
+         (transH (eSP (rB n z (rB (suc n) y b)) (rB n y (rB (suc n) (suc z) b)) (rB-rB b y z hyz) j' (ixPred j' n ix))
+                 (symH (pLoD (rB (suc n) (suc z) b) (dec (suc n) (rB (suc n) (suc z) b)) j' y (leb-trans y z j' hyz hzj) ix
+                             (ixPred j' n ix)))) } ;
+
+    ddLH (b : BoxL (suc (suc n))) (j y : Nat) : (z : Nat) (hyj : IsT (leb y j)) (hjz : IsT (ltb (suc j) z)) (hz : IsT (leb z (suc (suc n))))
+      (ix : IxK j (suc n)) (ix' : IxK (suc j) (suc n))
+      -> Id (EI (lin (suc n))) (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) z) (ctxP (suc n) (rB (suc n) y b) j, P (rB (suc n) y b) j ix))
+                               (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) y) (ctxP (suc n) (rB (suc n) z b) (suc j), P (rB (suc n) z b) (suc j) ix')) = split {
+      zero -> \ hyj hjz hz ix ix' -> absurd _ (false-true hjz) ;
+      suc z' -> \ hyj hjz hz ix ix' ->
+        transH (pHiD (rB (suc n) y b) (dec (suc n) (rB (suc n) y b)) j z' hjz hz ix (ixPred j n ix'))
+         (transH (eSP (rB n z' (rB (suc n) y b)) (rB n y (rB (suc n) (suc z') b))
+                      (rB-rB b y z' (leb-trans y j z' hyj (ltb-leb j z' hjz))) j (ixPred j n ix'))
+                 (symH (pLoD (rB (suc n) (suc z') b) (dec (suc n) (rB (suc n) (suc z') b)) j y hyj ix' (ixPred j n ix')))) } ;
+
+    ddHH (b : BoxL (suc (suc n))) (k y : Nat) : (z : Nat) (hky : IsT (ltb k y)) (hyz : IsT (ltb y z)) (hz : IsT (leb z (suc (suc n))))
+      (ix : IxK k (suc n))
+      -> Id (EI (lin (suc n))) (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) z) (ctxP (suc n) (rB (suc n) y b) k, P (rB (suc n) y b) k ix))
+                               (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) (suc y)) (ctxP (suc n) (rB (suc n) z b) k, P (rB (suc n) z b) k ix)) = split {
+      zero -> \ hky hyz hz ix -> absurd _ (false-true hyz) ;
+      suc z' -> \ hky hyz hz ix ->
+        transH (pHiD (rB (suc n) y b) (dec (suc n) (rB (suc n) y b)) k z' (ltb-leb-trans k y z' hky hyz) hz ix (ix2 k y z' hky hyz hz))
+         (transH (eSP (rB n z' (rB (suc n) y b)) (rB n y (rB (suc n) (suc z') b)) (rB-rB b y z' hyz) k (ix2 k y z' hky hyz hz))
+                 (symH (pHiD (rB (suc n) (suc z') b) (dec (suc n) (rB (suc n) (suc z') b)) k y hky (leb-trans y z' (suc n) hyz hz) ix
+                             (ix2 k y z' hky hyz hz)))) } ;
+
+    ix2 (k y z' : Nat) (hky : IsT (ltb k y)) (hyz : IsT (ltb y (suc z'))) (hz : IsT (leb (suc z') (suc (suc n)))) : IxK k n =
+      mkIx k n (ltb-leb-trans k z' (suc n) (ltb-leb-trans k y z' hky hyz) hz) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- The dimensions
+
+  stage0 : Stage[zero] = new Stage[zero, Gen[zero, tt].P, Gen[zero, tt].Q,
+    \ b -> Gen[zero, tt].pqD b (dec zero b),
+    \ b -> Gen[zero, tt].pq1D b (dec zero b),
+    \ b -> Gen[zero, tt].qbotD b (dec zero b),
+    \ b -> Gen[zero, tt].fullPD b (dec zero b),
+    \ b -> Gen[zero, tt].fullQD b (dec zero b),
+    \ b j y z hyz hzj ix -> absurd _ (false-true (leb-trans (suc z) j zero hzj (ixLe j zero ix))),
+    \ b j y z hyj hjz hz ix ix' -> absurd _ (false-true (ixLe (suc j) zero ix')),
+    \ b k y z hky hyz hz ix -> absurd _ (false-true (ltb-leb-trans k y zero hky (leb-trans (suc y) z (suc zero) hyz hz)))] ;
+
+  stageS (n : Nat) (S : Stage[n]) : Stage[suc n] = new Stage[suc n, Gen[suc n, S].P, Gen[suc n, S].Q,
+    \ b -> Gen[suc n, S].pqD b (dec (suc n) b),
+    \ b -> Gen[suc n, S].pq1D b (dec (suc n) b),
+    \ b -> Gen[suc n, S].qbotD b (dec (suc n) b),
+    \ b -> Gen[suc n, S].fullPD b (dec (suc n) b),
+    \ b -> Gen[suc n, S].fullQD b (dec (suc n) b),
+    GenS[n, S].ddLL, GenS[n, S].ddLH, GenS[n, S].ddHH] ;
+
+  crossS (n : Nat) (S : Stage[n]) : Cross[n, S, stageS n S] = new Cross[n, S, stageS n S,
+    \ b -> GenS[n, S].pLoD b (dec (suc n) b),
+    \ b -> GenS[n, S].pHiD b (dec (suc n) b),
+    \ b -> GenS[n, S].qFD b (dec (suc n) b)] ;
+
+  build : (n : Nat) -> Stage[n] = split { zero -> stage0 ; suc n -> stageS n (build n) } ;
+
+  cross (n : Nat) : Cross[n, build n, build (suc n)] = crossS n (build n) ;
+} ;

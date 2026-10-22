@@ -1,0 +1,94 @@
+-- GExtNat10.seg (inside IvBase.FaU, any base): Theorem 7 along a
+-- substitution, unconditionally: with the canonical structures of alpha[s]
+-- (GExtNat9: pulled-back fillers, eal substituted), Ext(alpha[s]) with its
+-- fibration is subFibEL s Ext(alpha) (FS), and its (triple , extEquiv) is
+-- the substituted one (eqNat).
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+
+module N10 (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (cQ2 : (X : Ob) (d : W0.Ix (D'.ob X)) (l : Fin psi.cr) -> Phi X)
+  (cnat2 : (Y X : Ob) (h : Hom Y X) (d : W0.Ix (D'.ob X)) (l : Fin psi.cr) -> Id (Phi Y) (cQ2 Y (D'.act Y X h d) l) (pre Y X h (cQ2 X d l)))
+  (GQ : (X : Ob) (d : W0.Ix (D'.ob X)) (l : Fin psi.cr) -> Id (Phi X) (cQ2 X d l) (psi.cQ X (s.nt X d) l))
+  (kA0 : LineFibP[GFam[a].famPath, G, A].FibAt e0) (kA1 : LineFibP[GFam[a].famPath, G, A].FibAt e1)
+  (kB0 : LineFibP[GFam[a].famPath, GP.CofL[G, psi].resCtx, B].FibAt e0)
+  (kB1 : LineFibP[GFam[a].famPath, GP.CofL[G, psi].resCtx, B].FibAt e1)
+  (kA0e : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, e0].TV.E, EndKit[GFam[a].famPath, G, A, e0].SFm.SF].KESI kA0)
+  (kA1e : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, e1].TV.E, EndKit[GFam[a].famPath, G, A, e1].SFm.SF].KESI kA1)
+  (kB0e : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, GP.CofL[G, psi].resCtx, B, e0].TV.E,
+            EndKit[GFam[a].famPath, GP.CofL[G, psi].resCtx, B, e0].SFm.SF].KESI kB0)
+  (kB1e : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, GP.CofL[G, psi].resCtx, B, e1].TV.E,
+            EndKit[GFam[a].famPath, GP.CofL[G, psi].resCtx, B, e1].SFm.SF].KESI kB1)
+  (eal : GEquiv[a].EquivOp GP.CofL[G, psi].resCtx B (subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR) al)
+  (keal : GCofEsi[a].PartialsEsi[GExt.ExtDef[G, A, psi].EA', GEquiv[a].HFib[GP.CofL[G, psi].resCtx, B,
+            subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR, al].FibT].KESI eal) {
+  module C = GExtNat9.N9[G, A, psi, B, al, D', s, GExtSub2.PQ[G, psi, D', s, cQ2, cnat2, GQ].psi', GExtSub2.PQ[G, psi, D', s, cQ2, cnat2, GQ].fullS] ;
+  module A0 = C.FA[e0, kA0, kA0e] ;
+  module A1 = C.FA[e1, kA1, kA1e] ;
+  module B0 = C.FB[e0, kB0, kB0e] ;
+  module B1 = C.FB[e1, kB1, kB1e] ;
+  module E = C.FE[eal, keal] ;
+
+  module S7 = GExtNat7.N7[G, A, psi, B, al, D', s, GExtSub2.PQ[G, psi, D', s, cQ2, cnat2, GQ].psi', GExtSub2.PQ[G, psi, D', s, cQ2, cnat2, GQ].fullS, kA0, kA1, kB0, kB1, kA0e, kA1e, kB0e, kB1e, eal, keal]
+    .Sb[A0.k', A1.k', B0.k', B1.k', A0.ke', A1.ke', B0.ke', B1.ke', E.eS.1, E.eS.2] ;
+
+  FS : Id (GFibE[a].FibEL D') S7.EF'.extFib (GSubst[a].subFibEL D' G s GExtFib.ExtFib[G, A, psi, B, al, kA0, kA1, kB0, kB1, kA0e, kA1e, kB0e, kB1e, eal, keal].extFib) =
+    S7.FS B0.H B1.H A0.H A1.H
+      GExtNat2.NQ[G, A, psi, B, al, D', s, cQ2, cnat2, GQ, e0, kA0, kB0, A0.k', B0.k', kA0e].hd
+      GExtNat2.NQ[G, A, psi, B, al, D', s, cQ2, cnat2, GQ, e1, kA1, kB1, A1.k', B1.k', kA1e].hd
+      (GExtNat5.N5[G, A, psi, B, al, D', s, GExtSub2.PQ[G, psi, D', s, cQ2, cnat2, GQ].psi', GExtSub2.PQ[G, psi, D', s, cQ2, cnat2, GQ].fullS].Eq[kA1, A1.k', eal, E.eS.1].extEqS E.Heal A1.H
+         (GExtSub2.HQ[G, psi, D', s, cQ2, cnat2, GQ].hg) kA1e) ;
+
+  module Q8 = GExtNat8.N8[G, A, psi, B, al, D', s, GExtSub2.PQ[G, psi, D', s, cQ2, cnat2, GQ].psi', GExtSub2.PQ[G, psi, D', s, cQ2, cnat2, GQ].fullS]
+    .Eq[kA1, A1.k', eal, E.eS.1, kA1e, A1.ke', keal, E.eS.2, E.Heal, A1.H, GExtSub2.HQ[G, psi, D', s, cQ2, cnat2, GQ].hg] ;
+
+
+} ;
+
+------------------------------------------------------------------------
+-- the same along an INSERTION of one empty generator (GCofIns.InsC; U6):
+-- FS-ins, given the motion of extEquiv (XS: GExtNat5's extEqS at the
+-- insertion, the equivalence half (c))
+
+module N10I (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D']) (k : Nat) (ins : GCofIns.InsC[G, psi, D', s, psi', k])
+  (kA0 : LineFibP[GFam[a].famPath, G, A].FibAt e0) (kA1 : LineFibP[GFam[a].famPath, G, A].FibAt e1)
+  (kB0 : LineFibP[GFam[a].famPath, GP.CofL[G, psi].resCtx, B].FibAt e0)
+  (kB1 : LineFibP[GFam[a].famPath, GP.CofL[G, psi].resCtx, B].FibAt e1)
+  (kA0e : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, e0].TV.E, EndKit[GFam[a].famPath, G, A, e0].SFm.SF].KESI kA0)
+  (kA1e : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, e1].TV.E, EndKit[GFam[a].famPath, G, A, e1].SFm.SF].KESI kA1)
+  (kB0e : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, GP.CofL[G, psi].resCtx, B, e0].TV.E,
+            EndKit[GFam[a].famPath, GP.CofL[G, psi].resCtx, B, e0].SFm.SF].KESI kB0)
+  (kB1e : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, GP.CofL[G, psi].resCtx, B, e1].TV.E,
+            EndKit[GFam[a].famPath, GP.CofL[G, psi].resCtx, B, e1].SFm.SF].KESI kB1)
+  (eal : GEquiv[a].EquivOp GP.CofL[G, psi].resCtx B (subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR) al)
+  (keal : GCofEsi[a].PartialsEsi[GExt.ExtDef[G, A, psi].EA', GEquiv[a].HFib[GP.CofL[G, psi].resCtx, B,
+            subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR, al].FibT].KESI eal) {
+  module C = GExtNat9.N9[G, A, psi, B, al, D', s, psi', GCofIns.fullS-ins G psi D' s psi' k ins] ;
+  module A0 = C.FA[e0, kA0, kA0e] ;
+  module A1 = C.FA[e1, kA1, kA1e] ;
+  module B0 = C.FB[e0, kB0, kB0e] ;
+  module B1 = C.FB[e1, kB1, kB1e] ;
+  module E = C.FE[eal, keal] ;
+
+  module S7 = GExtNat7.N7[G, A, psi, B, al, D', s, psi', GCofIns.fullS-ins G psi D' s psi' k ins, kA0, kA1, kB0, kB1, kA0e, kA1e, kB0e, kB1e, eal, keal]
+    .Sb[A0.k', A1.k', B0.k', B1.k', A0.ke', A1.ke', B0.ke', B1.ke', E.eS.1, E.eS.2] ;
+
+  FS-ins (XS : S7.M01.FMX.HTy S7.M01.C3'.E3.extEquiv S7.M01.C3.E3.extEquiv)
+    : Id (GFibE[a].FibEL D') S7.EF'.extFib (GSubst[a].subFibEL D' G s GExtFib.ExtFib[G, A, psi, B, al, kA0, kA1, kB0, kB1, kA0e, kA1e, kB0e, kB1e, eal, keal].extFib) =
+    S7.FS B0.H B1.H A0.H A1.H
+      GExtNat2.NI[G, A, psi, B, al, D', s, psi', k, ins, e0, kA0, kB0, A0.k', B0.k', kA0e].hd
+      GExtNat2.NI[G, A, psi, B, al, D', s, psi', k, ins, e1, kA1, kB1, A1.k', B1.k', kA1e].hd
+      XS ;
+} ;

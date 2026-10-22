@@ -1,0 +1,749 @@
+-- GPi.seg: Pi types in line form, over any base, with the family path
+-- object (CYLINDER.md step 3).  Composition for Pi A B from eS to eT, from
+-- a filler of A in the REVERSE direction (FibAt eT: a line ending at a
+-- given argument v, no sides) and a composition of B (eS to eT): the
+-- line form of FibPi.  This part: lines in Pi applied to lines in A.
+--
+--   apLine z Lp La   the line in B over the line La of G.A whose value at
+--                    (f , i) is the value of Lp (f , i) at La (f , i)
+
+level lv ;
+constraint a <= lv ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+open Axioms[lv+].FunExtLemmas[fe @(lv+)] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module PiLines (G : PCtx) (A : PTy[G]) (B : PTy[extP G A]) {
+  module PE = FibPiE[lv].PiE[G, A, B] ;
+  module TA = PE.TA ;
+  module TB = PE.TB ;
+  module TP = PE.TP ;
+  module FG = GFam[lv].FC[G] ;
+  module FA = GFam[lv].FT[G, A] ;
+  module FP = GFam[lv].FT[G, PE.P] ;
+  module FB = GFam[lv].FT[extP G A, B] ;
+
+  module ApL (V : Ob) (z : W0.Ix (FG.ob V)) (Lp : W0.Ix (FP.tobF V z)) (La : W0.Ix (FA.tobF V z)) {
+    -- the two lines lie over z
+    pz (W : Ob) (g : Hom W V) (i : Hom W Iv)
+      : Id (W0.Ix (G.ob W)) (G.act W W (idH W) (Lp.1.1 W g i).1) (La.1.1 W g i).1 =
+      transH (G.act-id W (Lp.1.1 W g i).1)
+        (transH (apH (\ q -> q.1 W g i) Lp.2) (symH (apH (\ q -> q.1 W g i) La.2))) ;
+
+    val (W : Ob) (g : Hom W V) (i : Hom W Iv) : TB.EI W =
+      (La.1.1 W g i, PE.apW W (Lp.1.1 W g i).1 (Lp.1.1 W g i).2 W (idH W) (La.1.1 W g i) (pz W g i)) ;
+
+    module VN (W' W : Ob) (g' : Hom W' W) (g : Hom W V) (i : Hom W Iv) {
+      x : TA.Pt W = (Lp.1.1 W g i).1 ;
+      u : W0.Ix (PE.PC.PiO W x) = (Lp.1.1 W g i).2 ;
+      w : TA.EI W = La.1.1 W g i ;
+      w' : TA.EI W' = La.1.1 W' (compH W' W V g g') (compH W' W Iv i g') ;
+      Lp' : TP.EI W' = Lp.1.1 W' (compH W' W V g g') (compH W' W Iv i g') ;
+
+      -- the restricted argument and the restricted element of Pi
+      Hw : Id (TA.EI W') (TA.E.act W' W g' w) w' = La.1.2 W' W g' g i ;
+      Hp : Id (TP.EI W') (TP.E.act W' W g' (x, u)) Lp' = Lp.1.2 W' W g' g i ;
+
+      p1 : Id (TA.Pt W') (G.act W' W (compH W' W W (idH W) g') x) w'.1 =
+        transH (G.act-o W' W W (idH W) g' x) (transH (apH (G.act W' W g') (pz W g i)) (apH (\ q -> q.1) Hw)) ;
+
+      p2 : Id (TA.Pt W') (G.act W' W (compH W' W' W g' (idH W')) x) w'.1 =
+        transH (apH (\ k -> G.act W' W k x) (transH (comp-idr W' W g') (symH (comp-idl W' W g')))) p1 ;
+
+      p3 : Id (TA.Pt W') (G.act W' W' (idH W') (TP.E.act W' W g' (x, u)).1) w'.1 =
+        transH (G.act-id W' (G.act W' W g' x))
+          (transH (apH (G.act W' W g') (transH (symH (G.act-id W x)) (pz W g i))) (apH (\ q -> q.1) Hw)) ;
+
+      res : Id (TB.EI W') (TB.E.act W' W g' (val W g i)) (val W' (compH W' W V g g') (compH W' W Iv i g')) =
+        calc (TB.EI W') {
+            TB.E.act W' W g' (w, PE.apW W x u W (idH W) w (pz W g i))
+          =< PE.apW-act W x u W (idH W) w (pz W g i) W' g' w' p1 Hw >
+            (w', PE.apW W x u W' (compH W' W W (idH W) g') w' p1)
+          =< PE.apW-f W x u W' (compH W' W W (idH W) g') (compH W' W' W g' (idH W'))
+               (transH (comp-idl W' W g') (symH (comp-idr W' W g'))) w' p1 p2 >
+            (w', PE.apW W x u W' (compH W' W' W g' (idH W')) w' p2)
+          =< symH (PE.apW-tact W' W g' x (TP.E.act W' W g' (x, u)).1 (refl (TP.E.act W' W g' (x, u)).1) u W' (idH W') w' p3 p2) >
+            (w', PE.apW W' (TP.E.act W' W g' (x, u)).1 (TP.E.act W' W g' (x, u)).2 W' (idH W') w' p3)
+          =< PE.apW-gen W' (TP.E.act W' W g' (x, u)).1 Lp'.1 (TP.E.act W' W g' (x, u)).2 Lp'.2 Hp W' (idH W') w' w' (refl w')
+               p3 (pz W' (compH W' W V g g') (compH W' W Iv i g')) >
+            val W' (compH W' W V g g') (compH W' W Iv i g') } ;
+    } ;
+
+    -- the line in B, over the line La.1 of G.A
+    bl : W0.Ix (FB.FE.ob V) = (val, \ W' W g' g i -> VN[W', W, g', g, i].res) ;
+
+    line : W0.Ix (FB.tobF V La.1) = (bl, FB.FG.fam-eq V (FB.piL V bl) La.1 (\ W g i -> refl (La.1.1 W g i))) ;
+
+    -- characterisation: its values
+    line-val (W : Ob) (g : Hom W V) (i : Hom W Iv) : Id (TB.EI W) (line.1.1 W g i) (val W g i) = refl (val W g i) ;
+  } ;
+
+  -- a restricted element of Pi, applied: along g, as the original at g
+  apW-restr (K : Ob) (x : TA.Pt K) (u : W0.Ix (PE.PC.PiO K x)) (V : Ob) (g : Hom V K) (w : TA.EI V)
+    (p : Id (TA.Pt V) (G.act V V (idH V) (TP.E.act V K g (x, u)).1) w.1) (p' : Id (TA.Pt V) (G.act V K g x) w.1)
+    : Id (TB.EI V) (w, PE.apW V (TP.E.act V K g (x, u)).1 (TP.E.act V K g (x, u)).2 V (idH V) w p) (w, PE.apW K x u V g w p') =
+    transH (PE.apW-tact V K g x (TP.E.act V K g (x, u)).1 (refl (TP.E.act V K g (x, u)).1) u V (idH V) w p
+              (transH (apH (\ k -> G.act V K k x) (comp-idr V K g)) p'))
+           (PE.apW-f K x u V (compH V V K g (idH V)) g (comp-idr V K g) w
+              (transH (apH (\ k -> G.act V K k x) (comp-idr V K g)) p') p') ;
+} ;
+
+------------------------------------------------------------------------
+-- composition for Pi A B, from eS to eT
+
+module PiComp (G : PCtx) (A : PTy[G]) (B : PTy[extP G A]) (eS eT : IPt)
+  (kA : LineFibP[GFam[lv].famPath, G, A].FibAt eT)
+  (cB : CompAtP[GFam[lv].famPath, extP G A, B, eS, eT].CompAt) {
+  module PL = PiLines[G, A, B] ;
+  module PE = PL.PE ;
+  module TA = PE.TA ;
+  module TB = PE.TB ;
+  module TP = PE.TP ;
+  module FG = PL.FG ;
+  module FA = PL.FA ;
+  module FP = PL.FP ;
+  module FB = PL.FB ;
+  module CP = CompAtP[GFam[lv].famPath, G, PE.P, eS, eT] ;
+  module CB = CompAtP[GFam[lv].famPath, extP G A, B, eS, eT] ;
+  module KAe = EndKit[GFam[lv].famPath, G, A, eT] ;
+  module KP = CP.EK ;
+  module KB = CB.EK ;
+  module LB = LevKit[GFam[lv].famPath, GFam[lv].famConn, extP G A, B, eS] ;
+  module LPs = LevKit[GFam[lv].famPath, GFam[lv].famConn, G, PE.P, eS] ;
+  module LAt = LevKit[GFam[lv].famPath, GFam[lv].famConn, G, A, eT] ;
+
+  -- the empty partial element
+  emptyP (K : Ob) (z : KAe.TV.EI K) : KAe.PT.Partial[K, z] =
+    new KAe.PT.Partial[K, z, zero, \ l -> absurd _ (false-true l.2), \ l j W f i i' -> absurd _ (false-true l.2)] ;
+
+  ----------------------------------------------------------------------
+  -- the problem at K, for an argument v at the end eT
+
+  module Prob (K : Ob) (wK : CP.TV.EI K) (pK : CP.PT.Partial[K, wK]) (v : W0.Ix (A.tob K ((GFam[lv].famPath.pev G eT).nt K wK.1))) {
+    xA : KAe.TV.EI K = (wK.1, v) ;
+
+    -- the A line ending at v: reverse filling, no sides
+    La : W0.Ix (FA.tobF K wK.1) = (kA.kop K xA (emptyP K xA)).1 ;
+
+    La-pt (W : Ob) (g : Hom W K) (i : Hom W Iv) : Id (W0.Ix (G.ob W)) (La.1.1 W g i).1 (wK.1.1 W g i) =
+      apH (\ q -> q.1 W g i) La.2 ;
+
+    -- the start of the B part: the start of the Pi line applied at the start of La
+    ps : Id (TA.Pt K) (G.act K K (idH K) ((GFam[lv].famPath.pev G eS).nt K wK.1)) (La.1.1 K (idH K) (ptH K eS)).1 =
+      transH (G.act-id K ((GFam[lv].famPath.pev G eS).nt K wK.1)) (symH (La-pt K (idH K) (ptH K eS))) ;
+
+    wB : CB.TV.EI K = (La.1, PE.apW K ((GFam[lv].famPath.pev G eS).nt K wK.1) wK.2 K (idH K) (La.1.1 K (idH K) (ptH K eS)) ps) ;
+
+    -- the end of La at eT is v
+    eE : Id (TA.EI K) (La.1.1 K (idH K) (ptH K eT)) ((GFam[lv].famPath.pev G eT).nt K wK.1, v) =
+      transH (symH (LAt.endL-lev K (wK.1, La))) (apH (KAe.endE K) (kA.kop K xA (emptyP K xA)).2) ;
+
+    -- the sides: the lines of the sides applied along La
+    module SB (l : Fin pK.pr) {
+      s : CP.PT.PSide[K, wK] = pK.ps l ;
+
+      LaV (V : Ob) (g : Hom V K) (h : Lands V K s.pQ g) : W0.Ix (FA.tobF V (s.pv V g h).1.1) =
+        (FA.FE.actF V K g La.1,
+         transH (transH (FA.piL-act V K g La.1) (apH (FG.actF V K g) La.2)) (symH (apH (\ z -> z.1) (s.ppt V g h)))) ;
+
+      Lb (V : Ob) (g : Hom V K) (h : Lands V K s.pQ g) : KB.TL.EI V =
+        ((LaV V g h).1, PL.ApL[V, (s.pv V g h).1.1, (s.pv V g h).2.1, LaV V g h].line) ;
+
+      -- the end at eS of the line of the side is the start, restricted
+      eP (V : Ob) (g : Hom V K) (h : Lands V K s.pQ g)
+        : Id (TP.EI V) ((s.pv V g h).2.1.1.1 V (idH V) (ptH V eS)) (TP.E.act V K g (((GFam[lv].famPath.pev G eS).nt K wK.1), wK.2)) =
+        calc (TP.EI V) {
+            (s.pv V g h).2.1.1.1 V (idH V) (ptH V eS)
+          =< symH (LPs.endL-lev V ((s.pv V g h).1.1, (s.pv V g h).2.1)) >
+            KP.endE V ((GFam[lv].famPath.pevA G PE.P eS).mE V ((s.pv V g h).1.1, (s.pv V g h).2.1))
+          =< apH (KP.endE V) (s.pv V g h).2.2 >
+            KP.endE V (s.pv V g h).1
+          =< apH (KP.endE V) (s.ppt V g h) >
+            KP.endE V (CP.TV.E.act V K g wK)
+          =< KP.endE-act V K g wK >
+            TP.E.act V K g (((GFam[lv].famPath.pev G eS).nt K wK.1), wK.2) } ;
+
+      -- the start of La, restricted
+      Hw (V : Ob) (g : Hom V K) : Id (TA.EI V) (TA.E.act V K g (La.1.1 K (idH K) (ptH K eS))) (La.1.1 V (compH V V K g (idH V)) (ptH V eS)) =
+        transH (La.1.2 V K g (idH K) (ptH K eS))
+          (transH (apH (\ k -> La.1.1 V k (compH V K Iv (ptH K eS) g)) (transH (comp-idl V K g) (symH (comp-idr V K g))))
+                  (apH (\ k -> La.1.1 V (compH V V K g (idH V)) k) (ptH-nat V K g eS))) ;
+
+      Qb (V : Ob) (g : Hom V K) (h : Lands V K s.pQ g)
+        : Id (TB.EI V) (KB.endE V ((GFam[lv].famPath.pevA (extP G A) B eS).mE V (Lb V g h))) (KB.endE V (CB.TV.E.act V K g wB)) =
+        calc (TB.EI V) {
+            KB.endE V ((GFam[lv].famPath.pevA (extP G A) B eS).mE V (Lb V g h))
+          =< LB.endL-lev V (Lb V g h) >
+            PL.ApL[V, (s.pv V g h).1.1, (s.pv V g h).2.1, LaV V g h].val V (idH V) (ptH V eS)
+          =< PE.apW-gen V ((s.pv V g h).2.1.1.1 V (idH V) (ptH V eS)).1 (TP.E.act V K g (((GFam[lv].famPath.pev G eS).nt K wK.1), wK.2)).1
+               ((s.pv V g h).2.1.1.1 V (idH V) (ptH V eS)).2 (TP.E.act V K g (((GFam[lv].famPath.pev G eS).nt K wK.1), wK.2)).2 (eP V g h)
+               V (idH V) ((LaV V g h).1.1 V (idH V) (ptH V eS)) ((LaV V g h).1.1 V (idH V) (ptH V eS))
+               (refl ((LaV V g h).1.1 V (idH V) (ptH V eS)))
+               (PL.ApL[V, (s.pv V g h).1.1, (s.pv V g h).2.1, LaV V g h].pz V (idH V) (ptH V eS))
+               (transH (apH (\ z -> G.act V V (idH V) z.1) (symH (eP V g h)))
+                       (PL.ApL[V, (s.pv V g h).1.1, (s.pv V g h).2.1, LaV V g h].pz V (idH V) (ptH V eS))) >
+            ((LaV V g h).1.1 V (idH V) (ptH V eS),
+             PE.apW V (TP.E.act V K g (((GFam[lv].famPath.pev G eS).nt K wK.1), wK.2)).1 (TP.E.act V K g (((GFam[lv].famPath.pev G eS).nt K wK.1), wK.2)).2 V (idH V) ((LaV V g h).1.1 V (idH V) (ptH V eS))
+               (transH (apH (\ z -> G.act V V (idH V) z.1) (symH (eP V g h)))
+                       (PL.ApL[V, (s.pv V g h).1.1, (s.pv V g h).2.1, LaV V g h].pz V (idH V) (ptH V eS))))
+          =< PL.apW-restr K ((GFam[lv].famPath.pev G eS).nt K wK.1) wK.2 V g ((LaV V g h).1.1 V (idH V) (ptH V eS))
+               (transH (apH (\ z -> G.act V V (idH V) z.1) (symH (eP V g h)))
+                       (PL.ApL[V, (s.pv V g h).1.1, (s.pv V g h).2.1, LaV V g h].pz V (idH V) (ptH V eS)))
+               (transH (apH (G.act V K g) (symH (G.act-id K ((GFam[lv].famPath.pev G eS).nt K wK.1)))) (transH (apH (G.act V K g) ps) (apH (\ z -> z.1) (Hw V g)))) >
+            ((LaV V g h).1.1 V (idH V) (ptH V eS), PE.apW K ((GFam[lv].famPath.pev G eS).nt K wK.1) wK.2 V g ((LaV V g h).1.1 V (idH V) (ptH V eS))
+               (transH (apH (G.act V K g) (symH (G.act-id K ((GFam[lv].famPath.pev G eS).nt K wK.1)))) (transH (apH (G.act V K g) ps) (apH (\ z -> z.1) (Hw V g)))))
+          =< symH (transH (PE.apW-act K ((GFam[lv].famPath.pev G eS).nt K wK.1) wK.2 K (idH K) (La.1.1 K (idH K) (ptH K eS)) ps V g ((LaV V g h).1.1 V (idH V) (ptH V eS))
+                             (transH (apH (\ k -> G.act V K k ((GFam[lv].famPath.pev G eS).nt K wK.1)) (comp-idl V K g)) (transH (apH (G.act V K g) (symH (G.act-id K ((GFam[lv].famPath.pev G eS).nt K wK.1)))) (transH (apH (G.act V K g) ps) (apH (\ z -> z.1) (Hw V g)))))
+                             (Hw V g))
+                     (PE.apW-f K ((GFam[lv].famPath.pev G eS).nt K wK.1) wK.2 V (compH V K K (idH K) g) g (comp-idl V K g) ((LaV V g h).1.1 V (idH V) (ptH V eS)) _ _)) >
+            TB.E.act V K g (KB.endE K wB)
+          =< symH (KB.endE-act V K g wB) >
+            KB.endE V (CB.TV.E.act V K g wB) } ;
+
+      pv : CB.PT.PvTy K s.pQ = \ V g h -> KB.mkTS V (CB.TV.E.act V K g wB) (Lb V g h) (refl (CB.TV.E.act V K g wB).1) (Qb V g h) ;
+
+      pv-pt (V : Ob) (g : Hom V K) (h : Lands V K s.pQ g) : Id (CB.TV.EI V) (pv V g h).1 (CB.TV.E.act V K g wB) =
+        KB.mkTS-pt V (CB.TV.E.act V K g wB) (Lb V g h) (refl (CB.TV.E.act V K g wB).1) (Qb V g h) ;
+
+      -- the values of its line: the line of the side applied along La
+      pv-lev (V : Ob) (g : Hom V K) (h : Lands V K s.pQ g) (W' : Ob) (g' : Hom W' V) (j : Hom W' Iv)
+        : Id (TB.EI W') (GFam[lv].famConn.levA (extP G A) B V (KB.lineL V (pv V g h)) W' g' j)
+                        (PL.ApL[V, (s.pv V g h).1.1, (s.pv V g h).2.1, LaV V g h].val W' g' j) =
+        LB.mkTS-lev V (CB.TV.E.act V K g wB) (Lb V g h) (refl (CB.TV.E.act V K g wB).1) (Qb V g h) W' g' j ;
+
+      -- the values depend only on the value of the Pi line and the point of La
+      val-eq (V V' : Ob) (g : Hom V K) (h : Lands V K s.pQ g) (g2 : Hom V' K) (h2 : Lands V' K s.pQ g2) (W' : Ob)
+        (g' : Hom W' V) (j : Hom W' Iv) (g2' : Hom W' V') (j2 : Hom W' Iv)
+        (Q : Id (TP.EI W') ((s.pv V g h).2.1.1.1 W' g' j) ((s.pv V' g2 h2).2.1.1.1 W' g2' j2))
+        (H : Id (TA.EI W') ((LaV V g h).1.1 W' g' j) ((LaV V' g2 h2).1.1 W' g2' j2))
+        : Id (TB.EI W') (PL.ApL[V, (s.pv V g h).1.1, (s.pv V g h).2.1, LaV V g h].val W' g' j)
+                        (PL.ApL[V', (s.pv V' g2 h2).1.1, (s.pv V' g2 h2).2.1, LaV V' g2 h2].val W' g2' j2) =
+        PE.apW-gen W' ((s.pv V g h).2.1.1.1 W' g' j).1 ((s.pv V' g2 h2).2.1.1.1 W' g2' j2).1
+          ((s.pv V g h).2.1.1.1 W' g' j).2 ((s.pv V' g2 h2).2.1.1.1 W' g2' j2).2 Q
+          W' (idH W') ((LaV V g h).1.1 W' g' j) ((LaV V' g2 h2).1.1 W' g2' j2) H
+          (PL.ApL[V, (s.pv V g h).1.1, (s.pv V g h).2.1, LaV V g h].pz W' g' j)
+          (PL.ApL[V', (s.pv V' g2 h2).1.1, (s.pv V' g2 h2).2.1, LaV V' g2 h2].pz W' g2' j2) ;
+
+      pnat : CB.PT.PnTy K s.pQ pv = \ V' V g' g h h' ->
+        LB.ts-ext V' (CB.TS.E.act V' V g' (pv V g h)) (pv V' (compH V' V K g g') h')
+          (transH (apH (CB.TV.E.act V' V g') (pv-pt V g h))
+            (transH (CB.TV.PE.actC V' V K g g' wB) (symH (pv-pt V' (compH V' V K g g') h'))))
+          (\ W' g'' j ->
+            calc (TB.EI W') {
+                GFam[lv].famConn.levA (extP G A) B V' (KB.lineL V' (CB.TS.E.act V' V g' (pv V g h))) W' g'' j
+              =< LB.line-act V' V g' (pv V g h) W' g'' j >
+                GFam[lv].famConn.levA (extP G A) B V (KB.lineL V (pv V g h)) W' (compH W' V' V g' g'') j
+              =< pv-lev V g h W' (compH W' V' V g' g'') j >
+                PL.ApL[V, (s.pv V g h).1.1, (s.pv V g h).2.1, LaV V g h].val W' (compH W' V' V g' g'') j
+              =< val-eq V V' g h (compH V' V K g g') h' W' (compH W' V' V g' g'') j g'' j
+                   (apH (\ z -> z.2.1.1.1 W' g'' j) (s.pnat V' V g' g h h'))
+                   (apH (\ k -> La.1.1 W' k j) (symH (comp-assoc W' V' V K g g' g''))) >
+                PL.ApL[V', (s.pv V' (compH V' V K g g') h').1.1, (s.pv V' (compH V' V K g g') h').2.1, LaV V' (compH V' V K g g') h'].val W' g'' j
+              =< symH (pv-lev V' (compH V' V K g g') h' W' g'' j) >
+                GFam[lv].famConn.levA (extP G A) B V' (KB.lineL V' (pv V' (compH V' V K g g') h')) W' g'' j }) ;
+
+      side : CB.PT.PSide[K, wB] = new CB.PT.PSide[K, wB, s.pQ, pv, pv-pt, pnat] ;
+
+      opaque pv ;
+    } ;
+
+    pcs : CB.PT.PCsTy K wB pK.pr (\ l -> SB[l].side) = \ l m V g h h' ->
+      LB.ts-ext V (SB[l].pv V g h) (SB[m].pv V g h') (transH (SB[l].pv-pt V g h) (symH (SB[m].pv-pt V g h')))
+        (\ W' g' j ->
+          transH (SB[l].pv-lev V g h W' g' j)
+            (transH (PE.apW-gen W' (((pK.ps l).pv V g h).2.1.1.1 W' g' j).1 (((pK.ps m).pv V g h').2.1.1.1 W' g' j).1
+                       (((pK.ps l).pv V g h).2.1.1.1 W' g' j).2 (((pK.ps m).pv V g h').2.1.1.1 W' g' j).2
+                       (apH (\ z -> z.2.1.1.1 W' g' j) (pK.pcs l m V g h h'))
+                       W' (idH W') (La.1.1 W' (compH W' V K g g') j) (La.1.1 W' (compH W' V K g g') j) (refl (La.1.1 W' (compH W' V K g g') j))
+                       (PL.ApL[V, ((pK.ps l).pv V g h).1.1, ((pK.ps l).pv V g h).2.1, SB[l].LaV V g h].pz W' g' j)
+                       (PL.ApL[V, ((pK.ps m).pv V g h').1.1, ((pK.ps m).pv V g h').2.1, SB[m].LaV V g h'].pz W' g' j))
+                    (symH (SB[m].pv-lev V g h' W' g' j)))) ;
+
+    pB : CB.PT.Partial[K, wB] = new CB.PT.Partial[K, wB, pK.pr, \ l -> SB[l].side, pcs] ;
+
+    -- the composite, read at ((x eT) , v)
+    value : W0.Ix (B.tob K ((GFam[lv].famPath.pev G eT).nt K wK.1, v)) =
+      TB.coeT K (La.1.1 K (idH K) (ptH K eT)) ((GFam[lv].famPath.pev G eT).nt K wK.1, v) eE (cB.cop K wB pB) ;
+
+    value-E : Id (TB.EI K) (((GFam[lv].famPath.pev G eT).nt K wK.1, v), value) (La.1.1 K (idH K) (ptH K eT), cB.cop K wB pB) =
+      symH (TB.pr-coe K (La.1.1 K (idH K) (ptH K eT)) ((GFam[lv].famPath.pev G eT).nt K wK.1, v) eE (cB.cop K wB pB)) ;
+  } ;
+
+  module EB1 = EndKit[GFam[lv].famPath, extP G A, B, eT] ;
+
+  ----------------------------------------------------------------------
+  -- the problem, restricted along g : K' -> K, is the problem at the
+  -- restricted data
+
+  module ProbR (K : Ob) (wK : CP.TV.EI K) (pK : CP.PT.Partial[K, wK]) (v : W0.Ix (A.tob K ((GFam[lv].famPath.pev G eT).nt K wK.1)))
+    (K' : Ob) (g : Hom K' K) {
+    module PW = Prob[K, wK, pK, v] ;
+    module PV = Prob[K', CP.TV.E.act K' K g wK, CP.PT.restrictP K' K g wK pK, (KAe.TV.E.act K' K g PW.xA).2] ;
+
+    -- the empty partial element, restricted, is empty
+    emptyR : Id (KAe.PT.Partial[K', PV.xA]) (subst (KAe.TV.EI K') (\ z -> KAe.PT.Partial[K', z]) (KAe.TV.E.act K' K g PW.xA) PV.xA
+                                                (refl PV.xA) (KAe.PT.restrictP K' K g PW.xA (emptyP K PW.xA)))
+                                         (emptyP K' PV.xA) =
+      KAe.PT.partExtH K' (KAe.TV.E.act K' K g PW.xA) PV.xA (refl PV.xA) (KAe.PT.restrictP K' K g PW.xA (emptyP K PW.xA)) (emptyP K' PV.xA)
+        (refl zero) (\ l -> absurd _ (false-true l.2)) (\ l W f i i' -> absurd _ (false-true l.2)) ;
+
+    -- the reverse A filler, restricted
+    eA : Id (KAe.TS.EI K') (KAe.TS.E.act K' K g (PW.xA, kA.kop K PW.xA (emptyP K PW.xA))) (PV.xA, kA.kop K' PV.xA (emptyP K' PV.xA)) =
+      transH (kA.kunif K' K g PW.xA (emptyP K PW.xA))
+        (KAe.PT.kop-cong kA K' (KAe.TV.E.act K' K g PW.xA) PV.xA (refl PV.xA) (KAe.PT.restrictP K' K g PW.xA (emptyP K PW.xA))
+           (emptyP K' PV.xA) emptyR) ;
+
+    eLa : Id (W0.Ix (FA.FE.ob K')) (FA.FE.actF K' K g PW.La.1) PV.La.1 = apH (\ z -> z.2.1.1) eA ;
+
+    eLaV (W' : Ob) (g' : Hom W' K') (j : Hom W' Iv)
+      : Id (TA.EI W') (PW.La.1.1 W' (compH W' K' K g g') j) (PV.La.1.1 W' g' j) = apH (\ q -> q.1 W' g' j) eLa ;
+
+    -- the start of the B part, restricted
+    w0' : TA.EI K' = PV.La.1.1 K' (idH K') (ptH K' eS) ;
+
+    Hw0 : Id (TA.EI K') (TA.E.act K' K g (PW.La.1.1 K (idH K) (ptH K eS))) w0' =
+      transH (PW.La.1.2 K' K g (idH K) (ptH K eS))
+        (transH (apH (\ k -> PW.La.1.1 K' k (compH K' K Iv (ptH K eS) g)) (transH (comp-idl K' K g) (symH (comp-idr K' K g))))
+          (transH (apH (\ k -> PW.La.1.1 K' (compH K' K' K g (idH K')) k) (ptH-nat K' K g eS)) (eLaV K' (idH K') (ptH K' eS)))) ;
+
+    pG : Id (TA.Pt K') (G.act K' K g ((GFam[lv].famPath.pev G eS).nt K wK.1)) w0'.1 =
+      transH (apH (G.act K' K g) (symH (G.act-id K ((GFam[lv].famPath.pev G eS).nt K wK.1)))) (transH (apH (G.act K' K g) PW.ps) (apH (\ z -> z.1) Hw0)) ;
+
+    eP0 : Id (TP.EI K') (TP.E.act K' K g (((GFam[lv].famPath.pev G eS).nt K wK.1), wK.2)) (((GFam[lv].famPath.pev G eS).nt K' (CP.TV.E.act K' K g wK).1), (CP.TV.E.act K' K g wK).2) = symH (KP.endE-act K' K g wK) ;
+
+    eW : Id (CB.TV.EI K') (CB.TV.E.act K' K g PW.wB) PV.wB =
+      KB.tv-eq K' (CB.TV.E.act K' K g PW.wB) PV.wB eLa
+        (calc (TB.EI K') {
+            KB.endE K' (CB.TV.E.act K' K g PW.wB)
+          =< KB.endE-act K' K g PW.wB >
+            TB.E.act K' K g (PW.La.1.1 K (idH K) (ptH K eS), PE.apW K ((GFam[lv].famPath.pev G eS).nt K wK.1) wK.2 K (idH K) (PW.La.1.1 K (idH K) (ptH K eS)) PW.ps)
+          =< PE.apW-act K ((GFam[lv].famPath.pev G eS).nt K wK.1) wK.2 K (idH K) (PW.La.1.1 K (idH K) (ptH K eS)) PW.ps K' g w0'
+               (transH (apH (\ k -> G.act K' K k ((GFam[lv].famPath.pev G eS).nt K wK.1)) (comp-idl K' K g)) pG) Hw0 >
+            (w0', PE.apW K ((GFam[lv].famPath.pev G eS).nt K wK.1) wK.2 K' (compH K' K K (idH K) g) w0' (transH (apH (\ k -> G.act K' K k ((GFam[lv].famPath.pev G eS).nt K wK.1)) (comp-idl K' K g)) pG))
+          =< PE.apW-f K ((GFam[lv].famPath.pev G eS).nt K wK.1) wK.2 K' (compH K' K K (idH K) g) g (comp-idl K' K g) w0'
+               (transH (apH (\ k -> G.act K' K k ((GFam[lv].famPath.pev G eS).nt K wK.1)) (comp-idl K' K g)) pG) pG >
+            (w0', PE.apW K ((GFam[lv].famPath.pev G eS).nt K wK.1) wK.2 K' g w0' pG)
+          =< symH (PL.apW-restr K ((GFam[lv].famPath.pev G eS).nt K wK.1) wK.2 K' g w0'
+                     (transH (apH (\ z -> G.act K' K' (idH K') z.1) (eP0)) (transH (G.act-id K' ((GFam[lv].famPath.pev G eS).nt K' (CP.TV.E.act K' K g wK).1)) (symH (PV.La-pt K' (idH K') (ptH K' eS))))) pG) >
+            (w0', PE.apW K' (TP.E.act K' K g (((GFam[lv].famPath.pev G eS).nt K wK.1), wK.2)).1 (TP.E.act K' K g (((GFam[lv].famPath.pev G eS).nt K wK.1), wK.2)).2 K' (idH K') w0'
+                    (transH (apH (\ z -> G.act K' K' (idH K') z.1) (eP0)) (transH (G.act-id K' ((GFam[lv].famPath.pev G eS).nt K' (CP.TV.E.act K' K g wK).1)) (symH (PV.La-pt K' (idH K') (ptH K' eS))))))
+          =< PE.apW-gen K' (TP.E.act K' K g (((GFam[lv].famPath.pev G eS).nt K wK.1), wK.2)).1 ((GFam[lv].famPath.pev G eS).nt K' (CP.TV.E.act K' K g wK).1) (TP.E.act K' K g (((GFam[lv].famPath.pev G eS).nt K wK.1), wK.2)).2 (CP.TV.E.act K' K g wK).2 eP0
+               K' (idH K') w0' w0' (refl w0')
+               (transH (apH (\ z -> G.act K' K' (idH K') z.1) (eP0)) (transH (G.act-id K' ((GFam[lv].famPath.pev G eS).nt K' (CP.TV.E.act K' K g wK).1)) (symH (PV.La-pt K' (idH K') (ptH K' eS)))))
+               PV.ps >
+            KB.endE K' PV.wB }) ;
+
+    -- the sides, restricted
+    eV : CB.PT.EVT K' (CB.TV.E.act K' K g PW.wB) PV.wB (CB.PT.restrictP K' K g PW.wB PW.pB) PV.pB.pr PV.pB.ps (refl pK.pr) =
+      \ l V g2 i i' ->
+        LB.ts-ext V (PW.SB[l].pv V (compH V K' K g g2) (lands-pre V K' K g (pK.ps l).pQ g2 i)) (PV.SB[l].pv V g2 i')
+          (transH (PW.SB[l].pv-pt V (compH V K' K g g2) (lands-pre V K' K g (pK.ps l).pQ g2 i))
+            (transH (symH (CB.TV.PE.actC V K' K g g2 PW.wB))
+              (transH (apH (CB.TV.E.act V K' g2) eW) (symH (PV.SB[l].pv-pt V g2 i')))))
+          (\ W' g' j ->
+            transH (PW.SB[l].pv-lev V (compH V K' K g g2) (lands-pre V K' K g (pK.ps l).pQ g2 i) W' g' j)
+              (transH (PE.apW-gen W'
+                         (((pK.ps l).pv V (compH V K' K g g2) (lands-pre V K' K g (pK.ps l).pQ g2 i)).2.1.1.1 W' g' j).1
+                         (((PV.pK.ps l).pv V g2 i').2.1.1.1 W' g' j).1
+                         (((pK.ps l).pv V (compH V K' K g g2) (lands-pre V K' K g (pK.ps l).pQ g2 i)).2.1.1.1 W' g' j).2
+                         (((PV.pK.ps l).pv V g2 i').2.1.1.1 W' g' j).2
+                         (apH (\ z -> z.2.1.1.1 W' g' j)
+                            (CP.PT.pv-irr K wK (pK.ps l) V (compH V K' K g g2) (lands-pre V K' K g (pK.ps l).pQ g2 i)
+                               (lands-pre V K' K g (pK.ps l).pQ g2 i')))
+                         W' (idH W') (PW.La.1.1 W' (compH W' V K (compH V K' K g g2) g') j) (PV.La.1.1 W' (compH W' V K' g2 g') j)
+                         (transH (apH (\ k -> PW.La.1.1 W' k j) (comp-assoc W' V K' K g g2 g')) (eLaV W' (compH W' V K' g2 g') j))
+                         (PL.ApL[V, ((pK.ps l).pv V (compH V K' K g g2) (lands-pre V K' K g (pK.ps l).pQ g2 i)).1.1,
+                                 ((pK.ps l).pv V (compH V K' K g g2) (lands-pre V K' K g (pK.ps l).pQ g2 i)).2.1,
+                                 PW.SB[l].LaV V (compH V K' K g g2) (lands-pre V K' K g (pK.ps l).pQ g2 i)].pz W' g' j)
+                         (PL.ApL[V, ((PV.pK.ps l).pv V g2 i').1.1, ((PV.pK.ps l).pv V g2 i').2.1, PV.SB[l].LaV V g2 i'].pz W' g' j))
+                      (symH (PV.SB[l].pv-lev V g2 i' W' g' j)))) ;
+
+    eR : Id (CB.PT.Partial[K', PV.wB])
+            (subst (CB.TV.EI K') (\ z -> CB.PT.Partial[K', z]) (CB.TV.E.act K' K g PW.wB) PV.wB eW (CB.PT.restrictP K' K g PW.wB PW.pB))
+            PV.pB =
+      CB.PT.partExtH K' (CB.TV.E.act K' K g PW.wB) PV.wB eW (CB.PT.restrictP K' K g PW.wB PW.pB) PV.pB (refl pK.pr)
+        (\ l -> refl (pre K' K g (pK.ps l).pQ)) eV ;
+
+    -- the composite, restricted
+    eC : Id (CB.TV'.EI K') (CB.TV'.E.act K' K g (PW.wB.1, cB.cop K PW.wB PW.pB)) (PV.wB.1, cB.cop K' PV.wB PV.pB) =
+      transH (cB.cunif K' K g PW.wB PW.pB)
+        (CB.cop-cong cB K' (CB.TV.E.act K' K g PW.wB) PV.wB eW (CB.PT.restrictP K' K g PW.wB PW.pB) PV.pB eR) ;
+
+    res : Id (TB.EI K') (TB.E.act K' K g (((GFam[lv].famPath.pev G eT).nt K wK.1, v), PW.value))
+                        (((GFam[lv].famPath.pev G eT).nt K' (CP.TV.E.act K' K g wK).1, (KAe.TV.E.act K' K g PW.xA).2), PV.value) =
+      calc (TB.EI K') {
+          TB.E.act K' K g (((GFam[lv].famPath.pev G eT).nt K wK.1, v), PW.value)
+        =< apH (TB.E.act K' K g) PW.value-E >
+          TB.E.act K' K g (EB1.endE K (PW.wB.1, cB.cop K PW.wB PW.pB))
+        =< symH (EB1.endE-act K' K g (PW.wB.1, cB.cop K PW.wB PW.pB)) >
+          EB1.endE K' (CB.TV'.E.act K' K g (PW.wB.1, cB.cop K PW.wB PW.pB))
+        =< apH (EB1.endE K') eC >
+          EB1.endE K' (PV.wB.1, cB.cop K' PV.wB PV.pB)
+        =< symH PV.value-E >
+          (((GFam[lv].famPath.pev G eT).nt K' (CP.TV.E.act K' K g wK).1, (KAe.TV.E.act K' K g PW.xA).2), PV.value) } ;
+
+    opaque eA ; opaque eW ; opaque eR ; opaque eC ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- equal data, equal values
+
+  Prob-cong (K : Ob) (wK wK' : CP.TV.EI K) (P : Id (CP.TV.EI K) wK wK') (pK : CP.PT.Partial[K, wK]) (pK' : CP.PT.Partial[K, wK'])
+    (R : Id (CP.PT.Partial[K, wK']) (subst (CP.TV.EI K) (\ z -> CP.PT.Partial[K, z]) wK wK' P pK) pK')
+    (v : W0.Ix (A.tob K ((GFam[lv].famPath.pev G eT).nt K wK.1))) (v' : W0.Ix (A.tob K ((GFam[lv].famPath.pev G eT).nt K wK'.1)))
+    (Vv : Id (KAe.TV.EI K) (wK.1, v) (wK'.1, v'))
+    : Id (TB.EI K) (((GFam[lv].famPath.pev G eT).nt K wK.1, v), Prob[K, wK, pK, v].value)
+                   (((GFam[lv].famPath.pev G eT).nt K wK'.1, v'), Prob[K, wK', pK', v'].value) =
+    idJ (CP.TV.EI K) wK
+      (\ w2 P2 -> (p2 : CP.PT.Partial[K, w2]) -> Id (CP.PT.Partial[K, w2]) (subst (CP.TV.EI K) (\ z -> CP.PT.Partial[K, z]) wK w2 P2 pK) p2
+         -> (v2 : W0.Ix (A.tob K ((GFam[lv].famPath.pev G eT).nt K w2.1))) -> Id (KAe.TV.EI K) (wK.1, v) (w2.1, v2)
+         -> Id (TB.EI K) (((GFam[lv].famPath.pev G eT).nt K wK.1, v), Prob[K, wK, pK, v].value)
+                         (((GFam[lv].famPath.pev G eT).nt K w2.1, v2), Prob[K, w2, p2, v2].value))
+      (\ p2 R2 ->
+         idJ (CP.PT.Partial[K, wK]) pK
+           (\ p3 R3 -> (v2 : W0.Ix (A.tob K ((GFam[lv].famPath.pev G eT).nt K wK.1))) -> Id (KAe.TV.EI K) (wK.1, v) (wK.1, v2)
+              -> Id (TB.EI K) (((GFam[lv].famPath.pev G eT).nt K wK.1, v), Prob[K, wK, pK, v].value)
+                              (((GFam[lv].famPath.pev G eT).nt K wK.1, v2), Prob[K, wK, p3, v2].value))
+           (\ v2 V2 ->
+              idJ (W0.Ix (A.tob K ((GFam[lv].famPath.pev G eT).nt K wK.1))) v
+                (\ v3 E3 -> Id (TB.EI K) (((GFam[lv].famPath.pev G eT).nt K wK.1, v), Prob[K, wK, pK, v].value)
+                                          (((GFam[lv].famPath.pev G eT).nt K wK.1, v3), Prob[K, wK, pK, v3].value))
+                (refl (((GFam[lv].famPath.pev G eT).nt K wK.1, v), Prob[K, wK, pK, v].value))
+                v2 (KAe.TV.pr-inj K wK.1 v v2 V2))
+           p2 R2)
+      wK' P pK' R v' Vv ;
+
+  -- transport back along a path
+  subst-inv (T : U lv+) (F : T -> U lv+) (x y : T) (Q : Id T x y) (u : F x) (u' : F y) (R : Id (F y) (subst T F x y Q u) u')
+    : Id (F x) (subst T F y x (symH Q) u') u =
+    idJ T x (\ y2 Q2 -> (u2 : F y2) -> Id (F y2) (subst T F x y2 Q2 u) u2 -> Id (F x) (subst T F y2 x (symH Q2) u2) u)
+      (\ u2 R2 -> idJ (F x) u (\ u3 R3 -> Id (F x) (subst T F x x (symH (refl x)) u3) u) (refl u) u2 R2)
+      y Q u' R ;
+
+  ----------------------------------------------------------------------
+  -- the composite: the element of Pi whose value at (f , v) is the value
+  -- of the problem at the restricted data
+
+  module CopX (X : Ob) (w : CP.TV.EI X) (p : CP.PT.Partial[X, w]) {
+    qf (K : Ob) (f : Hom K X) : Id (TA.Pt K) (G.act K X f ((GFam[lv].famPath.pev G eT).nt X w.1)) ((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K X f w).1) =
+      symH (FG.evN eT K X f w.1) ;
+
+    vK (K : Ob) (f : Hom K X) (v : W0.Ix (A.tob K (G.act K X f ((GFam[lv].famPath.pev G eT).nt X w.1)))) : W0.Ix (A.tob K ((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K X f w).1)) =
+      TA.coeT K (G.act K X f ((GFam[lv].famPath.pev G eT).nt X w.1)) ((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K X f w).1) (qf K f) v ;
+
+    -- characterisation of the moved argument
+    vK-E (K : Ob) (f : Hom K X) (v : W0.Ix (A.tob K (G.act K X f ((GFam[lv].famPath.pev G eT).nt X w.1))))
+      : Id (TA.EI K) (G.act K X f ((GFam[lv].famPath.pev G eT).nt X w.1), v) ((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K X f w).1, vK K f v) =
+      TA.pr-coe K (G.act K X f ((GFam[lv].famPath.pev G eT).nt X w.1)) ((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K X f w).1) (qf K f) v ;
+
+    opaque vK ;
+
+    phiT : PE.PC.FunT X (PE.PC.ptOf X ((GFam[lv].famPath.pev G eT).nt X w.1)) = \ K f v ->
+      TB.coeT K ((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K X f w).1, vK K f v) (G.act K X f ((GFam[lv].famPath.pev G eT).nt X w.1), v)
+        (symH (vK-E K f v))
+        Prob[K, CP.TV.E.act K X f w, CP.PT.restrictP K X f w p, vK K f v].value ;
+
+    phiT-E (K : Ob) (f : Hom K X) (v : W0.Ix (A.tob K (G.act K X f ((GFam[lv].famPath.pev G eT).nt X w.1))))
+      : Id (TB.EI K) ((G.act K X f ((GFam[lv].famPath.pev G eT).nt X w.1), v), phiT K f v)
+                     (((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K X f w).1, vK K f v),
+                      Prob[K, CP.TV.E.act K X f w, CP.PT.restrictP K X f w p, vK K f v].value) =
+      symH (TB.pr-coe K ((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K X f w).1, vK K f v) (G.act K X f ((GFam[lv].famPath.pev G eT).nt X w.1), v)
+              (symH (vK-E K f v))
+              Prob[K, CP.TV.E.act K X f w, CP.PT.restrictP K X f w p, vK K f v].value) ;
+
+    module NT (J K : Ob) (f : Hom J X) (g : Hom K J) (v : W0.Ix (A.tob J (G.act J X f ((GFam[lv].famPath.pev G eT).nt X w.1)))) {
+      aa : W0.Ix (A.tob K (G.act K X (compH K J X f g) ((GFam[lv].famPath.pev G eT).nt X w.1))) = A.tact K J g (G.act J X f ((GFam[lv].famPath.pev G eT).nt X w.1)) (G.act K X (compH K J X f g) ((GFam[lv].famPath.pev G eT).nt X w.1)) (PE.PC.cOf X ((GFam[lv].famPath.pev G eT).nt X w.1) J K f g) v ;
+
+      Pw : Id (CP.TV.EI K) (CP.TV.E.act K J g (CP.TV.E.act J X f w)) (CP.TV.E.act K X (compH K J X f g) w) = symH (CP.TV.E.act-o K J X f g w) ;
+
+      Rp : Id (CP.PT.Partial[K, CP.TV.E.act K X (compH K J X f g) w])
+              (subst (CP.TV.EI K) (\ z -> CP.PT.Partial[K, z]) (CP.TV.E.act K J g (CP.TV.E.act J X f w)) (CP.TV.E.act K X (compH K J X f g) w) Pw
+                     (CP.PT.restrictP K J g (CP.TV.E.act J X f w) (CP.PT.restrictP J X f w p)))
+              (CP.PT.restrictP K X (compH K J X f g) w p) =
+        subst-inv (CP.TV.EI K) (\ z -> CP.PT.Partial[K, z]) (CP.TV.E.act K X (compH K J X f g) w) (CP.TV.E.act K J g (CP.TV.E.act J X f w)) (CP.TV.E.act-o K J X f g w)
+          (CP.PT.restrictP K X (compH K J X f g) w p) (CP.PT.restrictP K J g (CP.TV.E.act J X f w) (CP.PT.restrictP J X f w p)) (CP.PT.restrictP-o K J X g f w p) ;
+
+      Vv : Id (KAe.TV.EI K) ((CP.TV.E.act K J g (CP.TV.E.act J X f w)).1, (KAe.TV.E.act K J g Prob[J, CP.TV.E.act J X f w, CP.PT.restrictP J X f w p, vK J f v].xA).2) ((CP.TV.E.act K X (compH K J X f g) w).1, vK K (compH K J X f g) aa) =
+        KAe.tv-eq K ((CP.TV.E.act K J g (CP.TV.E.act J X f w)).1, (KAe.TV.E.act K J g Prob[J, CP.TV.E.act J X f w, CP.PT.restrictP J X f w p, vK J f v].xA).2) ((CP.TV.E.act K X (compH K J X f g) w).1, vK K (compH K J X f g) aa)
+          (apH (\ z -> z.1) Pw)
+          (calc (TA.EI K) {
+              KAe.endE K (KAe.TV.E.act K J g Prob[J, CP.TV.E.act J X f w, CP.PT.restrictP J X f w p, vK J f v].xA)
+            =< KAe.endE-act K J g ((CP.TV.E.act J X f w).1, vK J f v) >
+              TA.E.act K J g ((GFam[lv].famPath.pev G eT).nt J (CP.TV.E.act J X f w).1, vK J f v)
+            =< apH (TA.E.act K J g) (symH (vK-E J f v)) >
+              TA.E.act K J g (G.act J X f ((GFam[lv].famPath.pev G eT).nt X w.1), v)
+            =< TA.pr-tact K J g (G.act J X f ((GFam[lv].famPath.pev G eT).nt X w.1)) (G.act K X (compH K J X f g) ((GFam[lv].famPath.pev G eT).nt X w.1)) (PE.PC.cOf X ((GFam[lv].famPath.pev G eT).nt X w.1) J K f g) v >
+              (G.act K X (compH K J X f g) ((GFam[lv].famPath.pev G eT).nt X w.1), aa)
+            =< vK-E K (compH K J X f g) aa >
+              ((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K X (compH K J X f g) w).1, vK K (compH K J X f g) aa) }) ;
+
+      res : Id (W0.Ix (B.tob K (G.act K X (compH K J X f g) ((GFam[lv].famPath.pev G eT).nt X w.1), aa)))
+               (B.tact K J g (G.act J X f ((GFam[lv].famPath.pev G eT).nt X w.1), v) (G.act K X (compH K J X f g) ((GFam[lv].famPath.pev G eT).nt X w.1), aa) (PE.PC.eOf X ((GFam[lv].famPath.pev G eT).nt X w.1) J K f g v) (phiT J f v))
+               (phiT K (compH K J X f g) aa) =
+        TB.pr-inj K (G.act K X (compH K J X f g) ((GFam[lv].famPath.pev G eT).nt X w.1), aa)
+          (B.tact K J g (G.act J X f ((GFam[lv].famPath.pev G eT).nt X w.1), v) (G.act K X (compH K J X f g) ((GFam[lv].famPath.pev G eT).nt X w.1), aa) (PE.PC.eOf X ((GFam[lv].famPath.pev G eT).nt X w.1) J K f g v) (phiT J f v)) (phiT K (compH K J X f g) aa)
+          (calc (TB.EI K) {
+              ((G.act K X (compH K J X f g) ((GFam[lv].famPath.pev G eT).nt X w.1), aa), B.tact K J g (G.act J X f ((GFam[lv].famPath.pev G eT).nt X w.1), v) (G.act K X (compH K J X f g) ((GFam[lv].famPath.pev G eT).nt X w.1), aa) (PE.PC.eOf X ((GFam[lv].famPath.pev G eT).nt X w.1) J K f g v) (phiT J f v))
+            =< symH (TB.pr-tact K J g (G.act J X f ((GFam[lv].famPath.pev G eT).nt X w.1), v) (G.act K X (compH K J X f g) ((GFam[lv].famPath.pev G eT).nt X w.1), aa) (PE.PC.eOf X ((GFam[lv].famPath.pev G eT).nt X w.1) J K f g v) (phiT J f v)) >
+              TB.E.act K J g ((G.act J X f ((GFam[lv].famPath.pev G eT).nt X w.1), v), phiT J f v)
+            =< apH (TB.E.act K J g) (phiT-E J f v) >
+              TB.E.act K J g (((GFam[lv].famPath.pev G eT).nt J (CP.TV.E.act J X f w).1, vK J f v), Prob[J, (CP.TV.E.act J X f w), CP.PT.restrictP J X f w p, vK J f v].value)
+            =< ProbR[J, (CP.TV.E.act J X f w), CP.PT.restrictP J X f w p, vK J f v, K, g].res >
+              (((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K J g (CP.TV.E.act J X f w)).1, (KAe.TV.E.act K J g Prob[J, CP.TV.E.act J X f w, CP.PT.restrictP J X f w p, vK J f v].xA).2),
+               Prob[K, CP.TV.E.act K J g (CP.TV.E.act J X f w), CP.PT.restrictP K J g (CP.TV.E.act J X f w) (CP.PT.restrictP J X f w p), (KAe.TV.E.act K J g Prob[J, CP.TV.E.act J X f w, CP.PT.restrictP J X f w p, vK J f v].xA).2].value)
+            =< Prob-cong K (CP.TV.E.act K J g (CP.TV.E.act J X f w)) (CP.TV.E.act K X (compH K J X f g) w) Pw
+                 (CP.PT.restrictP K J g (CP.TV.E.act J X f w) (CP.PT.restrictP J X f w p)) (CP.PT.restrictP K X (compH K J X f g) w p) Rp
+                 (KAe.TV.E.act K J g Prob[J, CP.TV.E.act J X f w, CP.PT.restrictP J X f w p, vK J f v].xA).2 (vK K (compH K J X f g) aa) Vv >
+              (((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K X (compH K J X f g) w).1, vK K (compH K J X f g) aa),
+               Prob[K, CP.TV.E.act K X (compH K J X f g) w, CP.PT.restrictP K X (compH K J X f g) w p, vK K (compH K J X f g) aa].value)
+            =< symH (phiT-E K (compH K J X f g) aa) >
+              ((G.act K X (compH K J X f g) ((GFam[lv].famPath.pev G eT).nt X w.1), aa), phiT K (compH K J X f g) aa) }) ;
+    } ;
+
+    natT : PE.PC.NatT X (PE.PC.ptOf X ((GFam[lv].famPath.pev G eT).nt X w.1)) (PE.PC.cOf X ((GFam[lv].famPath.pev G eT).nt X w.1)) (PE.PC.eOf X ((GFam[lv].famPath.pev G eT).nt X w.1)) phiT = \ J K f g v -> NT[J, K, f, g, v].res ;
+
+    cop : CP.TV'.T X w.1 = (phiT, natT) ;
+
+    -- characterisation of the composite: its values
+    cop-val (K : Ob) (f : Hom K X) (v : W0.Ix (A.tob K (G.act K X f ((GFam[lv].famPath.pev G eT).nt X w.1))))
+      : Id (TB.EI K) (PE.valE X ((GFam[lv].famPath.pev G eT).nt X w.1) cop K f v)
+                     (((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K X f w).1, vK K f v),
+                      Prob[K, CP.TV.E.act K X f w, CP.PT.restrictP K X f w p, vK K f v].value) = phiT-E K f v ;
+  } ;
+
+  module KPe = EndKit[GFam[lv].famPath, G, PE.P, eT] ;
+  module LBt = LevKit[GFam[lv].famPath, GFam[lv].famConn, extP G A, B, eT] ;
+
+  ----------------------------------------------------------------------
+  -- the composite agrees with the ends at eT of the sides
+
+  module CS (X : Ob) (w : CP.TV.EI X) (p : CP.PT.Partial[X, w]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (h : Lands W X (p.ps l).pQ f) {
+    module CX = CopX[X, w, p] ;
+    s : CP.PT.PSide[X, w] = p.ps l ;
+
+    -- the side's point is w restricted
+    P1 : Id (W0.Ix (FG.ob W)) (CP.TV'.E.act W X f (w.1, CX.cop)).1 (CP.endL W (s.pv W f h)).1 = symH (apH (\ z -> z.1) (s.ppt W f h)) ;
+
+    pE : Id (TA.Pt W) (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1)) ((s.pv W f h).2.1.1.1 W (idH W) (ptH W eT)).1 =
+      symH (transH (apH (\ q -> q.1 W (idH W) (ptH W eT)) (s.pv W f h).2.1.2)
+                   (transH (apH (\ z -> z.1 W (idH W) (ptH W eT)) P1') (FG.evN eT W X f w.1)))
+     where { P1' : Id (W0.Ix (FG.ob W)) (s.pv W f h).1.1 (FG.actF W X f w.1) = apH (\ z -> z.1) (s.ppt W f h) ; } ;
+
+    module CH (K : Ob) (g : Hom K W) (v : W0.Ix (A.tob K (G.act K W g (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1)))))
+      (v' : W0.Ix (A.tob K (G.act K W g ((s.pv W f h).2.1.1.1 W (idH W) (ptH W eT)).1)))
+      (R : Id (TA.EI K) (G.act K W g (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1)), v) (G.act K W g ((s.pv W f h).2.1.1.1 W (idH W) (ptH W eT)).1, v')) {
+      rhsE : TP.EI W = (s.pv W f h).2.1.1.1 W (idH W) (ptH W eT) ;
+
+      vb : W0.Ix (A.tob K (G.act K X (compH K W X f g) ((GFam[lv].famPath.pev G eT).nt X w.1))) =
+        PE.bk K (G.act K X (compH K W X f g) ((GFam[lv].famPath.pev G eT).nt X w.1)) (G.act K W g (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1))) (PE.PC.piPt W X f ((GFam[lv].famPath.pev G eT).nt X w.1) (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1)) (refl (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1))) K g) v ;
+
+      module Q = Prob[K, CP.TV.E.act K X (compH K W X f g) w, CP.PT.restrictP K X (compH K W X f g) w p, CX.vK K (compH K W X f g) vb] ;
+
+      -- the identity lands in the restricted side
+      iK : Lands K K (pre K X (compH K W X f g) s.pQ) (idH K) =
+        pre-lands K K X (compH K W X f g) s.pQ (idH K)
+          (lands-eq K X s.pQ (compH K W X f g) (compH K K X (compH K W X f g) (idH K)) (symH (comp-idr K X (compH K W X f g)))
+             (lands-comp K W X s.pQ f g h)) ;
+
+      -- the line of the restricted side at (id , eT) is the side's end, restricted
+      Lp : TP.EI K = ((Q.pK.ps l).pv K (idH K) iK).2.1.1.1 K (idH K) (ptH K eT) ;
+
+      eLp : Id (TP.EI K) Lp (TP.E.act K W g rhsE) =
+        calc (TP.EI K) {
+            Lp
+          =< apH (\ z -> z.2.1.1.1 K (idH K) (ptH K eT))
+                 (CP.PT.pv-hom X w s K (compH K K X (compH K W X f g) (idH K)) (compH K W X f g) (comp-idr K X (compH K W X f g))
+                    (lands-pre K K X (compH K W X f g) s.pQ (idH K) iK) (lands-comp K W X s.pQ f g h)) >
+            (s.pv K (compH K W X f g) (lands-comp K W X s.pQ f g h)).2.1.1.1 K (idH K) (ptH K eT)
+          =< apH (\ z -> z.2.1.1.1 K (idH K) (ptH K eT)) (symH (s.pnat K W g f h (lands-comp K W X s.pQ f g h))) >
+            (s.pv W f h).2.1.1.1 K (compH K K W g (idH K)) (ptH K eT)
+          =< apH (\ k -> (s.pv W f h).2.1.1.1 K k (ptH K eT)) (transH (comp-idr K W g) (symH (comp-idl K W g))) >
+            (s.pv W f h).2.1.1.1 K (compH K W W (idH W) g) (ptH K eT)
+          =< apH (\ k -> (s.pv W f h).2.1.1.1 K (compH K W W (idH W) g) k) (symH (ptH-nat K W g eT)) >
+            (s.pv W f h).2.1.1.1 K (compH K W W (idH W) g) (compH K W Iv (ptH W eT) g)
+          =< symH ((s.pv W f h).2.1.1.2 K W g (idH W) (ptH W eT)) >
+            TP.E.act K W g rhsE } ;
+
+      -- the end of La at eT is the argument
+      w' : TA.EI K = (G.act K W g rhsE.1, v') ;
+
+      eLa : Id (TA.EI K) (Q.La.1.1 K (compH K K K (idH K) (idH K)) (ptH K eT)) w' =
+        calc (TA.EI K) {
+            Q.La.1.1 K (compH K K K (idH K) (idH K)) (ptH K eT)
+          =< apH (\ k -> Q.La.1.1 K k (ptH K eT)) (comp-idl K K (idH K)) >
+            Q.La.1.1 K (idH K) (ptH K eT)
+          =< Q.eE >
+            ((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K X (compH K W X f g) w).1, CX.vK K (compH K W X f g) vb)
+          =< symH (CX.vK-E K (compH K W X f g) vb) >
+            (G.act K X (compH K W X f g) ((GFam[lv].famPath.pev G eT).nt X w.1), vb)
+          =< PE.pp K (G.act K X (compH K W X f g) ((GFam[lv].famPath.pev G eT).nt X w.1)) (G.act K W g (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1)))
+               (PE.PC.piPt W X f ((GFam[lv].famPath.pev G eT).nt X w.1) (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1)) (refl (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1))) K g) v >
+            (G.act K W g (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1)), v)
+          =< R >
+            w' } ;
+
+      pw' : Id (TA.Pt K) (G.act K W g rhsE.1) w'.1 = refl w'.1 ;
+
+      res : Id (TB.EI K) (PE.valE W (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1)) (PE.P.tact W X f ((GFam[lv].famPath.pev G eT).nt X w.1) (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1)) (refl (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1))) CX.cop) K g v)
+                         (PE.valE W rhsE.1 rhsE.2 K g v') =
+        calc (TB.EI K) {
+            PE.valE W (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1)) (PE.P.tact W X f ((GFam[lv].famPath.pev G eT).nt X w.1) (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1)) (refl (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1))) CX.cop) K g v
+          =< PE.valE-tact W X f ((GFam[lv].famPath.pev G eT).nt X w.1) (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1)) (refl (G.act W X f ((GFam[lv].famPath.pev G eT).nt X w.1))) CX.cop K g v >
+            PE.valE X ((GFam[lv].famPath.pev G eT).nt X w.1) CX.cop K (compH K W X f g) vb
+          =< CX.cop-val K (compH K W X f g) vb >
+            (((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K X (compH K W X f g) w).1, CX.vK K (compH K W X f g) vb), Q.value)
+          =< Q.value-E >
+            EB1.endE K (Q.wB.1, cB.cop K Q.wB Q.pB)
+          =< symH (TB.E.act-id K (EB1.endE K (Q.wB.1, cB.cop K Q.wB Q.pB))) >
+            TB.E.act K K (idH K) (EB1.endE K (Q.wB.1, cB.cop K Q.wB Q.pB))
+          =< symH (EB1.endE-act K K (idH K) (Q.wB.1, cB.cop K Q.wB Q.pB)) >
+            EB1.endE K (CB.TV'.E.act K K (idH K) (Q.wB.1, cB.cop K Q.wB Q.pB))
+          =< apH (EB1.endE K) (cB.cside K Q.wB Q.pB l K (idH K) iK) >
+            EB1.endE K (CB.endL K (Q.SB[l].pv K (idH K) iK))
+          =< LBt.endL-lev K (KB.lineL K (Q.SB[l].pv K (idH K) iK)) >
+            GFam[lv].famConn.levA (extP G A) B K (KB.lineL K (Q.SB[l].pv K (idH K) iK)) K (idH K) (ptH K eT)
+          =< Q.SB[l].pv-lev K (idH K) iK K (idH K) (ptH K eT) >
+            PL.ApL[K, ((Q.pK.ps l).pv K (idH K) iK).1.1, ((Q.pK.ps l).pv K (idH K) iK).2.1, Q.SB[l].LaV K (idH K) iK].val K (idH K) (ptH K eT)
+          =< PE.apW-gen K Lp.1 (TP.E.act K W g rhsE).1 Lp.2 (TP.E.act K W g rhsE).2 eLp K (idH K)
+               (Q.La.1.1 K (compH K K K (idH K) (idH K)) (ptH K eT)) w' eLa
+               (PL.ApL[K, ((Q.pK.ps l).pv K (idH K) iK).1.1, ((Q.pK.ps l).pv K (idH K) iK).2.1, Q.SB[l].LaV K (idH K) iK].pz K (idH K) (ptH K eT))
+               (G.act-id K (G.act K W g rhsE.1)) >
+            (w', PE.apW K (TP.E.act K W g rhsE).1 (TP.E.act K W g rhsE).2 K (idH K) w' (G.act-id K (G.act K W g rhsE.1)))
+          =< PL.apW-restr W rhsE.1 rhsE.2 K g w' (G.act-id K (G.act K W g rhsE.1)) pw' >
+            (w', PE.apW W rhsE.1 rhsE.2 K g w' pw')
+          =< PE.apW-E W rhsE.1 rhsE.2 K g w' pw' v' (refl w') >
+            PE.valE W rhsE.1 rhsE.2 K g v' } ;
+    } ;
+
+    -- the ends agree, as elements of Pi in E
+    EP : Id (TP.EI W) (TP.E.act W X f (((GFam[lv].famPath.pev G eT).nt X w.1), CX.cop)) ((s.pv W f h).2.1.1.1 W (idH W) (ptH W eT)) =
+      PE.piE-eq W (TP.E.act W X f (((GFam[lv].famPath.pev G eT).nt X w.1), CX.cop)) ((s.pv W f h).2.1.1.1 W (idH W) (ptH W eT)) pE
+        (\ K g v v' R -> CH[K, g, v, v', R].res) ;
+
+    res : Id (CP.TV'.EI W) (CP.TV'.E.act W X f (w.1, CX.cop)) (CP.endL W (s.pv W f h)) =
+      KPe.tv-eq W (CP.TV'.E.act W X f (w.1, CX.cop)) (CP.endL W (s.pv W f h)) P1
+        (transH (KPe.endE-act W X f (w.1, CX.cop))
+          (transH EP (symH (FP.Ev[eT].endB-E W ((s.pv W f h).1.1, (s.pv W f h).2.1))))) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- the composite is uniform
+
+  module CU (Y X : Ob) (h : Hom Y X) (w : CP.TV.EI X) (p : CP.PT.Partial[X, w]) {
+    module CX = CopX[X, w, p] ;
+    module CY = CopX[Y, CP.TV.E.act Y X h w, CP.PT.restrictP Y X h w p] ;
+
+    pE : Id (TA.Pt Y) (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1)) ((GFam[lv].famPath.pev G eT).nt Y (CP.TV.E.act Y X h w).1) = symH (FG.evN eT Y X h w.1) ;
+
+    module CH (K : Ob) (g : Hom K Y) (v : W0.Ix (A.tob K (G.act K Y g (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1))))) (v' : W0.Ix (A.tob K (G.act K Y g ((GFam[lv].famPath.pev G eT).nt Y (CP.TV.E.act Y X h w).1))))
+      (R : Id (TA.EI K) (G.act K Y g (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1)), v) (G.act K Y g ((GFam[lv].famPath.pev G eT).nt Y (CP.TV.E.act Y X h w).1), v')) {
+      vb : W0.Ix (A.tob K (G.act K X (compH K Y X h g) ((GFam[lv].famPath.pev G eT).nt X w.1))) =
+        PE.bk K (G.act K X (compH K Y X h g) ((GFam[lv].famPath.pev G eT).nt X w.1)) (G.act K Y g (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1))) (PE.PC.piPt Y X h ((GFam[lv].famPath.pev G eT).nt X w.1) (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1)) (refl (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1))) K g) v ;
+
+      Pw : Id (CP.TV.EI K) (CP.TV.E.act K X (compH K Y X h g) w) (CP.TV.E.act K Y g (CP.TV.E.act Y X h w)) = CP.TV.E.act-o K Y X h g w ;
+
+      Rp : Id (CP.PT.Partial[K, CP.TV.E.act K Y g (CP.TV.E.act Y X h w)])
+              (subst (CP.TV.EI K) (\ z -> CP.PT.Partial[K, z]) (CP.TV.E.act K X (compH K Y X h g) w) (CP.TV.E.act K Y g (CP.TV.E.act Y X h w)) Pw
+                     (CP.PT.restrictP K X (compH K Y X h g) w p))
+              (CP.PT.restrictP K Y g (CP.TV.E.act Y X h w) (CP.PT.restrictP Y X h w p)) =
+        CP.PT.restrictP-o K Y X g h w p ;
+
+      Vv : Id (KAe.TV.EI K) ((CP.TV.E.act K X (compH K Y X h g) w).1, CX.vK K (compH K Y X h g) vb)
+                            ((CP.TV.E.act K Y g (CP.TV.E.act Y X h w)).1, CY.vK K g v') =
+        KAe.tv-eq K ((CP.TV.E.act K X (compH K Y X h g) w).1, CX.vK K (compH K Y X h g) vb)
+          ((CP.TV.E.act K Y g (CP.TV.E.act Y X h w)).1, CY.vK K g v') (apH (\ z -> z.1) Pw)
+          (calc (TA.EI K) {
+              ((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K X (compH K Y X h g) w).1, CX.vK K (compH K Y X h g) vb)
+            =< symH (CX.vK-E K (compH K Y X h g) vb) >
+              (G.act K X (compH K Y X h g) ((GFam[lv].famPath.pev G eT).nt X w.1), vb)
+            =< PE.pp K (G.act K X (compH K Y X h g) ((GFam[lv].famPath.pev G eT).nt X w.1)) (G.act K Y g (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1)))
+                 (PE.PC.piPt Y X h ((GFam[lv].famPath.pev G eT).nt X w.1) (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1)) (refl (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1))) K g) v >
+              (G.act K Y g (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1)), v)
+            =< R >
+              (G.act K Y g ((GFam[lv].famPath.pev G eT).nt Y (CP.TV.E.act Y X h w).1), v')
+            =< CY.vK-E K g v' >
+              ((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K Y g (CP.TV.E.act Y X h w)).1, CY.vK K g v') }) ;
+
+      res : Id (TB.EI K) (PE.valE Y (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1)) (PE.P.tact Y X h ((GFam[lv].famPath.pev G eT).nt X w.1) (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1)) (refl (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1))) CX.cop) K g v)
+                         (PE.valE Y ((GFam[lv].famPath.pev G eT).nt Y (CP.TV.E.act Y X h w).1) CY.cop K g v') =
+        calc (TB.EI K) {
+            PE.valE Y (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1)) (PE.P.tact Y X h ((GFam[lv].famPath.pev G eT).nt X w.1) (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1)) (refl (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1))) CX.cop) K g v
+          =< PE.valE-tact Y X h ((GFam[lv].famPath.pev G eT).nt X w.1) (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1)) (refl (G.act Y X h ((GFam[lv].famPath.pev G eT).nt X w.1))) CX.cop K g v >
+            PE.valE X ((GFam[lv].famPath.pev G eT).nt X w.1) CX.cop K (compH K Y X h g) vb
+          =< CX.cop-val K (compH K Y X h g) vb >
+            (((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K X (compH K Y X h g) w).1, CX.vK K (compH K Y X h g) vb),
+             Prob[K, CP.TV.E.act K X (compH K Y X h g) w, CP.PT.restrictP K X (compH K Y X h g) w p, CX.vK K (compH K Y X h g) vb].value)
+          =< Prob-cong K (CP.TV.E.act K X (compH K Y X h g) w) (CP.TV.E.act K Y g (CP.TV.E.act Y X h w)) Pw
+               (CP.PT.restrictP K X (compH K Y X h g) w p) (CP.PT.restrictP K Y g (CP.TV.E.act Y X h w) (CP.PT.restrictP Y X h w p)) Rp
+               (CX.vK K (compH K Y X h g) vb) (CY.vK K g v') Vv >
+            (((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K Y g (CP.TV.E.act Y X h w)).1, CY.vK K g v'),
+             Prob[K, CP.TV.E.act K Y g (CP.TV.E.act Y X h w), CP.PT.restrictP K Y g (CP.TV.E.act Y X h w) (CP.PT.restrictP Y X h w p), CY.vK K g v'].value)
+          =< symH (CY.cop-val K g v') >
+            PE.valE Y ((GFam[lv].famPath.pev G eT).nt Y (CP.TV.E.act Y X h w).1) CY.cop K g v' } ;
+    } ;
+
+    EP : Id (TP.EI Y) (TP.E.act Y X h (((GFam[lv].famPath.pev G eT).nt X w.1), CX.cop)) (((GFam[lv].famPath.pev G eT).nt Y (CP.TV.E.act Y X h w).1), CY.cop) =
+      PE.piE-eq Y (TP.E.act Y X h (((GFam[lv].famPath.pev G eT).nt X w.1), CX.cop)) (((GFam[lv].famPath.pev G eT).nt Y (CP.TV.E.act Y X h w).1), CY.cop) pE (\ K g v v' R -> CH[K, g, v, v', R].res) ;
+
+    res : Id (CP.TV'.EI Y) (CP.TV'.E.act Y X h (w.1, CX.cop)) ((CP.TV.E.act Y X h w).1, CY.cop) =
+      KPe.tv-eq Y (CP.TV'.E.act Y X h (w.1, CX.cop)) ((CP.TV.E.act Y X h w).1, CY.cop) (refl (CP.TV.E.act Y X h w).1)
+        (transH (KPe.endE-act Y X h (w.1, CX.cop)) EP) ;
+  } ;
+
+  -- composition for Pi A B from eS to eT
+  piComp : CP.CompAt =
+    new CP.CompAt[\ X w p -> CopX[X, w, p].cop, \ X w p l W f h -> CS[X, w, p, l, W, f, h].res, \ Y X h w p -> CU[Y, X, h, w, p].res] ;
+
+  ----------------------------------------------------------------------
+  -- ESI: from CESI of B, the composite does not see an inserted empty side
+
+  module PI (K : Ob) (wK : CP.TV.EI K) (k : Nat) (pK pK' : CP.PT.Partial[K, wK]) (ins : CP.PEs.InsP[K, wK, k, pK, pK'])
+    (v : W0.Ix (A.tob K ((GFam[lv].famPath.pev G eT).nt K wK.1))) {
+    module Q0 = Prob[K, wK, pK, v] ;
+    module Q1 = Prob[K, wK, pK', v] ;
+
+    insv (n : Nat) (h : IsT (ltb n pK.pr)) (h' : IsT (ltb (Arith[a].skipN k n) pK'.pr)) (V : Ob) (g : Hom V K)
+      (i : Lands V K (pK'.ps (Arith[a].skipN k n, h')).pQ g) (i' : Lands V K (pK.ps (n, h)).pQ g)
+      : Id (CB.TS.EI V) (Q1.SB[(Arith[a].skipN k n, h')].pv V g i) (Q0.SB[(n, h)].pv V g i') =
+      LB.ts-ext V (Q1.SB[(Arith[a].skipN k n, h')].pv V g i) (Q0.SB[(n, h)].pv V g i')
+        (transH (Q1.SB[(Arith[a].skipN k n, h')].pv-pt V g i) (symH (Q0.SB[(n, h)].pv-pt V g i')))
+        (\ W' g' j ->
+          transH (Q1.SB[(Arith[a].skipN k n, h')].pv-lev V g i W' g' j)
+            (transH (PE.apW-gen W'
+                       (((pK'.ps (Arith[a].skipN k n, h')).pv V g i).2.1.1.1 W' g' j).1 (((pK.ps (n, h)).pv V g i').2.1.1.1 W' g' j).1
+                       (((pK'.ps (Arith[a].skipN k n, h')).pv V g i).2.1.1.1 W' g' j).2 (((pK.ps (n, h)).pv V g i').2.1.1.1 W' g' j).2
+                       (apH (\ z -> z.2.1.1.1 W' g' j) (ins.insp-v n h h' V g i i'))
+                       W' (idH W') (Q1.La.1.1 W' (compH W' V K g g') j) (Q0.La.1.1 W' (compH W' V K g g') j) (refl (Q0.La.1.1 W' (compH W' V K g g') j))
+                       (PL.ApL[V, ((pK'.ps (Arith[a].skipN k n, h')).pv V g i).1.1, ((pK'.ps (Arith[a].skipN k n, h')).pv V g i).2.1,
+                               Q1.SB[(Arith[a].skipN k n, h')].LaV V g i].pz W' g' j)
+                       (PL.ApL[V, ((pK.ps (n, h)).pv V g i').1.1, ((pK.ps (n, h)).pv V g i').2.1, Q0.SB[(n, h)].LaV V g i'].pz W' g' j))
+                    (symH (Q0.SB[(n, h)].pv-lev V g i' W' g' j)))) ;
+
+    insB : CB.PEs.InsP[K, Q0.wB, k, Q0.pB, Q1.pB] =
+      new CB.PEs.InsP[K, Q0.wB, k, Q0.pB, Q1.pB, ins.insp-r, ins.insp-k, \ hk -> ins.insp-e hk,
+                      \ n h h' -> ins.insp-Q n h h', \ n h h' V g i i' -> insv n h h' V g i i'] ;
+  } ;
+
+  module CE (ce : CB.CESI cB) {
+    value-eq (K : Ob) (wK : CP.TV.EI K) (k : Nat) (pK pK' : CP.PT.Partial[K, wK]) (ins : CP.PEs.InsP[K, wK, k, pK, pK'])
+      (v : W0.Ix (A.tob K ((GFam[lv].famPath.pev G eT).nt K wK.1)))
+      : Id (W0.Ix (B.tob K ((GFam[lv].famPath.pev G eT).nt K wK.1, v))) Prob[K, wK, pK', v].value Prob[K, wK, pK, v].value =
+      apH (\ c -> TB.coeT K (Prob[K, wK, pK, v].La.1.1 K (idH K) (ptH K eT)) ((GFam[lv].famPath.pev G eT).nt K wK.1, v) Prob[K, wK, pK, v].eE c)
+        (ce K Prob[K, wK, pK, v].wB k Prob[K, wK, pK, v].pB Prob[K, wK, pK', v].pB PI[K, wK, k, pK, pK', ins, v].insB) ;
+
+    cesi : CP.CESI piComp = \ X w k p p' ins ->
+      PE.PC.piCode-eq X (PE.PC.ptOf X ((GFam[lv].famPath.pev G eT).nt X w.1)) (PE.PC.cOf X ((GFam[lv].famPath.pev G eT).nt X w.1))
+        (PE.PC.eOf X ((GFam[lv].famPath.pev G eT).nt X w.1)) CopX[X, w, p'].cop CopX[X, w, p].cop
+        (\ K f v -> apH (\ c -> TB.coeT K ((GFam[lv].famPath.pev G eT).nt K (CP.TV.E.act K X f w).1, CopX[X, w, p].vK K f v)
+                                    (G.act K X f ((GFam[lv].famPath.pev G eT).nt X w.1), v)
+                                    (symH (CopX[X, w, p].vK-E K f v)) c)
+                       (value-eq K (CP.TV.E.act K X f w) k (CP.PT.restrictP K X f w p) (CP.PT.restrictP K X f w p')
+                          (CP.PEs.insR K X f w k p p' ins) (CopX[X, w, p].vK K f v))) ;
+  } ;
+} ;

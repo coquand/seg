@@ -1,0 +1,90 @@
+-- PosetFibE.seg: the poset fibrant types (FibExt.FibE: box composites with
+-- ESI) and the generic ones (GFibE.FibEL: line composites at the family
+-- path object with line ESI), converted both ways along the bridges
+-- (CompLine: box <-> line at posetPath; GTrans: posetPath <-> famPath),
+-- ESI carried by cesi / esi.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+open BaseP.GLine[a] ;
+open FibTriv[a] ;
+open PosetConn[a] ;
+module FX = FibExt[a, a] ;
+module GE = BaseP.GFibE[a] ;
+
+-- one direction of composition, box -> generic
+module ToLDir (G : PCtx) (A : PTy[G]) (e e' : El Iv) (co : Box[a, a].Boxes[G, A].CompOp[e, e'])
+  (es : Esi[a, a].EsiDef[G, A].ESI e e' co) {
+  module CL = CompLine[a].CompLine[G, A, e, e'] ;
+  module TC = BaseP.GTrans[a].ToFamC[posetPath, posetConn, G, A, e, e', CL.ToCompAt[co].ca] ;
+  ca : CompAtP[BaseP.GFam[a].famPath, G, A, e, e'].CompAt = TC.compAt ;
+  ce : CompAtP[BaseP.GFam[a].famPath, G, A, e, e'].CESI ca = TC.cesi (CL.ToCompAt[co].cesi es) ;
+} ;
+
+-- one direction of composition, generic -> box
+module FromLDir (G : PCtx) (A : PTy[G]) (e e' : El Iv) (ca : CompAtP[BaseP.GFam[a].famPath, G, A, e, e'].CompAt)
+  (ce : CompAtP[BaseP.GFam[a].famPath, G, A, e, e'].CESI ca) {
+  module FC = BaseP.GTrans[a].FromFamC[posetPath, posetConn, G, A, e, e', ca] ;
+  module CL = CompLine[a].CompLine[G, A, e, e'] ;
+  co : Box[a, a].Boxes[G, A].CompOp[e, e'] = CL.ToCompOp[FC.compAt].co ;
+  es : Esi[a, a].EsiDef[G, A].ESI e e' co = CL.ToCompOp[FC.compAt].esi (FC.cesi ce) ;
+} ;
+
+module ToL (G : PCtx) (F : FX.FibE G) {
+  module D0 = ToLDir[G, F.1, e0, e1, F.2.1.1, F.2.2.1] ;
+  module D1 = ToLDir[G, F.1, e1, e0, F.2.1.2, F.2.2.2] ;
+  res : GE.FibEL G = (F.1, ((D0.ca, D1.ca), (D0.ce, D1.ce))) ;
+} ;
+
+module FromL (G : PCtx) (F : GE.FibEL G) {
+  module D0 = FromLDir[G, F.1, e0, e1, F.2.1.1, F.2.2.1] ;
+  module D1 = FromLDir[G, F.1, e1, e0, F.2.1.2, F.2.2.2] ;
+  res : FX.FibE G = (F.1, ((D0.co, D1.co), (D0.es, D1.es))) ;
+} ;
+
+toL (G : PCtx) (F : FX.FibE G) : GE.FibEL G = ToL[G, F].res ;
+fromL (G : PCtx) (F : GE.FibEL G) : FX.FibE G = FromL[G, F].res ;
+
+------------------------------------------------------------------------
+-- the round trip: fromL (toL F) = F
+
+module RtDir (G : PCtx) (A : PTy[G]) (e e' : El Iv) (co : Box[a, a].Boxes[G, A].CompOp[e, e'])
+  (es : Esi[a, a].EsiDef[G, A].ESI e e' co) {
+  module TD = ToLDir[G, A, e, e', co, es] ;
+  module FD = FromLDir[G, A, e, e', TD.ca, TD.ce] ;
+  module CL = CompLine[a].CompLine[G, A, e, e'] ;
+  module R = BaseP.GTrans[a].RoundC[posetPath, posetConn, G, A, e, e', CL.ToCompAt[co].ca] ;
+  module BX = Box[a, a].Boxes[G, A] ;
+  module FT = FibTrivFill[a].FTC[G, A, e] ;
+
+  top (X : Ob) (b : BX.Box[e, X])
+    : Id (PR.TyL[G, A].EI X) (BX.topE e' X b.brho (FD.co.cop X b)) (BX.topE e' X b.brho (co.cop X b)) =
+    transH (apH (BX.topE e' X b.brho) (R.rt X FT.BP[X, b].x FT.BP[X, b].p))
+           (apH (\ bb -> BX.topE e' X bb.brho (co.cop X bb)) (CL.bpRT X b)) ;
+
+  eq : Id (BX.CompOp[e, e']) FD.co co = FX.CompExt[G, A].CompOp-ext e e' FD.co co top ;
+} ;
+
+fromL-toL (G : PCtx) (F : FX.FibE G) : Id (FX.FibE G) (fromL G (toL G F)) F =
+  apH {(cc : Box[a, a].Boxes[G, F.1].Comp) * Esi[a, a].EsiDef[G, F.1].ESIC cc} {FX.FibE G} (\ cc -> (F.1, cc))
+    (Sigma-eq (Box[a, a].Boxes[G, F.1].Comp) (\ cc -> Esi[a, a].EsiDef[G, F.1].ESIC cc)
+       (fromL G (toL G F)).2.1 F.2.1 (fromL G (toL G F)).2.2 F.2.2
+       (FX.FX[G].pairC F.1 (fromL G (toL G F)).2.1 F.2.1
+          RtDir[G, F.1, e0, e1, F.2.1.1, F.2.2.1].eq RtDir[G, F.1, e1, e0, F.2.1.2, F.2.2.2].eq)
+       (FX.CompExt[G, F.1].isProp-ESIC F.2.1)) ;
+
+------------------------------------------------------------------------
+-- path types of fibrant types: the generic composition (GPathComp), in
+-- the box format (replaces FibPath / EsiPath)
+
+pathFibE (G : PCtx) (F : FX.FibE G) (a0 b0 : PEl[G, F.1]) : FX.FibE G =
+  fromL G (BaseP.GPathComp[a].pathFibEL G (toL G F) a0 b0) ;

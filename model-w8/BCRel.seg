@@ -1,0 +1,133 @@
+-- BCRel.seg: MODEL/Univ/BCRel.agda.  Base change of the transport
+-- construction, final form: for univalence data built by
+-- TranspUData.trUData from a line type S over L (with composition c and
+-- ESI ec) over (y X)|psi, and from S [sg] over (y Y)|psi' along h (sR from
+-- the extents, sg : L' -> L, lines related by lnEq), the two UData are
+-- related: UnivOp.RelG.URelB.
+--   H1, H2: BCH2;  H3, H4: BCU (through RelBridge).
+-- Everything is stated on variables, so that an instance is compared with
+-- this statement through its arguments only.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Conn[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module FSb = FibSub[a, a] ;
+open Yon[a] ;
+open Cofib[a] ;
+open UMapOver[a] ;
+open UnivOp[a] ;
+open PackRel[a] ;
+open UBoxData[a] ;
+
+-- fillers of a substituted composition correspond, by direction
+module OK (L' L : PCtx) (sg : PSub[L', L]) (S : PTy[L]) (c : BXm.Boxes[L, S].Comp) {
+  S' : PTy[L'] = subTy L' L S sg ;
+  c' : BXm.Boxes[L', S'].Comp = FSb.subCompC L' L S sg c ;
+  fl : FibM.FillB[L, S].Fill = FibM.FillB[L, S].comp-to-fill c ;
+  fl' : FibM.FillB[L', S'].Fill = FibM.FillB[L', S'].comp-to-fill c' ;
+
+  okS : (e : Bool) -> LBSub[a].LBS[L', L, sg, S, src e].LBF[selFS L S fl e, selFS L' S' fl' e].FillSubOK = split {
+    true -> FillSub[a].FS[L', L, sg, S, true, c.1].fillSubOK ;
+    false -> FillSub[a].FS[L', L, sg, S, false, c.2].fillSubOK } ;
+
+  okT : (e : Bool) -> LBSub[a].LBS[L', L, sg, S, tgt e].LBF[selFT L S fl e, selFT L' S' fl' e].FillSubOK = split {
+    true -> FillSub[a].FS[L', L, sg, S, false, c.2].fillSubOK ;
+    false -> FillSub[a].FS[L', L, sg, S, true, c.1].fillSubOK } ;
+
+  ok0 : LBSub[a].LBS[L', L, sg, S, e0].LBF[fl.1, fl'.1].FillSubOK = FillSub[a].FS[L', L, sg, S, true, c.1].fillSubOK ;
+} ;
+
+module BCR (Y X : Ob) (h : Hom Y X) (A : PTy[yP X]) (psi' : Cof[yP Y]) (psi : Cof[yP X])
+  (rf : RelPre[Y, X, h, psi', psi].RFull)
+  (L' L : PCtx) (sg : PSub[L', L]) (S : PTy[L]) (c : BXm.Boxes[L, S].Comp) (ec : Esi[a, a].EsiDef[L, S].ESIC c)
+  (ln' : (W : Ob) -> W0.Ix (CofL[yP Y, psi'].resCtx.ob W) -> W0.Ix (L'.ob (prodP W Iv)))
+  (lnat' : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (CofL[yP Y, psi'].resCtx.ob W))
+          -> Id (W0.Ix (L'.ob (prodP W' Iv))) (L'.act (prodP W' Iv) (prodP W Iv) (cylH W' W g) (ln' W x))
+                (ln' W' (CofL[yP Y, psi'].resCtx.act W' W g x)))
+  (ln : (W : Ob) -> W0.Ix (CofL[yP X, psi].resCtx.ob W) -> W0.Ix (L.ob (prodP W Iv)))
+  (lnat : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (CofL[yP X, psi].resCtx.ob W))
+          -> Id (W0.Ix (L.ob (prodP W' Iv))) (L.act (prodP W' Iv) (prodP W Iv) (cylH W' W g) (ln W x))
+                (ln W' (CofL[yP X, psi].resCtx.act W' W g x)))
+  (lnEq : (W : Ob) (x : W0.Ix (CofL[yP Y, psi'].resCtx.ob W))
+          -> Id (W0.Ix (L.ob (prodP W Iv))) (sg.nt (prodP W Iv) (ln' W x)) (ln W ((RelPre[Y, X, h, psi', psi].sR rf).nt W x)))
+  (d : Bool)
+  (Po' : (I : Ob) (x : W0.Ix (CofL[yP Y, psi'].resCtx.ob I))
+         -> Id W0.V (Transp[a].Tp[CofL[yP Y, psi'].resCtx, L', subTy L' L S sg, ln', lnat', d,
+                       selFS L' (subTy L' L S sg) OK[L', L, sg, S, c].fl' d].SA.tob I x)
+                    ((subTy CofL[yP Y, psi'].resCtx (yP Y) (subTy (yP Y) (yP X) A (yH Y X h)) CofL[yP Y, psi'].inclR).tob I x))
+  (H1' : H1Ty CofL[yP Y, psi'].resCtx
+           Transp[a].Tp[CofL[yP Y, psi'].resCtx, L', subTy L' L S sg, ln', lnat', d, selFS L' (subTy L' L S sg) OK[L', L, sg, S, c].fl' d].SA
+           (subTy CofL[yP Y, psi'].resCtx (yP Y) (subTy (yP Y) (yP X) A (yH Y X h)) CofL[yP Y, psi'].inclR) Po')
+  (Po : (I : Ob) (x : W0.Ix (CofL[yP X, psi].resCtx.ob I))
+        -> Id W0.V (Transp[a].Tp[CofL[yP X, psi].resCtx, L, S, ln, lnat, d, selFS L S OK[L', L, sg, S, c].fl d].SA.tob I x)
+                   ((subTy CofL[yP X, psi].resCtx (yP X) A CofL[yP X, psi].inclR).tob I x))
+  (H1 : H1Ty CofL[yP X, psi].resCtx Transp[a].Tp[CofL[yP X, psi].resCtx, L, S, ln, lnat, d, selFS L S OK[L', L, sg, S, c].fl d].SA
+          (subTy CofL[yP X, psi].resCtx (yP X) A CofL[yP X, psi].inclR) Po) {
+  -- the category laws are proofs: never unfolded here (comparing the two
+  -- relations unfolds the naturality of yH and of the restriction otherwise)
+  opaque comp-assoc ; opaque comp-idl ; opaque comp-idr ;
+
+  module RP = RelPre[Y, X, h, psi', psi] ;
+  module K = OK[L', L, sg, S, c] ;
+
+  A'' : PTy[yP Y] = subTy (yP Y) (yP X) A (yH Y X h) ;
+
+  ec' : Esi[a, a].EsiDef[L', K.S'].ESIC K.c' = EsiSub[a, a].esiSubC L' L S sg c ec ;
+  fes : EsiFill[a, a].FesiDef[L, S].FESI e0 K.fl.1 * EsiFill[a, a].FesiDef[L, S].FESI e1 K.fl.2 = EsiFill[a, a].fesiC L S c ec ;
+  fes' : EsiFill[a, a].FesiDef[L', K.S'].FESI e0 K.fl'.1 * EsiFill[a, a].FesiDef[L', K.S'].FESI e1 K.fl'.2 =
+    EsiFill[a, a].fesiC L' K.S' K.c' ec' ;
+
+  -- the two univalence data
+  d' : UData[Y, A''] =
+    TranspUData[a].trUData Y A'' psi' L' K.S' ln' lnat' d (selFS L' K.S' K.fl' d) K.fl'.1 (selFT L' K.S' K.fl' d)
+      (fesFS L' K.S' K.fl' fes' d) (fesFT L' K.S' K.fl' fes' d) K.c' ec' Po' H1' ;
+
+  dd : UData[X, A] =
+    TranspUData[a].trUData X A psi L S ln lnat d (selFS L S K.fl d) K.fl.1 (selFT L S K.fl d)
+      (fesFS L S K.fl fes d) (fesFT L S K.fl fes d) c ec Po H1 ;
+
+  module BU = BCU[a].BCU[RP.G', RP.G, RP.sR rf, L', L, sg, S, ln', lnat', ln, lnat, lnEq, d,
+    selFS L S K.fl d, K.fl.1, selFT L S K.fl d, selFS L' K.S' K.fl' d, K.fl'.1, selFT L' K.S' K.fl' d,
+    K.okS d, K.ok0, K.okT d,
+    fesFS L S K.fl fes d, fesFT L S K.fl fes d, fesFS L' K.S' K.fl' fes' d, fesFT L' K.S' K.fl' fes' d,
+    subTy RP.G' (yP Y) A'' RP.CR'.inclR, subTy RP.G (yP X) A RP.CR.inclR,
+    Po', H1', Po, H1, \ W x -> refl ((subTy RP.G' (yP Y) A'' RP.CR'.inclR).tob W x)] ;
+
+  module B0 = BCBase[a].BC0[RP.G', RP.G, RP.sR rf, L', L, sg, S, ln', lnat', ln, lnat, lnEq, d,
+    selFS L S K.fl d, K.fl.1, selFS L' K.S' K.fl' d, K.fl'.1, K.okS d, K.ok0] ;
+
+  module PTp = Transp[a].Tp[RP.G', L', K.S', ln', lnat', d, selFS L' K.S' K.fl' d] ;
+  module UTp = Transp[a].Tp[RP.G, L, S, ln, lnat, d, selFS L S K.fl d] ;
+
+  PoB : BU.BB.PoBTy = \ W x -> apH (S.tob W) (B0.enEq (src d) W x) ;
+  PoA : BU.BB.PoATy = \ W x -> apH (S.tob W) (B0.enEq (tgt d) W x) ;
+
+  module HG = BCH2[a].H2G[RP.G', RP.G, L', L, RP.sR rf, sg, S, PTp.enS (src d), UTp.enS (src d), B0.enEq (src d), PoB] ;
+
+  module RGi = RelG[Y, X, h, A'', A, d', dd, \ rf2 -> mAsub Y X h A psi' psi rf2] ;
+  module RBi = RelBridge[a].RB[Y, X, h, A'', A, d', dd, \ rf2 -> mAsub Y X h A psi' psi rf2, rf, PoB] ;
+
+  u1 : RGi.H1Ty rf PoB = HG.mBact ;
+  -- u2 .. urelB compare the two univalence data with the base change built
+  -- by HG and RelG; the face maps (lid) and the restricted contexts
+  -- (CofL.resCtx) are compared by name, never unfolded (11 s -> 1.6 s for u2)
+  opaque lid ; opaque CofL.resCtx ;
+
+  u2 : MapOver[RP.G', RP.G, RP.sR rf, d'.Bf.1, dd.Bf.1, RGi.mB rf PoB u1].CompOver d'.Bf.2.1 dd.Bf.2.1 = HG.compOver c ;
+  u3 : RGi.RG[rf, PoB].H3Ty = RBi.h3 BU.MB2[PoB, PoA].H3u ;
+  u4 : RGi.RG[rf, PoB].H4Ty = RBi.h4 (\ X0 w' p' p r -> BU.MB2[PoB, PoA].HU[X0, w', p', p, r].H4u) ;
+
+  urelB : RGi.URelB = new RGi.URelB[rf, PoB, u1, u2, u3, u4] ;
+
+  transparent lid ; transparent CofL.resCtx ; transparent comp-assoc ; transparent comp-idl ; transparent comp-idr ;
+} ;

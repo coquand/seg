@@ -1,0 +1,170 @@
+-- GUaLoc.seg (inside IvBase.FaU, any base; Step 3): the universal B side
+-- at a full point x = (d , full) of CU at stage X, along its Yoneda map
+-- yx, is d's own structure.  As moves of structures:
+--
+--   yx*(eqU) = iota*((y x)*(eqU))       GTransferEqComp (iota : y X -> Y.y X)
+--            = iota*(L x)                yonE (GYonEq4 at a+)
+--            = (sg o iota)*(eqOn_d)       L x is eqOn_d moved up (GExtEq.Pt);
+--                                         GTransferEqTwice
+-- and on the other side eqDSub s0 (T0 , eqOn_d) = s0*(eqOn_d) as a move
+-- (GTransferEqSub after GTransferEqTwice.TrEqId), s0 = sg.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Trees[a] ;
+open Arith[a] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open GLine[a] ;
+module GE1 = GFibE[a+] ;
+module GX = GEqExt[a] ;
+module GL = GEqLaws[a] ;
+module L = GPre[a+].PS ;
+module LP = GPre[a+] ;
+module YL1 = GYon[a+] ;
+
+module LC (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE)
+  (kU0 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e0)
+  (kU1 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e1)
+  (kU0e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].SFm.SF].KESI kU0)
+  (kU1e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].SFm.SF].KESI kU1) (X : Ob) (x : V1.Ix (GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl].CU.resCtx.ob X)) {
+  module UV = GUaUniv.UV[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e] ;
+  module UB = UV.UB ;
+  module CU = UB.CU ;
+  module FU = UV.FU ;
+  module EQm = GExtEq.EQ[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module LZ = EQm.Pt[X, x] ;
+  module T0 = LZ.T0 ;
+
+  -- the Yoneda map of x (its naturality in the form of GTransferEqComp)
+  yx : GSmall.XSub[yP X, CU.resCtx] =
+    new GSmall.XSub[yP X, CU.resCtx, \ W f -> CU.resCtx.act W X f x,
+      \ V W g f -> transH (apH ((YL1.yPt CU.resCtx X x).nt V) (refl (compH V W X f g))) ((YL1.yPt CU.resCtx X x).nt-nat V W g f)] ;
+
+  module FMx = GUaFull.FM[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e, yP X, yx] ;
+  module X2 = FMx.X2 ;
+  module FI = GEquivSub2[a+].FibIso[YL1.yP X, CU.resCtx, YL1.yPt CU.resCtx X x, UB.BU, UB.AU', UB.alU] ;
+
+  ES : U a+ = GXsubEq.ES (yP X) ;
+
+  ----------------------------------------------------------------------
+  -- the move of FMx.R, read over the large Yoneda presheaf (iota)
+
+  PhNB1 (V W : Ob) (g : Hom V W) (w : X2.TBs.EI W)
+    : Id (FI.SB.TS.EI V) ((X2.TBs.E.act V W g w).1, FMx.phBR V (X2.TBs.E.act V W g w).1 (X2.TBs.E.act V W g w).2)
+                         (FI.SB.TS.E.act V W g (w.1, FMx.phBR W w.1 w.2)) =
+    FI.SB.mV-inj V ((X2.TBs.E.act V W g w).1, FMx.phBR V (X2.TBs.E.act V W g w).1 (X2.TBs.E.act V W g w).2)
+      (FI.SB.TS.E.act V W g (w.1, FMx.phBR W w.1 w.2))
+      (transH (apH (\ z -> z.1) (X2.TBs.pr-tact V W g w.1 (compH V W X w.1 g) (refl (compH V W X w.1 g)) w.2))
+              (symH (apH (\ z -> z.1) (FI.SB.TS.pr-tact V W g w.1 (compH V W X w.1 g) (refl (compH V W X w.1 g)) (FMx.phBR W w.1 w.2)))))
+      (transH (FMx.PhNBR V W g w) (symH (FI.SB.mV-nat V W g (w.1, FMx.phBR W w.1 w.2)))) ;
+
+  PhNA1 (V W : Ob) (g : Hom V W) (w : X2.TAs.EI W)
+    : Id (FI.SA.TS.EI V) ((X2.TAs.E.act V W g w).1, (X2.TAs.E.act V W g w).2) (FI.SA.TS.E.act V W g (w.1, w.2)) =
+    FI.SA.mV-inj V ((X2.TAs.E.act V W g w).1, (X2.TAs.E.act V W g w).2) (FI.SA.TS.E.act V W g (w.1, w.2))
+      (transH (apH (\ z -> z.1) (X2.TAs.pr-tact V W g w.1 (compH V W X w.1 g) (refl (compH V W X w.1 g)) w.2))
+              (symH (apH (\ z -> z.1) (FI.SA.TS.pr-tact V W g w.1 (compH V W X w.1 g) (refl (compH V W X w.1 g)) w.2))))
+      (transH (FMx.PhNAR V W g w) (symH (FI.SA.mV-nat V W g (w.1, w.2)))) ;
+
+  alSq1 (W : Ob) (w : X2.TBs.EI W)
+    : Id (FI.SA.TS.EI W) ((X2.alS.mE W w).1, (X2.alS.mE W w).2) (FI.al'.mE W (w.1, FMx.phBR W w.1 w.2)) =
+    FI.SA.mV-inj W ((X2.alS.mE W w).1, (X2.alS.mE W w).2) (FI.al'.mE W (w.1, FMx.phBR W w.1 w.2))
+      (X2.alS.mpt W w)
+      (transH (FMx.alSqR W w) (symH (FI.SM.mE-V W (w.1, FMx.phBR W w.1 w.2)))) ;
+
+  opaque PhNB1 ; opaque PhNA1 ; opaque alSq1 ;
+
+  module TC = GTransferEqComp[a+, a, a+].TrEqComp[yP X, X2.Bs, X2.As, X2.alS, CU.resCtx, UB.BU, UB.AU', UB.alU, FU.EQm.eqU.1,
+    YL1.yP X, YL1.yPt CU.resCtx X x, \ W f -> f, \ V W g f -> refl (compH V W X f g),
+    FMx.phBR, FMx.psBR, FMx.phB-psBR, FMx.psB-phBR,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, PhNA1, PhNB1, alSq1] ;
+
+  -- FMx.R and TC.T2 are the same move (the move data differ by proofs)
+  module IR = GTransferEqCong[a+, a, a+].TrEqCong[yP X, CU.resCtx, UB.BU, UB.AU', UB.alU, FU.EQm.eqU.1,
+    X2.Bs, X2.As, X2.alS, yx.nt, yx.nt-nat,
+    FMx.phBR, FMx.psBR, FMx.phB-psBR, FMx.psB-phBR,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, FMx.PhNAR, FMx.PhNBR, FMx.alSqR,
+    X2.Bs, X2.As, X2.alS, TC.sg2, TC.sg2-nat,
+    FMx.phBR, FMx.psBR, FMx.phB-psBR, FMx.psB-phBR,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, TC.PhNA2, TC.PhNB2, TC.alSq2,
+    refl X2.tri, \ Z w -> refl (yx.nt Z w.1, w.2), \ Z w -> refl (yx.nt Z w.1, FMx.phBR Z w.1 w.2)] ;
+
+  -- yonE, at a+
+  module YLx = GYonEq4[a+].YL[CU.resCtx, UB.BU, UB.AU', UB.alU, \ Z y -> EQm.Pt[Z, y].Lx, \ Z Z' h y -> EQm.Co[Z, Z', h, y].coh, X, x] ;
+
+  module T1L = GTransferEq[a+, a, a+].TrEq[yP X, X2.Bs, X2.As, X2.alS, YL1.yP X, FI.B', FI.A', FI.al', \ W f -> f, \ V W g f -> refl (compH V W X f g),
+    FMx.phBR, FMx.psBR, FMx.phB-psBR, FMx.psB-phBR,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, PhNA1, PhNB1, LZ.TE.trEq, alSq1] ;
+
+  yonT : Id (GEquiv[a].EquivOp (yP X) X2.Bs X2.As X2.alS) TC.T1.trEq T1L.trEq =
+    Paths[a++].apH {GEquiv[a+].EquivOp (YL1.yP X) FI.B' FI.A' FI.al'} {GEquiv[a].EquivOp (yP X) X2.Bs X2.As X2.alS}
+      (\ k -> GTransferEq[a+, a, a+].TrEq[yP X, X2.Bs, X2.As, X2.alS, YL1.yP X, FI.B', FI.A', FI.al', \ W f -> f, \ V W g f -> refl (compH V W X f g),
+         FMx.phBR, FMx.psBR, FMx.phB-psBR, FMx.psB-phBR,
+         \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, PhNA1, PhNB1, k, alSq1].trEq)
+      YLx.yonE ;
+
+  -- L x is eqOn_d moved up; moving it down along iota composes
+  module TW = GTransferEqTwice[a, a+, a, a+].TrEqTwice[T0.R.RC, T0.Bt, T0.At, T0.al, x.1.2.2.2.1,
+    YL1.yP X, LZ.Bp, LZ.Ap, LZ.SMp.subMap, LZ.sg, LZ.sg-nat, LZ.phB, LZ.psB, LZ.phB-psB, LZ.psB-phB,
+    LZ.phA, LZ.psA, LZ.phA-psA, LZ.psA-phA, LZ.PhNA, LZ.PhNB, LZ.alSq,
+    yP X, X2.Bs, X2.As, X2.alS, \ W f -> f, \ V W g f -> refl (compH V W X f g),
+    FMx.phBR, FMx.psBR, FMx.phB-psBR, FMx.psB-phBR,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, PhNA1, PhNB1, alSq1] ;
+
+  -- one step of structures over X2.tri
+  stepE (k k' : GEquiv[a].EquivOp (yP X) X2.Bs X2.As X2.alS) (P : Id (GEquiv[a].EquivOp (yP X) X2.Bs X2.As X2.alS) k k')
+    (e : GCofEsi[a].PartialsEsi[X2.TE.HD.EA, X2.TE.HD.FibT].KESI k) (e' : GCofEsi[a].PartialsEsi[X2.TE.HD.EA, X2.TE.HD.FibT].KESI k')
+    : Id ES (X2.tri, (k, e)) (X2.tri, (k', e')) =
+    apH {GX.EqDat[yP X].EqOn X2.tri} {ES} (\ z -> (X2.tri, z))
+      (Sigma-eq (GEquiv[a].EquivOp (yP X) X2.Bs X2.As X2.alS) (\ k2 -> GCofEsi[a].PartialsEsi[X2.TE.HD.EA, X2.TE.HD.FibT].KESI k2)
+         k k' e e' P (GCofEsi[a].PartialsEsi[X2.TE.HD.EA, X2.TE.HD.FibT].isProp-KESI k')) ;
+
+  -- the chain: yx*(eqU) = (sg o iota)*(eqOn_d)
+  chainR : Id ES (X2.tri, (FMx.R.trEq, FMx.R.trKesi FU.EQm.eqU.2)) (X2.tri, (TW.T12.trEq, TW.T12.trKesi x.1.2.2.2.2)) =
+    transH (IR.res FU.EQm.eqU.2)
+      (stepE TC.T2.trEq TW.T12.trEq (transH (symH TC.compEq) (transH yonT TW.twice))
+         (TC.T2.trKesi FU.EQm.eqU.2) (TW.T12.trKesi x.1.2.2.2.2)) ;
+
+  opaque yonT ; opaque chainR ;
+
+  ----------------------------------------------------------------------
+  -- the other side: eqDSub along s0 = sg is a move
+
+  s0 : PSub[yP X, T0.R.RC] = new PSub[yP X, T0.R.RC, LZ.sg, LZ.sg-nat] ;
+
+  module TI = GTransferEqTwice[a, a, a, a+].TrEqId[T0.R.RC, T0.Bt, T0.At, T0.al, x.1.2.2.2.1] ;
+
+  module TES = GTransferEqSub[a, a, a+].TrEqSub[T0.R.RC, T0.Bt, T0.At, T0.al, T0.R.RC, T0.Bt, T0.At, T0.al, \ W d -> d, \ V W g d -> refl (T0.R.RC.act V W g d),
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b,
+    \ V W g w -> refl (GPR.TyL[T0.R.RC, T0.At].E.act V W g w), \ V W g w -> refl (GPR.TyL[T0.R.RC, T0.Bt].E.act V W g w),
+    x.1.2.2.2.1, \ W w -> refl (T0.al.mE W w), yP X, s0] ;
+
+  t2 : GX.EqDat[yP X].Tri = (TES.FI.B', (TES.FI.A', TES.FI.al')) ;
+
+  chainD : Id ES (GL.eqDSub (yP X) T0.R.RC s0 T0.tri x.1.2.2.2) (t2, (TES.T'.trEq, TES.T'.trKesi x.1.2.2.2.2)) =
+    apH {GX.EqDat[yP X].EqOn t2} {ES} (\ z -> (t2, z))
+      (Sigma-eq (GEquiv[a].EquivOp (yP X) TES.FI.B' TES.FI.A' TES.FI.al') (\ k2 -> GCofEsi[a].PartialsEsi[TES.T'.HD.EA, TES.T'.HD.FibT].KESI k2)
+         (GL.eqDSub (yP X) T0.R.RC s0 T0.tri x.1.2.2.2).2.1 TES.T'.trEq
+         (GL.eqDSub (yP X) T0.R.RC s0 T0.tri x.1.2.2.2).2.2 (TES.T'.trKesi x.1.2.2.2.2)
+         (transH (apH (\ k -> GEquivSub2[a].EqSub[yP X, T0.R.RC, s0, T0.Bt, T0.At, T0.al, k].eqSub) TI.idEq) TES.eqNat)
+         (GCofEsi[a].PartialsEsi[TES.T'.HD.EA, TES.T'.HD.FibT].isProp-KESI TES.T'.trEq)) ;
+
+  opaque chainD ;
+} ;

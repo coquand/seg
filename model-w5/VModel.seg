@@ -1,0 +1,214 @@
+-- VModel.seg: MODEL/VModel.agda.  The CwF of Gylterud's iterative sets:
+-- contexts are iterative sets, types over G are families  Ix G -> V,
+-- elements are dependent functions.  Every CwF equation holds by refl;
+-- function extensionality is used for the set conditions, for the
+-- extensional identity type, and where Agda had eta for the unit record.
+--
+-- A sub-segment of Model at a level l: the CwF lives at l+ (V : U l+).
+
+level l ;
+open Base ;
+open Prelude[l+] ;
+open Axioms[l+].FunExtLemmas[fe @(l+)] ;
+module W = V[l] ;
+
+VCwF : CwF.CwF[l+] = new CwF.CwF[l := l+,
+  Ctx      := W.V,
+  Sub      := \ D G -> W.Ix D -> W.Ix G,
+  isSetSub := \ D G -> isSet-Pi (W.Ix D) (\ x -> W.Ix G) (\ x -> W.isSetIx G),
+  id       := \ G x -> x,
+  o        := \ T D G s s' x -> s (s' x),
+  o-idl    := \ D G s -> refl s,
+  o-idr    := \ D G s -> refl s,
+  o-assoc  := \ Q T D G s s' s'' -> refl (\ x -> s (s' (s'' x))),
+
+  nil      := W.unitV,
+  eps      := \ G x -> tt,
+  eps-uniq := \ G s -> funext (W.Ix G) (\ x -> Top) s (\ x -> tt) (\ x -> isTop (s x) tt),
+
+  Ty       := \ G -> W.Ix G -> W.V,
+  isSetTy  := \ G -> isSet-Pi (W.Ix G) (\ x -> W.V) (\ x -> W.isSetV),
+  subT     := \ D G A s x -> A (s x),
+  subT-id  := \ G A -> refl A,
+  subT-o   := \ T D G A s s' -> refl (\ x -> A (s (s' x))),
+
+  El       := \ G A -> (x : W.Ix G) -> W.Ix (A x),
+  isSetEl  := \ G A -> isSet-Pi (W.Ix G) (\ x -> W.Ix (A x)) (\ x -> W.isSetIx (A x)),
+  subt     := \ D G A a s x -> a (s x),
+  subt-id  := \ G A a -> refl a,
+  subt-o   := \ T D G A a s s' -> refl (\ x -> a (s (s' x))),
+
+  ext      := \ G A -> W.SigV G A,
+  p        := \ G A w -> w.1,
+  q        := \ G A w -> w.2,
+  lift     := \ D G A s w -> (s w.1, w.2),
+  sec      := \ G A a x -> (x, a x),
+
+  lift-id  := \ G A -> refl (\ w -> w),
+  lift-o   := \ T D G A s s' -> refl (\ w -> (s (s' w.1), w.2)),
+  p-lift   := \ D G A s -> refl (\ w -> s w.1),
+  p-sec    := \ G A a -> refl (\ x -> x),
+  sec-o    := \ D G A a s -> refl (\ x -> (s x, a (s x))),
+  lift-p-sec-q := \ G A -> refl (\ w -> w),
+  q-lift   := \ D G A s -> refl (\ w -> w.2),
+  q-sec    := \ G A a -> refl a ] ;
+
+module F = CwF.Formers[l+, VCwF] ;
+
+------------------------------------------------------------------------
+-- Type formers
+
+-- Agda's unit record has eta; Top here is a data type, so isTop and funext
+VUnit : F.UnitStr = new F.UnitStr[
+  Unit         := \ G x -> W.unitV,
+  Unit-nat     := \ D G s -> refl (\ x -> W.unitV),
+  Unit-iso     := \ G -> struct {
+                    fun = \ a -> tt ;
+                    inv = \ t x -> tt ;
+                    fun-inv = \ t -> isTop tt t ;
+                    inv-fun = \ a -> funext (W.Ix G) (\ x -> Top) (\ x -> tt) a (\ x -> isTop tt (a x)) },
+  Unit-iso-nat := \ D G t s -> refl (\ x -> tt) ] ;
+
+-- absurd is a function, so both sides of Zero-elim-nat are the same term
+VZero : F.ZeroStr = new F.ZeroStr[
+  Zero          := \ G x -> W.emptyV,
+  Zero-nat      := \ D G s -> refl (\ x -> W.emptyV),
+  Zero-elim     := \ G A w -> absurd (W.Ix (A w)) w.2,
+  Zero-elim-nat := \ D G A s -> refl (\ w -> absurd (W.Ix (A (s w.1, w.2))) w.2) ] ;
+
+elim2 (G : W.V) (A : ((x : W.Ix G) * Bool) -> W.V)
+  (t : (x : W.Ix G) -> W.Ix (A (x, true))) (f : (x : W.Ix G) -> W.Ix (A (x, false)))
+  (w : (x : W.Ix G) * Bool) : W.Ix (A w) = h w.1 w.2
+ where { h (x : W.Ix G) : (b : Bool) -> W.Ix (A (x, b)) = split { true -> t x ; false -> f x } ; } ;
+
+elim2-nat (D G : W.V) (A : ((x : W.Ix G) * Bool) -> W.V) (s : W.Ix D -> W.Ix G)
+  (t : (x : W.Ix G) -> W.Ix (A (x, true))) (f : (x : W.Ix G) -> W.Ix (A (x, false)))
+  (w : (x : W.Ix D) * Bool)
+  : Id (W.Ix (A (s w.1, w.2)))
+       (elim2 D (\ w' -> A (s w'.1, w'.2))
+              (\ x -> elim2 G A t f (s x, true)) (\ x -> elim2 G A t f (s x, false)) w)
+       (elim2 G A t f (s w.1, w.2)) = h w.1 w.2
+ where { h (x : W.Ix D) : (b : Bool)
+           -> Id (W.Ix (A (s x, b)))
+                 (elim2 D (\ w' -> A (s w'.1, w'.2))
+                        (\ x -> elim2 G A t f (s x, true)) (\ x -> elim2 G A t f (s x, false)) (x, b))
+                 (elim2 G A t f (s x, b)) =
+           split { true -> refl (t (s x)) ; false -> refl (f (s x)) } ; } ;
+
+VTwo : F.TwoStr = new F.TwoStr[
+  Two          := \ G x -> W.boolV,
+  Two-nat      := \ D G s -> refl (\ x -> W.boolV),
+  Btrue        := \ G x -> true,
+  Bfalse       := \ G x -> false,
+  Btrue-nat    := \ D G s -> refl (\ x -> true),
+  Bfalse-nat   := \ D G s -> refl (\ x -> false),
+  Two-elim     := \ G A tf -> elim2 G A tf.1 tf.2,
+  Two-beta     := \ G A tf -> refl tf,
+  Two-elim-nat := \ D G A s tf ->
+    funext ((x : W.Ix D) * Bool) (\ w -> W.Ix (A (s w.1, w.2)))
+      (elim2 D (\ w' -> A (s w'.1, w'.2))
+             (\ x -> elim2 G A tf.1 tf.2 (s x, true)) (\ x -> elim2 G A tf.1 tf.2 (s x, false)))
+      (\ w -> elim2 G A tf.1 tf.2 (s w.1, w.2))
+      (elim2-nat D G A s tf.1 tf.2) ] ;
+
+VSig : F.SigStr = new F.SigStr[
+  Sig     := \ G A B x -> W.SigV (A x) (\ y -> B (x, y)),
+  Sig-nat := \ D G A B s -> refl (\ x -> W.SigV (A (s x)) (\ y -> B (s x, y))),
+  Sig-iso := \ G A B -> struct {
+               fun = \ f -> (\ x -> (f x).1, \ x -> (f x).2) ;
+               inv = \ ab x -> (ab.1 x, ab.2 x) ;
+               fun-inv = \ ab -> refl ab ;
+               inv-fun = \ f -> refl f },
+  Sig-iso-nat := \ D G A B a b s -> refl (\ x -> (a (s x), b (s x))) ] ;
+
+VPi : F.PiStr = new F.PiStr[
+  Pi      := \ G A B x -> W.PiV (A x) (\ y -> B (x, y)),
+  Pi-nat  := \ D G A B s -> refl (\ x -> W.PiV (A (s x)) (\ y -> B (s x, y))),
+  Pi-iso  := \ G A B -> struct {
+               fun = \ f w -> f w.1 w.2 ;
+               inv = \ g x y -> g (x, y) ;
+               fun-inv = \ g -> refl g ;
+               inv-fun = \ f -> refl f },
+  Pi-iso-nat := \ D G A B f s -> refl (\ x y -> f (s x, y)) ] ;
+
+happly-ap (D G : W.V) (A : W.Ix G -> W.V) (a b : (x : W.Ix G) -> W.Ix (A x))
+  (e : Id ((x : W.Ix G) -> W.Ix (A x)) a b) (s : W.Ix D -> W.Ix G)
+  : Id ((x : W.Ix D) -> Id (W.Ix (A (s x))) (a (s x)) (b (s x)))
+       (\ x -> happly (W.Ix G) (\ y -> W.Ix (A y)) a b e (s x))
+       (happly (W.Ix D) (\ x -> W.Ix (A (s x))) (\ x -> a (s x)) (\ x -> b (s x))
+          (ap ((x : W.Ix G) -> W.Ix (A x)) ((x : W.Ix D) -> W.Ix (A (s x))) (\ c x -> c (s x)) a b e)) =
+  idJ ((x : W.Ix G) -> W.Ix (A x)) a
+    (\ b1 e1 -> Id ((x : W.Ix D) -> Id (W.Ix (A (s x))) (a (s x)) (b1 (s x)))
+                   (\ x -> happly (W.Ix G) (\ y -> W.Ix (A y)) a b1 e1 (s x))
+                   (happly (W.Ix D) (\ x -> W.Ix (A (s x))) (\ x -> a (s x)) (\ x -> b1 (s x))
+                      (ap ((x : W.Ix G) -> W.Ix (A x)) ((x : W.Ix D) -> W.Ix (A (s x))) (\ c x -> c (s x)) a b1 e1)))
+    (refl (\ x -> refl (a (s x)))) b e ;
+
+VId : F.IdStr = new F.IdStr[
+  IdT     := \ G A a b x -> W.IdV (A x) (a x) (b x),
+  IdT-nat := \ D G A a b s -> refl (\ x -> W.IdV (A (s x)) (a (s x)) (b (s x))),
+  IdT-iso := \ G A a b -> struct {
+               fun = funext (W.Ix G) (\ x -> W.Ix (A x)) a b ;
+               inv = happly (W.Ix G) (\ x -> W.Ix (A x)) a b ;
+               fun-inv = funext-happly (W.Ix G) (\ x -> W.Ix (A x)) a b ;
+               inv-fun = happly-funext (W.Ix G) (\ x -> W.Ix (A x)) a b },
+  IdT-iso-nat := \ D G A a b e s -> happly-ap D G A a b e s ] ;
+
+------------------------------------------------------------------------
+-- Natural numbers
+
+natElim (G : W.V) (A : ((x : W.Ix G) * Nat) -> W.V)
+  (z : (x : W.Ix G) -> W.Ix (A (x, zero)))
+  (st : (u : (w : (x : W.Ix G) * Nat) * W.Ix (A w)) -> W.Ix (A (u.1.1, suc u.1.2)))
+  (w : (x : W.Ix G) * Nat) : W.Ix (A w) = h w.1 w.2
+ where { h (x : W.Ix G) : (n : Nat) -> W.Ix (A (x, n)) =
+           split { zero -> z x ; suc n -> st ((x, n), h x n) } ; } ;
+
+natElim-nat (D G : W.V) (A : ((x : W.Ix G) * Nat) -> W.V) (s : W.Ix D -> W.Ix G)
+  (z : (x : W.Ix G) -> W.Ix (A (x, zero)))
+  (st : (u : (w : (x : W.Ix G) * Nat) * W.Ix (A w)) -> W.Ix (A (u.1.1, suc u.1.2)))
+  (w : (x : W.Ix D) * Nat)
+  : Id (W.Ix (A (s w.1, w.2)))
+       (natElim D (\ w' -> A (s w'.1, w'.2)) (\ x -> z (s x)) (\ u -> st ((s u.1.1, u.1.2), u.2)) w)
+       (natElim G A z st (s w.1, w.2)) = h w.1 w.2
+ where {
+  A' (w' : (x : W.Ix D) * Nat) : W.V = A (s w'.1, w'.2) ;
+  z' (x : W.Ix D) : W.Ix (A (s x, zero)) = z (s x) ;
+  st' (u : (w' : (x : W.Ix D) * Nat) * W.Ix (A' w')) : W.Ix (A (s u.1.1, suc u.1.2)) =
+    st ((s u.1.1, u.1.2), u.2) ;
+  h (x : W.Ix D) : (n : Nat) -> Id (W.Ix (A (s x, n))) (natElim D A' z' st' (x, n)) (natElim G A z st (s x, n)) =
+    split { zero -> refl (z (s x)) ;
+            suc n -> ap (W.Ix (A (s x, n))) (W.Ix (A (s x, suc n))) (\ r -> st ((s x, n), r))
+                        (natElim D A' z' st' (x, n)) (natElim G A z st (s x, n)) (h x n) } ;
+ } ;
+
+VNat : F.NatStr = new F.NatStr[
+  N         := \ G x -> W.natV,
+  N-nat     := \ D G s -> refl (\ x -> W.natV),
+  zeroS     := \ G x -> (x, zero),
+  sucS      := \ G w -> (w.1, suc w.2),
+  p-zeroS   := \ G -> refl (\ x -> x),
+  p-sucS    := \ G -> refl (\ w -> w.1),
+  zeroS-nat := \ D G s -> refl (\ x -> (s x, zero)),
+  sucS-nat  := \ D G s -> refl (\ w -> (s w.1, suc w.2)),
+  N-elim    := \ G A z st -> natElim G A z st,
+  N-beta-zero := \ G A z st -> refl z,
+  N-beta-suc  := \ G A z st -> refl (\ w -> natElim G A z st (w.1, suc w.2)),
+  N-elim-nat  := \ D G A z st s ->
+    funext ((x : W.Ix D) * Nat) (\ w -> W.Ix (A (s w.1, w.2)))
+      (natElim D (\ w' -> A (s w'.1, w'.2)) (\ x -> z (s x)) (\ u -> st ((s u.1.1, u.1.2), u.2)))
+      (\ w -> natElim G A z st (s w.1, w.2))
+      (natElim-nat D G A s z st) ] ;
+
+------------------------------------------------------------------------
+-- eta for Two and Zero, from the extensional identity type
+
+module E = CwF.Eta[l+, VCwF, VId] ;
+
+VTwo-eta (G : W.V) (A : ((x : W.Ix G) * Bool) -> W.V) (a : (w : (x : W.Ix G) * Bool) -> W.Ix (A w))
+  : Id ((w : (x : W.Ix G) * Bool) -> W.Ix (A w)) (VTwo.Two-elim G A (VTwo.cases G A a)) a =
+  E.Two-eta VTwo G A a ;
+
+VZero-eta (G : W.V) (A : ((x : W.Ix G) * Empty) -> W.V) (a : (w : (x : W.Ix G) * Empty) -> W.Ix (A w))
+  : Id ((w : (x : W.Ix G) * Empty) -> W.Ix (A w)) a (VZero.Zero-elim G A) =
+  E.Zero-eta VZero G A a ;

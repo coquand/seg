@@ -1,0 +1,73 @@
+-- EsiSig.seg: MODEL/Lv/EsiSig.agda.  Sigma preserves empty-side
+-- invariance.  Inserting an empty side in a box b for Sigma A B inserts it
+-- in the box of first components; the filler of A does not change (FESI),
+-- so the box of second components lies over the same point and also gets
+-- the empty side inserted; the composite of B does not change (ESI).
+--
+-- Posets at a, presheaves at l.  Agda's anonymous module is the segment ES1.
+
+level a l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+open Cat[a] ;
+open Constr[a] ;
+module PR = PreL[a, l] ;
+open PR.PS ;
+module BXm = Box[a, l] ;
+module FibM = Fib[a, l] ;
+module FSg = FibSig[a, l] ;
+module ES = Esi[a, l] ;
+module EF = EsiFill[a, l] ;
+module PF = PresheafFormers[a, l].PFormers[PosetCat] ;
+
+module EsiSig (G : PCtx) (A : PTy[G]) (B : PTy[extP G A]) (eS eT : El Iv)
+  (F : FibM.FillDef[G, A].FillOp[eS]) (cB : BXm.Boxes[extP G A, B].CompOp[eS, eT])
+  (fesi : EF.FesiDef[G, A].FESI eS F) (esiB : ES.EsiDef[extP G A, B].ESI eS eT cB) {
+  open FSg.SigComp[G, A, B, eS, eT, F, cB] ;
+  module ESd = ES.EsiDef[G, S] ;
+  module EA = ES.EsiDef[G, A] ;
+  module EB = ES.EsiDef[GA, B] ;
+
+  module ES1 (X : Ob) (k : Nat) (b b' : BS.Box[eS, X]) (ins : ESd.InsE[eS, X, k, b, b']) {
+    module S0 = SndBox[X, b] ;
+    module S1 = SndBox[X, b'] ;
+
+    insA : EA.InsE[eS, X, k, FstBox[X, b].box, FstBox[X, b'].box] = new EA.InsE[eS, X, k, FstBox[X, b].box, FstBox[X, b'].box,
+      ins.ins-r,
+      ins.ins-k,
+      ins.ins-rho,
+      apH (pA X) ins.ins-lid,
+      ins.ins-e,
+      ins.ins-Q,
+      \ n h h' W psi i i' -> apH (pA W) (ins.ins-v n h h' W psi i i')] ;
+
+    insB : EB.InsE[eS, X, k, S0.box, S1.box] = new EB.InsE[eS, X, k, S0.box, S1.box,
+      ins.ins-r,
+      ins.ins-k,
+      fesi X k FstBox[X, b].box FstBox[X, b'].box insA,
+      transH (KB.fromE-eq X (GA.act X (prodP X Iv) (lid X eS) S1.rhoB) S1.uE S1.upt)
+       (transH (apH (asc X) ins.ins-lid) (symH (KB.fromE-eq X (GA.act X (prodP X Iv) (lid X eS) S0.rhoB) S0.uE S0.upt))),
+      ins.ins-e,
+      ins.ins-Q,
+      \ n h h' W psi i i' ->
+        transH (S1.side-E (ES.skipN k n, h') W psi i)
+         (transH (apH (asc W) (ins.ins-v n h h' W psi i i'))
+                 (symH (S0.side-E (n, h) W psi i')))] ;
+
+    esiS : Id (TS.EI X) (BS.topE eT X b'.brho (copSig X b')) (BS.topE eT X b.brho (copSig X b)) =
+      apH (unasc X)
+        (transH (copSig-E X b')
+         (transH (esiB X k S0.box S1.box insB)
+                 (symH (copSig-E X b)))) ;
+  } ;
+
+  esiSig : ESd.ESI eS eT sigComp = \ X k b b' ins -> ES1[X, k, b, b', ins].esiS ;
+} ;
+
+esiSigC (G : PCtx) (A : PTy[G]) (B : PTy[extP G A]) (cA : BXm.Boxes[G, A].Comp) (cB : BXm.Boxes[extP G A, B].Comp)
+  (eA : ES.EsiDef[G, A].ESIC cA) (eB : ES.EsiDef[extP G A, B].ESIC cB)
+  : ES.EsiDef[G, PF.SigAB[G, A, B].SigP].ESIC (FSg.sigCompC G A B cA cB) =
+  (EsiSig[G, A, B, e0, e1, (FibM.FillB[G, A].comp-to-fill cA).1, cB.1, (EF.fesiC G A cA eA).1, eB.1].esiSig,
+   EsiSig[G, A, B, e1, e0, (FibM.FillB[G, A].comp-to-fill cA).2, cB.2, (EF.fesiC G A cA eA).2, eB.2].esiSig) ;

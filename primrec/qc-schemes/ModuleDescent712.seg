@@ -1,0 +1,32 @@
+-- The numerator-gluing part of 7.1.2 for arbitrary modules, with no WQC.
+-- Once denominators agree, compatible local fractions give a global numerator
+-- after multiplying by one uniform power. Equality uses Modules.Fractions.Same.
+level l ; open Ring[l] ; open Presentations[l] ;
+module Pr = Prelude[l] ; module Tr = Truncation[l] ;
+module NF = NatFin[l] ;
+module Over (R : CRing) (setR : Pr.isSet R.R)
+ (axioms : SAGAxioms[l,l].Over[R,setR].Assumptions) {
+ module MD = Modules[l].Over[R,setR] ;
+ module MF = ModuleFractions[l].Over[R,setR] ;
+ module S = Schemes[l].Over[R,setR] ;
+ module OP = OpenProp[l].Over[R,setR] ;
+ module At (X : U l) (scheme : S.Scheme X) (Mx : X -> MD.Module)
+  (g : X -> R.R) (n : Nat) (us : Fin n -> X -> U l)
+  (opens : (i : Fin n) (x : X) -> OP.Open (us i x))
+  (cover : (x : X) -> Tr.Trunc[(i : Fin n) * us i x].carrier)
+  (local : (i : Fin n) (x : X) -> us i x -> (Mx x).M) (k : Nat) {
+  Compatible : U l = (i j : Fin n) (x : X) (u : us i x) (v : us j x) ->
+   Tr.Trunc[(e : Nat) * MD.Fractions[Mx x].Same (g x) (local i x u) k (local j x v) k e].carrier ;
+  module G = LocalSections[l].Over[R,setR,axioms].At[X,scheme,
+   \ x -> (Mx x).M,\ x -> (Mx x).setM,\ x -> (Mx x).sm (g x),n,us,opens,cover,local] ;
+  Goal : U l = (d : Nat) * (m : (x : X) -> (Mx x).M) *
+   ((i : Fin n) (x : X) (u : us i x) ->
+    Id (Mx x).M (m x) ((Mx x).sm (MD.RA.pw (g x) (NF.toN d)) (local i x u))) ;
+  theorem (compat : Compatible) : Tr.Trunc[Goal].carrier =
+   Tr.Trunc[G.Goal].induction @l (\ z -> Tr.Trunc[Goal].carrier)
+    (\ z -> Tr.Trunc[Goal].proposition)
+    (\ a -> Tr.Trunc[Goal].inc (a.1,a.2.1,\ i x u ->
+     trans (a.2.2 i x u) (MF.At[Mx x,g x].power a.1 (local i x u))))
+    (G.theorem (\ i j x u v -> MF.At[Mx x,g x].same-detect k (local i x u) (local j x v) (compat i j x u v))) ;
+ } ;
+} ;

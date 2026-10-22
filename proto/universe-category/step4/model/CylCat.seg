@@ -1,0 +1,645 @@
+-- CylCat.seg: binary products on the base (CYLINDER.md), a nested segment
+-- Cyl of IvBase (imported inside it): the category, the interval and the
+-- sieves are IvBase's; Cyl adds
+--
+--   binary products, characterised by pr1-pair, pr2-pair, pair-eta
+--
+-- and Sieves adds forall along X * Iv -> X (allIv).  The cylinder X * Iv,
+-- its projection pX, the cylinder f * Iv of a map and the lids are then
+-- definitions, and their equations (pX-lid, pX-cyl, cyl-lid) are theorems.
+-- Posets: Constr's PCyl = PB.Cyl[prodP, ...].  (Simplicial sets: the
+-- products of the base are not needed by the line layer.)
+
+open Prelude[a+] ;
+open Paths[a+] ;
+
+module Cyl {
+  ----------------------------------------------------------------------
+  -- binary products
+  prodP (X Y : Ob) : Ob ;
+  pr1 (X Y : Ob) : Hom (prodP X Y) X ;
+  pr2 (X Y : Ob) : Hom (prodP X Y) Y ;
+  pairH (X Y Z : Ob) (f : Hom Z X) (g : Hom Z Y) : Hom Z (prodP X Y) ;
+  pr1-pair (X Y Z : Ob) (f : Hom Z X) (g : Hom Z Y)
+    : Id (Hom Z X) (compH Z (prodP X Y) X (pr1 X Y) (pairH X Y Z f g)) f ;
+  pr2-pair (X Y Z : Ob) (f : Hom Z X) (g : Hom Z Y)
+    : Id (Hom Z Y) (compH Z (prodP X Y) Y (pr2 X Y) (pairH X Y Z f g)) g ;
+  pair-eta (X Y Z : Ob) (h : Hom Z (prodP X Y))
+    : Id (Hom Z (prodP X Y)) (pairH X Y Z (compH Z (prodP X Y) X (pr1 X Y) h) (compH Z (prodP X Y) Y (pr2 X Y) h)) h ;
+
+  ----------------------------------------------------------------------
+  -- consequences of the product laws
+
+  -- two maps into a product are equal when their projections are
+  pair-ext (X Y Z : Ob) (h k : Hom Z (prodP X Y))
+    (p : Id (Hom Z X) (compH Z (prodP X Y) X (pr1 X Y) h) (compH Z (prodP X Y) X (pr1 X Y) k))
+    (q : Id (Hom Z Y) (compH Z (prodP X Y) Y (pr2 X Y) h) (compH Z (prodP X Y) Y (pr2 X Y) k))
+    : Id (Hom Z (prodP X Y)) h k =
+    calc (Hom Z (prodP X Y)) {
+      h
+        =< symH (pair-eta X Y Z h) >
+      pairH X Y Z (compH Z (prodP X Y) X (pr1 X Y) h) (compH Z (prodP X Y) Y (pr2 X Y) h)
+        =< apH (\ u -> pairH X Y Z u (compH Z (prodP X Y) Y (pr2 X Y) h)) p >
+      pairH X Y Z (compH Z (prodP X Y) X (pr1 X Y) k) (compH Z (prodP X Y) Y (pr2 X Y) h)
+        =< apH (\ v -> pairH X Y Z (compH Z (prodP X Y) X (pr1 X Y) k) v) q >
+      pairH X Y Z (compH Z (prodP X Y) X (pr1 X Y) k) (compH Z (prodP X Y) Y (pr2 X Y) k)
+        =< pair-eta X Y Z k >
+      k } ;
+
+  ----------------------------------------------------------------------
+  -- the cylinder
+
+  pX (X : Ob) : Hom (prodP X Iv) X = pr1 X Iv ;
+
+  -- f * Iv = (f pr1 , pr2)
+  cylH (Y X : Ob) (f : Hom Y X) : Hom (prodP Y Iv) (prodP X Iv) =
+    pairH X Iv (prodP Y Iv) (compH (prodP Y Iv) Y X f (pr1 Y Iv)) (pr2 Y Iv) ;
+
+  -- the cylinder is a functor: (id * Iv) = id, (f g) * Iv = (f * Iv) (g * Iv)
+  cyl-id (X : Ob) : Id (Hom (prodP X Iv) (prodP X Iv)) (cylH X X (idH X)) (idH (prodP X Iv)) =
+    pair-ext X Iv (prodP X Iv) (cylH X X (idH X)) (idH (prodP X Iv))
+      (calc (Hom (prodP X Iv) X) {
+        compH (prodP X Iv) (prodP X Iv) X (pr1 X Iv) (cylH X X (idH X))
+          =< pr1-pair X Iv (prodP X Iv) (compH (prodP X Iv) X X (idH X) (pr1 X Iv)) (pr2 X Iv) >
+        compH (prodP X Iv) X X (idH X) (pr1 X Iv)
+          =< comp-idl (prodP X Iv) X (pr1 X Iv) >
+        pr1 X Iv
+          =< symH (comp-idr (prodP X Iv) X (pr1 X Iv)) >
+        compH (prodP X Iv) (prodP X Iv) X (pr1 X Iv) (idH (prodP X Iv)) })
+      (transH (pr2-pair X Iv (prodP X Iv) (compH (prodP X Iv) X X (idH X) (pr1 X Iv)) (pr2 X Iv))
+              (symH (comp-idr (prodP X Iv) Iv (pr2 X Iv)))) ;
+
+  module CylComp (Z Y X : Ob) (f : Hom Y X) (g : Hom Z Y) {
+    L : Hom (prodP Z Iv) (prodP X Iv) = cylH Z X (compH Z Y X f g) ;
+    R : Hom (prodP Z Iv) (prodP X Iv) = compH (prodP Z Iv) (prodP Y Iv) (prodP X Iv) (cylH Y X f) (cylH Z Y g) ;
+
+    p1 : Id (Hom (prodP Z Iv) X) (compH (prodP Z Iv) (prodP X Iv) X (pr1 X Iv) L) (compH (prodP Z Iv) (prodP X Iv) X (pr1 X Iv) R) =
+      calc (Hom (prodP Z Iv) X) {
+        compH (prodP Z Iv) (prodP X Iv) X (pr1 X Iv) L
+          =< pr1-pair X Iv (prodP Z Iv) (compH (prodP Z Iv) Z X (compH Z Y X f g) (pr1 Z Iv)) (pr2 Z Iv) >
+        compH (prodP Z Iv) Z X (compH Z Y X f g) (pr1 Z Iv)
+          =< comp-assoc (prodP Z Iv) Z Y X f g (pr1 Z Iv) >
+        compH (prodP Z Iv) Y X f (compH (prodP Z Iv) Z Y g (pr1 Z Iv))
+          =< apH (\ u -> compH (prodP Z Iv) Y X f u)
+                 (symH (pr1-pair Y Iv (prodP Z Iv) (compH (prodP Z Iv) Z Y g (pr1 Z Iv)) (pr2 Z Iv))) >
+        compH (prodP Z Iv) Y X f (compH (prodP Z Iv) (prodP Y Iv) Y (pr1 Y Iv) (cylH Z Y g))
+          =< symH (comp-assoc (prodP Z Iv) (prodP Y Iv) Y X f (pr1 Y Iv) (cylH Z Y g)) >
+        compH (prodP Z Iv) (prodP Y Iv) X (compH (prodP Y Iv) Y X f (pr1 Y Iv)) (cylH Z Y g)
+          =< apH (\ u -> compH (prodP Z Iv) (prodP Y Iv) X u (cylH Z Y g))
+                 (symH (pr1-pair X Iv (prodP Y Iv) (compH (prodP Y Iv) Y X f (pr1 Y Iv)) (pr2 Y Iv))) >
+        compH (prodP Z Iv) (prodP Y Iv) X (compH (prodP Y Iv) (prodP X Iv) X (pr1 X Iv) (cylH Y X f)) (cylH Z Y g)
+          =< comp-assoc (prodP Z Iv) (prodP Y Iv) (prodP X Iv) X (pr1 X Iv) (cylH Y X f) (cylH Z Y g) >
+        compH (prodP Z Iv) (prodP X Iv) X (pr1 X Iv) R } ;
+
+    p2 : Id (Hom (prodP Z Iv) Iv) (compH (prodP Z Iv) (prodP X Iv) Iv (pr2 X Iv) L) (compH (prodP Z Iv) (prodP X Iv) Iv (pr2 X Iv) R) =
+      calc (Hom (prodP Z Iv) Iv) {
+        compH (prodP Z Iv) (prodP X Iv) Iv (pr2 X Iv) L
+          =< pr2-pair X Iv (prodP Z Iv) (compH (prodP Z Iv) Z X (compH Z Y X f g) (pr1 Z Iv)) (pr2 Z Iv) >
+        pr2 Z Iv
+          =< symH (pr2-pair Y Iv (prodP Z Iv) (compH (prodP Z Iv) Z Y g (pr1 Z Iv)) (pr2 Z Iv)) >
+        compH (prodP Z Iv) (prodP Y Iv) Iv (pr2 Y Iv) (cylH Z Y g)
+          =< apH (\ u -> compH (prodP Z Iv) (prodP Y Iv) Iv u (cylH Z Y g))
+                 (symH (pr2-pair X Iv (prodP Y Iv) (compH (prodP Y Iv) Y X f (pr1 Y Iv)) (pr2 Y Iv))) >
+        compH (prodP Z Iv) (prodP Y Iv) Iv (compH (prodP Y Iv) (prodP X Iv) Iv (pr2 X Iv) (cylH Y X f)) (cylH Z Y g)
+          =< comp-assoc (prodP Z Iv) (prodP Y Iv) (prodP X Iv) Iv (pr2 X Iv) (cylH Y X f) (cylH Z Y g) >
+        compH (prodP Z Iv) (prodP X Iv) Iv (pr2 X Iv) R } ;
+
+    res : Id (Hom (prodP Z Iv) (prodP X Iv)) L R = pair-ext X Iv (prodP Z Iv) L R p1 p2 ;
+  } ;
+
+  cyl-comp (Z Y X : Ob) (f : Hom Y X) (g : Hom Z Y)
+    : Id (Hom (prodP Z Iv) (prodP X Iv)) (cylH Z X (compH Z Y X f g))
+         (compH (prodP Z Iv) (prodP Y Iv) (prodP X Iv) (cylH Y X f) (cylH Z Y g)) = CylComp[Z, Y, X, f, g].res ;
+
+  -- a map into a cylinder is the cylinder of its first projection after
+  -- (id , its second projection):  psi = (pX psi * Iv) (id , pr2 psi)
+  cylEv (W X : Ob) (psi : Hom W (prodP X Iv)) : Hom W (prodP W Iv) =
+    pairH W Iv W (idH W) (compH W (prodP X Iv) Iv (pr2 X Iv) psi) ;
+
+  module CylEvm (W X : Ob) (psi : Hom W (prodP X Iv)) {
+    f : Hom W X = compH W (prodP X Iv) X (pr1 X Iv) psi ;
+    R : Hom W (prodP X Iv) = compH W (prodP W Iv) (prodP X Iv) (cylH W X f) (cylEv W X psi) ;
+
+    p1 : Id (Hom W X) (compH W (prodP X Iv) X (pr1 X Iv) psi) (compH W (prodP X Iv) X (pr1 X Iv) R) =
+      calc (Hom W X) {
+        f
+          =< symH (comp-idr W X f) >
+        compH W W X f (idH W)
+          =< apH (\ u -> compH W W X f u) (symH (pr1-pair W Iv W (idH W) (compH W (prodP X Iv) Iv (pr2 X Iv) psi))) >
+        compH W W X f (compH W (prodP W Iv) W (pr1 W Iv) (cylEv W X psi))
+          =< symH (comp-assoc W (prodP W Iv) W X f (pr1 W Iv) (cylEv W X psi)) >
+        compH W (prodP W Iv) X (compH (prodP W Iv) W X f (pr1 W Iv)) (cylEv W X psi)
+          =< apH (\ u -> compH W (prodP W Iv) X u (cylEv W X psi))
+                 (symH (pr1-pair X Iv (prodP W Iv) (compH (prodP W Iv) W X f (pr1 W Iv)) (pr2 W Iv))) >
+        compH W (prodP W Iv) X (compH (prodP W Iv) (prodP X Iv) X (pr1 X Iv) (cylH W X f)) (cylEv W X psi)
+          =< comp-assoc W (prodP W Iv) (prodP X Iv) X (pr1 X Iv) (cylH W X f) (cylEv W X psi) >
+        compH W (prodP X Iv) X (pr1 X Iv) R } ;
+
+    p2 : Id (Hom W Iv) (compH W (prodP X Iv) Iv (pr2 X Iv) psi) (compH W (prodP X Iv) Iv (pr2 X Iv) R) =
+      calc (Hom W Iv) {
+        compH W (prodP X Iv) Iv (pr2 X Iv) psi
+          =< symH (pr2-pair W Iv W (idH W) (compH W (prodP X Iv) Iv (pr2 X Iv) psi)) >
+        compH W (prodP W Iv) Iv (pr2 W Iv) (cylEv W X psi)
+          =< apH (\ u -> compH W (prodP W Iv) Iv u (cylEv W X psi))
+                 (symH (pr2-pair X Iv (prodP W Iv) (compH (prodP W Iv) W X f (pr1 W Iv)) (pr2 W Iv))) >
+        compH W (prodP W Iv) Iv (compH (prodP W Iv) (prodP X Iv) Iv (pr2 X Iv) (cylH W X f)) (cylEv W X psi)
+          =< comp-assoc W (prodP W Iv) (prodP X Iv) Iv (pr2 X Iv) (cylH W X f) (cylEv W X psi) >
+        compH W (prodP X Iv) Iv (pr2 X Iv) R } ;
+
+    res : Id (Hom W (prodP X Iv)) psi R = pair-ext X Iv W psi R p1 p2 ;
+  } ;
+
+  cyl-evm (W X : Ob) (psi : Hom W (prodP X Iv))
+    : Id (Hom W (prodP X Iv)) psi
+         (compH W (prodP W Iv) (prodP X Iv) (cylH W X (compH W (prodP X Iv) X (pr1 X Iv) psi)) (cylEv W X psi)) =
+    CylEvm[W, X, psi].res ;
+
+  -- the lid at e: x |-> (x , e)
+  lid (X : Ob) (e : IPt) : Hom X (prodP X Iv) = pairH X Iv X (idH X) (ptH X e) ;
+
+  -- pX (lid e) = id
+  pX-lid (X : Ob) (e : IPt) : Id (Hom X X) (compH X (prodP X Iv) X (pX X) (lid X e)) (idH X) =
+    pr1-pair X Iv X (idH X) (ptH X e) ;
+
+  -- pX (f * Iv) = f pX
+  pX-cyl (Y X : Ob) (f : Hom Y X)
+    : Id (Hom (prodP Y Iv) X) (compH (prodP Y Iv) (prodP X Iv) X (pX X) (cylH Y X f)) (compH (prodP Y Iv) Y X f (pX Y)) =
+    pr1-pair X Iv (prodP Y Iv) (compH (prodP Y Iv) Y X f (pr1 Y Iv)) (pr2 Y Iv) ;
+
+  -- (f * Iv) (lid e) = (lid e) f: both have projections f and the point e
+  module CL (Y X : Ob) (f : Hom Y X) (e : IPt) {
+    L : Hom Y (prodP X Iv) = compH Y (prodP Y Iv) (prodP X Iv) (cylH Y X f) (lid Y e) ;
+    R : Hom Y (prodP X Iv) = compH Y X (prodP X Iv) (lid X e) f ;
+
+    p1L : Id (Hom Y X) (compH Y (prodP X Iv) X (pr1 X Iv) L) f =
+      calc (Hom Y X) {
+        compH Y (prodP X Iv) X (pr1 X Iv) L
+          =< symH (comp-assoc Y (prodP Y Iv) (prodP X Iv) X (pr1 X Iv) (cylH Y X f) (lid Y e)) >
+        compH Y (prodP Y Iv) X (compH (prodP Y Iv) (prodP X Iv) X (pr1 X Iv) (cylH Y X f)) (lid Y e)
+          =< apH (\ u -> compH Y (prodP Y Iv) X u (lid Y e)) (pX-cyl Y X f) >
+        compH Y (prodP Y Iv) X (compH (prodP Y Iv) Y X f (pr1 Y Iv)) (lid Y e)
+          =< comp-assoc Y (prodP Y Iv) Y X f (pr1 Y Iv) (lid Y e) >
+        compH Y Y X f (compH Y (prodP Y Iv) Y (pr1 Y Iv) (lid Y e))
+          =< apH (\ u -> compH Y Y X f u) (pX-lid Y e) >
+        compH Y Y X f (idH Y)
+          =< comp-idr Y X f >
+        f } ;
+
+    p1R : Id (Hom Y X) (compH Y (prodP X Iv) X (pr1 X Iv) R) f =
+      calc (Hom Y X) {
+        compH Y (prodP X Iv) X (pr1 X Iv) R
+          =< symH (comp-assoc Y X (prodP X Iv) X (pr1 X Iv) (lid X e) f) >
+        compH Y X X (compH X (prodP X Iv) X (pr1 X Iv) (lid X e)) f
+          =< apH (\ u -> compH Y X X u f) (pX-lid X e) >
+        compH Y X X (idH X) f
+          =< comp-idl Y X f >
+        f } ;
+
+    p2L : Id (Hom Y Iv) (compH Y (prodP X Iv) Iv (pr2 X Iv) L) (ptH Y e) =
+      calc (Hom Y Iv) {
+        compH Y (prodP X Iv) Iv (pr2 X Iv) L
+          =< symH (comp-assoc Y (prodP Y Iv) (prodP X Iv) Iv (pr2 X Iv) (cylH Y X f) (lid Y e)) >
+        compH Y (prodP Y Iv) Iv (compH (prodP Y Iv) (prodP X Iv) Iv (pr2 X Iv) (cylH Y X f)) (lid Y e)
+          =< apH (\ u -> compH Y (prodP Y Iv) Iv u (lid Y e))
+                 (pr2-pair X Iv (prodP Y Iv) (compH (prodP Y Iv) Y X f (pr1 Y Iv)) (pr2 Y Iv)) >
+        compH Y (prodP Y Iv) Iv (pr2 Y Iv) (lid Y e)
+          =< pr2-pair Y Iv Y (idH Y) (ptH Y e) >
+        ptH Y e } ;
+
+    p2R : Id (Hom Y Iv) (compH Y (prodP X Iv) Iv (pr2 X Iv) R) (ptH Y e) =
+      calc (Hom Y Iv) {
+        compH Y (prodP X Iv) Iv (pr2 X Iv) R
+          =< symH (comp-assoc Y X (prodP X Iv) Iv (pr2 X Iv) (lid X e) f) >
+        compH Y X Iv (compH X (prodP X Iv) Iv (pr2 X Iv) (lid X e)) f
+          =< apH (\ u -> compH Y X Iv u f) (pr2-pair X Iv X (idH X) (ptH X e)) >
+        compH Y X Iv (ptH X e) f
+          =< ptH-nat Y X f e >
+        ptH Y e } ;
+
+    res : Id (Hom Y (prodP X Iv)) L R =
+      pair-ext X Iv Y L R (transH p1L (symH p1R)) (transH p2L (symH p2R)) ;
+  } ;
+
+  cyl-lid (Y X : Ob) (f : Hom Y X) (e : IPt)
+    : Id (Hom Y (prodP X Iv)) (compH Y (prodP Y Iv) (prodP X Iv) (cylH Y X f) (lid Y e))
+                              (compH Y X (prodP X Iv) (lid X e) f) = CL[Y, X, f, e].res ;
+
+  -- cylEv only depends on the second projection: cylEv ((h * Iv) psi) = cylEv psi
+  cylEv-cyl (W Y X : Ob) (h : Hom Y X) (psi : Hom W (prodP Y Iv))
+    : Id (Hom W (prodP W Iv)) (cylEv W X (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi)) (cylEv W Y psi) =
+    apH (\ u -> pairH W Iv W (idH W) u)
+      (calc (Hom W Iv) {
+        compH W (prodP X Iv) Iv (pr2 X Iv) (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi)
+          =< symH (comp-assoc W (prodP Y Iv) (prodP X Iv) Iv (pr2 X Iv) (cylH Y X h) psi) >
+        compH W (prodP Y Iv) Iv (compH (prodP Y Iv) (prodP X Iv) Iv (pr2 X Iv) (cylH Y X h)) psi
+          =< apH (\ u -> compH W (prodP Y Iv) Iv u psi) (pr2-pair X Iv (prodP Y Iv) (compH (prodP Y Iv) Y X h (pr1 Y Iv)) (pr2 Y Iv)) >
+        compH W (prodP Y Iv) Iv (pr2 Y Iv) psi }) ;
+
+  -- at a lid: cylEv ((lid e) phi) = lid e
+  cylEv-lid (W X : Ob) (e : IPt) (phi : Hom W X)
+    : Id (Hom W (prodP W Iv)) (cylEv W X (compH W X (prodP X Iv) (lid X e) phi)) (lid W e) =
+    apH (\ u -> pairH W Iv W (idH W) u)
+      (calc (Hom W Iv) {
+        compH W (prodP X Iv) Iv (pr2 X Iv) (compH W X (prodP X Iv) (lid X e) phi)
+          =< symH (comp-assoc W X (prodP X Iv) Iv (pr2 X Iv) (lid X e) phi) >
+        compH W X Iv (compH X (prodP X Iv) Iv (pr2 X Iv) (lid X e)) phi
+          =< apH (\ u -> compH W X Iv u phi) (pr2-pair X Iv X (idH X) (ptH X e)) >
+        compH W X Iv (ptH X e) phi
+          =< ptH-nat W X phi e >
+        ptH W e }) ;
+
+  -- naturality: cylEv psi chi = (chi * Iv) cylEv (psi chi)
+  module CylEvNat (W' W X : Ob) (psi : Hom W (prodP X Iv)) (chi : Hom W' W) {
+    L : Hom W' (prodP W Iv) = compH W' W (prodP W Iv) (cylEv W X psi) chi ;
+    R : Hom W' (prodP W Iv) = compH W' (prodP W' Iv) (prodP W Iv) (cylH W' W chi) (cylEv W' X (compH W' W (prodP X Iv) psi chi)) ;
+    q : Hom W' Iv = compH W' (prodP X Iv) Iv (pr2 X Iv) (compH W' W (prodP X Iv) psi chi) ;
+
+    p1 : Id (Hom W' W) (compH W' (prodP W Iv) W (pr1 W Iv) L) (compH W' (prodP W Iv) W (pr1 W Iv) R) =
+      calc (Hom W' W) {
+        compH W' (prodP W Iv) W (pr1 W Iv) L
+          =< symH (comp-assoc W' W (prodP W Iv) W (pr1 W Iv) (cylEv W X psi) chi) >
+        compH W' W W (compH W (prodP W Iv) W (pr1 W Iv) (cylEv W X psi)) chi
+          =< apH (\ u -> compH W' W W u chi) (pr1-pair W Iv W (idH W) (compH W (prodP X Iv) Iv (pr2 X Iv) psi)) >
+        compH W' W W (idH W) chi
+          =< comp-idl W' W chi >
+        chi
+          =< symH (comp-idr W' W chi) >
+        compH W' W' W chi (idH W')
+          =< apH (\ u -> compH W' W' W chi u) (symH (pr1-pair W' Iv W' (idH W') q)) >
+        compH W' W' W chi (compH W' (prodP W' Iv) W' (pr1 W' Iv) (cylEv W' X (compH W' W (prodP X Iv) psi chi)))
+          =< symH (comp-assoc W' (prodP W' Iv) W' W chi (pr1 W' Iv) (cylEv W' X (compH W' W (prodP X Iv) psi chi))) >
+        compH W' (prodP W' Iv) W (compH (prodP W' Iv) W' W chi (pr1 W' Iv)) (cylEv W' X (compH W' W (prodP X Iv) psi chi))
+          =< apH (\ u -> compH W' (prodP W' Iv) W u (cylEv W' X (compH W' W (prodP X Iv) psi chi)))
+                 (symH (pr1-pair W Iv (prodP W' Iv) (compH (prodP W' Iv) W' W chi (pr1 W' Iv)) (pr2 W' Iv))) >
+        compH W' (prodP W' Iv) W (compH (prodP W' Iv) (prodP W Iv) W (pr1 W Iv) (cylH W' W chi)) (cylEv W' X (compH W' W (prodP X Iv) psi chi))
+          =< comp-assoc W' (prodP W' Iv) (prodP W Iv) W (pr1 W Iv) (cylH W' W chi) (cylEv W' X (compH W' W (prodP X Iv) psi chi)) >
+        compH W' (prodP W Iv) W (pr1 W Iv) R } ;
+
+    p2 : Id (Hom W' Iv) (compH W' (prodP W Iv) Iv (pr2 W Iv) L) (compH W' (prodP W Iv) Iv (pr2 W Iv) R) =
+      calc (Hom W' Iv) {
+        compH W' (prodP W Iv) Iv (pr2 W Iv) L
+          =< symH (comp-assoc W' W (prodP W Iv) Iv (pr2 W Iv) (cylEv W X psi) chi) >
+        compH W' W Iv (compH W (prodP W Iv) Iv (pr2 W Iv) (cylEv W X psi)) chi
+          =< apH (\ u -> compH W' W Iv u chi) (pr2-pair W Iv W (idH W) (compH W (prodP X Iv) Iv (pr2 X Iv) psi)) >
+        compH W' W Iv (compH W (prodP X Iv) Iv (pr2 X Iv) psi) chi
+          =< comp-assoc W' W (prodP X Iv) Iv (pr2 X Iv) psi chi >
+        q
+          =< symH (pr2-pair W' Iv W' (idH W') q) >
+        compH W' (prodP W' Iv) Iv (pr2 W' Iv) (cylEv W' X (compH W' W (prodP X Iv) psi chi))
+          =< apH (\ u -> compH W' (prodP W' Iv) Iv u (cylEv W' X (compH W' W (prodP X Iv) psi chi)))
+                 (symH (pr2-pair W Iv (prodP W' Iv) (compH (prodP W' Iv) W' W chi (pr1 W' Iv)) (pr2 W' Iv))) >
+        compH W' (prodP W' Iv) Iv (compH (prodP W' Iv) (prodP W Iv) Iv (pr2 W Iv) (cylH W' W chi)) (cylEv W' X (compH W' W (prodP X Iv) psi chi))
+          =< comp-assoc W' (prodP W' Iv) (prodP W Iv) Iv (pr2 W Iv) (cylH W' W chi) (cylEv W' X (compH W' W (prodP X Iv) psi chi)) >
+        compH W' (prodP W Iv) Iv (pr2 W Iv) R } ;
+
+    res : Id (Hom W' (prodP W Iv)) L R = pair-ext W Iv W' L R p1 p2 ;
+  } ;
+
+  cylEv-nat (W' W X : Ob) (psi : Hom W (prodP X Iv)) (chi : Hom W' W)
+    : Id (Hom W' (prodP W Iv)) (compH W' W (prodP W Iv) (cylEv W X psi) chi)
+         (compH W' (prodP W' Iv) (prodP W Iv) (cylH W' W chi) (cylEv W' X (compH W' W (prodP X Iv) psi chi))) =
+    CylEvNat[W', W, X, psi, chi].res ;
+
+  -- along f * Iv: (pX * Iv) (cylEv (f * Iv)) = id
+  module CylEvPX (W X : Ob) (f : Hom W X) {
+    WI : Ob = prodP W Iv ;
+    E : Hom WI (prodP WI Iv) = cylEv WI X (cylH W X f) ;
+    L : Hom WI WI = compH WI (prodP WI Iv) WI (cylH WI W (pr1 W Iv)) E ;
+
+    p1 : Id (Hom WI W) (compH WI WI W (pr1 W Iv) L) (compH WI WI W (pr1 W Iv) (idH WI)) =
+      calc (Hom WI W) {
+        compH WI WI W (pr1 W Iv) L
+          =< symH (comp-assoc WI (prodP WI Iv) WI W (pr1 W Iv) (cylH WI W (pr1 W Iv)) E) >
+        compH WI (prodP WI Iv) W (compH (prodP WI Iv) WI W (pr1 W Iv) (cylH WI W (pr1 W Iv))) E
+          =< apH (\ u -> compH WI (prodP WI Iv) W u E) (pr1-pair W Iv (prodP WI Iv) (compH (prodP WI Iv) WI W (pr1 W Iv) (pr1 WI Iv)) (pr2 WI Iv)) >
+        compH WI (prodP WI Iv) W (compH (prodP WI Iv) WI W (pr1 W Iv) (pr1 WI Iv)) E
+          =< comp-assoc WI (prodP WI Iv) WI W (pr1 W Iv) (pr1 WI Iv) E >
+        compH WI WI W (pr1 W Iv) (compH WI (prodP WI Iv) WI (pr1 WI Iv) E)
+          =< apH (\ u -> compH WI WI W (pr1 W Iv) u) (pr1-pair WI Iv WI (idH WI) (compH WI (prodP X Iv) Iv (pr2 X Iv) (cylH W X f))) >
+        compH WI WI W (pr1 W Iv) (idH WI) } ;
+
+    p2 : Id (Hom WI Iv) (compH WI WI Iv (pr2 W Iv) L) (compH WI WI Iv (pr2 W Iv) (idH WI)) =
+      calc (Hom WI Iv) {
+        compH WI WI Iv (pr2 W Iv) L
+          =< symH (comp-assoc WI (prodP WI Iv) WI Iv (pr2 W Iv) (cylH WI W (pr1 W Iv)) E) >
+        compH WI (prodP WI Iv) Iv (compH (prodP WI Iv) WI Iv (pr2 W Iv) (cylH WI W (pr1 W Iv))) E
+          =< apH (\ u -> compH WI (prodP WI Iv) Iv u E) (pr2-pair W Iv (prodP WI Iv) (compH (prodP WI Iv) WI W (pr1 W Iv) (pr1 WI Iv)) (pr2 WI Iv)) >
+        compH WI (prodP WI Iv) Iv (pr2 WI Iv) E
+          =< pr2-pair WI Iv WI (idH WI) (compH WI (prodP X Iv) Iv (pr2 X Iv) (cylH W X f)) >
+        compH WI (prodP X Iv) Iv (pr2 X Iv) (cylH W X f)
+          =< pr2-pair X Iv WI (compH WI W X f (pr1 W Iv)) (pr2 W Iv) >
+        pr2 W Iv
+          =< symH (comp-idr WI Iv (pr2 W Iv)) >
+        compH WI WI Iv (pr2 W Iv) (idH WI) } ;
+
+    res : Id (Hom WI WI) L (idH WI) = pair-ext W Iv WI L (idH WI) p1 p2 ;
+  } ;
+
+  cylEv-pX (W X : Ob) (f : Hom W X)
+    : Id (Hom (prodP W Iv) (prodP W Iv))
+         (compH (prodP W Iv) (prodP (prodP W Iv) Iv) (prodP W Iv) (cylH (prodP W Iv) W (pr1 W Iv)) (cylEv (prodP W Iv) X (cylH W X f)))
+         (idH (prodP W Iv)) = CylEvPX[W, X, f].res ;
+
+
+  -- the projection of the square X * Iv * Iv onto X
+  kq (X : Ob) : Hom (prodP (prodP X Iv) Iv) X = compH (prodP (prodP X Iv) Iv) (prodP X Iv) X (pX X) (pX (prodP X Iv)) ;
+
+  -- kq (lid e) = pX (pX (lid e)) = pX
+  kq-lid (X : Ob) (e : IPt)
+    : Id (Hom (prodP X Iv) X) (compH (prodP X Iv) (prodP (prodP X Iv) Iv) X (kq X) (lid (prodP X Iv) e)) (pX X) =
+    calc (Hom (prodP X Iv) X) {
+        compH (prodP X Iv) (prodP (prodP X Iv) Iv) X (kq X) (lid (prodP X Iv) e)
+      =< comp-assoc (prodP X Iv) (prodP (prodP X Iv) Iv) (prodP X Iv) X (pX X) (pX (prodP X Iv)) (lid (prodP X Iv) e) >
+        compH (prodP X Iv) (prodP X Iv) X (pX X) (compH (prodP X Iv) (prodP (prodP X Iv) Iv) (prodP X Iv) (pX (prodP X Iv)) (lid (prodP X Iv) e))
+      =< apH (compH (prodP X Iv) (prodP X Iv) X (pX X)) (pX-lid (prodP X Iv) e) >
+        compH (prodP X Iv) (prodP X Iv) X (pX X) (idH (prodP X Iv))
+      =< comp-idr (prodP X Iv) X (pX X) >
+        pX X } ;
+
+  -- kq (h * Iv * Iv) = h kq
+  kq-cyl (Z X : Ob) (h : Hom Z X)
+    : Id (Hom (prodP (prodP Z Iv) Iv) X)
+         (compH (prodP (prodP Z Iv) Iv) (prodP (prodP X Iv) Iv) X (kq X) (cylH (prodP Z Iv) (prodP X Iv) (cylH Z X h)))
+         (compH (prodP (prodP Z Iv) Iv) Z X h (kq Z)) =
+    calc (Hom (prodP (prodP Z Iv) Iv) X) {
+        compH (prodP (prodP Z Iv) Iv) (prodP (prodP X Iv) Iv) X (kq X) (cylH (prodP Z Iv) (prodP X Iv) (cylH Z X h))
+      =< comp-assoc (prodP (prodP Z Iv) Iv) (prodP (prodP X Iv) Iv) (prodP X Iv) X (pX X) (pX (prodP X Iv)) (cylH (prodP Z Iv) (prodP X Iv) (cylH Z X h)) >
+        compH (prodP (prodP Z Iv) Iv) (prodP X Iv) X (pX X) (compH (prodP (prodP Z Iv) Iv) (prodP (prodP X Iv) Iv) (prodP X Iv) (pX (prodP X Iv)) (cylH (prodP Z Iv) (prodP X Iv) (cylH Z X h)))
+      =< apH (compH (prodP (prodP Z Iv) Iv) (prodP X Iv) X (pX X)) (pX-cyl (prodP Z Iv) (prodP X Iv) (cylH Z X h)) >
+        compH (prodP (prodP Z Iv) Iv) (prodP X Iv) X (pX X) (compH (prodP (prodP Z Iv) Iv) (prodP Z Iv) (prodP X Iv) (cylH Z X h) (pX (prodP Z Iv)))
+      =< symH (comp-assoc (prodP (prodP Z Iv) Iv) (prodP Z Iv) (prodP X Iv) X (pX X) (cylH Z X h) (pX (prodP Z Iv))) >
+        compH (prodP (prodP Z Iv) Iv) (prodP Z Iv) X (compH (prodP Z Iv) (prodP X Iv) X (pX X) (cylH Z X h)) (pX (prodP Z Iv))
+      =< apH (\ k -> compH (prodP (prodP Z Iv) Iv) (prodP Z Iv) X k (pX (prodP Z Iv))) (pX-cyl Z X h) >
+        compH (prodP (prodP Z Iv) Iv) (prodP Z Iv) X (compH (prodP Z Iv) Z X h (pX Z)) (pX (prodP Z Iv))
+      =< comp-assoc (prodP (prodP Z Iv) Iv) (prodP Z Iv) Z X h (pX Z) (pX (prodP Z Iv)) >
+        compH (prodP (prodP Z Iv) Iv) Z X h (kq Z) } ;
+  ----------------------------------------------------------------------
+  -- sieves: a presheaf Phi of (decidable) sieves.  Q : Phi X is known
+  -- through the maps landing in it (Lands); inverse image pre is pullback
+  -- of sieves.  The laws are stated through Lands, so Phi need not be
+  -- extensional (in posets, Phi X = decidable subsets of the carrier).
+  module Sieves {
+    -- forall along pX : X * Iv -> X: f lands in allIv X Q iff f * Iv lands in Q
+    allIv (X : Ob) (Q : Phi (prodP X Iv)) : Phi X ;
+    lands-all (W X : Ob) (Q : Phi (prodP X Iv)) (f : Hom W X) (i : Lands W X (allIv X Q) f)
+      : Lands (prodP W Iv) (prodP X Iv) Q (cylH W X f) ;
+    all-lands (W X : Ob) (Q : Phi (prodP X Iv)) (f : Hom W X) (i : Lands (prodP W Iv) (prodP X Iv) Q (cylH W X f))
+      : Lands W X (allIv X Q) f ;
+
+    -- pr2 (lid e g) = e
+    pr2-lid (W X : Ob) (e : IPt) (g : Hom W X)
+      : Id (Hom W Iv) (compH W (prodP X Iv) Iv (pr2 X Iv) (compH W X (prodP X Iv) (lid X e) g)) (ptH W e) =
+      calc (Hom W Iv) {
+        compH W (prodP X Iv) Iv (pr2 X Iv) (compH W X (prodP X Iv) (lid X e) g)
+          =< symH (comp-assoc W X (prodP X Iv) Iv (pr2 X Iv) (lid X e) g) >
+        compH W X Iv (compH X (prodP X Iv) Iv (pr2 X Iv) (lid X e)) g
+          =< apH (\ u -> compH W X Iv u g) (pr2-pair X Iv X (idH X) (ptH X e)) >
+        compH W X Iv (ptH X e) g
+          =< ptH-nat W X g e >
+        ptH W e } ;
+
+    -- pr2 (f * Iv) = pr2
+    pr2-cyl (Z X : Ob) (h : Hom Z X)
+      : Id (Hom (prodP Z Iv) Iv) (compH (prodP Z Iv) (prodP X Iv) Iv (pr2 X Iv) (cylH Z X h)) (pr2 Z Iv) =
+      pr2-pair X Iv (prodP Z Iv) (compH (prodP Z Iv) Z X h (pr1 Z Iv)) (pr2 Z Iv) ;
+
+    -- maps into Q * Iv: psi lies over Q (its first projection lands in Q)
+    InQ (W X : Ob) (Q : Phi X) (psi : Hom W (prodP X Iv)) : U a = Lands W X Q (compH W (prodP X Iv) X (pX X) psi) ;
+
+    isProp-InQ (W X : Ob) (Q : Phi X) (psi : Hom W (prodP X Iv)) : isProp (InQ W X Q psi) =
+      isProp-Lands W X Q (compH W (prodP X Iv) X (pX X) psi) ;
+
+    -- psi c lies over Q when psi does: pX (psi c) = (pX psi) c
+    inQ-comp (W' W X : Ob) (Q : Phi X) (psi : Hom W (prodP X Iv)) (c : Hom W' W) (i : InQ W X Q psi)
+      : InQ W' X Q (compH W' W (prodP X Iv) psi c) =
+      lands-eq W' X Q (compH W' W X (compH W (prodP X Iv) X (pX X) psi) c)
+        (compH W' (prodP X Iv) X (pX X) (compH W' W (prodP X Iv) psi c))
+        (comp-assoc W' W (prodP X Iv) X (pX X) psi c)
+        (lands-comp W' W X Q (compH W (prodP X Iv) X (pX X) psi) c i) ;
+
+    -- if psi lies over the inverse image of Q along h, then (h * Iv) psi lies
+    -- over Q: pX ((h * Iv) psi) = h (pX psi)
+    inQ-cyl (W Y X : Ob) (h : Hom Y X) (Q : Phi X) (psi : Hom W (prodP Y Iv)) (i : InQ W Y (pre Y X h Q) psi)
+      : InQ W X Q (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi) =
+      lands-eq W X Q (compH W Y X h (compH W (prodP Y Iv) Y (pX Y) psi))
+        (compH W (prodP X Iv) X (pX X) (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi))
+        (calc (Hom W X) {
+          compH W Y X h (compH W (prodP Y Iv) Y (pX Y) psi)
+            =< symH (comp-assoc W (prodP Y Iv) Y X h (pX Y) psi) >
+          compH W (prodP Y Iv) X (compH (prodP Y Iv) Y X h (pX Y)) psi
+            =< apH (\ u -> compH W (prodP Y Iv) X u psi) (symH (pX-cyl Y X h)) >
+          compH W (prodP Y Iv) X (compH (prodP Y Iv) (prodP X Iv) X (pX X) (cylH Y X h)) psi
+            =< comp-assoc W (prodP Y Iv) (prodP X Iv) X (pX X) (cylH Y X h) psi >
+          compH W (prodP X Iv) X (pX X) (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi) })
+        (lands-pre W Y X h Q (compH W (prodP Y Iv) Y (pX Y) psi) i) ;
+
+    -- along equal maps
+    inQ-eq (W X : Ob) (Q : Phi X) (psi psi' : Hom W (prodP X Iv)) (p : Id (Hom W (prodP X Iv)) psi psi') (i : InQ W X Q psi)
+      : InQ W X Q psi' = substH (\ k -> InQ W X Q k) p i ;
+
+    -- pX (lid e g) = g
+    pX-lid-comp (W X : Ob) (e : IPt) (g : Hom W X)
+      : Id (Hom W X) (compH W (prodP X Iv) X (pX X) (compH W X (prodP X Iv) (lid X e) g)) g =
+      calc (Hom W X) {
+        compH W (prodP X Iv) X (pX X) (compH W X (prodP X Iv) (lid X e) g)
+          =< symH (comp-assoc W X (prodP X Iv) X (pX X) (lid X e) g) >
+        compH W X X (compH X (prodP X Iv) X (pX X) (lid X e)) g
+          =< apH (\ u -> compH W X X u g) (pX-lid X e) >
+        compH W X X (idH X) g
+          =< comp-idl W X g >
+        g } ;
+
+    -- lid e g lies over Q iff g lands in Q
+    lands-inQ-lid (W X : Ob) (Q : Phi X) (e : IPt) (g : Hom W X) (i : Lands W X Q g)
+      : InQ W X Q (compH W X (prodP X Iv) (lid X e) g) =
+      lands-eq W X Q g (compH W (prodP X Iv) X (pX X) (compH W X (prodP X Iv) (lid X e) g)) (symH (pX-lid-comp W X e g)) i ;
+
+    inQ-lid-lands (W X : Ob) (Q : Phi X) (e : IPt) (g : Hom W X) (i : InQ W X Q (compH W X (prodP X Iv) (lid X e) g))
+      : Lands W X Q g =
+      lands-eq W X Q (compH W (prodP X Iv) X (pX X) (compH W X (prodP X Iv) (lid X e) g)) g (pX-lid-comp W X e g) i ;
+
+    -- the end {i = e} of X * Iv: the inverse image of ptS e along pr2
+    endQ (e : IPt) (X : Ob) : Phi (prodP X Iv) = pre (prodP X Iv) Iv (pr2 X Iv) (ptS e) ;
+
+    -- psi lands in {i = e} iff pr2 psi is constant at e
+    end-pt (W X : Ob) (e : IPt) (psi : Hom W (prodP X Iv)) (i : Lands W (prodP X Iv) (endQ e X) psi)
+      : Id (Hom W Iv) (compH W (prodP X Iv) Iv (pr2 X Iv) psi) (ptH W e) =
+      lands-pt W e (compH W (prodP X Iv) Iv (pr2 X Iv) psi) (lands-pre W (prodP X Iv) Iv (pr2 X Iv) (ptS e) psi i) ;
+
+    pt-end (W X : Ob) (e : IPt) (psi : Hom W (prodP X Iv))
+      (p : Id (Hom W Iv) (compH W (prodP X Iv) Iv (pr2 X Iv) psi) (ptH W e))
+      : Lands W (prodP X Iv) (endQ e X) psi =
+      pre-lands W (prodP X Iv) Iv (pr2 X Iv) (ptS e) psi
+        (lands-eq W Iv (ptS e) (ptH W e) (compH W (prodP X Iv) Iv (pr2 X Iv) psi) (symH p) (pt-lands W e)) ;
+
+    -- a map landing in {i = e} is (lid e) (pX psi)
+    module LandsEnd (W X : Ob) (e : IPt) (psi : Hom W (prodP X Iv)) (i : Lands W (prodP X Iv) (endQ e X) psi) {
+      R : Hom W (prodP X Iv) = compH W X (prodP X Iv) (lid X e) (compH W (prodP X Iv) X (pX X) psi) ;
+
+      p1 : Id (Hom W X) (compH W (prodP X Iv) X (pr1 X Iv) psi) (compH W (prodP X Iv) X (pr1 X Iv) R) =
+        calc (Hom W X) {
+          compH W (prodP X Iv) X (pr1 X Iv) psi
+            =< symH (comp-idl W X (compH W (prodP X Iv) X (pX X) psi)) >
+          compH W X X (idH X) (compH W (prodP X Iv) X (pX X) psi)
+            =< apH (\ u -> compH W X X u (compH W (prodP X Iv) X (pX X) psi)) (symH (pX-lid X e)) >
+          compH W X X (compH X (prodP X Iv) X (pX X) (lid X e)) (compH W (prodP X Iv) X (pX X) psi)
+            =< comp-assoc W X (prodP X Iv) X (pX X) (lid X e) (compH W (prodP X Iv) X (pX X) psi) >
+          compH W (prodP X Iv) X (pr1 X Iv) R } ;
+
+      p2 : Id (Hom W Iv) (compH W (prodP X Iv) Iv (pr2 X Iv) psi) (compH W (prodP X Iv) Iv (pr2 X Iv) R) =
+        transH (end-pt W X e psi i) (symH (pr2-lid W X e (compH W (prodP X Iv) X (pX X) psi))) ;
+
+      res : Id (Hom W (prodP X Iv)) psi R = pair-ext X Iv W psi R p1 p2 ;
+    } ;
+
+    lands-end (W X : Ob) (e : IPt) (psi : Hom W (prodP X Iv)) (i : Lands W (prodP X Iv) (endQ e X) psi)
+      : Id (Hom W (prodP X Iv)) psi (compH W X (prodP X Iv) (lid X e) (compH W (prodP X Iv) X (pX X) psi)) =
+      LandsEnd[W, X, e, psi, i].res ;
+
+    -- lid e g lands in {i = e}
+    lid-lands (W X : Ob) (e : IPt) (g : Hom W X) : Lands W (prodP X Iv) (endQ e X) (compH W X (prodP X Iv) (lid X e) g) =
+      pt-end W X e (compH W X (prodP X Iv) (lid X e) g) (pr2-lid W X e g) ;
+
+    -- lid e' (lid e) lies over {i = e}
+    lid2-end (X : Ob) (e e' : IPt)
+      : InQ X (prodP X Iv) (endQ e X) (compH X (prodP X Iv) (prodP (prodP X Iv) Iv) (lid (prodP X Iv) e') (lid X e)) =
+      lands-inQ-lid X (prodP X Iv) (endQ e X) e' (lid X e)
+        (lands-eq X (prodP X Iv) (endQ e X) (compH X X (prodP X Iv) (lid X e) (idH X)) (lid X e) (comp-idr X (prodP X Iv) (lid X e))
+           (lid-lands X X e (idH X))) ;
+
+    -- the two ends are disjoint
+    end-disj (W X : Ob) (psi : Hom W (prodP X Iv))
+      (i : Lands W (prodP X Iv) (endQ e0 X) psi) (i' : Lands W (prodP X Iv) (endQ e1 X) psi) : Empty =
+      pt-disj W (compH W (prodP X Iv) Iv (pr2 X Iv) psi)
+        (lands-pre W (prodP X Iv) Iv (pr2 X Iv) (ptS e0) psi i) (lands-pre W (prodP X Iv) Iv (pr2 X Iv) (ptS e1) psi i') ;
+
+    -- the inverse image of {i = e} along h * Iv is {i = e}
+    module EndPre (W Z X : Ob) (h : Hom Z X) (e : IPt) (psi : Hom W (prodP Z Iv)) {
+      -- pr2 ((h * Iv) psi) = pr2 psi
+      q : Id (Hom W Iv) (compH W (prodP X Iv) Iv (pr2 X Iv) (compH W (prodP Z Iv) (prodP X Iv) (cylH Z X h) psi))
+                        (compH W (prodP Z Iv) Iv (pr2 Z Iv) psi) =
+        calc (Hom W Iv) {
+          compH W (prodP X Iv) Iv (pr2 X Iv) (compH W (prodP Z Iv) (prodP X Iv) (cylH Z X h) psi)
+            =< symH (comp-assoc W (prodP Z Iv) (prodP X Iv) Iv (pr2 X Iv) (cylH Z X h) psi) >
+          compH W (prodP Z Iv) Iv (compH (prodP Z Iv) (prodP X Iv) Iv (pr2 X Iv) (cylH Z X h)) psi
+            =< apH (\ u -> compH W (prodP Z Iv) Iv u psi) (pr2-cyl Z X h) >
+          compH W (prodP Z Iv) Iv (pr2 Z Iv) psi } ;
+
+      to (i : Lands W (prodP Z Iv) (pre (prodP Z Iv) (prodP X Iv) (cylH Z X h) (endQ e X)) psi)
+        : Lands W (prodP Z Iv) (endQ e Z) psi =
+        pt-end W Z e psi (transH (symH q)
+          (end-pt W X e (compH W (prodP Z Iv) (prodP X Iv) (cylH Z X h) psi)
+             (lands-pre W (prodP Z Iv) (prodP X Iv) (cylH Z X h) (endQ e X) psi i))) ;
+
+      from (i : Lands W (prodP Z Iv) (endQ e Z) psi)
+        : Lands W (prodP Z Iv) (pre (prodP Z Iv) (prodP X Iv) (cylH Z X h) (endQ e X)) psi =
+        pre-lands W (prodP Z Iv) (prodP X Iv) (cylH Z X h) (endQ e X) psi
+          (pt-end W X e (compH W (prodP Z Iv) (prodP X Iv) (cylH Z X h) psi) (transH q (end-pt W Z e psi i))) ;
+    } ;
+
+    -- {i = src d} and {i = tgt d} are disjoint
+    end-disj-st (W V : Ob) : (d : Bool) (f : Hom W (prodP V Iv))
+      (i : Lands W (prodP V Iv) (endQ (src d) V) f) (i' : Lands W (prodP V Iv) (endQ (tgt d) V) f) -> Empty = split {
+      true -> \ f i i' -> end-disj W V f i i' ;
+      false -> \ f i i' -> end-disj W V f i' i } ;
+
+    endQ-cyl (e : IPt) (Z X : Ob) (h : Hom Z X)
+      : Id (Phi (prodP Z Iv)) (pre (prodP Z Iv) (prodP X Iv) (cylH Z X h) (endQ e X)) (endQ e Z) =
+      phi-ext (prodP Z Iv) (pre (prodP Z Iv) (prodP X Iv) (cylH Z X h) (endQ e X)) (endQ e Z)
+        (\ W psi i -> EndPre[W, Z, X, h, e, psi].to i) (\ W psi i -> EndPre[W, Z, X, h, e, psi].from i) ;
+
+    --------------------------------------------------------------------
+    -- connections: for a direction d, conn d X : X * Iv * Iv -> X * Iv
+    -- (x , i , j) |-> (x , i /\ j) for d = true, (x , i \/ j) for d = false.
+    -- It keeps x, its four faces are given, and it is natural in X.
+    module Conns {
+      conn (d : Bool) (X : Ob) : Hom (prodP (prodP X Iv) Iv) (prodP X Iv) ;
+      pX-conn (d : Bool) (X : Ob)
+        : Id (Hom (prodP (prodP X Iv) Iv) X) (compH (prodP (prodP X Iv) Iv) (prodP X Iv) X (pX X) (conn d X)) (kq X) ;
+      -- i = src d: constant;  i = tgt d: the identity
+      conn-isrc (d : Bool) (X : Ob)
+        : Id (Hom (prodP X Iv) (prodP X Iv))
+             (compH (prodP X Iv) (prodP (prodP X Iv) Iv) (prodP X Iv) (conn d X) (cylH X (prodP X Iv) (lid X (src d))))
+             (compH (prodP X Iv) X (prodP X Iv) (lid X (src d)) (pX X)) ;
+      conn-itgt (d : Bool) (X : Ob)
+        : Id (Hom (prodP X Iv) (prodP X Iv))
+             (compH (prodP X Iv) (prodP (prodP X Iv) Iv) (prodP X Iv) (conn d X) (cylH X (prodP X Iv) (lid X (tgt d))))
+             (idH (prodP X Iv)) ;
+      -- j = src d: constant;  j = tgt d: the identity
+      conn-jsrc (d : Bool) (X : Ob)
+        : Id (Hom (prodP X Iv) (prodP X Iv))
+             (compH (prodP X Iv) (prodP (prodP X Iv) Iv) (prodP X Iv) (conn d X) (lid (prodP X Iv) (src d)))
+             (compH (prodP X Iv) X (prodP X Iv) (lid X (src d)) (pX X)) ;
+      conn-jtgt (d : Bool) (X : Ob)
+        : Id (Hom (prodP X Iv) (prodP X Iv))
+             (compH (prodP X Iv) (prodP (prodP X Iv) Iv) (prodP X Iv) (conn d X) (lid (prodP X Iv) (tgt d)))
+             (idH (prodP X Iv)) ;
+      -- naturality: conn (h * Iv * Iv) = (h * Iv) conn
+      conn-cyl (d : Bool) (Z X : Ob) (h : Hom Z X)
+        : Id (Hom (prodP (prodP Z Iv) Iv) (prodP X Iv))
+             (compH (prodP (prodP Z Iv) Iv) (prodP (prodP X Iv) Iv) (prodP X Iv) (conn d X) (cylH (prodP Z Iv) (prodP X Iv) (cylH Z X h)))
+             (compH (prodP (prodP Z Iv) Iv) (prodP Z Iv) (prodP X Iv) (cylH Z X h) (conn d Z)) ;
+
+      ------------------------------------------------------------------
+      -- on {i = src d} the connection is constant: if pX psi lands in
+      -- {i = src d}, then psi = (lid (src d) * Iv) r with r = (kq psi , pr2 psi),
+      -- and conn psi = (lid (src d)) pX r = (lid (src d)) kq psi
+      module ConnEnd (d : Bool) (X W : Ob) (psi : Hom W (prodP (prodP X Iv) Iv))
+        (i : InQ W (prodP X Iv) (endQ (src d) X) psi) {
+        Y : Ob = prodP X Iv ;
+        YI : Ob = prodP (prodP X Iv) Iv ;
+        L : Hom X (prodP X Iv) = lid X (src d) ;
+        C : Hom (prodP X Iv) (prodP (prodP X Iv) Iv) = cylH X (prodP X Iv) (lid X (src d)) ;
+        kp : Hom W X = compH W (prodP (prodP X Iv) Iv) X (kq X) psi ;
+        r : Hom W (prodP X Iv) = pairH X Iv W kp (compH W (prodP (prodP X Iv) Iv) Iv (pr2 (prodP X Iv) Iv) psi) ;
+
+        p1 : Id (Hom W (prodP X Iv)) (compH W YI Y (pr1 Y Iv) psi) (compH W YI Y (pr1 Y Iv) (compH W Y YI C r)) =
+          calc (Hom W Y) {
+            compH W YI Y (pX Y) psi
+              =< lands-end W X (src d) (compH W YI Y (pX Y) psi) i >
+            compH W X Y L (compH W Y X (pX X) (compH W YI Y (pX Y) psi))
+              =< apH (\ u -> compH W X Y L u) (symH (comp-assoc W YI Y X (pX X) (pX Y) psi)) >
+            compH W X Y L kp
+              =< apH (\ u -> compH W X Y L u) (symH (pr1-pair X Iv W kp (compH W YI Iv (pr2 Y Iv) psi))) >
+            compH W X Y L (compH W Y X (pX X) r)
+              =< symH (comp-assoc W Y X Y L (pX X) r) >
+            compH W Y Y (compH Y X Y L (pX X)) r
+              =< apH (\ u -> compH W Y Y u r) (symH (pX-cyl X Y L)) >
+            compH W Y Y (compH Y YI Y (pX Y) C) r
+              =< comp-assoc W Y YI Y (pX Y) C r >
+            compH W YI Y (pX Y) (compH W Y YI C r) } ;
+
+        p2 : Id (Hom W Iv) (compH W YI Iv (pr2 Y Iv) psi) (compH W YI Iv (pr2 Y Iv) (compH W Y YI C r)) =
+          calc (Hom W Iv) {
+            compH W YI Iv (pr2 Y Iv) psi
+              =< symH (pr2-pair X Iv W kp (compH W YI Iv (pr2 Y Iv) psi)) >
+            compH W Y Iv (pr2 X Iv) r
+              =< apH (\ u -> compH W Y Iv u r) (symH (pr2-cyl X Y L)) >
+            compH W Y Iv (compH Y YI Iv (pr2 Y Iv) C) r
+              =< comp-assoc W Y YI Iv (pr2 Y Iv) C r >
+            compH W YI Iv (pr2 Y Iv) (compH W Y YI C r) } ;
+
+        psi-eq : Id (Hom W YI) psi (compH W Y YI C r) = pair-ext Y Iv W psi (compH W Y YI C r) p1 p2 ;
+
+        res : Id (Hom W Y) (compH W X Y L kp) (compH W YI Y (conn d X) psi) =
+          calc (Hom W Y) {
+            compH W X Y L kp
+              =< apH (\ u -> compH W X Y L u) (symH (pr1-pair X Iv W kp (compH W YI Iv (pr2 Y Iv) psi))) >
+            compH W X Y L (compH W Y X (pX X) r)
+              =< symH (comp-assoc W Y X Y L (pX X) r) >
+            compH W Y Y (compH Y X Y L (pX X)) r
+              =< apH (\ u -> compH W Y Y u r) (symH (conn-isrc d X)) >
+            compH W Y Y (compH Y YI Y (conn d X) C) r
+              =< comp-assoc W Y YI Y (conn d X) C r >
+            compH W YI Y (conn d X) (compH W Y YI C r)
+              =< apH (\ u -> compH W YI Y (conn d X) u) (symH psi-eq) >
+            compH W YI Y (conn d X) psi } ;
+      } ;
+
+      conn-end (d : Bool) (X W : Ob) (psi : Hom W (prodP (prodP X Iv) Iv)) (i : InQ W (prodP X Iv) (endQ (src d) X) psi)
+        : Id (Hom W (prodP X Iv)) (compH W X (prodP X Iv) (lid X (src d)) (compH W (prodP (prodP X Iv) Iv) X (kq X) psi))
+                                  (compH W (prodP (prodP X Iv) Iv) (prodP X Iv) (conn d X) psi) =
+        ConnEnd[d, X, W, psi, i].res ;
+    } ;
+  } ;
+} ;

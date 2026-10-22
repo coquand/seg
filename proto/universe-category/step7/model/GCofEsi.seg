@@ -1,0 +1,267 @@
+-- GCofEsi.seg (inside IvBase; posets: BaseP.GCofEsi, the former CofEsi):
+-- from MODEL/Poset/CofEsi.agda.  Insertion of an empty side into a
+-- partial element, and the property KESI of a contractibility structure:
+-- its extension does not see an inserted empty side.  InsP, InsPH (the
+-- heterogeneous version, two points propositionally equal) are segment
+-- types; Agda's  toInsP / kesiH  matches on refl are idJ.
+
+level l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+open Axioms[l+].FunExtLemmas[fe @(l+)] ;
+module W0 = V[l] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[l] ;
+open GPR.PS ;
+module GCF = GCofib[l] ;
+
+module PartialsEsi (D : PCtx) (C : PTy[D]) {
+  open GPR.TyL[D, C] ;
+  open GCF.Partials[D, C] ;
+
+  module InsP (X : Ob) (x : Pt X) (k : Nat) (p p' : Partial[X, x]) {
+    insp-r : Id Nat p'.pr (suc p.pr) ;
+    insp-k : IsT (leb k p.pr) ;
+    -- the inserted side is empty
+    insp-e (hk : IsT (ltb k p'.pr)) : Id (Phi X) (p'.ps (k, hk)).pQ (emptyS X) ;
+    -- the other sides are the old ones
+    insp-Q (n : Nat) (h : IsT (ltb n p.pr)) (h' : IsT (ltb (Arith[a].skipN k n) p'.pr))
+      : Id (Phi X) (p'.ps (Arith[a].skipN k n, h')).pQ (p.ps (n, h)).pQ ;
+    insp-v (n : Nat) (h : IsT (ltb n p.pr)) (h' : IsT (ltb (Arith[a].skipN k n) p'.pr))
+      (W : Ob) (f : Hom W X) (i : Lands W X (p'.ps (Arith[a].skipN k n, h')).pQ f) (i' : Lands W X (p.ps (n, h)).pQ f)
+      : Id (EI W) ((p'.ps (Arith[a].skipN k n, h')).pv W f i) ((p.ps (n, h)).pv W f i') ;
+  } ;
+
+  KESI (kk : ContrOp) : U l = (X : Ob) (x : Pt X) (k : Nat) (p p' : Partial[X, x]) -> InsP[X, x, k, p, p']
+    -> Id (T X x) (kk.kop X x p') (kk.kop X x p) ;
+
+  -- KESI is a proposition
+  isProp-KESI (kk : ContrOp) : isProp (KESI kk) =
+    isProp-Pi Ob (\ X -> (x : Pt X) (n : Nat) (p p' : Partial[X, x]) -> InsP[X, x, n, p, p']
+                         -> Id (T X x) (kk.kop X x p') (kk.kop X x p)) (\ X ->
+    isProp-Pi (Pt X) (\ x -> (n : Nat) (p p' : Partial[X, x]) -> InsP[X, x, n, p, p']
+                         -> Id (T X x) (kk.kop X x p') (kk.kop X x p)) (\ x ->
+    isProp-Pi Nat (\ n -> (p p' : Partial[X, x]) -> InsP[X, x, n, p, p']
+                         -> Id (T X x) (kk.kop X x p') (kk.kop X x p)) (\ n ->
+    isProp-Pi (Partial[X, x]) (\ p -> (p' : Partial[X, x]) -> InsP[X, x, n, p, p']
+                         -> Id (T X x) (kk.kop X x p') (kk.kop X x p)) (\ p ->
+    isProp-Pi (Partial[X, x]) (\ p' -> InsP[X, x, n, p, p'] -> Id (T X x) (kk.kop X x p') (kk.kop X x p)) (\ p' ->
+    isProp-Pi (InsP[X, x, n, p, p']) (\ ins -> Id (T X x) (kk.kop X x p') (kk.kop X x p)) (\ ins ->
+      W0.isSetIx (C.tob X x) (kk.kop X x p') (kk.kop X x p))))))) ;
+
+  -- restriction preserves the insertion of an empty side
+  insR (Y X : Ob) (h : Hom Y X) (x : Pt X) (k : Nat) (p p' : Partial[X, x]) (ins : InsP[X, x, k, p, p'])
+    : InsP[Y, D.act Y X h x, k, restrictP Y X h x p, restrictP Y X h x p'] =
+    new InsP[Y, D.act Y X h x, k, restrictP Y X h x p, restrictP Y X h x p', ins.insp-r, ins.insp-k,
+      \ hk -> transH (apH (pre Y X h) (ins.insp-e hk)) (pre-empty Y X h),
+      \ n h1 h' -> apH (pre Y X h) (ins.insp-Q n h1 h'),
+      \ n h1 h' W g i i' -> ins.insp-v n h1 h' W (compH W Y X h g)
+                              (lands-pre W Y X h (p'.ps (Arith[a].skipN k n, h')).pQ g i) (lands-pre W Y X h (p.ps (n, h1)).pQ g i')] ;
+
+  ----------------------------------------------------------------------
+  -- Heterogeneous version (the two points propositionally equal), and
+  -- KESI for it
+
+  module InsPH (X : Ob) (x x' : Pt X) (k : Nat) (p : Partial[X, x]) (p' : Partial[X, x']) {
+    insh-r : Id Nat p'.pr (suc p.pr) ;
+    insh-k : IsT (leb k p.pr) ;
+    insh-e (hk : IsT (ltb k p'.pr)) : Id (Phi X) (p'.ps (k, hk)).pQ (emptyS X) ;
+    insh-Q (n : Nat) (h : IsT (ltb n p.pr)) (h' : IsT (ltb (Arith[a].skipN k n) p'.pr))
+      : Id (Phi X) (p'.ps (Arith[a].skipN k n, h')).pQ (p.ps (n, h)).pQ ;
+    insh-v (n : Nat) (h : IsT (ltb n p.pr)) (h' : IsT (ltb (Arith[a].skipN k n) p'.pr))
+      (W : Ob) (f : Hom W X) (i : Lands W X (p'.ps (Arith[a].skipN k n, h')).pQ f) (i' : Lands W X (p.ps (n, h)).pQ f)
+      : Id (EI W) ((p'.ps (Arith[a].skipN k n, h')).pv W f i) ((p.ps (n, h)).pv W f i') ;
+  } ;
+
+  toInsP (X : Ob) (x x' : Pt X) (P : Id (Pt X) x' x) (k : Nat) (p : Partial[X, x]) (p' : Partial[X, x'])
+    (h : InsPH[X, x, x', k, p, p']) : InsP[X, x, k, p, subst (Pt X) (\ z -> Partial[X, z]) x' x P p'] =
+    idJ (Pt X) x'
+      (\ y Q -> (p1 : Partial[X, y]) -> InsPH[X, y, x', k, p1, p'] -> InsP[X, y, k, p1, subst (Pt X) (\ z -> Partial[X, z]) x' y Q p'])
+      (\ p1 h1 -> new InsP[X, x', k, p1, p', h1.insh-r, h1.insh-k, h1.insh-e, h1.insh-Q, h1.insh-v])
+      x P p h ;
+
+  kesiH (kk : ContrOp) (ke : KESI kk) (X : Ob) (x x' : Pt X) (P : Id (Pt X) x' x) (k : Nat)
+    (p : Partial[X, x]) (p' : Partial[X, x']) (h : InsPH[X, x, x', k, p, p'])
+    : Id (EI X) (x', kk.kop X x' p') (x, kk.kop X x p) =
+    idJ (Pt X) x'
+      (\ y Q -> (p1 : Partial[X, y]) -> InsPH[X, y, x', k, p1, p'] -> Id (EI X) (x', kk.kop X x' p') (y, kk.kop X y p1))
+      (\ p1 h1 -> apH (\ z -> (x', z)) (ke X x' k p1 p' (toInsP X x' x' (refl x') k p1 p' h1)))
+      x P p h ;
+
+  ----------------------------------------------------------------------
+  -- An insertion, read side by side at any presentation of the indices
+  -- (the form joinIns takes)
+
+  module InsSides (X : Ob) (x : Pt X) (k : Nat) (p p' : Partial[X, x]) (ins : InsP[X, x, k, p, p']) {
+    finAt (m' : Fin p'.pr) (n : Nat) (P : Id Nat m'.1 n) : Fin p'.pr = (n, subst Nat (\ z -> IsT (ltb z p'.pr)) m'.1 n P m'.2) ;
+
+    eE (m' : Fin p'.pr) (P : Id Nat m'.1 k) : Id (Phi X) (p'.ps m').pQ (emptyS X) =
+      transH (apH (\ z -> (p'.ps z).pQ) (fin-eq p'.pr m' (finAt m' k P) P)) (ins.insp-e (finAt m' k P).2) ;
+
+    eQL (m : Fin p.pr) (m' : Fin p'.pr) (P : Id Nat m'.1 (Arith[a].skipN k m.1)) : Id (Phi X) (p'.ps m').pQ (p.ps m).pQ =
+      transH (apH (\ z -> (p'.ps z).pQ) (fin-eq p'.pr m' (finAt m' (Arith[a].skipN k m.1) P) P))
+             (ins.insp-Q m.1 m.2 (finAt m' (Arith[a].skipN k m.1) P).2) ;
+
+    -- the values of a side of p' along an equality of indices
+    pvIdx (V : Ob) (f : Hom V X) (m1 m2 : Fin p'.pr) (E : Id (Fin p'.pr) m1 m2)
+      (i1 : Lands V X (p'.ps m1).pQ f) (i2 : Lands V X (p'.ps m2).pQ f) : Id (EI V) ((p'.ps m1).pv V f i1) ((p'.ps m2).pv V f i2) =
+      idJ (Fin p'.pr) m1 (\ m E2 -> (i3 : Lands V X (p'.ps m).pQ f) -> Id (EI V) ((p'.ps m1).pv V f i1) ((p'.ps m).pv V f i3))
+        (\ i3 -> pv-irr X x (p'.ps m1) V f i1 i3) m2 E i2 ;
+
+    eVL (m : Fin p.pr) (m' : Fin p'.pr) (P : Id Nat m'.1 (Arith[a].skipN k m.1)) (V : Ob) (f : Hom V X)
+      (i : Lands V X (p'.ps m').pQ f) (i' : Lands V X (p.ps m).pQ f) : Id (EI V) ((p'.ps m').pv V f i) ((p.ps m).pv V f i') =
+      transH (pvIdx V f m' (finAt m' (Arith[a].skipN k m.1) P) (fin-eq p'.pr m' (finAt m' (Arith[a].skipN k m.1) P) P) i
+                (lands-sub V X (p.ps m).pQ (p'.ps (finAt m' (Arith[a].skipN k m.1) P)).pQ
+                   (symH (ins.insp-Q m.1 m.2 (finAt m' (Arith[a].skipN k m.1) P).2)) f i'))
+        (ins.insp-v m.1 m.2 (finAt m' (Arith[a].skipN k m.1) P).2 V f
+           (lands-sub V X (p.ps m).pQ (p'.ps (finAt m' (Arith[a].skipN k m.1) P)).pQ
+              (symH (ins.insp-Q m.1 m.2 (finAt m' (Arith[a].skipN k m.1) P).2)) f i') i') ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- An empty side inserted into the FIRST family of a joined partial
+  -- element (GCofib.Partials.Join) is inserted at the same place in the
+  -- joined list (the index lemma split-skip / split-k: Arith)
+
+  module JoinIns (X : Ob) (x x' : Pt X) (k r1 r2 : Nat) (hk : IsT (leb k r1))
+    (S1 : Fin r1 -> PSide[X, x]) (S2 : Fin r2 -> PSide[X, x]) (c11 : PCsTy X x r1 S1)
+    (c12 : (l : Fin r1) (j : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (S1 l).pQ f) (i' : Lands W X (S2 j).pQ f)
+           -> Id (EI W) ((S1 l).pv W f i) ((S2 j).pv W f i'))
+    (c22 : PCsTy X x r2 S2)
+    (S1' : Fin (suc r1) -> PSide[X, x']) (S2' : Fin r2 -> PSide[X, x']) (c11' : PCsTy X x' (suc r1) S1')
+    (c12' : (l : Fin (suc r1)) (j : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (S1' l).pQ f) (i' : Lands W X (S2' j).pQ f)
+            -> Id (EI W) ((S1' l).pv W f i) ((S2' j).pv W f i'))
+    (c22' : PCsTy X x' r2 S2')
+    (eE : (m' : Fin (suc r1)) -> Id Nat m'.1 k -> Id (Phi X) (S1' m').pQ (emptyS X))
+    (eQL : (m : Fin r1) (m' : Fin (suc r1)) -> Id Nat m'.1 (Arith[a].skipN k m.1) -> Id (Phi X) (S1' m').pQ (S1 m).pQ)
+    (eQR : (j : Fin r2) -> Id (Phi X) (S2' j).pQ (S2 j).pQ)
+    (eVL : (m : Fin r1) (m' : Fin (suc r1)) (P : Id Nat m'.1 (Arith[a].skipN k m.1)) (W : Ob) (f : Hom W X)
+           (i : Lands W X (S1' m').pQ f) (i' : Lands W X (S1 m).pQ f) -> Id (EI W) ((S1' m').pv W f i) ((S1 m).pv W f i'))
+    (eVR : (j : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (S2' j).pQ f) (i' : Lands W X (S2 j).pQ f)
+           -> Id (EI W) ((S2' j).pv W f i) ((S2 j).pv W f i')) {
+    module J = Join[X, x, r1, r2, S1, S2, c11, c12, c22] ;
+    module J' = Join[X, x', suc r1, r2, S1', S2', c11', c12', c22'] ;
+
+    qRel : (s' : Plus (Fin (suc r1)) (Fin r2)) (s : Plus (Fin r1) (Fin r2)) -> SR r1 r2 k s' s
+      -> Id (Phi X) (J'.sideAt s').pQ (J.sideAt s).pQ = split {
+      inl l' -> split { inl l -> \ P -> eQL l l' P ; inr j -> \ P -> absurd _ P } ;
+      inr j' -> split {
+        inl l -> \ P -> absurd _ P ;
+        inr j -> \ P -> transH (apH (\ z -> (S2' z).pQ) (fin-eq r2 j' j P)) (eQR j) } } ;
+
+    vRel : (s' : Plus (Fin (suc r1)) (Fin r2)) (s : Plus (Fin r1) (Fin r2)) -> SR r1 r2 k s' s
+      -> (W : Ob) (f : Hom W X) (i : Lands W X (J'.sideAt s').pQ f) (i' : Lands W X (J.sideAt s).pQ f)
+      -> Id (EI W) ((J'.sideAt s').pv W f i) ((J.sideAt s).pv W f i') = split {
+      inl l' -> split { inl l -> \ P -> eVL l l' P ; inr j -> \ P -> absurd _ P } ;
+      inr j' -> split {
+        inl l -> \ P -> absurd _ P ;
+        inr j -> \ P W f i i' ->
+          transH (idJ (Fin r2) j' (\ j2 E -> (i2 : Lands W X (S2' j2).pQ f) -> Id (EI W) ((S2' j').pv W f i) ((S2' j2).pv W f i2))
+                    (\ i2 -> pv-irr X x' (S2' j') W f i i2) j (fin-eq r2 j' j P)
+                    (lands-sub W X (S2 j).pQ (S2' j).pQ (symH (eQR j)) f i'))
+                 (eVR j W f (lands-sub W X (S2 j).pQ (S2' j).pQ (symH (eQR j)) f i') i') } } ;
+
+    ins : InsPH[X, x, x', k, J.part, J'.part] =
+      new InsPH[X, x, x', k, J.part, J'.part,
+        refl (suc (plus r1 r2)),
+        leb-trans k r1 (plus r1 r2) hk (leb-plus r1 r2),
+        \ hk' -> transH (apH (\ s -> (J'.sideAt s).pQ) (split-k r1 r2 k hk hk').2.2)
+                       (eE (split-k r1 r2 k hk hk').1 (split-k r1 r2 k hk hk').2.1),
+        \ n h h' -> qRel (splitF (suc r1) r2 (Arith[a].skipN k n, h')) (splitF r1 r2 (n, h)) (split-skip r1 r2 k n hk h h'),
+        \ n h h' W f i i' -> vRel (splitF (suc r1) r2 (Arith[a].skipN k n, h')) (splitF r1 r2 (n, h)) (split-skip r1 r2 k n hk h h') W f i i'] ;
+  } ;
+
+  -- the same with the first family of p' of any length r1' = suc r1
+  -- (an insertion only gives the length propositionally)
+  JoinInsTy (X : Ob) (x x' : Pt X) (k r1 r2 : Nat)
+    (S1 : Fin r1 -> PSide[X, x]) (S2 : Fin r2 -> PSide[X, x]) (c11 : PCsTy X x r1 S1)
+    (c12 : (l : Fin r1) (j : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (S1 l).pQ f) (i' : Lands W X (S2 j).pQ f)
+           -> Id (EI W) ((S1 l).pv W f i) ((S2 j).pv W f i'))
+    (c22 : PCsTy X x r2 S2) (S2' : Fin r2 -> PSide[X, x']) (c22' : PCsTy X x' r2 S2')
+    (eQR : (j : Fin r2) -> Id (Phi X) (S2' j).pQ (S2 j).pQ)
+    (eVR : (j : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (S2' j).pQ f) (i' : Lands W X (S2 j).pQ f)
+           -> Id (EI W) ((S2' j).pv W f i) ((S2 j).pv W f i'))
+    (r1' : Nat) : U l =
+    (S1' : Fin r1' -> PSide[X, x']) (c11' : PCsTy X x' r1' S1')
+    (c12' : (l : Fin r1') (j : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (S1' l).pQ f) (i' : Lands W X (S2' j).pQ f)
+            -> Id (EI W) ((S1' l).pv W f i) ((S2' j).pv W f i'))
+    (eE : (m' : Fin r1') -> Id Nat m'.1 k -> Id (Phi X) (S1' m').pQ (emptyS X))
+    (eQL : (m : Fin r1) (m' : Fin r1') -> Id Nat m'.1 (Arith[a].skipN k m.1) -> Id (Phi X) (S1' m').pQ (S1 m).pQ)
+    (eVL : (m : Fin r1) (m' : Fin r1') (P : Id Nat m'.1 (Arith[a].skipN k m.1)) (W : Ob) (f : Hom W X)
+           (i : Lands W X (S1' m').pQ f) (i' : Lands W X (S1 m).pQ f) -> Id (EI W) ((S1' m').pv W f i) ((S1 m).pv W f i'))
+    -> InsPH[X, x, x', k, Join[X, x, r1, r2, S1, S2, c11, c12, c22].part, Join[X, x', r1', r2, S1', S2', c11', c12', c22'].part] ;
+
+  joinIns (X : Ob) (x x' : Pt X) (k r1 r2 : Nat) (hk : IsT (leb k r1))
+    (S1 : Fin r1 -> PSide[X, x]) (S2 : Fin r2 -> PSide[X, x]) (c11 : PCsTy X x r1 S1)
+    (c12 : (l : Fin r1) (j : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (S1 l).pQ f) (i' : Lands W X (S2 j).pQ f)
+           -> Id (EI W) ((S1 l).pv W f i) ((S2 j).pv W f i'))
+    (c22 : PCsTy X x r2 S2) (S2' : Fin r2 -> PSide[X, x']) (c22' : PCsTy X x' r2 S2')
+    (eQR : (j : Fin r2) -> Id (Phi X) (S2' j).pQ (S2 j).pQ)
+    (eVR : (j : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (S2' j).pQ f) (i' : Lands W X (S2 j).pQ f)
+           -> Id (EI W) ((S2' j).pv W f i) ((S2 j).pv W f i'))
+    (r1' : Nat) (er1 : Id Nat (suc r1) r1')
+    : JoinInsTy X x x' k r1 r2 S1 S2 c11 c12 c22 S2' c22' eQR eVR r1' =
+    idJ Nat (suc r1) (\ n E -> JoinInsTy X x x' k r1 r2 S1 S2 c11 c12 c22 S2' c22' eQR eVR n)
+      (\ S1' c11' c12' eE eQL eVL ->
+         JoinIns[X, x, x', k, r1, r2, hk, S1, S2, c11, c12, c22, S1', S2', c11', c12', c22', eE, eQL, eQR, eVL, eVR].ins)
+      r1' er1 ;
+} ;
+
+------------------------------------------------------------------------
+-- moving partial elements along a map preserves the insertion of an
+-- empty side
+
+module MapIns (D1 D2 : PCtx) (C1 : PTy[D1]) (C2 : PTy[D2]) (s : PSub[D1, D2])
+  (mV : (W : Ob) -> GPR.TyL[D1, C1].EI W -> GPR.TyL[D2, C2].EI W)
+  (mpt : (W : Ob) (v : GPR.TyL[D1, C1].EI W) -> Id (W0.Ix (D2.ob W)) (mV W v).1 (s.nt W v.1))
+  (mnat : (V W : Ob) (g : Hom V W) (v : GPR.TyL[D1, C1].EI W)
+          -> Id (GPR.TyL[D2, C2].EI V) (GPR.TyL[D2, C2].E.act V W g (mV W v)) (mV V (GPR.TyL[D1, C1].E.act V W g v))) {
+  module M = GCF.MapP[D1, D2, C1, C2, s, mV, mpt, mnat] ;
+  module E1 = PartialsEsi[D1, C1] ;
+  module E2 = PartialsEsi[D2, C2] ;
+
+  mapIns (X : Ob) (x : W0.Ix (D1.ob X)) (k : Nat) (p p' : GCF.Partials[D1, C1].Partial[X, x]) (ins : E1.InsP[X, x, k, p, p'])
+    : E2.InsP[X, s.nt X x, k, M.mapP X x p, M.mapP X x p'] =
+    new E2.InsP[X, s.nt X x, k, M.mapP X x p, M.mapP X x p', ins.insp-r, ins.insp-k, ins.insp-e, ins.insp-Q,
+      \ n h h' W f i i' ->
+        transH (M.mapS-pv X x (p'.ps (Arith[a].skipN k n, h')) W f i)
+          (transH (apH (mV W) (ins.insp-v n h h' W f i i')) (symH (M.mapS-pv X x (p.ps (n, h)) W f i')))] ;
+} ;
+
+------------------------------------------------------------------------
+-- KESI moves along a retraction (ContrRet) and along a substitution
+-- (ContrSub): the moved partial elements still differ by an inserted empty
+-- side (MapIns), so the extensions agree
+
+module RetEsi (D : PCtx) (C C' : PTy[D])
+  (r : (W : Ob) -> GPR.TyL[D, C].EI W -> GPR.TyL[D, C'].EI W)
+  (rpt : (W : Ob) (v : GPR.TyL[D, C].EI W) -> Id (W0.Ix (D.ob W)) (r W v).1 v.1)
+  (rnat : (V W : Ob) (g : Hom V W) (v : GPR.TyL[D, C].EI W)
+          -> Id (GPR.TyL[D, C'].EI V) (GPR.TyL[D, C'].E.act V W g (r W v)) (r V (GPR.TyL[D, C].E.act V W g v)))
+  (s : (W : Ob) -> GPR.TyL[D, C'].EI W -> GPR.TyL[D, C].EI W)
+  (spt : (W : Ob) (v : GPR.TyL[D, C'].EI W) -> Id (W0.Ix (D.ob W)) (s W v).1 v.1)
+  (snat : (V W : Ob) (g : Hom V W) (v : GPR.TyL[D, C'].EI W)
+          -> Id (GPR.TyL[D, C].EI V) (GPR.TyL[D, C].E.act V W g (s W v)) (s V (GPR.TyL[D, C'].E.act V W g v)))
+  (rs : (W : Ob) (v : GPR.TyL[D, C'].EI W) -> Id (GPR.TyL[D, C'].EI W) (r W (s W v)) v)
+  (k : GCF.Partials[D, C].ContrOp) (ke : PartialsEsi[D, C].KESI k) {
+  module CR = GCF.ContrRet[D, C, C', r, rpt, rnat, s, spt, snat, rs, k] ;
+  module MI = MapIns[D, D, C', C, idS D, s, spt, snat] ;
+
+  retEsi : PartialsEsi[D, C'].KESI CR.contr =
+    \ X x n p p' ins ->
+      GPR.TyL[D, C'].pr-inj X x (CR.kop X x p') (CR.kop X x p)
+        (transH (CR.kop-E X x p')
+          (transH (apH (\ z -> r X (x, z)) (ke X x n (CR.MS.mapP X x p) (CR.MS.mapP X x p') (MI.mapIns X x n p p' ins)))
+                  (symH (CR.kop-E X x p)))) ;
+} ;
+
+module SubEsi (D G : PCtx) (s : PSub[D, G]) (C : PTy[G]) (k : GCF.Partials[G, C].ContrOp) (ke : PartialsEsi[G, C].KESI k) {
+  module CS = GCF.ContrSub[D, G, s, C, k] ;
+  module MI = MapIns[D, G, subTy D G C s, C, s, CS.SC.mV, \ W v -> refl (s.nt W v.1), \ V W g v -> symH (CS.SC.mV-nat V W g v)] ;
+
+  subEsi : PartialsEsi[D, subTy D G C s].KESI CS.contr =
+    \ X x n p p' ins -> ke X (s.nt X x) n (CS.MP.mapP X x p) (CS.MP.mapP X x p') (MI.mapIns X x n p p' ins) ;
+} ;

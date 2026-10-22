@@ -1,0 +1,109 @@
+-- GFibMove.seg (inside IvBase, any base): homotopy fibres along a square.
+-- For al' : B' -> A' over D' and al : B -> A over G, a context map sg : D'
+-- -> G covered by fibre maps phB , phA commuting with the actions (PhNB,
+-- PhNA) and with the maps (alSq), a fibre element of al' moves to one of al
+-- (mvF: point and B part by phA / phB, line pointwise by PhA), naturally;
+-- so do partial elements (mapP).  An equivalence structure k' on al' is
+-- the moved one of k when the extensions move (HTy) -- the form in which
+-- Theorem 7's equivalence half is natural (GExtNat3).
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+module GCF = GCofib[lv] ;
+module GQ = GEquiv[lv] ;
+
+module FibMove (D' : PCtx) (B' A' : PTy[D']) (al' : PMap[D', B', A']) (G : PCtx) (B A : PTy[G]) (al : PMap[G, B, A])
+  (sg : (W : Ob) -> W0.Ix (D'.ob W) -> W0.Ix (G.ob W))
+  (sg-nat : (V W : Ob) (g : Hom V W) (d : W0.Ix (D'.ob W)) -> Id (W0.Ix (G.ob V)) (sg V (D'.act V W g d)) (G.act V W g (sg W d)))
+  (phB : (W : Ob) (d : W0.Ix (D'.ob W)) -> W0.Ix (B'.tob W d) -> W0.Ix (B.tob W (sg W d)))
+  (phA : (W : Ob) (d : W0.Ix (D'.ob W)) -> W0.Ix (A'.tob W d) -> W0.Ix (A.tob W (sg W d)))
+  (PhNB : (V W : Ob) (g : Hom V W) (w : GPR.TyL[D', B'].EI W)
+     -> Id (GPR.TyL[G, B].EI V)
+           (sg V (GPR.TyL[D', B'].E.act V W g w).1, phB V (GPR.TyL[D', B'].E.act V W g w).1 (GPR.TyL[D', B'].E.act V W g w).2)
+           (GPR.TyL[G, B].E.act V W g (sg W w.1, phB W w.1 w.2)))
+  (PhNA : (V W : Ob) (g : Hom V W) (w : GPR.TyL[D', A'].EI W)
+     -> Id (GPR.TyL[G, A].EI V)
+           (sg V (GPR.TyL[D', A'].E.act V W g w).1, phA V (GPR.TyL[D', A'].E.act V W g w).1 (GPR.TyL[D', A'].E.act V W g w).2)
+           (GPR.TyL[G, A].E.act V W g (sg W w.1, phA W w.1 w.2)))
+  (alSq : (W : Ob) (w : GPR.TyL[D', B'].EI W)
+     -> Id (GPR.TyL[G, A].EI W) (sg W (al'.mE W w).1, phA W (al'.mE W w).1 (al'.mE W w).2) (al.mE W (sg W w.1, phB W w.1 w.2))) {
+  module HD = GQ.HFib[D', B', A', al'] ;
+  module HG = GQ.HFib[G, B, A, al] ;
+  module PD = GCF.Partials[HD.EA, HD.FibT] ;
+  module PG = GCF.Partials[HG.EA, HG.FibT] ;
+
+  PhA (W : Ob) (u : HD.TA.EI W) : HG.TA.EI W = (sg W u.1, phA W u.1 u.2) ;
+  PhB (W : Ob) (u : HD.TB.EI W) : HG.TB.EI W = (sg W u.1, phB W u.1 u.2) ;
+
+  ----------------------------------------------------------------------
+  -- fibre elements
+
+  module MF (X : Ob) (v : HD.TF.EI X) {
+    t (W : Ob) (f : Hom W X) (i : Hom W Iv) : HG.TA.EI W = PhA W (HD.fibL X v W f i) ;
+
+    tn (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+      : Id (HG.TA.EI V) (HG.TA.E.act V W g (t W f i)) (t V (compH V W X f g) (compH V W Iv i g)) =
+      transH (symH (PhNA V W g (HD.fibL X v W f i))) (apH (PhA V) (HD.fibL-nat X v V W g f i)) ;
+
+    tp (W : Ob) (f : Hom W X) (i : Hom W Iv) : Id (W0.Ix (G.ob W)) (t W f i).1 (G.act W X f (PhA X v.1).1) =
+      transH (apH (sg W) (HD.fibL-pt X v W f i)) (sg-nat W X f v.1.1) ;
+
+    t0 : Id (HG.TA.EI X) (t X (idH X) (ptH X e0)) (al.mE X ((PhA X v.1).1, phB X v.1.1 v.2.1)) =
+      transH (apH (PhA X) (HD.fibL-0 X v)) (alSq X (HD.fibB X v)) ;
+
+    t1 : Id (HG.TA.EI X) (t X (idH X) (ptH X e1)) (PhA X v.1) = apH (PhA X) (HD.fibL-1 X v) ;
+
+    res : HG.TF.EI X = HG.mkFib X (PhA X v.1) (phB X v.1.1 v.2.1) t tn tp t0 t1 ;
+  } ;
+
+  mvF (X : Ob) (v : HD.TF.EI X) : HG.TF.EI X = MF[X, v].res ;
+
+  mvF-pt (X : Ob) (v : HD.TF.EI X) : Id (HG.TA.EI X) (mvF X v).1 (PhA X v.1) = refl (PhA X v.1) ;
+  mvF-B (X : Ob) (v : HD.TF.EI X) : Id (HG.TB.EI X) (HG.fibB X (mvF X v)) (PhB X (HD.fibB X v)) = refl (PhB X (HD.fibB X v)) ;
+  mvF-L (X : Ob) (v : HD.TF.EI X) (W : Ob) (f : Hom W X) (i : Hom W Iv)
+    : Id (HG.TA.EI W) (HG.fibL X (mvF X v) W f i) (PhA W (HD.fibL X v W f i)) = refl (PhA W (HD.fibL X v W f i)) ;
+
+  mvF-act (V X : Ob) (g : Hom V X) (v : HD.TF.EI X) : Id (HG.TF.EI V) (HG.TF.E.act V X g (mvF X v)) (mvF V (HD.TF.E.act V X g v)) =
+    HG.fibE-eq V (HG.TF.E.act V X g (mvF X v)) (mvF V (HD.TF.E.act V X g v)) (symH (PhNA V X g v.1))
+      (transH (HG.fibB-act V X g (mvF X v)) (transH (symH (PhNB V X g (HD.fibB X v))) (apH (PhB V) (symH (HD.fibB-act V X g v)))))
+      (\ W f i -> refl (PhA W (HD.fibL X v W (compH W V X g f) i))) ;
+
+  opaque mvF-act ;
+
+  ----------------------------------------------------------------------
+  -- partial elements
+
+  mside (X : Ob) (x : HD.TA.EI X) (sd : PD.PSide[X, x]) : PG.PSide[X, PhA X x] =
+    new PG.PSide[X, PhA X x, sd.pQ, \ W f i -> mvF W (sd.pv W f i),
+      \ W f i -> transH (apH (PhA W) (sd.ppt W f i)) (PhNA W X f x),
+      \ W' W chi f i i' -> transH (mvF-act W' W chi (sd.pv W f i)) (apH (mvF W') (sd.pnat W' W chi f i i'))] ;
+
+  mapP (X : Ob) (x : HD.TA.EI X) (p : PD.Partial[X, x]) : PG.Partial[X, PhA X x] =
+    new PG.Partial[X, PhA X x, p.pr, \ j -> mside X x (p.ps j), \ j j' W f i i' -> apH (mvF W) (p.pcs j j' W f i i')] ;
+
+  mapP-restr (Y X : Ob) (h : Hom Y X) (x : HD.TA.EI X) (p : PD.Partial[X, x])
+    : Id (PG.Partial[Y, PhA Y (HD.TA.E.act Y X h x)])
+         (subst (HG.TA.EI Y) (\ z -> PG.Partial[Y, z]) (HG.TA.E.act Y X h (PhA X x)) (PhA Y (HD.TA.E.act Y X h x))
+            (symH (PhNA Y X h x)) (PG.restrictP Y X h (PhA X x) (mapP X x p)))
+         (mapP Y (HD.TA.E.act Y X h x) (PD.restrictP Y X h x p)) =
+    PG.partExtH Y (HG.TA.E.act Y X h (PhA X x)) (PhA Y (HD.TA.E.act Y X h x)) (symH (PhNA Y X h x))
+      (PG.restrictP Y X h (PhA X x) (mapP X x p)) (mapP Y (HD.TA.E.act Y X h x) (PD.restrictP Y X h x p)) (refl p.pr)
+      (\ j -> refl (pre Y X h (p.ps j).pQ))
+      (\ j W g i i' -> apH (mvF W) (PD.pv-irr X x (p.ps j) W (compH W Y X h g)
+                                     (lands-pre W Y X h (p.ps j).pQ g i) (lands-pre W Y X h (p.ps j).pQ g i'))) ;
+
+  opaque mapP-restr ;
+
+  -- an equivalence structure on al' is the moved one of k
+  HTy (k' : GQ.EquivOp D' B' A' al') (k : GQ.EquivOp G B A al) : U lv =
+    (X : Ob) (x : HD.TA.EI X) (p : PD.Partial[X, x]) -> Id (HG.TF.EI X) (mvF X (x, k'.kop X x p)) (PhA X x, k.kop X (PhA X x) (mapP X x p)) ;
+} ;

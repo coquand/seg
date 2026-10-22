@@ -1,0 +1,70 @@
+-- CofEsi.seg: MODEL/Poset/CofEsi.agda.  Insertion of an empty side into a
+-- partial element, and the property KESI of a contractibility structure:
+-- its extension does not see an inserted empty side.  InsP, InsPH (the
+-- heterogeneous version, two points propositionally equal) are segment
+-- types; Agda's  toInsP / kesiH  matches on refl are idJ.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+open Cofib[a] ;
+
+module PartialsEsi (D : PCtx) (C : PTy[D]) {
+  open PR.TyL[D, C] ;
+  open Partials[D, C] ;
+
+  module InsP (X : Ob) (x : Pt X) (k : Nat) (p p' : Partial[X, x]) {
+    insp-r : Id Nat p'.pr (suc p.pr) ;
+    insp-k : IsT (leb k p.pr) ;
+    -- the inserted side is empty
+    insp-e (hk : IsT (ltb k p'.pr)) (s : El X) : Id Bool ((p'.ps (k, hk)).pQ s.1) false ;
+    -- the other sides are the old ones
+    insp-Q (n : Nat) (h : IsT (ltb n p.pr)) (h' : IsT (ltb (Esi[a, a].skipN k n) p'.pr)) (s : El X)
+      : Id Bool ((p'.ps (Esi[a, a].skipN k n, h')).pQ s.1) ((p.ps (n, h)).pQ s.1) ;
+    insp-v (n : Nat) (h : IsT (ltb n p.pr)) (h' : IsT (ltb (Esi[a, a].skipN k n) p'.pr))
+      (W : Ob) (f : Hom W X) (i : Lands W X (p'.ps (Esi[a, a].skipN k n, h')).pQ f) (i' : Lands W X (p.ps (n, h)).pQ f)
+      : Id (EI W) ((p'.ps (Esi[a, a].skipN k n, h')).pv W f i) ((p.ps (n, h)).pv W f i') ;
+  } ;
+
+  KESI (kk : ContrOp) : U a = (X : Ob) (x : Pt X) (k : Nat) (p p' : Partial[X, x]) -> InsP[X, x, k, p, p']
+    -> Id (T X x) (kk.kop X x p') (kk.kop X x p) ;
+
+  ----------------------------------------------------------------------
+  -- Heterogeneous version (the two points propositionally equal), and
+  -- KESI for it
+
+  module InsPH (X : Ob) (x x' : Pt X) (k : Nat) (p : Partial[X, x]) (p' : Partial[X, x']) {
+    insh-r : Id Nat p'.pr (suc p.pr) ;
+    insh-k : IsT (leb k p.pr) ;
+    insh-e (hk : IsT (ltb k p'.pr)) (s : El X) : Id Bool ((p'.ps (k, hk)).pQ s.1) false ;
+    insh-Q (n : Nat) (h : IsT (ltb n p.pr)) (h' : IsT (ltb (Esi[a, a].skipN k n) p'.pr)) (s : El X)
+      : Id Bool ((p'.ps (Esi[a, a].skipN k n, h')).pQ s.1) ((p.ps (n, h)).pQ s.1) ;
+    insh-v (n : Nat) (h : IsT (ltb n p.pr)) (h' : IsT (ltb (Esi[a, a].skipN k n) p'.pr))
+      (W : Ob) (f : Hom W X) (i : Lands W X (p'.ps (Esi[a, a].skipN k n, h')).pQ f) (i' : Lands W X (p.ps (n, h)).pQ f)
+      : Id (EI W) ((p'.ps (Esi[a, a].skipN k n, h')).pv W f i) ((p.ps (n, h)).pv W f i') ;
+  } ;
+
+  toInsP (X : Ob) (x x' : Pt X) (P : Id (Pt X) x' x) (k : Nat) (p : Partial[X, x]) (p' : Partial[X, x'])
+    (h : InsPH[X, x, x', k, p, p']) : InsP[X, x, k, p, subst (Pt X) (\ z -> Partial[X, z]) x' x P p'] =
+    idJ (Pt X) x'
+      (\ y Q -> (p1 : Partial[X, y]) -> InsPH[X, y, x', k, p1, p'] -> InsP[X, y, k, p1, subst (Pt X) (\ z -> Partial[X, z]) x' y Q p'])
+      (\ p1 h1 -> new InsP[X, x', k, p1, p', h1.insh-r, h1.insh-k, h1.insh-e, h1.insh-Q, h1.insh-v])
+      x P p h ;
+
+  kesiH (kk : ContrOp) (ke : KESI kk) (X : Ob) (x x' : Pt X) (P : Id (Pt X) x' x) (k : Nat)
+    (p : Partial[X, x]) (p' : Partial[X, x']) (h : InsPH[X, x, x', k, p, p'])
+    : Id (EI X) (x', kk.kop X x' p') (x, kk.kop X x p) =
+    idJ (Pt X) x'
+      (\ y Q -> (p1 : Partial[X, y]) -> InsPH[X, y, x', k, p1, p'] -> Id (EI X) (x', kk.kop X x' p') (y, kk.kop X y p1))
+      (\ p1 h1 -> apH (\ z -> (x', z)) (ke X x' k p1 p' (toInsP X x' x' (refl x') k p1 p' h1)))
+      x P p h ;
+} ;

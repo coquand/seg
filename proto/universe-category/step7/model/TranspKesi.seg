@@ -1,0 +1,221 @@
+-- TranspKesi.seg: MODEL/Univ/TranspKesi.agda.  The transport equivalence
+-- is empty-side invariant (KESI, CofEsi): inserting an empty side in a
+-- partial element of the fibre inserts an empty side in the first family
+-- of the B-box and of the path square (EsiSplit.SideIns), so with FESI
+-- fillers the fillers, hence bnew, pnew and kop, do not change.
+-- Agda's matches on (skipN k n , h') are idJ on the index equation.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module CN = Conn[a] ;
+open CN ;
+open Cofib[a] ; open GP ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open ExtKit[a] ;
+open Transp[a] ;
+open TranspP[a] ;
+
+-- composition and application in the category are used only through their laws
+opaque compH ; opaque app ; opaque prodP ;
+
+leb-plus : (n m : Nat) -> IsT (leb n (plus n m)) = split {
+  zero -> \ m -> refl true ;
+  suc n -> \ m -> leb-plus n m } ;
+
+module TK (D L : PCtx) (S : PTy[L])
+  (ln : (W : Ob) -> W0.Ix (D.ob W) -> W0.Ix (L.ob (prodP W Iv)))
+  (lnat : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D.ob W))
+          -> Id (W0.Ix (L.ob (prodP W' Iv))) (L.act (prodP W' Iv) (prodP W Iv) (cylH W' W g) (ln W x)) (ln W' (D.act W' W g x)))
+  (d : Bool) (fS : FibM.FillDef[L, S].FillOp[src d]) (f0 : FibM.FillDef[L, S].FillOp[e0])
+  (fT : FibM.FillDef[L, S].FillOp[tgt d])
+  (fesiS : EsiFill[a, a].FesiDef[L, S].FESI (src d) fS) (fesiT : EsiFill[a, a].FesiDef[L, S].FESI (tgt d) fT) {
+  open Transp[a].Tp[D, L, S, ln, lnat, d, fS] ;
+  open TranspSq[a].Sq[D, L, S, ln, lnat, d, fS, f0] ;
+  open TranspSqN[a].SqN[D, L, S, ln, lnat, d, fS, f0] ;
+  open TranspB[a].TB[D, L, S, ln, lnat, d, fS, f0, fT] ;
+  open TranspP[a].TP[D, L, S, ln, lnat, d, fS, f0, fT] ;
+  open TranspEquiv[a].TEq[D, L, S, ln, lnat, d, fS, f0, fT] ;
+  open TranspEquiv2[a].TEq2[D, L, S, ln, lnat, d, fS, f0, fT] ;
+
+  module PE = BaseP.GCofEsi[a].PartialsEsi[EA, FTr.FibT] ;
+  module ED = Esi[a, a].EsiDef[L, S] ;
+  module SI0 = EsiSplit[a].SideIns[L, S] ;
+
+  module IK (X : Ob) (w : SEt.TD.EI X) (k : Nat) (p p' : PX.Partial[X, w]) (ins : PE.InsP[X, w, k, p, p']) {
+
+    -- the sides of p' at skipN k n are those of p at n
+    pvIns (m : Fin p.pr) (m' : Fin p'.pr) (P : Id Nat m'.1 (Arith[a].skipN k m.1))
+      (W : Ob) (f : Hom W X) (i : Lands W X (p'.ps m').pQ f) (i' : Lands W X (p.ps m).pQ f)
+      : Id (FTr.TF.EI W) ((p'.ps m').pv W f i) ((p.ps m).pv W f i') =
+      idJ Nat (Arith[a].skipN k m.1)
+        (\ n2 P2 -> (h2 : IsT (ltb n2 p'.pr)) (i2 : Lands W X (p'.ps (n2, h2)).pQ f)
+           -> Id (FTr.TF.EI W) ((p'.ps (n2, h2)).pv W f i2) ((p.ps m).pv W f i'))
+        (\ h2 i2 -> ins.insp-v m.1 m.2 h2 W f i2 i')
+        m'.1 (symH P) m'.2 i ;
+
+    pQIns (m : Fin p.pr) (m' : Fin p'.pr) (P : Id Nat m'.1 (Arith[a].skipN k m.1))
+      : Id (Subset X) (p'.ps m').pQ (p.ps m).pQ =
+      idJ Nat (Arith[a].skipN k m.1)
+        (\ n2 P2 -> (h2 : IsT (ltb n2 p'.pr)) -> Id (Subset X) (p'.ps (n2, h2)).pQ (p.ps m).pQ)
+        (\ h2 -> ins.insp-Q m.1 m.2 h2)
+        m'.1 (symH P) m'.2 ;
+
+    pEmpty (m' : Fin p'.pr) (P : Id Nat m'.1 k) : Id (Subset X) (p'.ps m').pQ (emptyS X) =
+      idJ Nat k (\ n2 P2 -> (h2 : IsT (ltb n2 p'.pr)) -> Id (Subset X) (p'.ps (n2, h2)).pQ (emptyS X))
+        (\ h2 -> ins.insp-e h2) m'.1 (symH P) m'.2 ;
+
+    ------------------------------------------------------------------
+    -- the B-box
+
+    module Bp = LBt.Bx[X, ln X w.1, p.pr, zero, BB[X, w, p].LDb] ;
+    module Bp' = LBt.Bx[X, ln X w.1, p'.pr, zero, BB[X, w, p'].LDb] ;
+
+    relB : SI0.Rel[X, k, p.pr, zero, ins.insp-k, ln X w.1, ln X w.1, Bp.sideAt, p'.pr, Bp'.sideAt] =
+      new SI0.Rel[X, k, p.pr, zero, ins.insp-k, ln X w.1, ln X w.1, Bp.sideAt, p'.pr, Bp'.sideAt,
+        ins.insp-r,
+        \ m' P -> pEmpty m' P,
+        \ m m' P -> pQIns m m' P,
+        \ j -> absurd _ (fz j),
+        \ m m' P W psi i i' ->
+          transH (Bp'.valAt-E (inl m') W psi i)
+           (transH (apH (ES.act W (prodP W Iv) (evm X W psi))
+                     (transH (BB[X, w, p'].Pk-def m' W (pXf W X psi) i)
+                      (transH (apH (\ v -> omA W (fdOf W v))
+                                 (pvIns m m' P W (pXf W X psi) i i'))
+                              (symH (BB[X, w, p].Pk-def m W (pXf W X psi) i')))))
+                   (symH (Bp.valAt-E (inl m) W psi i'))),
+        \ j W psi i i' -> absurd _ (fz j)] ;
+
+    module SIB = SI0.SI[X, k, p.pr, zero, ins.insp-k, ln X w.1, ln X w.1, Bp.sideAt, p'.pr, Bp'.sideAt, relB] ;
+
+    insB : ED.InsE[tgt d, X, k, Bp.box, Bp'.box] =
+      new ED.InsE[tgt d, X, k, Bp.box, Bp'.box,
+        apH (\ n -> plus n zero) ins.insp-r,
+        leb-trans k p.pr (plus p.pr zero) ins.insp-k (leb-plus p.pr zero),
+        refl (ln X w.1),
+        transH Bp'.lidE-u (symH Bp.lidE-u),
+        SIB.ins-e, SIB.ins-Q, SIB.ins-v] ;
+
+    FEb-ins : Id (TS.EI (prodP X Iv)) (FEb X w p') (FEb X w p) =
+      transH (apH {TS.T (prodP X Iv) (ln X w.1)} {TS.EI (prodP X Iv)} (\ z -> (ln X w.1, z))
+                (LBt.fopA-def X (ln X w.1) p'.pr zero BB[X, w, p'].LDb))
+       (transH (fesiT X k Bp.box Bp'.box insB)
+               (symH (apH {TS.T (prodP X Iv) (ln X w.1)} {TS.EI (prodP X Iv)} (\ z -> (ln X w.1, z))
+                         (LBt.fopA-def X (ln X w.1) p.pr zero BB[X, w, p].LDb)))) ;
+
+    bn-ins : Id (TS.EI X) (bnewS X w p') (bnewS X w p) = apH (ES.act X (prodP X Iv) (lid X s)) FEb-ins ;
+
+    ------------------------------------------------------------------
+    -- the path square
+
+    module PPp = PP[X, w, p] ;
+    module PPp' = PP[X, w, p'] ;
+    module Pp = LBs.Bx[prodP X Iv, PPp.rhoP, p.pr, suc (suc zero), PPp.LDp] ;
+    module Pp' = LBs.Bx[prodP X Iv, PPp'.rhoP, p'.pr, suc (suc zero), PPp'.LDp] ;
+
+    UU-ins : (n : Nat) -> Id (TS.EI (prodP X Iv)) (PPp'.UU n) (PPp.UU n) = split {
+      zero -> uF-cong X w.1 w.1 (refl w.1) (bnewS X w p') (bnewS X w p) (refl (en s X w.1)) (refl (en s X w.1)) bn-ins ;
+      suc n -> FEb-ins } ;
+
+    -- the sides of the path box of p' are those of p, with an empty side at k
+    PXI : Ob = prodP X Iv ;
+
+    pP-e (m' : Fin p'.pr) (P : Id Nat m'.1 k) : Id (Subset PXI) (Pp'.sideAt (inl m')).sQ (emptyS PXI) =
+      transH (apH (pre PXI X (pX X)) (pEmpty m' P)) (pre-empty PXI X (pX X)) ;
+
+    pP-QL (m : Fin p.pr) (m' : Fin p'.pr) (P : Id Nat m'.1 (Arith[a].skipN k m.1))
+      : Id (Subset PXI) (Pp'.sideAt (inl m')).sQ (Pp.sideAt (inl m)).sQ =
+      apH (pre PXI X (pX X)) (pQIns m m' P) ;
+
+    pP-QR (j : Fin (suc (suc zero))) : Id (Subset PXI) (Pp'.sideAt (inr j)).sQ (Pp.sideAt (inr j)).sQ =
+      refl ((Pp.sideAt (inr j)).sQ) ;
+
+    pP-VL (m : Fin p.pr) (m' : Fin p'.pr) (P : Id Nat m'.1 (Arith[a].skipN k m.1))
+      (W : Ob) (psi : Hom W (prodP PXI Iv)) (i : InQ W PXI (Pp'.sideAt (inl m')).sQ psi) (i' : InQ W PXI (Pp.sideAt (inl m)).sQ psi)
+      : Id (TS.EI W) ((Pp'.sideAt (inl m')).svE W psi i) ((Pp.sideAt (inl m)).svE W psi i') =
+
+      trans (TS.EI W) ((Pp'.sideAt (inl m')).svE W psi i) (Pp'.valAt (inl m') W psi i) ((Pp.sideAt (inl m)).svE W psi i')
+            (Pp'.valAt-E (inl m') W psi i)
+            (trans (TS.EI W) (Pp'.valAt (inl m') W psi i) (Pp.valAt (inl m) W psi i') ((Pp.sideAt (inl m)).svE W psi i')
+               (ap (FTr.TF.EI W) (TS.EI W)
+                   (\ v -> ES.act W (prodP W Iv) (evm (prodP X Iv) W psi)
+                            (ES.act (prodP W Iv) (prodP (prodP W Iv) Iv) (mF X W (pXf W (prodP X Iv) psi)) (omF W (fdOf W v))))
+                   ((p'.ps m').pv W (pXf W X (pXf W (prodP X Iv) psi)) (PPp'.gOf m' W (pXf W (prodP X Iv) psi) (i)))
+                   ((p.ps m).pv W (pXf W X (pXf W (prodP X Iv) psi)) (PPp.gOf m W (pXf W (prodP X Iv) psi) (i')))
+                   (pvIns m m' P W (pXf W X (pXf W (prodP X Iv) psi))
+                      (PPp'.gOf m' W (pXf W (prodP X Iv) psi) (i))
+                      (PPp.gOf m W (pXf W (prodP X Iv) psi) (i'))))
+               (sym (TS.EI W) ((Pp.sideAt (inl m)).svE W psi i') (Pp.valAt (inl m) W psi i') (Pp.valAt-E (inl m) W psi i'))) ;
+
+    pP-VR (j : Fin (suc (suc zero))) (W : Ob) (psi : Hom W (prodP PXI Iv))
+      (i : InQ W PXI (Pp'.sideAt (inr j)).sQ psi) (i' : InQ W PXI (Pp.sideAt (inr j)).sQ psi)
+      : Id (TS.EI W) ((Pp'.sideAt (inr j)).svE W psi i) ((Pp.sideAt (inr j)).svE W psi i') =
+          trans (TS.EI W) ((Pp'.sideAt (inr j)).svE W psi i) (Pp'.valAt (inr j) W psi i) ((Pp.sideAt (inr j)).svE W psi i')
+            (Pp'.valAt-E (inr j) W psi i)
+            (trans (TS.EI W) (Pp'.valAt (inr j) W psi i) (Pp.valAt (inr j) W psi i') ((Pp.sideAt (inr j)).svE W psi i')
+               (ap (TS.EI (prodP X Iv)) (TS.EI W)
+                   (\ z -> ES.act W (prodP W Iv) (evm (prodP X Iv) W psi)
+                            (ES.act (prodP W Iv) (prodP X Iv) (cylH W X (pXf W X (pXf W (prodP X Iv) psi))) z))
+                   (PPp'.UU j.1) (PPp.UU j.1) (UU-ins j.1))
+               (sym (TS.EI W) ((Pp.sideAt (inr j)).svE W psi i') (Pp.valAt (inr j) W psi i') (Pp.valAt-E (inr j) W psi i'))) ;
+
+    relP : SI0.Rel[PXI, k, p.pr, suc (suc zero), ins.insp-k, PPp.rhoP, PPp.rhoP, Pp.sideAt, p'.pr, Pp'.sideAt] =
+      new SI0.Rel[PXI, k, p.pr, suc (suc zero), ins.insp-k, PPp.rhoP, PPp.rhoP, Pp.sideAt, p'.pr, Pp'.sideAt,
+        ins.insp-r, pP-e, pP-QL, pP-QR, pP-VL, pP-VR] ;
+
+    module SIP = SI0.SI[prodP X Iv, k, p.pr, suc (suc zero), ins.insp-k, PPp.rhoP, PPp.rhoP, Pp.sideAt, p'.pr, Pp'.sideAt, relP] ;
+
+    insP : ED.InsE[s, prodP X Iv, k, Pp.box, Pp'.box] =
+      new ED.InsE[s, prodP X Iv, k, Pp.box, Pp'.box,
+        apH (\ n -> plus n (suc (suc zero))) ins.insp-r,
+        leb-trans k p.pr (plus p.pr (suc (suc zero))) ins.insp-k (leb-plus p.pr (suc (suc zero))),
+        refl PPp.rhoP,
+        transH Pp'.lidE-u (transH (apH (ES.act (prodP X Iv) X (pX X)) bn-ins) (symH Pp.lidE-u)),
+        SIP.ins-e, SIP.ins-Q, SIP.ins-v] ;
+
+    FEp-ins : Id (TS.EI (prodP (prodP X Iv) Iv)) (FEp X w p') (FEp X w p) =
+      transH (apH {TS.T (prodP (prodP X Iv) Iv) PPp.rhoP} {TS.EI (prodP (prodP X Iv) Iv)} (\ z -> (PPp.rhoP, z))
+                (LBs.fopA-def (prodP X Iv) PPp'.rhoP p'.pr (suc (suc zero)) PPp'.LDp))
+       (transH (fesiS (prodP X Iv) k Pp.box Pp'.box insP)
+               (symH (apH {TS.T (prodP (prodP X Iv) Iv) PPp.rhoP} {TS.EI (prodP (prodP X Iv) Iv)} (\ z -> (PPp.rhoP, z))
+                         (LBs.fopA-def (prodP X Iv) PPp.rhoP p.pr (suc (suc zero)) PPp.LDp)))) ;
+
+    kopE-ins : Id (FTr.TF.EI X) (kopE X w p') (kopE X w p) =
+      FTr.fibE-eq X (kopE X w p') (kopE X w p)
+        (transH (mkPt X w p') (symH (mkPt X w p)))
+        (transH (mkB X w p') (transH (SEs.Ls-inj X (bE X w p') (bE X w p) (refl w.1) bn-ins) (symH (mkB X w p))))
+        (transH (mkP X w p')
+         (transH (SEt.Ls-inj (prodP X Iv) (pE X w p') (pE X w p) (refl (D.act (prodP X Iv) X (pX X) w.1))
+                    (apH (ES.act (prodP X Iv) (prodP (prodP X Iv) Iv) (lid (prodP X Iv) t)) FEp-ins))
+                 (symH (mkP X w p)))) ;
+
+    opaque relB ; opaque insB ; opaque FEb-ins ; opaque bn-ins ; opaque UU-ins ; opaque relP ; opaque insP ; opaque FEp-ins ; opaque kopE-ins ;
+  } ;
+
+  trKesi : PE.KESI trEquiv = \ X w k p p' ins ->
+    TFb.pr-inj X w (kop X w p') (kop X w p)
+      (transH (kop-E X w p') (transH (IK[X, w, k, p, p', ins].kopE-ins) (symH (kop-E X w p)))) ;
+
+  opaque trKesi ;
+
+  -- the same, typed as EquivIso.EqvPack expects
+  trKesiC : BaseP.GCofEsi[a].PartialsEsi[extP D SA, FibTy[D, SB, SA, tr].FibT].KESI trEquiv = trKesi ;
+} ;
+
+transparent compH ; transparent app ; transparent prodP ;

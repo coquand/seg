@@ -1,0 +1,155 @@
+-- GUnivL.seg (inside IvBase, any base): the universe at the LINE classifier
+-- (cours6: C(A) = the fibrancy structures on A):
+--
+--   ClL G A    line compositions both ways with line ESI (GFibE), so that
+--              (A : PTy G) * ClL G A is FibEL G
+--   clSubL     substitution (GSubst.subFibEL), laws GFibLaws.subFibEL-id/-o
+--   encClL     its code one level up: a composition is determined by its
+--              composites (CompAt-ext; ESI is a proposition), a partial
+--              element by its sides (partExt), a side by its sieve and its
+--              values (psideExt), a sieve by its characteristic map
+--              W f |-> allS W (pre W X f Q) (phi-ext)
+--   UL         GUniv.Univ at this classifier: U0, uAct, codeU, UCtx, EGen
+--
+-- U_L is the POSET universe: El of U_L is fibrant only where X * [1] is
+-- representable (tininess; GLocal + the poset instance).  It is stated
+-- for any base because it uses nothing else, but on Delta it is NOT the
+-- universe: Delta's is GUniv at the horn classifier (isFib), with El
+-- fibrant through DeltaFibIff.  Nothing uses U_L on Delta.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Trees[a] ;
+open Arith[a] ;
+module W0 = V[a] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open Encode[a, a+] ;
+open GLine[a] ;
+open GYon[a] ;
+module GE = GFibE[a] ;
+module GS = GSubst[a] ;
+module GL = GFibLaws[a] ;
+
+encOb : Enc Ob = encIx0 obV ;
+
+encHom (W X : Ob) : Enc (Hom W X) = encIx0 (homV W X) ;
+
+encNat : Enc Nat = encIx0 W0.natV ;
+
+encBool : Enc Bool = encIx0 W0.boolV ;
+
+encFin (r : Nat) : Enc (Fin r) =
+  encSig Nat (\ j -> IsT (ltb j r)) encNat (\ j -> encProp (IsT (ltb j r)) (isProp-IsT' (ltb j r))) ;
+
+------------------------------------------------------------------------
+-- a sieve is determined by its characteristic map
+
+chiS (X : Ob) (Q : Phi X) (W : Ob) (f : Hom W X) : Bool = allS W (pre W X f Q) ;
+
+landsChi (W X : Ob) (Q : Phi X) (f : Hom W X) (i : Lands W X Q f) : Id Bool (chiS X Q W f) true =
+  allS-complete W (pre W X f Q)
+    (pre-lands W W X f Q (idH W) (lands-eq W X Q f (compH W W X f (idH W)) (symH (comp-idr W X f)) i)) ;
+
+chiLands (W X : Ob) (Q : Phi X) (f : Hom W X) (h : Id Bool (chiS X Q W f) true) : Lands W X Q f =
+  lands-eq W X Q (compH W W X f (idH W)) f (comp-idr W X f) (lands-pre W W X f Q (idH W) (allS-sound W (pre W X f Q) h)) ;
+
+chiS-inj (X : Ob) (Q Q' : Phi X) (P : Id ((W : Ob) -> Hom W X -> Bool) (chiS X Q) (chiS X Q')) : Id (Phi X) Q Q' =
+  phi-ext X Q Q' (\ W f i -> chiLands W X Q' f (transH (symH (apH (\ k -> k W f) P)) (landsChi W X Q f i)))
+                 (\ W f i -> chiLands W X Q f (transH (apH (\ k -> k W f) P) (landsChi W X Q' f i))) ;
+
+encPhi (X : Ob) : Enc (Phi X) =
+  encInj (Phi X) ((W : Ob) -> Hom W X -> Bool) (chiS X) chiS-inj-X
+    (encPi0 Ob (\ W -> Hom W X -> Bool) encOb (\ W -> encPi0 (Hom W X) (\ f -> Bool) (encHom W X) (\ f -> encBool)))
+ where { chiS-inj-X (Q Q' : Phi X) (P : Id ((W : Ob) -> Hom W X -> Bool) (chiS X Q) (chiS X Q')) : Id (Phi X) Q Q' = chiS-inj X Q Q' P ; } ;
+
+------------------------------------------------------------------------
+-- partial elements are determined by their sides, sides by their data
+
+module EncP (D : PCtx) (C : PTy[D]) {
+  module PP = GCofib[a].Partials[D, C] ;
+  module TC = GPR.TyL[D, C] ;
+
+  encPv (X : Ob) (q : Phi X) : Enc (PP.PvTy X q) =
+    encPi0 Ob (\ W -> (f : Hom W X) -> Lands W X q f -> TC.EI W) encOb (\ W ->
+    encPi0 (Hom W X) (\ f -> Lands W X q f -> TC.EI W) (encHom W X) (\ f ->
+    encPi0 (Lands W X q f) (\ i -> TC.EI W) (encProp (Lands W X q f) (isProp-Lands W X q f)) (\ i ->
+      encIx0 (TC.E.ob W)))) ;
+
+  SideD (X : Ob) : U a = (q : Phi X) * PP.PvTy X q ;
+
+  sideD (X : Ob) (x : TC.Pt X) (s : PP.PSide[X, x]) : SideD X = (s.pQ, s.pv) ;
+
+  sideInj (X : Ob) (x : TC.Pt X) (s s' : PP.PSide[X, x]) (P : Id (SideD X) (sideD X x s) (sideD X x s'))
+    : Id (PP.PSide[X, x]) s s' =
+    idJ (SideD X) (s.pQ, s.pv)
+      (\ w Q -> (pp : PP.PptTy X x w.1 w.2) (pn : PP.PnTy X w.1 w.2) -> Id (PP.PSide[X, x]) s (new PP.PSide[X, x, w.1, w.2, pp, pn]))
+      (\ pp pn -> PP.psideExt X x s (new PP.PSide[X, x, s.pQ, s.pv, pp, pn]) (refl s.pQ) (\ W f i i' -> PP.pv-irr X x s W f i i'))
+      (s'.pQ, s'.pv) P s'.ppt s'.pnat ;
+
+  encSide (X : Ob) (x : TC.Pt X) : Enc (PP.PSide[X, x]) =
+    encInj (PP.PSide[X, x]) (SideD X) (sideD X x) (sideInj X x) (encSig (Phi X) (\ q -> PP.PvTy X q) (encPhi X) (encPv X)) ;
+
+  PartD (X : Ob) (x : TC.Pt X) : U a = (r : Nat) * (Fin r -> PP.PSide[X, x]) ;
+
+  partD (X : Ob) (x : TC.Pt X) (p : PP.Partial[X, x]) : PartD X x = (p.pr, p.ps) ;
+
+  partInj (X : Ob) (x : TC.Pt X) (p p' : PP.Partial[X, x]) (P : Id (PartD X x) (partD X x p) (partD X x p'))
+    : Id (PP.Partial[X, x]) p p' =
+    idJ (PartD X x) (p.pr, p.ps)
+      (\ w Q -> (cs : PP.PCsTy X x w.1 w.2) -> Id (PP.Partial[X, x]) p (new PP.Partial[X, x, w.1, w.2, cs]))
+      (\ cs -> ap (PP.PCsTy X x p.pr p.ps) (PP.Partial[X, x]) (\ z -> new PP.Partial[X, x, p.pr, p.ps, z]) p.pcs cs
+                 (PP.isProp-PCs X x p.pr p.ps p.pcs cs))
+      (p'.pr, p'.ps) P p'.pcs ;
+
+  encPart (X : Ob) (x : TC.Pt X) : Enc (PP.Partial[X, x]) =
+    encInj (PP.Partial[X, x]) (PartD X x) (partD X x) (partInj X x)
+      (encSig Nat (\ r -> Fin r -> PP.PSide[X, x]) encNat (\ r ->
+        encPi0 (Fin r) (\ l -> PP.PSide[X, x]) (encFin r) (\ l -> encSide X x))) ;
+} ;
+
+------------------------------------------------------------------------
+-- the classifier and its code
+
+ClL (G : PCtx) (A : PTy[G]) : U a+ = (c : GE.FE[G, A].Comp) * GE.FE[G, A].ESIC c ;
+
+module EncC (G : PCtx) (A : PTy[G]) (e e' : IPt) {
+  module CA = CompAtP[GFam[a].famPath, G, A, e, e'] ;
+  module EP = EncP[CA.TV.E, CA.SFm.SF] ;
+
+  encCopT : Enc CA.CopT =
+    encPi0 Ob (\ X -> (x : CA.TV.EI X) (p : CA.PT.Partial[X, x]) -> CA.TV'.T X x.1) encOb (\ X ->
+    encPi0 (CA.TV.EI X) (\ x -> (p : CA.PT.Partial[X, x]) -> CA.TV'.T X x.1) (encIx0 (CA.TV.E.ob X)) (\ x ->
+    encPi0 (CA.PT.Partial[X, x]) (\ p -> CA.TV'.T X x.1) (EP.encPart X x) (\ p ->
+      encIx0 ((CA.LP.Aev e').tob X x.1)))) ;
+
+  copInj (c c' : CA.CompAt) (P : Id CA.CopT c.cop c'.cop) : Id CA.CompAt c c' =
+    CA.CompAt-ext c c' (\ X x p -> apH (\ k -> k X x p) P) ;
+
+  encCompAt : Enc CA.CompAt = encInj CA.CompAt CA.CopT (\ c -> c.cop) copInj encCopT ;
+} ;
+
+encClL (G : PCtx) (A : PTy[G]) : Enc (ClL G A) =
+  encSig (GE.FE[G, A].Comp) (\ c -> GE.FE[G, A].ESIC c)
+    (encSig (GE.FE[G, A].C01.CompAt) (\ z -> GE.FE[G, A].C10.CompAt) EncC[G, A, e0, e1].encCompAt (\ z -> EncC[G, A, e1, e0].encCompAt))
+    (\ c -> encProp (GE.FE[G, A].ESIC c)
+              (isProp-Sigma (GE.FE[G, A].C01.CESI c.1) (\ z -> GE.FE[G, A].C10.CESI c.2)
+                 (GE.FE[G, A].C01.isProp-CESI c.1) (\ z -> GE.FE[G, A].C10.isProp-CESI c.2))) ;
+
+opaque encClL ;
+
+------------------------------------------------------------------------
+-- substitution and its laws (GSubst, GFibLaws)
+
+clSubL (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : ClL G A) : ClL D (subTy D G A s) = (GS.subFibEL D G s (A, c)).2 ;
+
+clSub-idL (G : PCtx) (A : PTy[G]) (c : ClL G A)
+  : Id ((A' : PTy[G]) * ClL G A') (A, c) (subTy G G A (idS G), clSubL G G (idS G) A c) = GL.subFibEL-id G (A, c) ;
+
+clSub-oL (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : ClL G A)
+  : Id ((A' : PTy[T]) * ClL T A') (subTy T G A (oS T D G s s'), clSubL T G (oS T D G s s') A c)
+                                  (subTy T D (subTy D G A s) s', clSubL T D s' (subTy D G A s) (clSubL D G s A c)) =
+  GL.subFibEL-o T D G s s' (A, c) ;
+
+module UL = GUniv.Univ[ClL, clSubL, clSub-idL, clSub-oL, \ X A -> encClL (yP X) A] ;

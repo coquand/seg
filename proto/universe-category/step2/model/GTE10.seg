@@ -1,0 +1,115 @@
+-- GTE10.seg (inside IvBase.Cn): transport along a line, part 10: the
+-- extension of a partial element of the fibre of tr over w = (x , a):
+--
+--   qv       the path of the extension: pnew (GTE9), read in SA over x
+--   kop      the fibre element (bnew , qv) (GEquiv.HFib.mkFib)
+--   kside    on a side of p it is the side (B part: GTE5 bside; path:
+--            the composite agrees with the side, whose end is the path of
+--            the side's fibre element)
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module Ext (G : PCtx) (A : PTy[G]) (d : Bool) (ca : CompAtP[GFam[lv].famPath, G, A, src d, tgt d].CompAt)
+  (cb : CompAtP[GFam[lv].famPath, G, A, tgt d, src d].CompAt)
+  (c01 : CompAtP[GFam[lv].famPath, G, A, e0, e1].CompAt)
+  (D : PCtx) (ln : PSub[D, GFam[lv].famPath.pth G]) {
+  module FM = GFam[lv] ;
+  module PN = GTE9[lv].PNew[G, A, d, ca, cb, c01, D, ln] ;
+  module TQ = PN.TQ ;
+  module B = PN.B ;
+  module KK = PN.KK ;
+  module T1 = PN.T1 ;
+  module HF = PN.HF ;
+  module TA = PN.TA ;
+  module KP = PN.KP ;
+  module CP2 = PN.CP2 ;
+  module EK1 = EndKit[FM.famPath, G, A, tgt d] ;
+
+  -- an element of SA is determined by its point and its reading at the end of ln
+  rdA (W : Ob) (z : HF.TA.EI W) : TA.EI W = EK1.endE W (T1.LA.nt W z) ;
+
+  saInj (W : Ob) (z z' : HF.TA.EI W) (P : Id (W0.Ix (D.ob W)) z.1 z'.1) (Q : Id (TA.EI W) (rdA W z) (rdA W z')) : Id (HF.TA.EI W) z z' =
+    idJ (W0.Ix (D.ob W)) z.1
+      (\ x2 P2 -> (c : W0.Ix (T1.SA.tob W x2)) -> Id (TA.EI W) (rdA W z) (rdA W (x2, c)) -> Id (HF.TA.EI W) z (x2, c))
+      (\ c Q2 -> apH {W0.Ix (T1.SA.tob W z.1)} {HF.TA.EI W} (\ u -> (z.1, u))
+                   (TA.pr-inj W ((FM.famPath.pev G (tgt d)).nt W (ln.nt W z.1)) z.2 c Q2))
+      z'.1 P z'.2 Q ;
+
+  -- rdA is natural
+  rdA-act (V W : Ob) (g : Hom V W) (z : HF.TA.EI W) : Id (TA.EI V) (rdA V (HF.TA.E.act V W g z)) (TA.E.act V W g (rdA W z)) =
+    transH (apH (EK1.endE V) (T1.LA.nt-nat V W g z)) (EK1.endE-act V W g (T1.LA.nt W z)) ;
+
+  opaque saInj ; opaque rdA-act ;
+
+  module Bx (X : Ob) (w : HF.TA.EI X) (p : B.FP.Partial[X, w]) {
+    module P9 = PN.Bx[X, w, p] ;
+    module PX = P9.PX ;
+    module BX = P9.BX ;
+
+    yT : W0.Ix (KP.K2.ob X) = PX.L3.v3 X (idH X) (ptH X (tgt d)) ;
+
+    pv (W : Ob) (f : Hom W X) (i : Hom W Iv) : TA.EI W = P9.pnew.1.1 W f i ;
+
+    -- the point of pnew at (f , i): ln (x f) at its end
+    pe1 (W : Ob) (f : Hom W X) (i : Hom W Iv) : Id (W0.Ix (G.ob W)) (pv W f i).1 (KP.s X yT W f i) = P9.pnew.2.1 W f i ;
+
+    -- the point of ln x at the end, along f
+    peR (W : Ob) (f : Hom W X) (i : Hom W Iv)
+      : Id (W0.Ix (G.ob W)) (G.act W X f (PX.u X (idH X) (ptH X (tgt d))).1) ((FM.famPath.pev G (tgt d)).nt W (ln.nt W (D.act W X f w.1))) =
+      transH (apH (G.act W X f) (FM.famConn.levA-pt G A X (B.E0.lineL X PX.uS) X (idH X) (ptH X (tgt d))))
+        (transH ((ln.nt X w.1).2 W X f (idH X) (ptH X (tgt d)))
+          (transH (apH (\ m -> (ln.nt X w.1).1 W m (compH W X Iv (ptH X (tgt d)) f))
+                       (transH (comp-idl W X f) (symH (comp-idr W X f))))
+            (transH (apH (\ k -> (ln.nt X w.1).1 W (compH W W X f (idH W)) k) (ptH-nat W X f (tgt d)))
+                    (symH (apH (\ y -> y.1 W (idH W) (ptH W (tgt d))) (ln.nt-nat W X f w.1)))))) ;
+
+    pe (W : Ob) (f : Hom W X) (i : Hom W Iv)
+      : Id (W0.Ix (G.ob W)) (pv W f i).1 ((FM.famPath.pev G (tgt d)).nt W (ln.nt W (D.act W X f w.1))) =
+      transH (pe1 W f i) (peR W f i) ;
+
+    -- pnew read in SA over x
+    t (W : Ob) (f : Hom W X) (i : Hom W Iv) : HF.TA.EI W =
+      (D.act W X f w.1, TA.coeT W (pv W f i).1 ((FM.famPath.pev G (tgt d)).nt W (ln.nt W (D.act W X f w.1))) (pe W f i) (pv W f i).2) ;
+
+    t-rd (W : Ob) (f : Hom W X) (i : Hom W Iv) : Id (TA.EI W) (rdA W (t W f i)) (pv W f i) =
+      symH (TA.pr-coe W (pv W f i).1 ((FM.famPath.pev G (tgt d)).nt W (ln.nt W (D.act W X f w.1))) (pe W f i) (pv W f i).2) ;
+
+    tn (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+      : Id (HF.TA.EI V) (HF.TA.E.act V W g (t W f i)) (t V (compH V W X f g) (compH V W Iv i g)) =
+      saInj V (HF.TA.E.act V W g (t W f i)) (t V (compH V W X f g) (compH V W Iv i g))
+        (GPR.PshL[D].actC V W X f g w.1)
+        (transH (rdA-act V W g (t W f i))
+          (transH (apH (TA.E.act V W g) (t-rd W f i))
+            (transH (P9.pnew.1.2 V W g f i) (symH (t-rd V (compH V W X f g) (compH V W Iv i g)))))) ;
+
+    tp (W : Ob) (f : Hom W X) (i : Hom W Iv) : Id (W0.Ix (D.ob W)) (t W f i).1 (D.act W X f w.1) = refl (D.act W X f w.1) ;
+
+    t0 : Id (HF.TA.EI X) (t X (idH X) (ptH X e0)) (T1.trE X PX.xbn) =
+      saInj X (t X (idH X) (ptH X e0)) (T1.trE X PX.xbn) (D.act-id X w.1)
+        (transH (t-rd X (idH X) (ptH X e0))
+          (transH P9.pnew.2.2.1
+            (symH (B.LT.endL-lev X (B.E0.lineL X PX.uS))))) ;
+
+    t1 : Id (HF.TA.EI X) (t X (idH X) (ptH X e1)) w =
+      saInj X (t X (idH X) (ptH X e1)) w (D.act-id X w.1)
+        (transH (t-rd X (idH X) (ptH X e1))
+          (transH P9.pnew.2.2.2
+            (transH (KP.mk3-b X (PX.u X (idH X) (ptH X (tgt d))) (PX.u' X (idH X) (ptH X (tgt d))) (PX.P X (idH X) (ptH X (tgt d))))
+              (transH (symH (B.LT.endL-lev X (B.EKt.lineL X BX.FbS))) (apH (EK1.endE X) BX.FbS.2.2))))) ;
+
+    opaque pe ; opaque tn ; opaque t0 ; opaque t1 ;
+
+    -- the extension
+    kop : HF.TF.T X w = (HF.mkFib X w BX.bnew t tn tp t0 t1).2 ;
+  } ;
+} ;

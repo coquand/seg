@@ -1,0 +1,361 @@
+-- GGlueE.seg (inside IvBase, any base; Step 2 probe, point 3): the
+-- equivalence component of the glue data.  For data d at stage I
+-- (GGlueD), the restricted representable RC of the list of sieves, and the
+-- triple T_d = (B , A , alpha) over it DERIVED from d's codes.  The
+-- equivalence structure of d is an EqOn T_d; along h it is substituted by
+-- eqDSub along the lift RC(d h) -> RC(d), and the substituted triple IS
+-- T_(d h) (triEq: the codes agree on the nose, the actions up to
+-- irrelevance of paths, the maps on the nose).
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Trees[a] ;
+open Arith[a] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open GLine[a] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+module GX = GEqExt[a] ;
+module GL = GEqLaws[a] ;
+
+-- the extent of a list is stable under restriction
+fl-act (I : Ob) (r : Nat) (ph : Fin r -> Phi I) (Y' Y : Ob) (k : Hom Y' Y) (h : Hom Y I) (q : IsT (GGlueD.fl I r ph Y h))
+  : IsT (GGlueD.fl I r ph Y' (compH Y' Y I h k)) =
+  GGlueD.anyF-mono r (\ l -> allS Y (pre Y I h (ph l))) (\ l -> allS Y' (pre Y' I (compH Y' Y I h k) (ph l)))
+    (\ l t -> GUnivL.landsChi Y' I (ph l) (compH Y' Y I h k) (lands-comp Y' Y I (ph l) h k (GUnivL.chiLands Y I (ph l) h t))) q ;
+
+opaque fl-act ;
+
+-- the restricted representable: maps into I in the extent
+module RCm (I : Ob) (r : Nat) (ph : Fin r -> Phi I) {
+  ob (Y : Ob) : W0.V = W0.SigV (homV Y I) (\ h -> W0.IsTV (GGlueD.fl I r ph Y h)) ;
+
+  act (Y' Y : Ob) (k : Hom Y' Y) (x : W0.Ix (ob Y)) : W0.Ix (ob Y') = (compH Y' Y I x.1 k, fl-act I r ph Y' Y k x.1 x.2) ;
+
+  pt-eq (Y : Ob) (x x' : W0.Ix (ob Y)) (P : Id (Hom Y I) x.1 x'.1) : Id (W0.Ix (ob Y)) x x' =
+    Sigma-eq (Hom Y I) (\ h -> IsT (GGlueD.fl I r ph Y h)) x.1 x'.1 x.2 x'.2 P (isProp-IsT' (GGlueD.fl I r ph Y x'.1)) ;
+
+  act-id (Y : Ob) (x : W0.Ix (ob Y)) : Id (W0.Ix (ob Y)) (act Y Y (idH Y) x) x = pt-eq Y (act Y Y (idH Y) x) x (comp-idr Y I x.1) ;
+
+  act-o (Z Y' Y : Ob) (k : Hom Y' Y) (k' : Hom Z Y') (x : W0.Ix (ob Y))
+    : Id (W0.Ix (ob Z)) (act Z Y (compH Z Y' Y k k') x) (act Z Y' k' (act Y' Y k x)) =
+    pt-eq Z (act Z Y (compH Z Y' Y k k') x) (act Z Y' k' (act Y' Y k x)) (symH (comp-assoc Z Y' Y I x.1 k k')) ;
+
+  opaque act-id ; opaque act-o ;
+
+  RC : PCtx = new PCtx[ob, act, act-id, act-o] ;
+
+  inclRC : PSub[RC, yP I] = new PSub[RC, yP I, \ Y x -> x.1, \ Y' Y k x -> refl (compH Y' Y I x.1 k)] ;
+} ;
+
+module GE (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A)) {
+  module UU = GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module DD = GGlueD.GD[Cl, clSub, clSub-id, clSub-o, encCl] ;
+
+  ----------------------------------------------------------------------
+  -- the triple of data d at stage I, over RC
+
+  module Tr (I : Ob) (A : UU.U0 I) (r : Nat) (ph : Fin r -> Phi I) (bd : DD.BD I A r ph) {
+    module R = RCm[I, r, ph] ;
+
+    Bt : PTy[R.RC] =
+      mkTy R.RC (\ Y x -> UU.fib0 Y (bd.1 Y x.1 x.2))
+        (\ Y' Y k x y e b -> UU.tactG Y' Y k (bd.1 Y x.1 x.2) (bd.1 Y' y.1 y.2) (bd.2.1 Y' Y k x.1 x.2 y.1 (apH (\ z -> z.1) e) y.2) b)
+        (\ Y x e b -> UU.tidC Y (bd.1 Y x.1 x.2) (bd.2.1 Y Y (idH Y) x.1 x.2 x.1 (apH (\ z -> z.1) e) x.2) b)
+        (\ K J I0 f g x y z e1 e2 e3 b -> UU.toC K J I0 f g (bd.1 I0 x.1 x.2) (bd.1 J y.1 y.2) (bd.1 K z.1 z.2)
+           (bd.2.1 J I0 f x.1 x.2 y.1 (apH (\ w -> w.1) e1) y.2) (bd.2.1 K J g y.1 y.2 z.1 (apH (\ w -> w.1) e2) z.2)
+           (bd.2.1 K I0 (compH K J I0 f g) x.1 x.2 z.1 (apH (\ w -> w.1) e3) z.2) b) ;
+
+    At : PTy[R.RC] = subTy R.RC (yP I) A.1 R.inclRC ;
+
+    module TBt = GPR.TyL[R.RC, Bt] ;
+    module TAt = GPR.TyL[R.RC, At] ;
+
+    alE (Y : Ob) (w : TBt.EI Y) : TAt.EI Y = (w.1, bd.2.2.1 Y w.1.1 w.1.2 w.2) ;
+
+    alN (Y' Y : Ob) (k : Hom Y' Y) (w : TBt.EI Y) : Id (TAt.EI Y') (alE Y' (TBt.E.act Y' Y k w)) (TAt.E.act Y' Y k (alE Y w)) =
+      apH {W0.Ix (A.1.tob Y' (compH Y' Y I w.1.1 k))} {TAt.EI Y'} (\ z -> (R.act Y' Y k w.1, z))
+        (transH (bd.2.2.2 Y' Y k w.1.1 w.1.2 (compH Y' Y I w.1.1 k) (apH (\ z -> z.1) (refl (R.act Y' Y k w.1))) (fl-act I r ph Y' Y k w.1.1 w.1.2) w.2)
+           (tact-irr (yP I) A.1 Y' Y k w.1.1 (compH Y' Y I w.1.1 k) (apH (\ z -> z.1) (refl (R.act Y' Y k w.1)))
+              (ntEq R.RC (yP I) R.inclRC Y' Y k w.1 (R.act Y' Y k w.1) (refl (R.act Y' Y k w.1))) (bd.2.2.1 Y w.1.1 w.1.2 w.2))) ;
+
+    al : PMap[R.RC, Bt, At] = new PMap[R.RC, Bt, At, alE, \ Y w -> refl w.1, alN] ;
+
+    tri : GX.EqDat[R.RC].Tri = (Bt, (At, al)) ;
+  } ;
+
+  -- the lift of RC along h
+  lift (J I : Ob) (h : Hom J I) (r : Nat) (ph : Fin r -> Phi I) : PSub[RCm[J, r, GGlueD.phR J I h r ph].RC, RCm[I, r, ph].RC] =
+    new PSub[RCm[J, r, GGlueD.phR J I h r ph].RC, RCm[I, r, ph].RC,
+      \ Y x -> (compH Y J I h x.1, GGlueD.fl-pre J I h r ph Y x.1 x.2),
+      \ Y' Y k x -> RCm[I, r, ph].pt-eq Y' _ _ (symH (comp-assoc Y' Y J I h x.1 k))] ;
+
+  ----------------------------------------------------------------------
+  -- the crux: the substituted triple is the triple of the restricted data
+
+  module TriEq (J I : Ob) (h : Hom J I) (A : UU.U0 I) (r : Nat) (ph : Fin r -> Phi I) (bd : DD.BD I A r ph) {
+    module T0 = Tr[I, A, r, ph, bd] ;
+    module M = DD.Act[J, I, h, A, r, ph, bd] ;
+    module T1 = Tr[J, M.A', r, M.ph', (M.B', (M.bn', (M.al', M.aln')))] ;
+    module R1 = RCm[J, r, M.ph'] ;
+    sh : PSub[R1.RC, T0.R.RC] = lift J I h r ph ;
+    module SM = GEquivSub[a].SubMap[R1.RC, T0.R.RC, sh, T0.Bt, T0.At, T0.al] ;
+
+    triEq : Id (GX.EqDat[R1.RC].Tri) (subTy R1.RC T0.R.RC T0.Bt sh, (subTy R1.RC T0.R.RC T0.At sh, SM.subMap)) T1.tri =
+      GL.TriL[R1.RC].triExtPw (subTy R1.RC T0.R.RC T0.Bt sh) (subTy R1.RC T0.R.RC T0.At sh) SM.subMap T1.Bt T1.At T1.al
+        (\ Y x -> refl (T1.Bt.tob Y x))
+        (\ Y' Y k x y e b -> GSmall.tact-irr UU.UCtx UU.El Y' Y k (M.B' Y x.1 x.2) (M.B' Y' y.1 y.2)
+           (bd.2.1 Y' Y k (compH Y J I h x.1) (GGlueD.fl-pre J I h r ph Y x.1 x.2) (compH Y' J I h y.1)
+              (apH (\ z -> z.1) (ntEq R1.RC T0.R.RC sh Y' Y k x y e)) (GGlueD.fl-pre J I h r ph Y' y.1 y.2))
+           (M.bn' Y' Y k x.1 x.2 y.1 (apH (\ z -> z.1) e) y.2) b)
+        (\ Y x -> refl (T1.At.tob Y x))
+        (\ Y' Y k x y e a0 -> tact-irr (yP I) A.1 Y' Y k (compH Y J I h x.1) (compH Y' J I h y.1)
+           (ntEq T0.R.RC (yP I) T0.R.inclRC Y' Y k (sh.nt Y x) (sh.nt Y' y) (ntEq R1.RC T0.R.RC sh Y' Y k x y e))
+           (ntEq (yP J) (yP I) (yH J I h) Y' Y k x.1 y.1 (ntEq R1.RC (yP J) R1.inclRC Y' Y k x y e)) a0)
+        (\ X w -> symH (transH
+           (GPR.TyL[R1.RC, subTy R1.RC T0.R.RC T0.At sh].fromE-eq X w.1 (SM.mE X w) (refl w.1))
+           (apH {W0.Ix (A.1.tob X (compH X J I h w.1.1))} {T1.TAt.EI X} (\ z -> (w.1, z))
+              (T0.TAt.pr-inj X (sh.nt X w.1) (T0.TAt.fromE X (sh.nt X w.1) (T0.alE X (sh.nt X w.1, w.2)) (refl (sh.nt X w.1)))
+                 (T0.alE X (sh.nt X w.1, w.2)).2
+                 (T0.TAt.fromE-eq X (sh.nt X w.1) (T0.alE X (sh.nt X w.1, w.2)) (refl (sh.nt X w.1))))))) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- glue data with the equivalence structure
+
+  ES (G : PCtx) : U a+ = (t : GX.EqDat[G].Tri) * GX.EqDat[G].EqOn t ;
+
+  TD (I : Ob) (A : UU.U0 I) (r : Nat) (ph : Fin r -> Phi I) (bd : DD.BD I A r ph) : GX.EqDat[RCm[I, r, ph].RC].Tri = Tr[I, A, r, ph, bd].tri ;
+
+  BE (I : Ob) (A : UU.U0 I) (r : Nat) (ph : Fin r -> Phi I) : U a+ =
+    (bd : DD.BD I A r ph) * GX.EqDat[RCm[I, r, ph].RC].EqOn (TD I A r ph bd) ;
+
+  GD1 (I : Ob) : U a+ = (A : UU.U0 I) * ((r : Nat) * ((ph : Fin r -> Phi I) * BE I A r ph)) ;
+
+  -- the triple and its structure along h
+  esAct (J I : Ob) (h : Hom J I) (A : UU.U0 I) (r : Nat) (ph : Fin r -> Phi I) (be : BE I A r ph)
+    : GX.EqDat[RCm[J, r, GGlueD.phR J I h r ph].RC].EqOn (TD J (UU.uAct J I h A) r (GGlueD.phR J I h r ph) (DD.Act[J, I, h, A, r, ph, be.1].res.2.2.2)) =
+    subst (GX.EqDat[RCm[J, r, GGlueD.phR J I h r ph].RC].Tri) (\ t -> GX.EqDat[RCm[J, r, GGlueD.phR J I h r ph].RC].EqOn t) _ _
+      TriEq[J, I, h, A, r, ph, be.1].triEq
+      (GL.eqDSub RCm[J, r, GGlueD.phR J I h r ph].RC RCm[I, r, ph].RC (lift J I h r ph) (TD I A r ph be.1) be.2).2 ;
+
+  act1 (J I : Ob) (h : Hom J I) (D : GD1 I) : GD1 J =
+    (UU.uAct J I h D.1, (D.2.1, (GGlueD.phR J I h D.2.1 D.2.2.1,
+      (DD.Act[J, I, h, D.1, D.2.1, D.2.2.1, D.2.2.2.1].res.2.2.2, esAct J I h D.1 D.2.1 D.2.2.1 D.2.2.2)))) ;
+
+  ----------------------------------------------------------------------
+  -- sets and pairs
+
+  isSet-PMap (G : PCtx) (B A : PTy[G]) : isSet (PMap[G, B, A]) =
+    V1.isSetIx (V1.mkV (PMap[G, B, A]) (GUnivEq.encPMap G B A).1 (GUnivEq.encPMap G B A).2) ;
+
+  isSet-Tri (G : PCtx) : isSet (GX.EqDat[G].Tri) =
+    isSet-Sigma (PTy[G]) (\ B -> (A : PTy[G]) * PMap[G, B, A]) (isSet-PTy G) (\ B ->
+      isSet-Sigma (PTy[G]) (\ A -> PMap[G, B, A]) (isSet-PTy G) (\ A -> isSet-PMap G B A)) ;
+
+  sndTri (G : PCtx) (t : GX.EqDat[G].Tri) (e e2 : GX.EqDat[G].EqOn t) (R : Id (ES G) (t, e) (t, e2)) : Id (GX.EqDat[G].EqOn t) e e2 =
+    transH (apH (\ q -> subst (GX.EqDat[G].Tri) (\ u -> GX.EqDat[G].EqOn u) t t q e)
+                (symH (isSet-Tri G t t (ap (ES G) (GX.EqDat[G].Tri) (\ w -> w.1) (t, e) (t, e2) R) (refl t))))
+           (Sigma-snd (GX.EqDat[G].Tri) (\ u -> GX.EqDat[G].EqOn u) t t e e2 R) ;
+
+  -- a transported structure, paired with the target triple
+  pairTr (G : PCtx) (t t2 : GX.EqDat[G].Tri) (P : Id (GX.EqDat[G].Tri) t t2) (e : GX.EqDat[G].EqOn t)
+    : Id (ES G) (t2, subst (GX.EqDat[G].Tri) (\ u -> GX.EqDat[G].EqOn u) t t2 P e) (t, e) =
+    idJ (GX.EqDat[G].Tri) t (\ t3 P3 -> Id (ES G) (t3, subst (GX.EqDat[G].Tri) (\ u -> GX.EqDat[G].EqOn u) t t3 P3 e) (t, e))
+      (refl (t, e)) t2 P ;
+
+  opaque isSet-Tri ; opaque sndTri ; opaque pairTr ;
+
+  -- the canonical map between the restricted representables of equal lists
+  castRC (I : Ob) (r : Nat) (ph ph' : Fin r -> Phi I) (P : Id (Fin r -> Phi I) ph ph') : PSub[RCm[I, r, ph'].RC, RCm[I, r, ph].RC] =
+    new PSub[RCm[I, r, ph'].RC, RCm[I, r, ph].RC,
+      \ Y x -> (x.1, substH (\ p -> IsT (GGlueD.fl I r p Y x.1)) (symH P) x.2),
+      \ Y' Y k x -> RCm[I, r, ph].pt-eq Y' _ _ (refl (compH Y' Y I x.1 k))] ;
+
+  castRC-refl (I : Ob) (r : Nat) (ph : Fin r -> Phi I) : Id (PSub[RCm[I, r, ph].RC, RCm[I, r, ph].RC]) (castRC I r ph ph (refl ph)) (idS RCm[I, r, ph].RC) =
+    sub-ext RCm[I, r, ph].RC RCm[I, r, ph].RC (castRC I r ph ph (refl ph)) (idS RCm[I, r, ph].RC)
+      (\ Y x -> RCm[I, r, ph].pt-eq Y _ _ (refl x.1)) ;
+
+  opaque castRC-refl ;
+
+  ----------------------------------------------------------------------
+  -- extensionality with the structure: the codes as in GGlueD.gdExt, and
+  -- the structures through the canonical map
+
+  beExt (I : Ob) (A : UU.U0 I) (r : Nat) (ph : Fin r -> Phi I) (bd bd' : DD.BD I A r ph)
+    (e : GX.EqDat[RCm[I, r, ph].RC].EqOn (TD I A r ph bd)) (e' : GX.EqDat[RCm[I, r, ph].RC].EqOn (TD I A r ph bd'))
+    (Q : Id (DD.BD I A r ph) bd bd') (R : Id (ES RCm[I, r, ph].RC) (TD I A r ph bd, e) (TD I A r ph bd', e'))
+    : Id (BE I A r ph) (bd, e) (bd', e') =
+    idJ (DD.BD I A r ph) bd
+      (\ b2 Q2 -> (e2 : GX.EqDat[RCm[I, r, ph].RC].EqOn (TD I A r ph b2)) -> Id (ES RCm[I, r, ph].RC) (TD I A r ph bd, e) (TD I A r ph b2, e2)
+         -> Id (BE I A r ph) (bd, e) (b2, e2))
+      (\ e2 R2 -> apH {GX.EqDat[RCm[I, r, ph].RC].EqOn (TD I A r ph bd)} {BE I A r ph} (\ z -> (bd, z))
+         (sndTri RCm[I, r, ph].RC (TD I A r ph bd) e e2 R2))
+      bd' Q e' R ;
+
+  gd1Ext (I : Ob) (A A' : UU.U0 I) (PA : Id (UU.U0 I) A A') (r : Nat) (ph ph' : Fin r -> Phi I)
+    (Pph : (l : Fin r) -> Id (Phi I) (ph l) (ph' l)) (be : BE I A r ph) (be' : BE I A' r ph')
+    (PB : (W : Ob) (f : Hom W I) (q : IsT (GGlueD.fl I r ph W f)) (q' : IsT (GGlueD.fl I r ph' W f)) -> Id (UU.U0 W) (be.1.1 W f q) (be'.1.1 W f q'))
+    (Pal : (W : Ob) (f : Hom W I) (q : IsT (GGlueD.fl I r ph W f)) (q' : IsT (GGlueD.fl I r ph' W f)) (b : W0.Ix (UU.fib0 W (be.1.1 W f q)))
+       -> Id (W0.Ix (A'.1.tob W f)) (DD.trA I A A' PA W f (be.1.2.2.1 W f q b)) (be'.1.2.2.1 W f q' (DD.trB W (be.1.1 W f q) (be'.1.1 W f q') (PB W f q q') b)))
+    (He : Id (ES RCm[I, r, ph'].RC)
+            (GL.eqDSub RCm[I, r, ph'].RC RCm[I, r, ph].RC (castRC I r ph ph' (funext (Fin r) (\ l -> Phi I) ph ph' Pph)) (TD I A r ph be.1) be.2)
+            (TD I A' r ph' be'.1, be'.2))
+    : Id (GD1 I) (A, (r, (ph, be))) (A', (r, (ph', be'))) =
+    idJ (UU.U0 I) A
+      (\ A2 PA2 -> (be2 : BE I A2 r ph')
+         -> (PB2 : (W : Ob) (f : Hom W I) (q : IsT (GGlueD.fl I r ph W f)) (q' : IsT (GGlueD.fl I r ph' W f)) -> Id (UU.U0 W) (be.1.1 W f q) (be2.1.1 W f q'))
+         -> ((W : Ob) (f : Hom W I) (q : IsT (GGlueD.fl I r ph W f)) (q' : IsT (GGlueD.fl I r ph' W f)) (b : W0.Ix (UU.fib0 W (be.1.1 W f q)))
+             -> Id (W0.Ix (A2.1.tob W f)) (DD.trA I A A2 PA2 W f (be.1.2.2.1 W f q b)) (be2.1.2.2.1 W f q' (DD.trB W (be.1.1 W f q) (be2.1.1 W f q') (PB2 W f q q') b)))
+         -> Id (ES RCm[I, r, ph'].RC)
+               (GL.eqDSub RCm[I, r, ph'].RC RCm[I, r, ph].RC (castRC I r ph ph' (funext (Fin r) (\ l -> Phi I) ph ph' Pph)) (TD I A r ph be.1) be.2)
+               (TD I A2 r ph' be2.1, be2.2)
+         -> Id (GD1 I) (A, (r, (ph, be))) (A2, (r, (ph', be2))))
+      (\ be2 PB2 Pal2 He2 ->
+         apH {(ph2 : Fin r -> Phi I) * BE I A r ph2} {GD1 I} (\ z -> (A, (r, z)))
+           (idJ (Fin r -> Phi I) ph
+              (\ ph2 P2 -> (be3 : BE I A r ph2)
+                 -> (PB3 : (W : Ob) (f : Hom W I) (q : IsT (GGlueD.fl I r ph W f)) (q' : IsT (GGlueD.fl I r ph2 W f)) -> Id (UU.U0 W) (be.1.1 W f q) (be3.1.1 W f q'))
+                 -> ((W : Ob) (f : Hom W I) (q : IsT (GGlueD.fl I r ph W f)) (q' : IsT (GGlueD.fl I r ph2 W f)) (b : W0.Ix (UU.fib0 W (be.1.1 W f q)))
+                     -> Id (W0.Ix (A.1.tob W f)) (be.1.2.2.1 W f q b) (be3.1.2.2.1 W f q' (DD.trB W (be.1.1 W f q) (be3.1.1 W f q') (PB3 W f q q') b)))
+                 -> Id (ES RCm[I, r, ph2].RC) (GL.eqDSub RCm[I, r, ph2].RC RCm[I, r, ph].RC (castRC I r ph ph2 P2) (TD I A r ph be.1) be.2) (TD I A r ph2 be3.1, be3.2)
+                 -> Id ((ph2 : Fin r -> Phi I) * BE I A r ph2) (ph, be) (ph2, be3))
+              (\ be3 PB3 Pal3 He3 -> apH {BE I A r ph} {(ph2 : Fin r -> Phi I) * BE I A r ph2} (\ z -> (ph, z))
+                 (beExt I A r ph be.1 be3.1 be.2 be3.2
+                    (DD.bdExt I A r ph be.1 be3.1 (\ W f q -> PB3 W f q q) (\ W f q b -> Pal3 W f q q b))
+                    (transH (transH (GL.LawId[RCm[I, r, ph].RC, TD I A r ph be.1, be.2].eqD-id)
+                                    (apH (\ s0 -> GL.eqDSub RCm[I, r, ph].RC RCm[I, r, ph].RC s0 (TD I A r ph be.1) be.2) (symH (castRC-refl I r ph))))
+                            He3)))
+              ph' (funext (Fin r) (\ l -> Phi I) ph ph' Pph) be2 PB2 Pal2 He2))
+      A' PA be' PB Pal He ;
+
+  opaque beExt ; opaque gd1Ext ;
+
+  ----------------------------------------------------------------------
+  -- the laws of the action with the structure
+
+  gd1-id (I : Ob) (D : GD1 I) : Id (GD1 I) (act1 I I (idH I) D) D =
+    gd1Ext I (UU.uAct I I (idH I) D.1) D.1 (UU.uAct-id I D.1) D.2.1 (GGlueD.phR I I (idH I) D.2.1 D.2.2.1) D.2.2.1
+      (\ l -> pre-id I (D.2.2.1 l)) (act1 I I (idH I) D).2.2.2 D.2.2.2
+      (\ W f q q' -> DD.Bhom I D.2.1 D.2.2.1 D.2.2.2.1.1 W (compH W I I (idH I) f) f (comp-idl W I f) (GGlueD.fl-pre I I (idH I) D.2.1 D.2.2.1 W f q) q')
+      (\ W f q q' b -> transH
+         (transH (subst-ap (UU.U0 I) W0.V (\ F -> F.1.tob W f) (\ v -> W0.Ix v) (UU.uAct I I (idH I) D.1) D.1 (UU.uAct-id I D.1)
+                    (D.2.2.2.1.2.2.1 W (compH W I I (idH I) f) (GGlueD.fl-pre I I (idH I) D.2.1 D.2.2.1 W f q) b))
+                 (UU.fib-move (Hom W I) (D.1.1.tob W) (compH W I I (idH I) f) f (comp-idl W I f)
+                    (ap (UU.U0 I) W0.V (\ F -> F.1.tob W f) (UU.uAct I I (idH I) D.1) D.1 (UU.uAct-id I D.1))
+                    (D.2.2.2.1.2.2.1 W (compH W I I (idH I) f) (GGlueD.fl-pre I I (idH I) D.2.1 D.2.2.1 W f q) b)))
+         (DD.alHom I D.1 D.2.1 D.2.2.1 D.2.2.2.1 W (compH W I I (idH I) f) f (comp-idl W I f) (GGlueD.fl-pre I I (idH I) D.2.1 D.2.2.1 W f q) q' b))
+      (calc (ES R0) {
+          GL.eqDSub R0 R1 cst (TD I (UU.uAct I I (idH I) D.1) D.2.1 (GGlueD.phR I I (idH I) D.2.1 D.2.2.1) (act1 I I (idH I) D).2.2.2.1) (act1 I I (idH I) D).2.2.2.2
+        =< apH (\ u -> GL.eqDSub R0 R1 cst u.1 u.2)
+             (pairTr R1 (GL.eqDSub R1 R0 (lift I I (idH I) D.2.1 D.2.2.1) T0 D.2.2.2.2).1 (TriEq[I, I, idH I, D.1, D.2.1, D.2.2.1, D.2.2.2.1].T1.tri)
+                TriEq[I, I, idH I, D.1, D.2.1, D.2.2.1, D.2.2.2.1].triEq (GL.eqDSub R1 R0 (lift I I (idH I) D.2.1 D.2.2.1) T0 D.2.2.2.2).2) >
+          GL.eqDSub R0 R1 cst (GL.eqDSub R1 R0 (lift I I (idH I) D.2.1 D.2.2.1) T0 D.2.2.2.2).1 (GL.eqDSub R1 R0 (lift I I (idH I) D.2.1 D.2.2.1) T0 D.2.2.2.2).2
+        =< symH (GEqLaws2[a].LawO[R0, R1, R0, lift I I (idH I) D.2.1 D.2.2.1, cst, T0, D.2.2.2.2].eqD-o) >
+          GL.eqDSub R0 R0 (oS R0 R1 R0 (lift I I (idH I) D.2.1 D.2.2.1) cst) T0 D.2.2.2.2
+        =< apH (\ s0 -> GL.eqDSub R0 R0 s0 T0 D.2.2.2.2)
+             (sub-ext R0 R0 (oS R0 R1 R0 (lift I I (idH I) D.2.1 D.2.2.1) cst) (idS R0) (\ Y x -> RCm[I, D.2.1, D.2.2.1].pt-eq Y _ _ (comp-idl Y I x.1))) >
+          GL.eqDSub R0 R0 (idS R0) T0 D.2.2.2.2
+        =< symH (GL.LawId[R0, T0, D.2.2.2.2].eqD-id) >
+          (T0, D.2.2.2.2) })
+   where {
+     R0 : PCtx = RCm[I, D.2.1, D.2.2.1].RC ;
+     R1 : PCtx = RCm[I, D.2.1, GGlueD.phR I I (idH I) D.2.1 D.2.2.1].RC ;
+     T0 : GX.EqDat[RCm[I, D.2.1, D.2.2.1].RC].Tri = TD I D.1 D.2.1 D.2.2.1 D.2.2.2.1 ;
+     cst : PSub[RCm[I, D.2.1, D.2.2.1].RC, RCm[I, D.2.1, GGlueD.phR I I (idH I) D.2.1 D.2.2.1].RC] =
+       castRC I D.2.1 (GGlueD.phR I I (idH I) D.2.1 D.2.2.1) D.2.2.1
+         (funext (Fin D.2.1) (\ l -> Phi I) (GGlueD.phR I I (idH I) D.2.1 D.2.2.1) D.2.2.1 (\ l -> pre-id I (D.2.2.1 l))) ; } ;
+
+  gd1-o (K J I : Ob) (h : Hom J I) (k : Hom K J) (D : GD1 I)
+    : Id (GD1 K) (act1 K I (compH K J I h k) D) (act1 K J k (act1 J I h D)) =
+    gd1Ext K (UU.uAct K I (compH K J I h k) D.1) (UU.uAct K J k (UU.uAct J I h D.1)) (UU.uAct-o K J I h k D.1) D.2.1
+      (GGlueD.phR K I (compH K J I h k) D.2.1 D.2.2.1) (GGlueD.phR K J k D.2.1 (GGlueD.phR J I h D.2.1 D.2.2.1))
+      (\ l -> symH (pre-comp K J I k h (D.2.2.1 l)))
+      (act1 K I (compH K J I h k) D).2.2.2 (act1 K J k (act1 J I h D)).2.2.2
+      (\ W g q q' -> DD.Bhom I D.2.1 D.2.2.1 D.2.2.2.1.1 W (compH W K I (compH K J I h k) g) (compH W J I h (compH W K J k g))
+         (comp-assoc W K J I h k g) (GGlueD.fl-pre K I (compH K J I h k) D.2.1 D.2.2.1 W g q)
+         (GGlueD.fl-pre J I h D.2.1 D.2.2.1 W (compH W K J k g) (GGlueD.fl-pre K J k D.2.1 (GGlueD.phR J I h D.2.1 D.2.2.1) W g q')))
+      (\ W g q q' b -> transH
+         (transH (subst-ap (UU.U0 K) W0.V (\ F -> F.1.tob W g) (\ v -> W0.Ix v)
+                    (UU.uAct K I (compH K J I h k) D.1) (UU.uAct K J k (UU.uAct J I h D.1)) (UU.uAct-o K J I h k D.1)
+                    (D.2.2.2.1.2.2.1 W (compH W K I (compH K J I h k) g) (GGlueD.fl-pre K I (compH K J I h k) D.2.1 D.2.2.1 W g q) b))
+                 (UU.fib-move (Hom W I) (D.1.1.tob W) (compH W K I (compH K J I h k) g) (compH W J I h (compH W K J k g))
+                    (comp-assoc W K J I h k g)
+                    (ap (UU.U0 K) W0.V (\ F -> F.1.tob W g) (UU.uAct K I (compH K J I h k) D.1) (UU.uAct K J k (UU.uAct J I h D.1))
+                       (UU.uAct-o K J I h k D.1))
+                    (D.2.2.2.1.2.2.1 W (compH W K I (compH K J I h k) g) (GGlueD.fl-pre K I (compH K J I h k) D.2.1 D.2.2.1 W g q) b)))
+         (DD.alHom I D.1 D.2.1 D.2.2.1 D.2.2.2.1 W (compH W K I (compH K J I h k) g) (compH W J I h (compH W K J k g))
+            (comp-assoc W K J I h k g) (GGlueD.fl-pre K I (compH K J I h k) D.2.1 D.2.2.1 W g q)
+            (GGlueD.fl-pre J I h D.2.1 D.2.2.1 W (compH W K J k g) (GGlueD.fl-pre K J k D.2.1 (GGlueD.phR J I h D.2.1 D.2.2.1) W g q')) b))
+      (calc (ES RK) {
+          GL.eqDSub RK RL cst (TD K (UU.uAct K I (compH K J I h k) D.1) D.2.1 phL (act1 K I (compH K J I h k) D).2.2.2.1) (act1 K I (compH K J I h k) D).2.2.2.2
+        =< apH (\ u -> GL.eqDSub RK RL cst u.1 u.2)
+             (pairTr RL (GL.eqDSub RL R0 (lift K I (compH K J I h k) D.2.1 D.2.2.1) T0 D.2.2.2.2).1
+                (TriEq[K, I, compH K J I h k, D.1, D.2.1, D.2.2.1, D.2.2.2.1].T1.tri)
+                TriEq[K, I, compH K J I h k, D.1, D.2.1, D.2.2.1, D.2.2.2.1].triEq (GL.eqDSub RL R0 (lift K I (compH K J I h k) D.2.1 D.2.2.1) T0 D.2.2.2.2).2) >
+          GL.eqDSub RK RL cst (GL.eqDSub RL R0 (lift K I (compH K J I h k) D.2.1 D.2.2.1) T0 D.2.2.2.2).1 (GL.eqDSub RL R0 (lift K I (compH K J I h k) D.2.1 D.2.2.1) T0 D.2.2.2.2).2
+        =< symH (GEqLaws2[a].LawO[RK, RL, R0, lift K I (compH K J I h k) D.2.1 D.2.2.1, cst, T0, D.2.2.2.2].eqD-o) >
+          GL.eqDSub RK R0 (oS RK RL R0 (lift K I (compH K J I h k) D.2.1 D.2.2.1) cst) T0 D.2.2.2.2
+        =< apH (\ s0 -> GL.eqDSub RK R0 s0 T0 D.2.2.2.2)
+             (sub-ext RK R0 (oS RK RL R0 (lift K I (compH K J I h k) D.2.1 D.2.2.1) cst) (oS RK RJ R0 (lift J I h D.2.1 D.2.2.1) (lift K J k D.2.1 phJ))
+                (\ Y x -> RCm[I, D.2.1, D.2.2.1].pt-eq Y _ _ (comp-assoc Y K J I h k x.1))) >
+          GL.eqDSub RK R0 (oS RK RJ R0 (lift J I h D.2.1 D.2.2.1) (lift K J k D.2.1 phJ)) T0 D.2.2.2.2
+        =< GEqLaws2[a].LawO[RK, RJ, R0, lift J I h D.2.1 D.2.2.1, lift K J k D.2.1 phJ, T0, D.2.2.2.2].eqD-o >
+          GL.eqDSub RK RJ (lift K J k D.2.1 phJ) (GL.eqDSub RJ R0 (lift J I h D.2.1 D.2.2.1) T0 D.2.2.2.2).1 (GL.eqDSub RJ R0 (lift J I h D.2.1 D.2.2.1) T0 D.2.2.2.2).2
+        =< apH (\ u -> GL.eqDSub RK RJ (lift K J k D.2.1 phJ) u.1 u.2)
+             (symH (pairTr RJ (GL.eqDSub RJ R0 (lift J I h D.2.1 D.2.2.1) T0 D.2.2.2.2).1
+                (TriEq[J, I, h, D.1, D.2.1, D.2.2.1, D.2.2.2.1].T1.tri)
+                TriEq[J, I, h, D.1, D.2.1, D.2.2.1, D.2.2.2.1].triEq (GL.eqDSub RJ R0 (lift J I h D.2.1 D.2.2.1) T0 D.2.2.2.2).2)) >
+          GL.eqDSub RK RJ (lift K J k D.2.1 phJ) (TD J (UU.uAct J I h D.1) D.2.1 phJ (act1 J I h D).2.2.2.1) (act1 J I h D).2.2.2.2
+        =< symH (pairTr RK (GL.eqDSub RK RJ (lift K J k D.2.1 phJ) (TD J (UU.uAct J I h D.1) D.2.1 phJ (act1 J I h D).2.2.2.1) (act1 J I h D).2.2.2.2).1
+                (TriEq[K, J, k, UU.uAct J I h D.1, D.2.1, phJ, (act1 J I h D).2.2.2.1].T1.tri)
+                TriEq[K, J, k, UU.uAct J I h D.1, D.2.1, phJ, (act1 J I h D).2.2.2.1].triEq
+                (GL.eqDSub RK RJ (lift K J k D.2.1 phJ) (TD J (UU.uAct J I h D.1) D.2.1 phJ (act1 J I h D).2.2.2.1) (act1 J I h D).2.2.2.2).2) >
+          (TD K (UU.uAct K J k (UU.uAct J I h D.1)) D.2.1 (GGlueD.phR K J k D.2.1 phJ) (act1 K J k (act1 J I h D)).2.2.2.1, (act1 K J k (act1 J I h D)).2.2.2.2) })
+   where {
+     phJ : Fin D.2.1 -> Phi J = GGlueD.phR J I h D.2.1 D.2.2.1 ;
+     phL : Fin D.2.1 -> Phi K = GGlueD.phR K I (compH K J I h k) D.2.1 D.2.2.1 ;
+     R0 : PCtx = RCm[I, D.2.1, D.2.2.1].RC ;
+     RJ : PCtx = RCm[J, D.2.1, GGlueD.phR J I h D.2.1 D.2.2.1].RC ;
+     RL : PCtx = RCm[K, D.2.1, GGlueD.phR K I (compH K J I h k) D.2.1 D.2.2.1].RC ;
+     RK : PCtx = RCm[K, D.2.1, GGlueD.phR K J k D.2.1 (GGlueD.phR J I h D.2.1 D.2.2.1)].RC ;
+     T0 : GX.EqDat[RCm[I, D.2.1, D.2.2.1].RC].Tri = TD I D.1 D.2.1 D.2.2.1 D.2.2.2.1 ;
+     cst : PSub[RCm[K, D.2.1, GGlueD.phR K J k D.2.1 (GGlueD.phR J I h D.2.1 D.2.2.1)].RC, RCm[K, D.2.1, GGlueD.phR K I (compH K J I h k) D.2.1 D.2.2.1].RC] =
+       castRC K D.2.1 (GGlueD.phR K I (compH K J I h k) D.2.1 D.2.2.1) (GGlueD.phR K J k D.2.1 (GGlueD.phR J I h D.2.1 D.2.2.1))
+         (funext (Fin D.2.1) (\ l -> Phi K) (GGlueD.phR K I (compH K J I h k) D.2.1 D.2.2.1) (GGlueD.phR K J k D.2.1 (GGlueD.phR J I h D.2.1 D.2.2.1))
+            (\ l -> symH (pre-comp K J I k h (D.2.2.1 l)))) ; } ;
+
+  opaque gd1-id ; opaque gd1-o ;
+
+  ----------------------------------------------------------------------
+  -- the code, and the presheaf of glue data with their equivalences
+
+  encGD1 (I : Ob) : Enc (GD1 I) =
+    encSig (UU.U0 I) (\ A -> (r : Nat) * ((ph : Fin r -> Phi I) * BE I A r ph)) (UU.encU I) (\ A ->
+    encSig Nat (\ r -> (ph : Fin r -> Phi I) * BE I A r ph) GUnivL.encNat (\ r ->
+    encSig (Fin r -> Phi I) (\ ph -> BE I A r ph) (encPi0 (Fin r) (\ l -> Phi I) (GUnivL.encFin r) (\ l -> GUnivL.encPhi I)) (\ ph ->
+    encSig (DD.BD I A r ph) (\ bd -> GX.EqDat[RCm[I, r, ph].RC].EqOn (TD I A r ph bd)) (DD.encBD I A r ph) (\ bd ->
+      GUnivEq.encEqOn RCm[I, r, ph].RC (TD I A r ph bd))))) ;
+
+  encGD1f (I : Ob) (D : GD1 I) : V1.V = (encGD1 I).1 D ;
+
+  encGD1inj (I : Ob) : V1.Inj (GD1 I) (encGD1f I) = (encGD1 I).2 ;
+
+  opaque encGD1f ; opaque encGD1inj ;
+
+  codeGD1 (I : Ob) : V1.V = V1.mkV (GD1 I) (encGD1f I) (encGD1inj I) ;
+
+  GD1Ctx : GPre[a+].PS.PCtx = new GPre[a+].PS.PCtx[codeGD1, act1, gd1-id, gd1-o] ;
+} ;

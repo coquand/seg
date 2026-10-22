@@ -1,0 +1,58 @@
+-- BoxBase.seg: MODEL/Poset/BoxBase.agda.  The level-free part of the open
+-- boxes: maps into Q * [1] (InQ), inverse images, the lid, finite index
+-- sets.  Shared by the boxes at every level.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+
+------------------------------------------------------------------------
+-- Maps into Q * [1]
+
+pr1T : Tree -> Tree = split { leaf n -> leaf n ; node s t -> s } ;
+
+InQ (W X : Ob) (Q : Subset X) (psi : Hom W (prodP X Iv)) : U a =
+  (s : El W) -> IsT (Q (pr1T (app W (prodP X Iv) psi s).1)) ;
+
+isProp-InQ (W X : Ob) (Q : Subset X) (psi : Hom W (prodP X Iv)) : isProp (InQ W X Q psi) =
+  isProp-Pi (El W) (\ s -> IsT (Q (pr1T (app W (prodP X Iv) psi s).1)))
+    (\ s -> isProp-IsT' (Q (pr1T (app W (prodP X Iv) psi s).1))) ;
+
+-- the first projection, on trees
+pr1-T (X : Ob) (w : El (prodP X Iv)) : Id Tree (app (prodP X Iv) X (pr1 X Iv) w).1 (pr1T w.1) = aux w.1 w.2
+ where { aux : (t : Tree) (h : IsT (car (prodP X Iv) t)) -> Id Tree (app (prodP X Iv) X (pr1 X Iv) (t, h)).1 (pr1T t) = split {
+           leaf n -> \ h -> absurd _ (false-true h) ;
+           node s t -> \ h -> refl s } ; } ;
+
+-- if psi lies in the inverse image of Q, then (h * [1]) psi lies in Q
+inQ-cyl (W Y X : Ob) (h : Hom Y X) (Q : Subset X) (psi : Hom W (prodP Y Iv)) (i : InQ W Y (pre Y X h Q) psi)
+  : InQ W X Q (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi) = \ s ->
+  transH (apH (\ t -> Q (pr1T t))
+            (transH (app-compH1 W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi s) (app-cylH1 Y X h (app W (prodP Y Iv) psi s))))
+   (transH (symH (Pre[Y, X, h, Q].pre-el (app (prodP Y Iv) Y (pr1 Y Iv) (app W (prodP Y Iv) psi s))))
+           (transH (apH (pre Y X h Q) (pr1-T Y (app W (prodP Y Iv) psi s))) (i s))) ;
+
+-- inverse images compose
+pre-comp (Z Y X : Ob) (g : Hom Z Y) (h : Hom Y X) (Q : Subset X) (z : Tree)
+  : Id Bool (pre Z Y g (pre Y X h Q) z) (pre Z X (compH Z Y X h g) Q z) = aux (car Z z) (refl (car Z z))
+ where { aux : (b : Bool) (e : Id Bool (car Z z) b)
+           -> Id Bool (Pre[Z, Y, g, pre Y X h Q].preB z b e) (Pre[Z, X, compH Z Y X h g, Q].preB z b e) = split {
+           true -> \ e -> transH (Pre[Y, X, h, Q].pre-el (app Z Y g (z, e))) (symH (apH Q (app-compH1 Z Y X h g (z, e)))) ;
+           false -> \ e -> refl false } ; } ;
+
+-- the lid commutes with restriction
+pw-lid (Y X : Ob) (h : Hom Y X) (e : El Iv)
+  : PW Y (prodP X Iv) (compH Y X (prodP X Iv) (lid X e) h) (compH Y (prodP Y Iv) (prodP X Iv) (cylH Y X h) (lid Y e)) =
+  \ y -> apH (\ k -> (app Y (prodP X Iv) k y).1) (symH (cyl-lid Y X h e)) ;
+
+------------------------------------------------------------------------
+-- Finite index sets
+
+Fin (r : Nat) : U a = (j : Nat) * IsT (ltb j r) ;

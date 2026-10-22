@@ -1,0 +1,26 @@
+-- DeltaExt.seg: Ext(alpha) as a fibrant type in line form for SIMPLICIAL
+-- SETS: the generic assembly (IvBase.FaU's GExtFib) at the Delta
+-- instances of the connections (DeltaBase.DCn: fillers by line MkFill,
+-- GFibFill) and of forall (DeltaForall.DFaU: one decidable sieve).
+
+level a ;
+open Base ;
+module DB = DeltaBase[a].DB ;
+module PR = DB.GPre[a] ;
+open PR.PS ;
+module GP = DB.GCofib[a] ;
+open DB.GLine[a] ;
+
+module DExt (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (cA : DB.GFibE[a].FE[G, A].Comp) (eA : DB.GFibE[a].FE[G, A].ESIC cA)
+  (cB : DB.GFibE[a].FE[GP.CofL[G, psi].resCtx, B].Comp) (eB : DB.GFibE[a].FE[GP.CofL[G, psi].resCtx, B].ESIC cB)
+  (eal : DB.GEquiv[a].EquivOp GP.CofL[G, psi].resCtx B (subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR) al)
+  (keal : DB.GCofEsi[a].PartialsEsi[DB.GExt[a].ExtDef[G, A, psi].EA', DB.GEquiv[a].HFib[GP.CofL[G, psi].resCtx, B,
+            subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR, al].FibT].KESI eal) {
+  module FA = DeltaBase[a].DCn.GFibFill[a].FibFill[G, A, cA, eA] ;
+  module FB = DeltaBase[a].DCn.GFibFill[a].FibFill[GP.CofL[G, psi].resCtx, B, cB, eB] ;
+
+  extFib : DB.GFibE[a].FibEL G =
+    DeltaForall[a].DFaU.GExtFib[a].ExtFib[G, A, psi, B, al, FA.k0, FA.k1, FB.k0, FB.k1, FA.k0e, FA.k1e, FB.k0e, FB.k1e, eal, keal].extFib ;
+} ;

@@ -1,0 +1,53 @@
+-- PElYonB.seg: El of the poset universe at a Yoneda code is the code,
+-- the composites, part 2 (PElYonA has the points and side values): at p,
+-- El's composite (TrEl) is F's composite of p moved along x^ o pair o
+-- diagonal (copA, selEq), which is p itself pointwise (copPE, GProbEq:
+-- the points Hl / He, the side values SV.Hv); so TrEl.cop = TrF.cop (copEq).
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosS[a] ; open PSB ; open PSCyl ;
+module W0 = V[a] ;
+open Arith[a] ;
+module V1 = V[a+] ;
+module BaseP = PosS[a].PSB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module L1 = BaseP.GPre[a+] ;
+open BaseP.GYon[a] ;
+module UL = BaseP.GUnivL.UL ;
+module PE0 = PElL[a] ;
+module PE2 = PElL2[a] ;
+module PY0 = PElYon[a] ;
+module PYA = PElYonA[a] ;
+
+module At (Z : Ob) (F : UL.U0 Z) (e e' : BaseP.IPt)
+  (sel : (Z1 : Ob) (F1 : UL.U0 Z1) -> BaseP.GLine[a].CompAtP[BaseP.GFam[a].famPath, yP Z1, F1.1, e, e'].CompAt)
+  (selEq : (Z' Z1 : Ob) (g : Hom Z' Z1) (F1 : UL.U0 Z1)
+     -> Id (BaseP.GLine[a].CompAtP[BaseP.GFam[a].famPath, yP Z', (UL.uAct Z' Z1 g F1).1, e, e'].CompAt)
+           (sel Z' (UL.uAct Z' Z1 g F1)) (BaseP.GSubst[a].SubC[yP Z', yP Z1, yH Z' Z1 g, F1.1, e, e', sel Z1 F1].compAt))
+  (X : Ob) (x : PY0.EY[Z, F].Dir[e, e', sel, selEq].CD.TV.EI X)
+  (p : PY0.EY[Z, F].Dir[e, e', sel, selEq].CD.PT.Partial[X, x]) {
+  module A0 = PYA.At[Z, F, e, e', sel, selEq, X, x, p] ;
+
+  -- the composites: F's at the moved problem and at the problem read in F
+  kx' : Hom X Z = x.1.1 X (idH X) (ptH X e') ;
+
+  copPE : Id (A0.MP.CG.TV'.EI X) (A0.P2.1, (sel Z F).cop X A0.P2 A0.Q2) (A0.Pz.1, (sel Z F).cop X A0.Pz A0.Qz) =
+    BaseP.GProbEq[a].ProbEq[yP Z, F.1, e, e', X].cop-eq (sel Z F) A0.P2 A0.Pz A0.Hl A0.He A0.Q2 A0.Qz (refl p.pr) (\ k -> refl (p.ps k).pQ)
+      (\ k W f i i' V g j -> A0.SV[k, W, f, i, i', V, g, j].Hv) ;
+
+  copA : Id (W0.Ix (F.1.tob X (A0.P2.1.1 X (idH X) (ptH X e'))))
+            ((sel (prodP X Iv) (PE0.FC X A0.l)).cop X A0.P1 A0.Q1) ((sel Z F).cop X A0.P2 A0.Q2) =
+    apH (\ c -> c.cop X A0.P1 A0.Q1) (selEq (prodP X Iv) Z A0.xh F) ;
+
+  copEq : Id (A0.DR.CD.TV'.T X x.1) (A0.DR.TrEl.cop X x p) (A0.DR.TrF.cop X x p) =
+    transH (apH (A0.EP.ps X (idH X, ptH X e')) copA)
+      (PY0.CVP[Z, F.1, X].cVback (A0.P2.1.1 X (idH X) (ptH X e')) kx' ((sel Z F).cop X A0.P2 A0.Q2) ((sel Z F).cop X A0.Pz A0.Qz)
+         (apH (A0.MP.KG'.endE X) copPE) (UL.fib0 X (A0.EY0.YN.cY X kx')) (A0.EP.Pv X (idH X, ptH X e')) (symH (A0.EY0.YN.Po X kx'))) ;
+
+  opaque copPE ; opaque copEq ;
+} ;

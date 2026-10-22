@@ -1,0 +1,94 @@
+-- GTE3.seg (inside IvBase.Cn): transport along a line, part 3: the square
+-- omega of a fibre element v = (b , q) over w = (x , a) (TranspSq, in line
+-- form): the filler (line MkFill of the composition GTE2.OmK.PC, from e0),
+-- in the paths over ln x, along the line ell v : j |-> (q j , b), of the
+-- problem with no side whose start is the transport filler of b (uFP: a
+-- path over ln x from b to tr b).
+--
+--   omSq V v    the square: a line in j of paths over ln x
+--   om V v      its end at e1: a path over ln x from b to a
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module Om (G : PCtx) (A : PTy[G]) (d : Bool) (ca : CompAtP[GFam[lv].famPath, G, A, src d, tgt d].CompAt)
+  (c01 : CompAtP[GFam[lv].famPath, G, A, e0, e1].CompAt)
+  (D : PCtx) (ln : PSub[D, GFam[lv].famPath.pth G]) {
+  module FM = GFam[lv] ;
+  module KK = GTE2[lv].OmK[G, A, d, ca, c01, D, ln] ;
+  module T1 = KK.T1 ;
+  module HF = KK.HF ;
+  module TA = KK.TA ;
+  module PC = KK.PC ;
+  module PT = KK.PT ;
+  module LS = LevKit[FM.famPath, FM.famConn, G, A, src d] ;
+  module FS = GFillFib[lv].FillLineFib[FM.famPath, FM.famConn, KK.K, PT.PathP, true, PC.compAt] ;
+  kS : LineFibP[FM.famPath, KK.K, PT.PathP].FibAt e0 = FS.fibAt ;
+  module LT = LevKit[FM.famPath, FM.famConn, G, A, tgt d] ;
+
+  module W (V : Ob) (v : HF.TF.EI V) {
+    module L = KK.FL[V, v] ;
+
+    xb : HF.TB.EI V = HF.fibB V v ;
+
+    y0 : W0.Ix (KK.K.ob V) = L.lw V (idH V) (ptH V e0) ;
+
+    u : T1.CA.TS.EI V = T1.uF V xb ;
+
+    t (W : Ob) (f : Hom W V) (i : Hom W Iv) : TA.EI W = FM.famConn.levA G A V (T1.CA.EK.lineL V u) W f i ;
+
+    tn (V' W : Ob) (g : Hom V' W) (f : Hom W V) (i : Hom W Iv)
+      : Id (TA.EI V') (TA.E.act V' W g (t W f i)) (t V' (compH V' W V f g) (compH V' W Iv i g)) =
+      FM.famConn.levA-nat G A V (T1.CA.EK.lineL V u) V' W g f i ;
+
+    -- the point x of v is the point of the line at e0
+    xq : Id (W0.Ix (D.ob V)) xb.1 y0.1.1 = symH (transH (HF.fibL-pt V v V (idH V) (ptH V e0)) (D.act-id V xb.1)) ;
+
+    tp (W : Ob) (f : Hom W V) (i : Hom W Iv) : Id (W0.Ix (G.ob W)) (t W f i).1 (KK.s V y0 W f i) =
+      transH (FM.famConn.levA-pt G A V (T1.CA.EK.lineL V u) W f i) (apH (\ z -> (ln.nt V z).1 W f i) xq) ;
+
+    -- the B part of the start point is xb
+    yB : Id (HF.TB.EI V) (y0.1.1, y0.2) xb = transH (L.lvB V (idH V) (ptH V e0)) (HF.TB.E.act-id V xb) ;
+
+    t0 : Id (TA.EI V) (t V (idH V) (ptH V (src d))) (KK.aE V y0) =
+      calc (TA.EI V) {
+          FM.famConn.levA G A V (T1.CA.EK.lineL V u) V (idH V) (ptH V (src d))
+        =< symH (LS.endL-lev V (T1.CA.EK.lineL V u)) >
+          LS.EK.endE V ((FM.famPath.pevA G A (src d)).mE V (T1.CA.EK.lineL V u))
+        =< apH (LS.EK.endE V) (T1.uF-start V xb) >
+          LS.EK.endE V (T1.LB.nt V xb)
+        =< apH (\ z -> LS.EK.endE V (T1.LB.nt V z)) (symH yB) >
+          KK.aE V y0 } ;
+
+    t1 : Id (TA.EI V) (t V (idH V) (ptH V (tgt d))) (KK.bE V y0) =
+      calc (TA.EI V) {
+          FM.famConn.levA G A V (T1.CA.EK.lineL V u) V (idH V) (ptH V (tgt d))
+        =< symH (LT.endL-lev V (T1.CA.EK.lineL V u)) >
+          LT.EK.endE V (T1.CA.endL V u)
+        =< apH (\ z -> LT.EK.endE V (T1.LA.nt V z)) (symH (HF.fibL-0 V v)) >
+          KK.bE V y0 } ;
+
+    -- the transport filler of b, as a path over ln x from b to tr b
+    uFP : W0.Ix (PT.tobP V y0) = PT.mkPath V y0 t tn tp t0 t1 ;
+
+    xh : PC.CP.TV.EI V = (L.ell, uFP) ;
+
+    emptyP : PC.CP.PT.Partial[V, xh] =
+      new PC.CP.PT.Partial[V, xh, zero, \ l -> absurd _ (false-true l.2), \ l j W f i i' -> absurd _ (false-true l.2)] ;
+
+    -- the square: a line (in j) of paths over ln x, from uFP
+    omSq : PC.CP.TS.EI V = (xh, kS.kop V xh emptyP) ;
+
+    -- its end at e1: a path over ln x from b to a
+    omE : PC.CP.TV'.EI V = PC.CP.endL V omSq ;
+  } ;
+} ;

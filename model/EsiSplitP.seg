@@ -1,0 +1,124 @@
+-- EsiSplitP.seg: MODEL/Poset/EsiSplitP.agda.  EsiSplit.SideIns for partial
+-- elements (Cofib.Partials): the insh-e / insh-Q / insh-v fields of
+-- CofEsi.InsPH for two lists of PSides [first list ++ second list], an
+-- empty side inserted in the first.  Rel and SI as in EsiSplit.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+open Cofib[a] ; open GP ;
+open ExtKit[a] ;
+open EsiSplit[a] ;
+
+module PSideIns (D : PCtx) (C : PTy[D]) {
+  open PR.TyL[D, C] ;
+  open Partials[D, C] ;
+
+  -- the hypotheses on the second family S' (over r1' = suc r1)
+  module Rel (X : Ob) (k r1 r2 : Nat) (hk : IsT (leb k r1)) (x x' : Pt X)
+    (S : Plus (Fin r1) (Fin r2) -> PSide[X, x]) (r1' : Nat) (S' : Plus (Fin r1') (Fin r2) -> PSide[X, x']) {
+    er1 : Id Nat r1' (suc r1) ;
+    eE (m' : Fin r1') (P : Id Nat m'.1 k) : Id (Subset X) (S' (inl m')).pQ (emptyS X) ;
+    eQL (m : Fin r1) (m' : Fin r1') (P : Id Nat m'.1 (skipN k m.1))
+      : Id (Subset X) (S' (inl m')).pQ (S (inl m)).pQ ;
+    eQR (j : Fin r2) : Id (Subset X) (S' (inr j)).pQ (S (inr j)).pQ ;
+    eVL (m : Fin r1) (m' : Fin r1') (P : Id Nat m'.1 (skipN k m.1))
+      (W : Ob) (f : Hom W X) (i : Lands W X (S' (inl m')).pQ f) (i' : Lands W X (S (inl m)).pQ f)
+      : Id (EI W) ((S' (inl m')).pv W f i) ((S (inl m)).pv W f i') ;
+    eVR (j : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (S' (inr j)).pQ f) (i' : Lands W X (S (inr j)).pQ f)
+      : Id (EI W) ((S' (inr j)).pv W f i) ((S (inr j)).pv W f i') ;
+  } ;
+
+  module SI (X : Ob) (k r1 r2 : Nat) (hk : IsT (leb k r1)) (x x' : Pt X)
+    (S : Plus (Fin r1) (Fin r2) -> PSide[X, x]) (r1' : Nat) (S' : Plus (Fin r1') (Fin r2) -> PSide[X, x'])
+    (R : Rel[X, k, r1, r2, hk, x, x', S, r1', S']) {
+
+    QLTy (r1'' : Nat) (S'' : Plus (Fin r1'') (Fin r2) -> PSide[X, x']) : U a =
+      (m : Fin r1) (m' : Fin r1'') -> Id Nat m'.1 (skipN k m.1) -> Id (Subset X) (S'' (inl m')).pQ (S (inl m)).pQ ;
+
+    QRTy (r1'' : Nat) (S'' : Plus (Fin r1'') (Fin r2) -> PSide[X, x']) : U a =
+      (j : Fin r2) -> Id (Subset X) (S'' (inr j)).pQ (S (inr j)).pQ ;
+
+    VLTy (r1'' : Nat) (S'' : Plus (Fin r1'') (Fin r2) -> PSide[X, x']) : U a =
+      (m : Fin r1) (m' : Fin r1'') -> Id Nat m'.1 (skipN k m.1)
+      -> (W : Ob) (f : Hom W X) (i : Lands W X (S'' (inl m')).pQ f) (i' : Lands W X (S (inl m)).pQ f)
+      -> Id (EI W) ((S'' (inl m')).pv W f i) ((S (inl m)).pv W f i') ;
+
+    VRTy (r1'' : Nat) (S'' : Plus (Fin r1'') (Fin r2) -> PSide[X, x']) : U a =
+      (j : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (S'' (inr j)).pQ f) (i' : Lands W X (S (inr j)).pQ f)
+      -> Id (EI W) ((S'' (inr j)).pv W f i) ((S (inr j)).pv W f i') ;
+
+    -- related index pairs, once r1' = suc r1
+    qRel (S'' : Plus (Fin (suc r1)) (Fin r2) -> PSide[X, x']) (qL : QLTy (suc r1) S'') (qR : QRTy (suc r1) S'')
+      : (s' : Plus (Fin (suc r1)) (Fin r2)) (s : Plus (Fin r1) (Fin r2)) -> SR r1 r2 k s' s -> Id (Subset X) (S'' s').pQ (S s).pQ = split {
+      inl l' -> split { inl l -> \ P -> qL l l' P ; inr j -> \ P -> absurd _ P } ;
+      inr j' -> split {
+        inl l -> \ P -> absurd _ P ;
+        inr j -> \ P -> transH (apH (\ z -> (S'' (inr z)).pQ) (fin-eq r2 j' j P)) (qR j) } } ;
+
+    vRel (S'' : Plus (Fin (suc r1)) (Fin r2) -> PSide[X, x']) (vL : VLTy (suc r1) S'') (vR : VRTy (suc r1) S'')
+      : (s' : Plus (Fin (suc r1)) (Fin r2)) (s : Plus (Fin r1) (Fin r2)) -> SR r1 r2 k s' s
+        -> (W : Ob) (f : Hom W X) (i : Lands W X (S'' s').pQ f) (i' : Lands W X (S s).pQ f)
+        -> Id (EI W) ((S'' s').pv W f i) ((S s).pv W f i') = split {
+      inl l' -> split { inl l -> \ P W f i i' -> vL l l' P W f i i' ; inr j -> \ P W f i i' -> absurd _ P } ;
+      inr j' -> split {
+        inl l -> \ P W f i i' -> absurd _ P ;
+        inr j -> \ P W f i i' ->
+          idJ (Fin r2) j
+            (\ j2 E -> (i2 : Lands W X (S'' (inr j2)).pQ f) -> Id (EI W) ((S'' (inr j2)).pv W f i2) ((S (inr j)).pv W f i'))
+            (\ i2 -> vR j W f i2 i')
+            j' (symH (fin-eq r2 j' j P)) i } } ;
+
+    InsQTy (r1'' : Nat) (S'' : Plus (Fin r1'') (Fin r2) -> PSide[X, x']) : U a =
+      (n : Nat) (h : IsT (ltb n (plus r1 r2))) (h' : IsT (ltb (skipN k n) (plus r1'' r2)))
+      -> Id (Subset X) ((S'' (splitF r1'' r2 (skipN k n, h'))).pQ) ((S (splitF r1 r2 (n, h))).pQ) ;
+
+    insh-Q : InsQTy r1' S' =
+      idJ Nat (suc r1)
+        (\ r3 E -> (S'' : Plus (Fin r3) (Fin r2) -> PSide[X, x']) -> QLTy r3 S'' -> QRTy r3 S'' -> InsQTy r3 S'')
+        (\ S'' qL qR n h h' ->
+           qRel S'' qL qR (splitF (suc r1) r2 (skipN k n, h')) (splitF r1 r2 (n, h)) (split-skip r1 r2 k n hk h h'))
+        r1' (symH R.er1) S' R.eQL R.eQR ;
+
+    InsVTy (r1'' : Nat) (S'' : Plus (Fin r1'') (Fin r2) -> PSide[X, x']) : U a =
+      (n : Nat) (h : IsT (ltb n (plus r1 r2))) (h' : IsT (ltb (skipN k n) (plus r1'' r2)))
+      (W : Ob) (f : Hom W X) (i : Lands W X (S'' (splitF r1'' r2 (skipN k n, h'))).pQ f)
+      (i' : Lands W X (S (splitF r1 r2 (n, h))).pQ f)
+      -> Id (EI W) ((S'' (splitF r1'' r2 (skipN k n, h'))).pv W f i) ((S (splitF r1 r2 (n, h))).pv W f i') ;
+
+    insh-v : InsVTy r1' S' =
+      idJ Nat (suc r1)
+        (\ r3 E -> (S'' : Plus (Fin r3) (Fin r2) -> PSide[X, x']) -> VLTy r3 S'' -> VRTy r3 S'' -> InsVTy r3 S'')
+        (\ S'' vL vR n h h' W f i i' ->
+           vRel S'' vL vR (splitF (suc r1) r2 (skipN k n, h')) (splitF r1 r2 (n, h)) (split-skip r1 r2 k n hk h h') W f i i')
+        r1' (symH R.er1) S' R.eVL R.eVR ;
+
+    EETy (r1'' : Nat) (S'' : Plus (Fin r1'') (Fin r2) -> PSide[X, x']) : U a =
+      (m' : Fin r1'') -> Id Nat m'.1 k -> Id (Subset X) (S'' (inl m')).pQ (emptyS X) ;
+
+    InsETy (r1'' : Nat) (S'' : Plus (Fin r1'') (Fin r2) -> PSide[X, x']) : U a =
+      (hk' : IsT (ltb k (plus r1'' r2))) -> Id (Subset X) (S'' (splitF r1'' r2 (k, hk'))).pQ (emptyS X) ;
+
+    insh-e : InsETy r1' S' =
+      idJ Nat (suc r1)
+        (\ r3 E -> (S'' : Plus (Fin r3) (Fin r2) -> PSide[X, x']) -> EETy r3 S'' -> InsETy r3 S'')
+        (\ S'' eE'' hk' ->
+           transH (apH (\ s -> (S'' s).pQ) (split-k r1 r2 k hk hk').2.2)
+                  (eE'' (split-k r1 r2 k hk hk').1 (split-k r1 r2 k hk hk').2.1))
+        r1' (symH R.er1) S' R.eE ;
+
+    opaque insh-Q ; opaque insh-v ; opaque insh-e ;
+  } ;
+} ;
+

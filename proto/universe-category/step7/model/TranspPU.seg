@@ -1,0 +1,145 @@
+-- TranspPU.seg: MODEL/Univ/TranspPU.agda.  Transport is an equivalence,
+-- part 5: uniformity of the B component (bn-unif, UU-unif) and of the path
+-- square (FEp-unif): restricting the data along h gives the data at
+-- (w h , p h).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module CN = Conn[a] ;
+open CN ;
+module CF = Cofib[a] ;
+open CF ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open TranspSqN[a] ;
+open TranspP[a] ;
+
+-- mF along (h * [1]) g is mF along g: both send z to (z , j (g (pX z))),
+-- since h * [1] does not move the j coordinate
+mF-cyl (X Y W : Ob) (h : Hom Y X) (g : Hom W (prodP Y Iv))
+  : PW (prodP W Iv) (prodP (prodP W Iv) Iv) (mF X W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g)) (mF Y W g) = \ z ->
+  calc Tree {
+      (app (prodP W Iv) (prodP (prodP W Iv) Iv) (mF X W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g)) z).1
+    =< app-mF1 X W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g) z >
+      node z.1 (pr2T (app W (prodP X Iv) (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g) (app (prodP W Iv) W (pX W) z)).1)
+    =< apH (\ y -> node z.1 (pr2T y))
+         (transH (app-compH1 W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g (app (prodP W Iv) W (pX W) z))
+                 (app-cylH1 Y X h (app W (prodP Y Iv) g (app (prodP W Iv) W (pX W) z)))) >
+      node z.1 (p2 Y Iv (app W (prodP Y Iv) g (app (prodP W Iv) W (pX W) z))).1
+    =< apH (\ y -> node z.1 y) (pr2-T Y (app W (prodP Y Iv) g (app (prodP W Iv) W (pX W) z))) >
+      node z.1 (pr2T (app W (prodP Y Iv) g (app (prodP W Iv) W (pX W) z)).1)
+    =< symH (app-mF1 Y W g z) >
+      (app (prodP W Iv) (prodP (prodP W Iv) Iv) (mF Y W g) z).1 } ;
+
+module TPU (D L : PCtx) (S : PTy[L])
+  (ln : (W : Ob) -> W0.Ix (D.ob W) -> W0.Ix (L.ob (prodP W Iv)))
+  (lnat : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D.ob W))
+          -> Id (W0.Ix (L.ob (prodP W' Iv))) (L.act (prodP W' Iv) (prodP W Iv) (cylH W' W g) (ln W x)) (ln W' (D.act W' W g x)))
+  (d : Bool) (fS : FibM.FillDef[L, S].FillOp[src d]) (f0 : FibM.FillDef[L, S].FillOp[e0])
+  (fT : FibM.FillDef[L, S].FillOp[tgt d]) {
+  open Transp[a].Tp[D, L, S, ln, lnat, d, fS] ;
+  open TranspSq[a].Sq[D, L, S, ln, lnat, d, fS, f0] ;
+  open TranspSqN[a].SqN[D, L, S, ln, lnat, d, fS, f0] ;
+  open TranspB[a].TB[D, L, S, ln, lnat, d, fS, f0, fT] ;
+  open TranspP[a].TP[D, L, S, ln, lnat, d, fS, f0, fT] ;
+
+  bn-unif (Y X : Ob) (h : Hom Y X) (w : SEt.TD.EI X) (p : PX.Partial[X, w])
+    : Id (TS.EI Y) (ES.act Y X h (bnewS X w p)) (bnewS Y (EA.act Y X h w) (PX.restrictP Y X h w p)) =
+    transH (TS.PE.actSq Y X (prodP Y Iv) (prodP X Iv) (lid X s) h (cylH Y X h) (lid Y s) (hom-eq Y (prodP X Iv) (compH Y X (prodP X Iv) (lid X s) h) (compH Y (prodP Y Iv) (prodP X Iv) (cylH Y X h) (lid Y s)) (pw-lid Y X h s)) (FEb X w p))
+           (apH (ES.act Y (prodP Y Iv) (lid Y s)) (FEb-unif Y X h w p)) ;
+
+  UU-unif (Y X : Ob) (h : Hom Y X) (w : SEt.TD.EI X) (p : PX.Partial[X, w])
+    : (n : Nat) -> Id (TS.EI (prodP Y Iv)) (ES.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) (PP[X, w, p].UU n))
+                                           (PP[Y, EA.act Y X h w, PX.restrictP Y X h w p].UU n) = split {
+    zero ->
+      transH (uF-unif Y X h w.1 (bnewS X w p) (refl (en s X w.1)) (symH (enNat s Y X h w.1)))
+             (uF-cong Y (D.act Y X h w.1) (D.act Y X h w.1) (refl (D.act Y X h w.1))
+                (ES.act Y X h (bnewS X w p)) (bnewS Y (EA.act Y X h w) (PX.restrictP Y X h w p))
+                (symH (enNat s Y X h w.1)) (refl (en s Y (D.act Y X h w.1))) (bn-unif Y X h w p)) ;
+    suc n -> FEb-unif Y X h w p } ;
+
+  opaque bn-unif ; opaque UU-unif ;
+
+  module FU (Y X : Ob) (h : Hom Y X) (w : SEt.TD.EI X) (p : PX.Partial[X, w]) {
+    module PXx = PP[X, w, p] ;
+    module PYy = PP[Y, EA.act Y X h w, PX.restrictP Y X h w p] ;
+
+    Pl : Id (W0.Ix (L.ob (prodP (prodP Y Iv) Iv)))
+            (L.act (prodP (prodP Y Iv) Iv) (prodP (prodP X Iv) Iv) (cylH (prodP Y Iv) (prodP X Iv) (cylH Y X h)) PXx.rhoP) PYy.rhoP =
+      transH (lnat (prodP Y Iv) (prodP X Iv) (cylH Y X h) (D.act (prodP X Iv) X (pX X) w.1))
+             (apH (ln (prodP Y Iv)) (DL.actSq (prodP Y Iv) (prodP X Iv) Y X (pX X) (cylH Y X h) h (pX Y) (hom-eq (prodP Y Iv) X (compH (prodP Y Iv) (prodP X Iv) X (pX X) (cylH Y X h)) (compH (prodP Y Iv) Y X h (pX Y)) (CN.Nat[true, Y, X, h].pX-cylPW)) w.1)) ;
+
+    lwEq : Id (TS.EI (prodP Y Iv)) (ES.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) PXx.lwP) PYy.lwP =
+      transH (TS.PE.actSq (prodP Y Iv) (prodP X Iv) Y X (pX X) (cylH Y X h) h (pX Y) (hom-eq (prodP Y Iv) X (compH (prodP Y Iv) (prodP X Iv) X (pX X) (cylH Y X h)) (compH (prodP Y Iv) Y X h (pX Y)) (CN.Nat[true, Y, X, h].pX-cylPW)) (bnewS X w p))
+             (apH (ES.act (prodP Y Iv) Y (pX Y)) (bn-unif Y X h w p)) ;
+
+    -- pX (h * 1) = h pX
+    eQ2 (k : Fin p.pr) : Id (Subset (prodP Y Iv)) (pre (prodP Y Iv) (prodP X Iv) (cylH Y X h) (PXx.QP k)) (PYy.QP k) =
+      calc (Subset (prodP Y Iv)) {
+        pre (prodP Y Iv) (prodP X Iv) (cylH Y X h) (pre (prodP X Iv) X (pX X) (p.ps k).pQ)
+          =< pre-comp (prodP Y Iv) (prodP X Iv) X (cylH Y X h) (pX X) (p.ps k).pQ >
+        pre (prodP Y Iv) X (compH (prodP Y Iv) (prodP X Iv) X (pX X) (cylH Y X h)) (p.ps k).pQ
+          =< apH (\ u -> pre (prodP Y Iv) X u (p.ps k).pQ) (pX-cyl Y X h) >
+        pre (prodP Y Iv) X (compH (prodP Y Iv) Y X h (pX Y)) (p.ps k).pQ
+          =< symH (pre-comp (prodP Y Iv) Y X (pX Y) h (p.ps k).pQ) >
+        pre (prodP Y Iv) Y (pX Y) (pre Y X h (p.ps k).pQ) } ;
+
+    inner (W : Ob) (g : Hom W (prodP Y Iv)) : PW W X (pXf W X (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g)) (compH W Y X h (pXf W Y g)) =
+      pw-of-homEq W X _ _ (symH (pXf-cyl W Y X h g)) ;
+
+    ev1 (k : Fin (suc (suc zero))) (W : Ob) (g : Hom W (prodP Y Iv))
+      (i : Lands W (prodP Y Iv) (pre (prodP Y Iv) (prodP X Iv) (cylH Y X h) (endQ (jE k.1) X)) g)
+      (i' : Lands W (prodP Y Iv) (endQ (jE k.1) Y) g)
+      : Id (TS.EI (prodP W Iv)) (PXx.V1 k.1 W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g)) (PYy.V1 k.1 W g) =
+      transH (TS.PE.actEq (prodP W Iv) (prodP X Iv) (cylH W X (pXf W X (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g))) (compH (prodP W Iv) (prodP Y Iv) (prodP X Iv) (cylH Y X h) (cylH W Y (pXf W Y g))) (hom-eq (prodP W Iv) (prodP X Iv) (cylH W X (pXf W X (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g))) (compH (prodP W Iv) (prodP Y Iv) (prodP X Iv) (cylH Y X h) (cylH W Y (pXf W Y g))) (pw-trans (prodP W Iv) (prodP X Iv) (cylH W X (pXf W X (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g)))
+                   (cylH W X (compH W Y X h (pXf W Y g))) (compH (prodP W Iv) (prodP Y Iv) (prodP X Iv) (cylH Y X h) (cylH W Y (pXf W Y g)))
+                   (pw-cylH W X (pXf W X (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g)) (compH W Y X h (pXf W Y g)) (inner W g))
+                   (pw-sym (prodP W Iv) (prodP X Iv) (compH (prodP W Iv) (prodP Y Iv) (prodP X Iv) (cylH Y X h) (cylH W Y (pXf W Y g)))
+                      (cylH W X (compH W Y X h (pXf W Y g))) (pw-cyl-comp W Y X h (pXf W Y g))))) (PXx.UU k.1))
+       (transH (symH (TS.PE.actTri (prodP W Iv) (prodP Y Iv) (prodP X Iv) (cylH Y X h) (cylH W Y (pXf W Y g)) (compH (prodP W Iv) (prodP Y Iv) (prodP X Iv) (cylH Y X h) (cylH W Y (pXf W Y g))) (hom-eq (prodP W Iv) (prodP X Iv) (compH (prodP W Iv) (prodP Y Iv) (prodP X Iv) (cylH Y X h) (cylH W Y (pXf W Y g))) (compH (prodP W Iv) (prodP Y Iv) (prodP X Iv) (cylH Y X h) (cylH W Y (pXf W Y g))) (\ z -> refl (app (prodP W Iv) (prodP X Iv) (compH (prodP W Iv) (prodP Y Iv) (prodP X Iv) (cylH Y X h) (cylH W Y (pXf W Y g))) z).1)) (PXx.UU k.1)))
+               (apH (ES.act (prodP W Iv) (prodP Y Iv) (cylH W Y (pXf W Y g))) (UU-unif Y X h w p k.1))) ;
+
+    ev2 (k : Fin p.pr) (W : Ob) (g : Hom W (prodP Y Iv))
+      (i : Lands W (prodP Y Iv) (pre (prodP Y Iv) (prodP X Iv) (cylH Y X h) (PXx.QP k)) g)
+      (i' : Lands W (prodP Y Iv) (PYy.QP k) g)
+      : Id (TS.EI (prodP W Iv))
+           (PXx.V2 k W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g) (lands-pre W (prodP Y Iv) (prodP X Iv) (cylH Y X h) (PXx.QP k) g i))
+           (PYy.V2 k W g i') =
+      transH (apH (\ v -> ES.act (prodP W Iv) (prodP (prodP W Iv) Iv) (mF X W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g)) (omF W (fdOf W v)))
+                (PX.pv-hom X w (p.ps k) W (pXf W X (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g)) (compH W Y X h (pXf W Y g)) (hom-eq W X (pXf W X (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g)) (compH W Y X h (pXf W Y g)) (inner W g)) (PXx.gOf k W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g)
+                      (lands-pre W (prodP Y Iv) (prodP X Iv) (cylH Y X h) (PXx.QP k) g i)) (lands-pre W Y X h (p.ps k).pQ (pXf W Y g) (PYy.gOf k W g i'))))
+             (TS.PE.actEq (prodP W Iv) (prodP (prodP W Iv) Iv) (mF X W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g)) (mF Y W g) (hom-eq (prodP W Iv) (prodP (prodP W Iv) Iv) (mF X W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) g)) (mF Y W g) (mF-cyl X Y W h g)) (omF W (fdOf W ((p.ps k).pv W (compH W Y X h (pXf W Y g)) (lands-pre W Y X h (p.ps k).pQ (pXf W Y g) (PYy.gOf k W g i')))))) ;
+
+    res : Id (TS.EI (prodP (prodP Y Iv) Iv))
+             (ES.act (prodP (prodP Y Iv) Iv) (prodP (prodP X Iv) Iv) (cylH (prodP Y Iv) (prodP X Iv) (cylH Y X h)) (FEp X w p))
+             (FEp Y (EA.act Y X h w) (PX.restrictP Y X h w p)) =
+      transH (LBs.FE-unif (prodP Y Iv) (prodP X Iv) (cylH Y X h) PXx.rhoP p.pr (suc (suc zero)) PXx.LDp)
+        (LBs.FE-congH (prodP Y Iv)
+           (L.act (prodP (prodP Y Iv) Iv) (prodP (prodP X Iv) Iv) (cylH (prodP Y Iv) (prodP X Iv) (cylH Y X h)) PXx.rhoP)
+           PYy.rhoP p.pr (suc (suc zero)) Pl
+           (LBs.rLD (prodP Y Iv) (prodP X Iv) (cylH Y X h) PXx.rhoP p.pr (suc (suc zero)) PXx.LDp) PYy.LDp
+           lwEq eQ2 (\ k -> endQ-cyl (jE k.1) Y X h) ev2 ev1) ;
+  } ;
+
+  FEp-unif (Y X : Ob) (h : Hom Y X) (w : SEt.TD.EI X) (p : PX.Partial[X, w])
+    : Id (TS.EI (prodP (prodP Y Iv) Iv))
+         (ES.act (prodP (prodP Y Iv) Iv) (prodP (prodP X Iv) Iv) (cylH (prodP Y Iv) (prodP X Iv) (cylH Y X h)) (FEp X w p))
+         (FEp Y (EA.act Y X h w) (PX.restrictP Y X h w p)) = FU[Y, X, h, w, p].res ;
+
+  opaque FEp-unif ;
+} ;

@@ -1,0 +1,216 @@
+-- UnivCtx.seg: MODEL/Univ/UCtx.agda (renamed: a file module UCtx would
+-- shadow the presheaf UCtx).  The universe as a presheaf one level
+-- up (UCtx), as a type over any context (UTy), and the generic family EGen
+-- over it: its fibre at F : U0 I is the fibre of F at the identity of I.
+--
+-- The fibre of uAct f F at the identity of J is the fibre of F at the
+-- point f id of y I (idf-eq: it is the restriction f^* id of the generic
+-- point).  Transport along an equation G1 = G2 in U0 J between fibrant
+-- types whose fibres at the identity are fibres of the same type at two
+-- points y, y' is transport along any path y = y' (V is a set:
+-- substFib-irr, fib-move), and moving the target of an action along such a
+-- path is the action to the new target (tact-move).
+--
+-- Agda's Lift/lower disappear (cumulativity); its dot patterns in toG are
+-- two idJ's.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module L1 = PreL[a, a+].PS ;
+open Yon[a] ;
+open UAct[a] ;
+open UEnc[a] ;
+open Encode[a, a+] ;
+
+------------------------------------------------------------------------
+-- The universe as a presheaf, and as a type
+
+-- the identity and the composition of the category PosetCat are idH and
+-- compH; the presheaf laws are stated with the former, uAct-id and uAct-o
+-- with the latter
+idC-idH (I : Ob) : Id (Hom I I) (PosetCat.idC I) (idH I) = refl (idH I) ;
+
+oC-compH (K J I : Ob) (f : Hom J I) (g : Hom K J) : Id (Hom K I) (PosetCat.oC K J I f g) (compH K J I f g) =
+  refl (compH K J I f g) ;
+
+uAct-idC (I : Ob) (F : U0 I) : Id (U0 I) (uAct I I (PosetCat.idC I) F) F =
+  transH (apH (\ h -> uAct I I h F) (idC-idH I)) (uAct-id I F) ;
+
+uAct-oC (K J I : Ob) (f : Hom J I) (g : Hom K J) (F : U0 I)
+  : Id (U0 K) (uAct K I (PosetCat.oC K J I f g) F) (uAct K J g (uAct J I f F)) =
+  transH (apH (\ h -> uAct K I h F) (oC-compH K J I f g)) (uAct-o K J I f g F) ;
+
+opaque uAct-idC ; opaque uAct-oC ;
+
+UCtx : L1.PCtx = new L1.PCtx[codeU, \ J I f F -> uAct J I f F, uAct-idC, uAct-oC] ;
+
+UTy (G : L1.PCtx) : L1.PTy[G] = new L1.PTy[G, \ I x -> codeU I, \ J I f x y e F -> uAct J I f F,
+  \ I x e F -> uAct-idC I F, \ K J I f g x y z e1 e2 e3 F -> uAct-oC K J I f g F] ;
+
+------------------------------------------------------------------------
+-- The generic family
+
+-- an iterative set of level a as one of level a+
+smallF (v : W0.V) (z : W0.Ix v) : V1.V = (encIx0 v).1 z ;
+
+smallInj (v : W0.V) : V1.Inj (W0.Ix v) (smallF v) = (encIx0 v).2 ;
+
+opaque smallF ; opaque smallInj ;
+
+smallC (v : W0.V) : V1.V = V1.mkV (W0.Ix v) (smallF v) (smallInj v) ;
+
+-- the fibre at the identity
+fib0 (I : Ob) (F : U0 I) : W0.V = F.1.tob I (idH I) ;
+
+-- a loop in V transports trivially
+loopV (v : W0.V) (q : Id W0.V v v) (z : W0.Ix v) : Id (W0.Ix v) (subst W0.V (\ w -> W0.Ix w) v v q z) z =
+  apH (\ q' -> subst W0.V (\ w -> W0.Ix w) v v q' z) (W0.isSetV v v q (refl v)) ;
+
+-- transport along an equation of fibrant types with the same fibre
+substF (J : Ob) (G1 G2 : U0 J) (e : Id (U0 J) G1 G2) (z : W0.Ix (fib0 J G1))
+  : Id (W0.Ix (fib0 J G2)) (subst (U0 J) (\ G' -> W0.Ix (fib0 J G')) G1 G2 e z)
+                          (subst W0.V (\ w -> W0.Ix w) (fib0 J G1) (fib0 J G2) (ap (U0 J) W0.V (fib0 J) G1 G2 e) z) =
+  subst-ap (U0 J) W0.V (fib0 J) (\ w -> W0.Ix w) G1 G2 e z ;
+
+-- the restriction of the identity of I along f, seen in two ways
+idf-eq (J I : Ob) (f : Hom J I) : Id (Hom J I) ((yP I).act J I f (idH I)) ((yH J I f).nt J (idH J)) =
+  calc (Hom J I) {
+    compH J I I (idH I) f =< comp-idl J I f >
+    f                     =< symH (comp-idr J I f) >
+    compH J J I f (idH J) } ;
+
+-- transport of a fibre element does not depend on the path (V is a set)
+substFib-irr (v w : W0.V) (q q' : Id W0.V v w) (z : W0.Ix v)
+  : Id (W0.Ix w) (subst W0.V (\ u -> W0.Ix u) v w q z) (subst W0.V (\ u -> W0.Ix u) v w q' z) =
+  apH (\ q'' -> subst W0.V (\ u -> W0.Ix u) v w q'' z) (W0.isSetV v w q q') ;
+
+-- a path between two fibres of a family o is the image of a path of indices
+fib-move (X : U a) (o : X -> W0.V) (y y' : X) (p : Id X y y') (q : Id W0.V (o y) (o y')) (z : W0.Ix (o y))
+  : Id (W0.Ix (o y')) (subst W0.V (\ u -> W0.Ix u) (o y) (o y') q z) (subst X (\ x -> W0.Ix (o x)) y y' p z) =
+  transH (substFib-irr (o y) (o y') q (ap X W0.V o y y' p) z)
+         (symH (subst-ap X W0.V o (\ u -> W0.Ix u) y y' p z)) ;
+
+-- moving the target of an action along a path of points
+tact-move (G : PCtx) (A : PTy[G]) (J I : Ob) (f : Hom J I) (x : W0.Ix (G.ob I)) (y y' : W0.Ix (G.ob J))
+  (e : Id (W0.Ix (G.ob J)) (G.act J I f x) y) (e' : Id (W0.Ix (G.ob J)) (G.act J I f x) y')
+  (p : Id (W0.Ix (G.ob J)) y y') (b : W0.Ix (A.tob I x))
+  : Id (W0.Ix (A.tob J y')) (subst (W0.Ix (G.ob J)) (\ u -> W0.Ix (A.tob J u)) y y' p (A.tact J I f x y e b))
+                           (A.tact J I f x y' e' b) =
+  idJ (W0.Ix (G.ob J)) y
+    (\ u q -> (e2 : Id (W0.Ix (G.ob J)) (G.act J I f x) u)
+       -> Id (W0.Ix (A.tob J u)) (subst (W0.Ix (G.ob J)) (\ u' -> W0.Ix (A.tob J u')) y u q (A.tact J I f x y e b))
+                                (A.tact J I f x u e2 b))
+    (\ e2 -> tact-irr G A J I f x y e e2 b) y' p e' ;
+
+-- moving the source of an action along a path of points
+tact-src-move (G : PCtx) (A : PTy[G]) (J I : Ob) (f : Hom J I) (x x' : W0.Ix (G.ob I)) (y : W0.Ix (G.ob J))
+  (p : Id (W0.Ix (G.ob I)) x x') (e : Id (W0.Ix (G.ob J)) (G.act J I f x') y) (e' : Id (W0.Ix (G.ob J)) (G.act J I f x) y)
+  (b : W0.Ix (A.tob I x))
+  : Id (W0.Ix (A.tob J y)) (A.tact J I f x' y e (subst (W0.Ix (G.ob I)) (\ u -> W0.Ix (A.tob I u)) x x' p b))
+                          (A.tact J I f x y e' b) =
+  idJ (W0.Ix (G.ob I)) x
+    (\ u q -> (e2 : Id (W0.Ix (G.ob J)) (G.act J I f u) y)
+       -> Id (W0.Ix (A.tob J y)) (A.tact J I f u y e2 (subst (W0.Ix (G.ob I)) (\ u' -> W0.Ix (A.tob I u')) x u q b))
+                                (A.tact J I f x y e' b))
+    (\ e2 -> tact-irr G A J I f x y e2 e' b) x' p e ;
+
+-- the action of the generic family: act on the fibre of F, at the point f id
+tactG (J I : Ob) (f : Hom J I) (F : U0 I) (F' : U0 J) (e : Id (U0 J) (uAct J I f F) F') (z : W0.Ix (fib0 I F)) : W0.Ix (fib0 J F') =
+  subst (U0 J) (\ G' -> W0.Ix (fib0 J G')) (uAct J I f F) F' e
+    (F.1.tact J I f (idH I) ((yH J I f).nt J (idH J)) (idf-eq J I f) z) ;
+
+-- along the identity: the fibre moves back along comp-idl, then tact-id
+tidG (I : Ob) (F : U0 I) (e : Id (U0 I) (uAct I I (idH I) F) F) (z : W0.Ix (fib0 I F))
+  : Id (W0.Ix (fib0 I F)) (tactG I I (idH I) F F e z) z =
+  calc (W0.Ix (fib0 I F)) {
+    tactG I I (idH I) F F e z
+      =< substF I (uAct I I (idH I) F) F e tz >
+    subst W0.V (\ u -> W0.Ix u) (fib0 I (uAct I I (idH I) F)) (fib0 I F) (ap (U0 I) W0.V (fib0 I) (uAct I I (idH I) F) F e) tz
+      =< fib-move (Hom I I) (F.1.tob I) y0 (idH I) (comp-idl I I (idH I))
+                  (ap (U0 I) W0.V (fib0 I) (uAct I I (idH I) F) F e) tz >
+    subst (Hom I I) (\ x -> W0.Ix (F.1.tob I x)) y0 (idH I) (comp-idl I I (idH I)) tz
+      =< tact-move (yP I) F.1 I I (idH I) (idH I) y0 (idH I) (idf-eq I I (idH I)) (comp-idl I I (idH I)) (comp-idl I I (idH I)) z >
+    F.1.tact I I (idH I) (idH I) (idH I) (comp-idl I I (idH I)) z
+      =< F.1.tact-id I (idH I) (comp-idl I I (idH I)) z >
+    z }
+ where {
+   y0 : Hom I I = (yH I I (idH I)).nt I (idH I) ;
+   tz : W0.Ix (F.1.tob I y0) = F.1.tact I I (idH I) (idH I) y0 (idf-eq I I (idH I)) z ; } ;
+
+module TO (K J I : Ob) (f : Hom J I) (g : Hom K J) (F : U0 I) (z : W0.Ix (fib0 I F)) {
+  Ff : U0 J = uAct J I f F ;
+
+  Ffg : U0 K = uAct K J g Ff ;
+
+  -- the two target points: (compH K J I f g) id, and f (g id)
+  y1 : Hom K I = (yH K I (compH K J I f g)).nt K (idH K) ;
+  y2 : Hom K I = (yH J I f).nt K ((yH K J g).nt K (idH K)) ;
+
+  -- they agree by associativity
+  p12 : Id (Hom K I) y1 y2 = comp-assoc K K J I f g (idH K) ;
+
+  -- the actions by f then g, read in F
+  e1 : Id (Hom J I) ((yP I).act J I f (idH I)) ((yH J I f).nt J (idH J)) = idf-eq J I f ;
+  e2 : Id (Hom K I) ((yP I).act K J g ((yH J I f).nt J (idH J))) y2 =
+    ntEq (yP J) (yP I) (yH J I f) K J g (idH J) ((yH K J g).nt K (idH K)) (idf-eq K J g) ;
+
+  tz : W0.Ix (F.1.tob K y1) = F.1.tact K I (compH K J I f g) (idH I) y1 (idf-eq K I (compH K J I f g)) z ;
+
+  base (E3 : Id (U0 K) (uAct K I (compH K J I f g) F) Ffg)
+    : Id (W0.Ix (fib0 K Ffg)) (tactG K I (compH K J I f g) F Ffg E3 z) (tactG K J g Ff Ffg (refl Ffg) (tactG J I f F Ff (refl Ff) z)) =
+    calc (W0.Ix (fib0 K Ffg)) {
+      tactG K I (compH K J I f g) F Ffg E3 z
+        =< substF K (uAct K I (compH K J I f g) F) Ffg E3 tz >
+      subst W0.V (\ u -> W0.Ix u) (fib0 K (uAct K I (compH K J I f g) F)) (fib0 K Ffg) (ap (U0 K) W0.V (fib0 K) (uAct K I (compH K J I f g) F) Ffg E3) tz
+        =< fib-move (Hom K I) (F.1.tob K) y1 y2 p12 (ap (U0 K) W0.V (fib0 K) (uAct K I (compH K J I f g) F) Ffg E3) tz >
+      subst (Hom K I) (\ x -> W0.Ix (F.1.tob K x)) y1 y2 p12 tz
+        =< tact-move (yP I) F.1 K I (compH K J I f g) (idH I) y1 y2 (idf-eq K I (compH K J I f g)) (transH (idf-eq K I (compH K J I f g)) p12) p12 z >
+      F.1.tact K I (compH K J I f g) (idH I) y2 (transH (idf-eq K I (compH K J I f g)) p12) z
+        =< F.1.tact-o K J I f g (idH I) ((yH J I f).nt J (idH J)) y2 e1 e2 (transH (idf-eq K I (compH K J I f g)) p12) z >
+      F.1.tact K J g ((yH J I f).nt J (idH J)) y2 e2 (F.1.tact J I f (idH I) ((yH J I f).nt J (idH J)) e1 z) } ;
+
+  res (F' : U0 J) (F'' : U0 K) (e1 : Id (U0 J) Ff F') (e2 : Id (U0 K) (uAct K J g F') F'') (e3 : Id (U0 K) (uAct K I (compH K J I f g) F) F'')
+    : Id (W0.Ix (fib0 K F'')) (tactG K I (compH K J I f g) F F'' e3 z) (tactG K J g F' F'' e2 (tactG J I f F F' e1 z)) =
+    idJ (U0 J) Ff
+      (\ F2 E1 -> (F3 : U0 K) (E2 : Id (U0 K) (uAct K J g F2) F3) (E3 : Id (U0 K) (uAct K I (compH K J I f g) F) F3)
+         -> Id (W0.Ix (fib0 K F3)) (tactG K I (compH K J I f g) F F3 E3 z) (tactG K J g F2 F3 E2 (tactG J I f F F2 E1 z)))
+      (\ F3 E2 ->
+         idJ (U0 K) Ffg
+           (\ F4 E4 -> (E3 : Id (U0 K) (uAct K I (compH K J I f g) F) F4)
+              -> Id (W0.Ix (fib0 K F4)) (tactG K I (compH K J I f g) F F4 E3 z) (tactG K J g Ff F4 E4 (tactG J I f F Ff (refl Ff) z)))
+           base F3 E2)
+      F' e1 F'' e2 e3 ;
+} ;
+
+toG (K J I : Ob) (f : Hom J I) (g : Hom K J) (F : U0 I) (F' : U0 J) (F'' : U0 K)
+  (e1 : Id (U0 J) (uAct J I f F) F') (e2 : Id (U0 K) (uAct K J g F') F'') (e3 : Id (U0 K) (uAct K I (compH K J I f g) F) F'')
+  (z : W0.Ix (fib0 I F))
+  : Id (W0.Ix (fib0 K F'')) (tactG K I (compH K J I f g) F F'' e3 z) (tactG K J g F' F'' e2 (tactG J I f F F' e1 z)) =
+  TO[K, J, I, f, g, F, z].res F' F'' e1 e2 e3 ;
+
+opaque tidG ; opaque toG ;
+
+-- the same, at the identity and composition of PosetCat
+tidC (I : Ob) (F : U0 I) (e : Id (U0 I) (uAct I I (PosetCat.idC I) F) F) (z : W0.Ix (fib0 I F))
+  : Id (W0.Ix (fib0 I F)) (tactG I I (PosetCat.idC I) F F e z) z =
+  substH (\ h -> (e' : Id (U0 I) (uAct I I h F) F) -> Id (W0.Ix (fib0 I F)) (tactG I I h F F e' z) z)
+    (symH (idC-idH I)) (\ e' -> tidG I F e' z) e ;
+
+toC (K J I : Ob) (f : Hom J I) (g : Hom K J) (F : U0 I) (F' : U0 J) (F'' : U0 K)
+  (e1 : Id (U0 J) (uAct J I f F) F') (e2 : Id (U0 K) (uAct K J g F') F'') (e3 : Id (U0 K) (uAct K I (PosetCat.oC K J I f g) F) F'')
+  (z : W0.Ix (fib0 I F))
+  : Id (W0.Ix (fib0 K F'')) (tactG K I (PosetCat.oC K J I f g) F F'' e3 z) (tactG K J g F' F'' e2 (tactG J I f F F' e1 z)) =
+  substH (\ h -> (e' : Id (U0 K) (uAct K I h F) F'')
+            -> Id (W0.Ix (fib0 K F'')) (tactG K I h F F'' e' z) (tactG K J g F' F'' e2 (tactG J I f F F' e1 z)))
+    (symH (oC-compH K J I f g)) (\ e' -> toG K J I f g F F' F'' e1 e2 e' z) e3 ;
+
+opaque tidC ; opaque toC ;
+
+EGen : L1.PTy[UCtx] = new L1.PTy[UCtx, \ I F -> smallC (fib0 I F), tactG, tidC, toC] ;

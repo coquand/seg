@@ -1,0 +1,2484 @@
+diff -ru defenv/core/Arith.seg primrec/core/Arith.seg
+--- defenv/core/Arith.seg	2026-10-18 13:27:06
++++ primrec/core/Arith.seg	2026-10-19 10:25:52
+@@ -30,12 +30,12 @@
+ -- the position of the old side n once a side is inserted at k
+ skipN : Nat -> Nat -> Nat = split {
+   zero -> \ n -> suc n ;
+-  suc k -> split { zero -> zero ; suc n -> suc (skipN k n) } } ;
++  suc k | ih-k -> split { zero -> zero ; suc n -> suc (ih-k n) } } ;
+ 
+ -- finite index sets
+ Fin (r : Nat) : U l = (j : Nat) * IsT (ltb j r) ;
+ 
+-plus : Nat -> Nat -> Nat = split { zero -> \ n -> n ; suc m -> \ n -> suc (plus m n) } ;
++plus : Nat -> Nat -> Nat = split { zero -> \ n -> n ; suc m | ih-m -> \ n -> suc (ih-m n) } ;
+ 
+ pred : Nat -> Nat = split { zero -> zero ; suc n -> n } ;
+ 
+@@ -47,11 +47,11 @@
+ 
+ plus-suc : (m n : Nat) -> Id Nat (plus m (suc n)) (suc (plus m n)) = split {
+   zero -> \ n -> refl (suc n) ;
+-  suc m -> \ n -> ap Nat Nat (\ k -> suc k) (plus m (suc n)) (suc (plus m n)) (plus-suc m n) } ;
++  suc m | ih-m -> \ n -> ap Nat Nat (\ k -> suc k) (plus m (suc n)) (suc (plus m n)) (ih-m n) } ;
+ 
+ plus-zero : (m : Nat) -> Id Nat (plus m zero) m = split {
+   zero -> refl zero ;
+-  suc m -> ap Nat Nat (\ k -> suc k) (plus m zero) m (plus-zero m) } ;
++  suc m | ih-m -> ap Nat Nat (\ k -> suc k) (plus m zero) m (ih-m) } ;
+ 
+ -- equality on Bool, as a family of propositions
+ CodeB : Bool -> Bool -> U l = split {
+@@ -77,7 +77,7 @@
+   Hedberg[Nat, m, \ n -> IsT (eqN m n), \ n -> isProp-IsT' (eqN m n), eqN-refl m,
+           \ n h -> eqN-sound m n h].hedberg ;
+ 
+-leb-suc : (n : Nat) -> IsT (leb n (suc n)) = split { zero -> refl true ; suc n -> leb-suc n } ;
++leb-suc : (n : Nat) -> IsT (leb n (suc n)) = split { zero -> refl true ; suc n | ih-n -> ih-n } ;
+ 
+ leb-step (m n : Nat) (h : IsT (leb m n)) : IsT (leb m (suc n)) = leb-trans m n (suc n) h (leb-suc n) ;
+ 
+@@ -89,14 +89,14 @@
+ 
+ ltb-irr : (m : Nat) -> IsT (ltb m m) -> Empty = split {
+   zero -> \ h -> false-true h ;
+-  suc m -> \ h -> ltb-irr m h } ;
++  suc m | ih-m -> \ h -> ih-m h } ;
+ 
+ -- m < n  or  n <= m   (Agda splits n first)
+ ltbDecN (R : U l) : (n m : Nat) -> (IsT (ltb m n) -> R) -> (IsT (leb n m) -> R) -> R = split {
+   zero -> \ m k1 k2 -> k2 (refl true) ;
+-  suc n -> split {
++  suc n | ih-n -> split {
+     zero -> \ k1 k2 -> k1 (refl true) ;
+-    suc m -> \ k1 k2 -> ltbDecN R n m k1 k2 } } ;
++    suc m -> \ k1 k2 -> ih-n m k1 k2 } } ;
+ 
+ ltb-dec (R : U l) (m n : Nat) : (IsT (ltb m n) -> R) -> (IsT (leb n m) -> R) -> R = ltbDecN R n m ;
+ 
+@@ -112,21 +112,21 @@
+   zero -> split {
+     zero -> \ h k -> absurd (IsT false) (false-true k) ;
+     suc n -> \ h k -> refl true } ;
+-  suc m -> split {
++  suc m | ih-m -> split {
+     zero -> \ h k -> absurd (IsT false) (false-true h) ;
+-    suc n -> \ h k -> leb-neq m n h k } } ;
++    suc n -> \ h k -> ih-m n h k } } ;
+ 
+ ltb-neq : (m n : Nat) -> IsT (ltb m n) -> IsT (not (eqN m n)) = split {
+   zero -> split {
+     zero -> \ h -> absurd (IsT false) (false-true h) ;
+     suc n -> \ h -> refl true } ;
+-  suc m -> split {
++  suc m | ih-m -> split {
+     zero -> \ h -> absurd (IsT true) (false-true h) ;
+-    suc n -> \ h -> ltb-neq m n h } } ;
++    suc n -> \ h -> ih-m n h } } ;
+ 
+ neq-sym : (m n : Nat) -> IsT (not (eqN m n)) -> IsT (not (eqN n m)) = split {
+   zero -> split { zero -> \ h -> h ; suc n -> \ h -> refl true } ;
+-  suc m -> split { zero -> \ h -> refl true ; suc n -> \ h -> neq-sym m n h } } ;
++  suc m | ih-m -> split { zero -> \ h -> refl true ; suc n -> \ h -> ih-m n h } } ;
+ 
+ leb-ltb-trans (i m n : Nat) (h1 : IsT (leb i m)) (h2 : IsT (ltb m n)) : IsT (ltb i n) =
+   leb-trans (suc i) (suc m) n h1 h2 ;
+@@ -143,60 +143,60 @@
+ 
+ skip : Nat -> Nat -> Nat = split {
+   zero -> \ i -> suc i ;
+-  suc y -> split { zero -> zero ; suc i -> suc (skip y i) } } ;
++  suc y | ih-y -> split { zero -> zero ; suc i -> suc (ih-y i) } } ;
+ 
+ skip-range : (y i n : Nat) -> IsT (leb i n) -> IsT (leb (skip y i) (suc n)) = split {
+   zero -> \ i n h -> h ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> \ n h -> refl true ;
+     suc i -> split {
+       zero -> \ h -> absurd (IsT (leb (skip (suc y) (suc i)) (suc zero))) (false-true h) ;
+-      suc n -> \ h -> skip-range y i n h } } } ;
++      suc n -> \ h -> ih-y i n h } } } ;
+ 
+ skip-mono : (y i j : Nat) -> IsT (leb i j) -> IsT (leb (skip y i) (skip y j)) = split {
+   zero -> \ i j h -> h ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> \ j h -> refl true ;
+     suc i -> split {
+       zero -> \ h -> absurd (IsT (leb (skip (suc y) (suc i)) zero)) (false-true h) ;
+-      suc j -> \ h -> skip-mono y i j h } } } ;
++      suc j -> \ h -> ih-y i j h } } } ;
+ 
+ skip-strict : (y i j : Nat) -> IsT (ltb i j) -> IsT (ltb (skip y i) (skip y j)) = split {
+   zero -> \ i j h -> h ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> split {
+       zero -> \ h -> absurd (IsT false) (false-true h) ;
+       suc j -> \ h -> refl true } ;
+     suc i -> split {
+       zero -> \ h -> absurd (IsT (ltb (skip (suc y) (suc i)) zero)) (false-true h) ;
+-      suc j -> \ h -> skip-strict y i j h } } } ;
++      suc j -> \ h -> ih-y i j h } } } ;
+ 
+ -- delta_y misses y
+ skip-miss : (y i : Nat) -> IsT (not (eqN (skip y i) y)) = split {
+   zero -> \ i -> refl true ;
+-  suc y -> split { zero -> refl true ; suc i -> skip-miss y i } } ;
++  suc y | ih-y -> split { zero -> refl true ; suc i -> ih-y i } } ;
+ 
+ -- the simplicial identity  delta_{z+1} delta_y = delta_y delta_z  for y <= z
+ skip-skip : (y z i : Nat) -> IsT (leb y z) -> Id Nat (skip (suc z) (skip y i)) (skip y (skip z i)) = split {
+   zero -> \ z i h -> refl (skip (suc z) (suc i)) ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> \ i h -> absurd (Id Nat (skip (suc zero) (skip (suc y) i)) (skip (suc y) (skip zero i))) (false-true h) ;
+     suc z -> split {
+       zero -> \ h -> refl zero ;
+-      suc i -> \ h -> ap Nat Nat (\ k -> suc k) (skip (suc z) (skip y i)) (skip y (skip z i)) (skip-skip y z i h) } } } ;
++      suc i -> \ h -> ap Nat Nat (\ k -> suc k) (skip (suc z) (skip y i)) (skip y (skip z i)) (ih-y z i h) } } } ;
+ 
+ -- i < y  or  y <= i  read on skip
+ skip-lt : (y i : Nat) -> IsT (ltb i y) -> Id Nat (skip y i) i = split {
+   zero -> \ i h -> absurd (Id Nat (suc i) i) (false-true h) ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> \ h -> refl zero ;
+-    suc i -> \ h -> ap Nat Nat (\ k -> suc k) (skip y i) i (skip-lt y i h) } } ;
++    suc i -> \ h -> ap Nat Nat (\ k -> suc k) (skip y i) i (ih-y i h) } } ;
+ 
+ skip-ge : (y i : Nat) -> IsT (leb y i) -> Id Nat (skip y i) (suc i) = split {
+   zero -> \ i h -> refl (suc i) ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> \ h -> absurd (Id Nat zero (suc zero)) (false-true h) ;
+-    suc i -> \ h -> ap Nat Nat (\ k -> suc k) (skip y i) (suc i) (skip-ge y i h) } } ;
++    suc i -> \ h -> ap Nat Nat (\ k -> suc k) (skip y i) (suc i) (ih-y i h) } } ;
+ 
+ ------------------------------------------------------------------------
+ -- A retraction of the face map: dg n y : [n+1] -> [n]
+@@ -205,17 +205,17 @@
+ 
+ dgY : Nat -> Nat -> Nat -> Nat = split {
+   zero -> \ n -> split { zero -> zero ; suc j -> j } ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> \ j -> zero ;
+-    suc n -> split { zero -> zero ; suc j -> suc (dgY y n j) } } } ;
++    suc n -> split { zero -> zero ; suc j -> suc (ih-y n j) } } } ;
+ 
+ dg (n y j : Nat) : Nat = dgY y n j ;
+ 
+ dgRangeY : (y n j : Nat) -> IsT (leb j (suc n)) -> IsT (leb (dg n y j) n) = split {
+   zero -> \ n -> split { zero -> \ h -> refl true ; suc j -> \ h -> h } ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> \ j h -> refl true ;
+-    suc n -> split { zero -> \ h -> refl true ; suc j -> \ h -> dgRangeY y n j h } } } ;
++    suc n -> split { zero -> \ h -> refl true ; suc j -> \ h -> ih-y n j h } } } ;
+ 
+ dg-range (n y j : Nat) : IsT (leb j (suc n)) -> IsT (leb (dg n y j) n) = dgRangeY y n j ;
+ 
+@@ -225,50 +225,50 @@
+     suc i -> split {
+       zero -> \ h -> absurd (IsT (leb i zero)) (false-true h) ;
+       suc j -> \ h -> h } } ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> \ i j h -> refl true ;
+     suc n -> split {
+       zero -> \ j h -> refl true ;
+       suc i -> split {
+         zero -> \ h -> absurd (IsT false) (false-true h) ;
+-        suc j -> \ h -> dgMonoY y n i j h } } } } ;
++        suc j -> \ h -> ih-y n i j h } } } } ;
+ 
+ dg-mono (n y i j : Nat) : IsT (leb i j) -> IsT (leb (dg n y i) (dg n y j)) = dgMonoY y n i j ;
+ 
+ -- dg is a retraction of skip
+ dgSkipY : (y n i : Nat) -> IsT (leb y (suc n)) -> IsT (leb i n) -> Id Nat (dg n y (skip y i)) i = split {
+   zero -> \ n i hy hi -> refl i ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> split {
+       zero -> \ hy hi -> refl zero ;
+       suc i -> \ hy hi -> absurd (Id Nat zero (suc i)) (false-true hi) } ;
+     suc n -> split {
+       zero -> \ hy hi -> refl zero ;
+-      suc i -> \ hy hi -> ap Nat Nat (\ k -> suc k) (dg n y (skip y i)) i (dgSkipY y n i hy hi) } } } ;
++      suc i -> \ hy hi -> ap Nat Nat (\ k -> suc k) (dg n y (skip y i)) i (ih-y n i hy hi) } } } ;
+ 
+ dg-skip (n y i : Nat) : IsT (leb y (suc n)) -> IsT (leb i n) -> Id Nat (dg n y (skip y i)) i = dgSkipY y n i ;
+ 
++-- the case  n = zero , y = suc y , j = suc j  (all absurd)
++skipDg0 : (y j : Nat) -> IsT (leb (suc y) (suc zero)) -> IsT (leb (suc j) (suc zero))
++  -> IsT (not (eqN (suc j) (suc y))) -> Id Nat (skip (suc y) (dg zero (suc y) (suc j))) (suc j) = split {
++  zero -> split {
++    zero -> \ hy hj k -> absurd (Id Nat zero (suc zero)) (false-true k) ;
++    suc j -> \ hy hj k -> absurd (Id Nat zero (suc (suc j))) (false-true hj) } ;
++  suc y -> \ j hy hj k -> absurd (Id Nat zero (suc j)) (false-true hy) } ;
+ -- and skip a section of dg away from y
+ skipDgY : (y n j : Nat) -> IsT (leb y (suc n)) -> IsT (leb j (suc n)) -> IsT (not (eqN j y))
+   -> Id Nat (skip y (dg n y j)) j = split {
+   zero -> \ n -> split {
+     zero -> \ hy hj k -> absurd (Id Nat (suc zero) zero) (false-true k) ;
+     suc j -> \ hy hj k -> refl (suc j) } ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> split {
+       zero -> \ hy hj k -> refl zero ;
+       suc j -> skipDg0 y j } ;
+     suc n -> split {
+       zero -> \ hy hj k -> refl zero ;
+-      suc j -> \ hy hj k -> ap Nat Nat (\ m -> suc m) (skip y (dg n y j)) j (skipDgY y n j hy hj k) } } } ;
++      suc j -> \ hy hj k -> ap Nat Nat (\ m -> suc m) (skip y (dg n y j)) j (ih-y n j hy hj k) } } } ;
+ 
+--- the case  n = zero , y = suc y , j = suc j  (all absurd)
+-skipDg0 : (y j : Nat) -> IsT (leb (suc y) (suc zero)) -> IsT (leb (suc j) (suc zero))
+-  -> IsT (not (eqN (suc j) (suc y))) -> Id Nat (skip (suc y) (dg zero (suc y) (suc j))) (suc j) = split {
+-  zero -> split {
+-    zero -> \ hy hj k -> absurd (Id Nat zero (suc zero)) (false-true k) ;
+-    suc j -> \ hy hj k -> absurd (Id Nat zero (suc (suc j))) (false-true hj) } ;
+-  suc y -> \ j hy hj k -> absurd (Id Nat zero (suc j)) (false-true hy) } ;
+ 
+ skip-dg (n y j : Nat) : IsT (leb y (suc n)) -> IsT (leb j (suc n)) -> IsT (not (eqN j y))
+   -> Id Nat (skip y (dg n y j)) j = skipDgY y n j ;
+@@ -276,13 +276,13 @@
+ -- if skip y a < skip y b then a < b
+ dg-back : (y a b : Nat) -> IsT (ltb (skip y a) (skip y b)) -> IsT (ltb a b) = split {
+   zero -> \ a b h -> h ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> split {
+       zero -> \ h -> absurd (IsT false) (false-true h) ;
+       suc b -> \ h -> refl true } ;
+     suc a -> split {
+       zero -> \ h -> absurd (IsT (ltb (suc a) zero)) (false-true h) ;
+-      suc b -> \ h -> dg-back y a b h } } } ;
++      suc b -> \ h -> ih-y a b h } } } ;
+ 
+ -- dg is strictly monotone away from y
+ dg-strict (n y i j : Nat) (hy : IsT (leb y (suc n))) (hj : IsT (leb j (suc n)))
+@@ -302,60 +302,60 @@
+ 
+ qlvl : Nat -> Nat -> Nat = split {
+   zero -> \ i -> suc zero ;
+-  suc k -> split { zero -> zero ; suc i -> qlvl k i } } ;
++  suc k | ih-k -> split { zero -> zero ; suc i -> ih-k i } } ;
+ 
+ qlvl-range : (k i : Nat) -> IsT (leb (qlvl k i) (suc zero)) = split {
+   zero -> \ i -> refl true ;
+-  suc k -> split { zero -> refl true ; suc i -> qlvl-range k i } } ;
++  suc k | ih-k -> split { zero -> refl true ; suc i -> ih-k i } } ;
+ 
+ qlvl-mono : (k i j : Nat) -> IsT (leb i j) -> IsT (leb (qlvl k i) (qlvl k j)) = split {
+   zero -> \ i j h -> refl true ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> \ j h -> refl true ;
+     suc i -> split {
+       zero -> \ h -> absurd (IsT (leb (qlvl k i) zero)) (false-true h) ;
+-      suc j -> \ h -> qlvl-mono k i j h } } } ;
++      suc j -> \ h -> ih-k i j h } } } ;
+ 
+ -- Q_{n+1} is the lower lid   (Agda splits i first)
+ qlvlTopI : (i n : Nat) -> IsT (leb i n) -> Id Nat (qlvl (suc n) i) zero = split {
+   zero -> \ n h -> refl zero ;
+-  suc i -> split {
++  suc i | ih-i -> split {
+     zero -> \ h -> absurd (Id Nat (qlvl zero i) zero) (false-true h) ;
+-    suc n -> \ h -> qlvlTopI i n h } } ;
++    suc n -> \ h -> ih-i n h } } ;
+ 
+ qlvl-top (n i : Nat) : IsT (leb i n) -> Id Nat (qlvl (suc n) i) zero = qlvlTopI i n ;
+ 
+ qface : Nat -> Nat -> Nat = split {
+   zero -> split { zero -> zero ; suc k -> k } ;
+-  suc y -> split { zero -> zero ; suc k -> suc (qface y k) } } ;
++  suc y | ih-y -> split { zero -> zero ; suc k -> suc (ih-y k) } } ;
+ 
+ -- the faces of Q_k
+ qlvl-skip : (y k i : Nat) -> Id Nat (qlvl k (skip y i)) (qlvl (qface y k) i) = split {
+   zero -> split {
+     zero -> \ i -> refl (suc zero) ;
+     suc k -> \ i -> refl (qlvl k i) } ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> \ i -> refl (suc zero) ;
+     suc k -> split {
+       zero -> refl zero ;
+-      suc i -> qlvl-skip y k i } } } ;
++      suc i -> ih-y k i } } } ;
+ 
+ qface-zero : (y : Nat) -> Id Nat (qface y zero) zero = split { zero -> refl zero ; suc y -> refl zero } ;
+ 
+ -- y < k+1 gives qface y (k+1) = k ; k <= y gives qface y k = k
+ qface-lt : (y k : Nat) -> IsT (leb y k) -> Id Nat (qface y (suc k)) k = split {
+   zero -> \ k h -> refl k ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> \ h -> absurd (Id Nat (suc (qface y zero)) zero) (false-true h) ;
+-    suc k -> \ h -> ap Nat Nat (\ m -> suc m) (qface y (suc k)) k (qface-lt y k h) } } ;
++    suc k -> \ h -> ap Nat Nat (\ m -> suc m) (qface y (suc k)) k (ih-y k h) } } ;
+ 
+ qface-ge : (y k : Nat) -> IsT (leb k y) -> Id Nat (qface y k) k = split {
+   zero -> split {
+     zero -> \ h -> refl zero ;
+     suc k -> \ h -> absurd (Id Nat k (suc k)) (false-true h) } ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> \ h -> refl zero ;
+-    suc k -> \ h -> ap Nat Nat (\ m -> suc m) (qface y k) k (qface-ge y k h) } } ;
++    suc k -> \ h -> ap Nat Nat (\ m -> suc m) (qface y k) k (ih-y k h) } } ;
+ 
+ ------------------------------------------------------------------------
+ -- The chains P_k of [n] * [1]:  [n+1] -> [n] * [1]
+@@ -364,25 +364,25 @@
+ 
+ pcK : Nat -> Nat -> Nat -> Nat = split {
+   zero -> \ n -> split { zero -> zero ; suc i -> i } ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> split { zero -> zero ; suc i -> i } ;
+-    suc n -> split { zero -> zero ; suc i -> suc (pcK k n i) } } } ;
++    suc n -> split { zero -> zero ; suc i -> suc (ih-k n i) } } } ;
+ 
+ pc (n k i : Nat) : Nat = pcK k n i ;
+ 
+ plK : Nat -> Nat -> Nat -> Nat = split {
+   zero -> \ n -> split { zero -> zero ; suc i -> suc zero } ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> split { zero -> zero ; suc i -> suc zero } ;
+-    suc n -> split { zero -> zero ; suc i -> plK k n i } } } ;
++    suc n -> split { zero -> zero ; suc i -> ih-k n i } } } ;
+ 
+ pl (n k i : Nat) : Nat = plK k n i ;
+ 
+ pcRangeK : (k n i : Nat) -> IsT (leb i (suc n)) -> IsT (leb (pc n k i) n) = split {
+   zero -> \ n -> split { zero -> \ h -> refl true ; suc i -> \ h -> h } ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> split { zero -> \ h -> refl true ; suc i -> \ h -> h } ;
+-    suc n -> split { zero -> \ h -> refl true ; suc i -> \ h -> pcRangeK k n i h } } } ;
++    suc n -> split { zero -> \ h -> refl true ; suc i -> \ h -> ih-k n i h } } } ;
+ 
+ pc-range (n k i : Nat) : IsT (leb i (suc n)) -> IsT (leb (pc n k i) n) = pcRangeK k n i ;
+ 
+@@ -392,7 +392,7 @@
+     suc i -> split {
+       zero -> \ h -> absurd (IsT (leb i zero)) (false-true h) ;
+       suc j -> \ h -> h } } ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> split {
+       zero -> \ j h -> refl true ;
+       suc i -> split {
+@@ -402,15 +402,15 @@
+       zero -> \ j h -> refl true ;
+       suc i -> split {
+         zero -> \ h -> absurd (IsT false) (false-true h) ;
+-        suc j -> \ h -> pcMonoK k n i j h } } } } ;
++        suc j -> \ h -> ih-k n i j h } } } } ;
+ 
+ pc-mono (n k i j : Nat) : IsT (leb i j) -> IsT (leb (pc n k i) (pc n k j)) = pcMonoK k n i j ;
+ 
+ plRangeK : (k n i : Nat) -> IsT (leb (pl n k i) (suc zero)) = split {
+   zero -> \ n -> split { zero -> refl true ; suc i -> refl true } ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> split { zero -> refl true ; suc i -> refl true } ;
+-    suc n -> split { zero -> refl true ; suc i -> plRangeK k n i } } } ;
++    suc n -> split { zero -> refl true ; suc i -> ih-k n i } } } ;
+ 
+ pl-range (n k i : Nat) : IsT (leb (pl n k i) (suc zero)) = plRangeK k n i ;
+ 
+@@ -420,7 +420,7 @@
+     suc i -> split {
+       zero -> \ h -> absurd (IsT false) (false-true h) ;
+       suc j -> \ h -> refl true } } ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> split {
+       zero -> \ j h -> refl true ;
+       suc i -> split {
+@@ -430,7 +430,7 @@
+       zero -> \ j h -> refl true ;
+       suc i -> split {
+         zero -> \ h -> absurd (IsT (leb (pl n k i) zero)) (false-true h) ;
+-        suc j -> \ h -> plMonoK k n i j h } } } } ;
++        suc j -> \ h -> ih-k n i j h } } } } ;
+ 
+ pl-mono (n k i j : Nat) : IsT (leb i j) -> IsT (leb (pl n k i) (pl n k j)) = plMonoK k n i j ;
+ 
+@@ -439,80 +439,86 @@
+ -- y = k : the face is Q_k
+ pcFaceK : (k n i : Nat) -> IsT (leb k n) -> Id Nat (pc n k (skip k i)) i = split {
+   zero -> \ n i h -> refl i ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> \ i h -> absurd (Id Nat (pc zero (suc k) (skip (suc k) i)) i) (false-true h) ;
+     suc n -> split {
+       zero -> \ h -> refl zero ;
+-      suc i -> \ h -> ap Nat Nat (\ m -> suc m) (pc n k (skip k i)) i (pcFaceK k n i h) } } } ;
++      suc i -> \ h -> ap Nat Nat (\ m -> suc m) (pc n k (skip k i)) i (ih-k n i h) } } } ;
+ 
+ pc-face-k (n k i : Nat) : IsT (leb k n) -> Id Nat (pc n k (skip k i)) i = pcFaceK k n i ;
+ 
+ plFaceK : (k n i : Nat) -> IsT (leb k n) -> Id Nat (pl n k (skip k i)) (qlvl k i) = split {
+   zero -> \ n i h -> refl (suc zero) ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> \ i h -> absurd (Id Nat (pl zero (suc k) (skip (suc k) i)) (qlvl (suc k) i)) (false-true h) ;
+     suc n -> split {
+       zero -> \ h -> refl zero ;
+-      suc i -> \ h -> plFaceK k n i h } } } ;
++      suc i -> \ h -> ih-k n i h } } } ;
+ 
+ pl-face-k (n k i : Nat) : IsT (leb k n) -> Id Nat (pl n k (skip k i)) (qlvl k i) = plFaceK k n i ;
+ 
+ -- y = k+1 : the face is Q_{k+1}
+ pcFaceK1 : (k n i : Nat) -> IsT (leb k n) -> Id Nat (pc n k (skip (suc k) i)) i = split {
+   zero -> \ n -> split { zero -> \ h -> refl zero ; suc i -> \ h -> refl (suc i) } ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> \ i h -> absurd (Id Nat (pc zero (suc k) (skip (suc (suc k)) i)) i) (false-true h) ;
+     suc n -> split {
+       zero -> \ h -> refl zero ;
+-      suc i -> \ h -> ap Nat Nat (\ m -> suc m) (pc n k (skip (suc k) i)) i (pcFaceK1 k n i h) } } } ;
++      suc i -> \ h -> ap Nat Nat (\ m -> suc m) (pc n k (skip (suc k) i)) i (ih-k n i h) } } } ;
+ 
+ pc-face-k1 (n k i : Nat) : IsT (leb k n) -> Id Nat (pc n k (skip (suc k) i)) i = pcFaceK1 k n i ;
+ 
+ plFaceK1 : (k n i : Nat) -> IsT (leb k n) -> Id Nat (pl n k (skip (suc k) i)) (qlvl (suc k) i) = split {
+   zero -> \ n -> split { zero -> \ h -> refl zero ; suc i -> \ h -> refl (suc zero) } ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> \ i h -> absurd (Id Nat (pl zero (suc k) (skip (suc (suc k)) i)) (qlvl (suc (suc k)) i)) (false-true h) ;
+     suc n -> split {
+       zero -> \ h -> refl zero ;
+-      suc i -> \ h -> plFaceK1 k n i h } } } ;
++      suc i -> \ h -> ih-k n i h } } } ;
+ 
+ pl-face-k1 (n k i : Nat) : IsT (leb k n) -> Id Nat (pl n k (skip (suc k) i)) (qlvl (suc k) i) = plFaceK1 k n i ;
+ 
+--- y < k = k'+1 : the face is P_{k'} of [n-1], read along delta_y   (Agda splits y first)
+-pcFaceLoY : (y n k i : Nat) -> IsT (leb y k) -> IsT (leb k n)
+-  -> Id Nat (pc (suc n) (suc k) (skip y i)) (skip y (pc n k i)) = split {
+-  zero -> \ n k i hy hk -> refl (suc (pc n k i)) ;
+-  suc y -> \ n -> split {
+-    zero -> \ i hy hk -> absurd (Id Nat (pc (suc n) (suc zero) (skip (suc y) i)) (skip (suc y) (pc n zero i))) (false-true hy) ;
+-    suc k -> pcFaceLoN y n k } } ;
+-
+-pcFaceLoN (y : Nat) : (n : Nat) (k i : Nat) -> IsT (leb (suc y) (suc k)) -> IsT (leb (suc k) n)
++pcFaceLoN (y : Nat)
++  (ih : (n k i : Nat) -> IsT (leb y k) -> IsT (leb k n) -> Id Nat (pc (suc n) (suc k) (skip y i)) (skip y (pc n k i)))
++  : (n : Nat) (k i : Nat) -> IsT (leb (suc y) (suc k)) -> IsT (leb (suc k) n)
+   -> Id Nat (pc (suc n) (suc (suc k)) (skip (suc y) i)) (skip (suc y) (pc n (suc k) i)) = split {
+   zero -> \ k i hy hk -> absurd (Id Nat (pc (suc zero) (suc (suc k)) (skip (suc y) i)) (skip (suc y) (pc zero (suc k) i)))
+                                 (false-true hk) ;
+   suc n -> \ k -> split {
+     zero -> \ hy hk -> refl zero ;
+     suc i -> \ hy hk -> ap Nat Nat (\ m -> suc m) (pc (suc n) (suc k) (skip y i)) (skip y (pc n k i))
+-                           (pcFaceLoY y n k i hy hk) } } ;
++                           (ih n k i hy hk) } } ;
+ 
++-- y < k = k'+1 : the face is P_{k'} of [n-1], read along delta_y   (Agda splits y first)
++pcFaceLoY : (y n k i : Nat) -> IsT (leb y k) -> IsT (leb k n)
++  -> Id Nat (pc (suc n) (suc k) (skip y i)) (skip y (pc n k i)) = split {
++  zero -> \ n k i hy hk -> refl (suc (pc n k i)) ;
++  suc y | ih-y -> \ n -> split {
++    zero -> \ i hy hk -> absurd (Id Nat (pc (suc n) (suc zero) (skip (suc y) i)) (skip (suc y) (pc n zero i))) (false-true hy) ;
++    suc k -> pcFaceLoN y ih-y n k } } ;
++
++
+ pc-face-lo (n k y i : Nat) : IsT (leb y k) -> IsT (leb k n)
+   -> Id Nat (pc (suc n) (suc k) (skip y i)) (skip y (pc n k i)) = pcFaceLoY y n k i ;
+ 
+-plFaceLoY : (y n k i : Nat) -> IsT (leb y k) -> IsT (leb k n)
+-  -> Id Nat (pl (suc n) (suc k) (skip y i)) (pl n k i) = split {
+-  zero -> \ n k i hy hk -> refl (pl n k i) ;
+-  suc y -> \ n -> split {
+-    zero -> \ i hy hk -> absurd (Id Nat (pl (suc n) (suc zero) (skip (suc y) i)) (pl n zero i)) (false-true hy) ;
+-    suc k -> plFaceLoN y n k } } ;
+-
+-plFaceLoN (y : Nat) : (n : Nat) (k i : Nat) -> IsT (leb (suc y) (suc k)) -> IsT (leb (suc k) n)
++plFaceLoN (y : Nat)
++  (ih : (n k i : Nat) -> IsT (leb y k) -> IsT (leb k n) -> Id Nat (pl (suc n) (suc k) (skip y i)) (pl n k i))
++  : (n : Nat) (k i : Nat) -> IsT (leb (suc y) (suc k)) -> IsT (leb (suc k) n)
+   -> Id Nat (pl (suc n) (suc (suc k)) (skip (suc y) i)) (pl n (suc k) i) = split {
+   zero -> \ k i hy hk -> absurd (Id Nat (pl (suc zero) (suc (suc k)) (skip (suc y) i)) (pl zero (suc k) i))
+                                 (false-true hk) ;
+   suc n -> \ k -> split {
+     zero -> \ hy hk -> refl zero ;
+-    suc i -> \ hy hk -> plFaceLoY y n k i hy hk } } ;
++    suc i -> \ hy hk -> ih n k i hy hk } } ;
+ 
++plFaceLoY : (y n k i : Nat) -> IsT (leb y k) -> IsT (leb k n)
++  -> Id Nat (pl (suc n) (suc k) (skip y i)) (pl n k i) = split {
++  zero -> \ n k i hy hk -> refl (pl n k i) ;
++  suc y | ih-y -> \ n -> split {
++    zero -> \ i hy hk -> absurd (Id Nat (pl (suc n) (suc zero) (skip (suc y) i)) (pl n zero i)) (false-true hy) ;
++    suc k -> plFaceLoN y ih-y n k } } ;
++
++
+ pl-face-lo (n k y i : Nat) : IsT (leb y k) -> IsT (leb k n)
+   -> Id Nat (pl (suc n) (suc k) (skip y i)) (pl n k i) = plFaceLoY y n k i ;
+ 
+@@ -524,7 +530,7 @@
+     suc y -> split {
+       zero -> \ hy hk -> refl zero ;
+       suc i -> \ hy hk -> refl (skip (suc y) i) } } ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> \ y i hy hk -> absurd (Id Nat (pc (suc zero) (suc k) (skip (suc y) i)) (skip y (pc zero (suc k) i))) (false-true hk) ;
+     suc n -> split {
+       zero -> \ i hy hk -> absurd (Id Nat (pc (suc (suc n)) (suc k) (skip (suc zero) i)) (skip zero (pc (suc n) (suc k) i)))
+@@ -532,7 +538,7 @@
+       suc y -> split {
+         zero -> \ hy hk -> refl zero ;
+         suc i -> \ hy hk -> ap Nat Nat (\ m -> suc m) (pc (suc n) k (skip (suc y) i)) (skip y (pc n k i))
+-                               (pcFaceHiK k n y i hy hk) } } } } ;
++                               (ih-k n y i hy hk) } } } } ;
+ 
+ pc-face-hi (n k y i : Nat) : IsT (ltb k y) -> IsT (leb k n)
+   -> Id Nat (pc (suc n) k (skip (suc y) i)) (skip y (pc n k i)) = pcFaceHiK k n y i ;
+@@ -544,14 +550,14 @@
+     suc y -> split {
+       zero -> \ hy hk -> refl zero ;
+       suc i -> \ hy hk -> refl (suc zero) } } ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> \ y i hy hk -> absurd (Id Nat (pl (suc zero) (suc k) (skip (suc y) i)) (pl zero (suc k) i)) (false-true hk) ;
+     suc n -> split {
+       zero -> \ i hy hk -> absurd (Id Nat (pl (suc (suc n)) (suc k) (skip (suc zero) i)) (pl (suc n) (suc k) i))
+                                   (false-true hy) ;
+       suc y -> split {
+         zero -> \ hy hk -> refl zero ;
+-        suc i -> \ hy hk -> plFaceHiK k n y i hy hk } } } } ;
++        suc i -> \ hy hk -> ih-k n y i hy hk } } } } ;
+ 
+ pl-face-hi (n k y i : Nat) : IsT (ltb k y) -> IsT (leb k n)
+   -> Id Nat (pl (suc n) k (skip (suc y) i)) (pl n k i) = plFaceHiK k n y i ;
+@@ -569,21 +575,21 @@
+ 
+ anyF : (r : Nat) -> (Fin r -> Bool) -> Bool = split {
+   zero -> \ P -> false ;
+-  suc r -> \ P -> or (P (finTop r)) (anyF r (\ l0 -> P (finWk r l0))) } ;
++  suc r | ih-r -> \ P -> or (P (finTop r)) (ih-r (\ l0 -> P (finWk r l0))) } ;
+ 
+ anyF-sound : (r : Nat) (P : Fin r -> Bool) -> IsT (anyF r P) -> (l0 : Fin r) * IsT (P l0) = split {
+   zero -> \ P h -> absurd _ (false-true h) ;
+-  suc r -> \ P h ->
++  suc r | ih-r -> \ P h ->
+     or-elim ((l0 : Fin (suc r)) * IsT (P l0)) (P (finTop r)) (anyF r (\ l0 -> P (finWk r l0))) h
+       (\ h' -> (finTop r, h'))
+-      (\ h' -> (finWk r (anyF-sound r (\ l0 -> P (finWk r l0)) h').1, (anyF-sound r (\ l0 -> P (finWk r l0)) h').2)) } ;
++      (\ h' -> (finWk r (ih-r (\ l0 -> P (finWk r l0)) h').1, (ih-r (\ l0 -> P (finWk r l0)) h').2)) } ;
+ 
+ anyF-complete : (r : Nat) (P : Fin r -> Bool) (l0 : Fin r) -> IsT (P l0) -> IsT (anyF r P) = split {
+   zero -> \ P l0 p -> absurd _ (false-true l0.2) ;
+-  suc r -> \ P l0 p ->
++  suc r | ih-r -> \ P l0 p ->
+     ltb-dec (IsT (anyF (suc r) P)) l0.1 r
+       (\ lt -> or-r (P (finTop r)) (anyF r (\ l2 -> P (finWk r l2)))
+-                 (anyF-complete r (\ l2 -> P (finWk r l2)) (l0.1, lt)
++                 (ih-r (\ l2 -> P (finWk r l2)) (l0.1, lt)
+                     (subst (Fin (suc r)) (\ l3 -> IsT (P l3)) l0 (finWk r (l0.1, lt)) (fin-eq (suc r) l0 (finWk r (l0.1, lt)) (refl l0.1)) p)))
+       (\ ge -> or-l (P (finTop r)) (anyF r (\ l2 -> P (finWk r l2)))
+                  (subst (Fin (suc r)) (\ l3 -> IsT (P l3)) l0 (finTop r) (fin-eq (suc r) l0 (finTop r) (leb-anti l0.1 r l0.2 ge)) p)) } ;
+@@ -603,38 +609,39 @@
+   inl l0 -> inl (suc l0.1, l0.2) ;
+   inr l0 -> inr l0 } ;
+ 
++sfS (r1 r2 : Nat) (ih : Fin (plus r1 r2) -> Plus (Fin r1) (Fin r2)) : (n : Nat) -> IsT (ltb n (suc (plus r1 r2))) -> Plus (Fin (suc r1)) (Fin r2) = split {
++  zero -> \ h -> inl (zero, refl true) ;
++  suc n -> \ h -> plusSuc r1 r2 (ih (n, h)) } ;
++
+ splitF : (r1 r2 : Nat) -> Fin (plus r1 r2) -> Plus (Fin r1) (Fin r2) = split {
+   zero -> \ r2 l0 -> inr l0 ;
+-  suc r1 -> \ r2 l0 -> sfS r1 r2 l0.1 l0.2 } ;
++  suc r1 | ih-r1 -> \ r2 l0 -> sfS r1 r2 (ih-r1 r2) l0.1 l0.2 } ;
+ 
+-sfS (r1 r2 : Nat) : (n : Nat) -> IsT (ltb n (suc (plus r1 r2))) -> Plus (Fin (suc r1)) (Fin r2) = split {
+-  zero -> \ h -> inl (zero, refl true) ;
+-  suc n -> \ h -> plusSuc r1 r2 (splitF r1 r2 (n, h)) } ;
++flS (r1 r2 : Nat) (ih : Fin r1 -> Fin (plus r1 r2)) : (n : Nat) -> IsT (ltb n (suc r1)) -> Fin (suc (plus r1 r2)) = split {
++  zero -> \ h -> (zero, refl true) ;
++  suc n -> \ h -> (suc (ih (n, h)).1, (ih (n, h)).2) } ;
+ 
+ finL : (r1 r2 : Nat) -> Fin r1 -> Fin (plus r1 r2) = split {
+   zero -> \ r2 l0 -> absurd _ (false-true l0.2) ;
+-  suc r1 -> \ r2 l0 -> flS r1 r2 l0.1 l0.2 } ;
++  suc r1 | ih-r1 -> \ r2 l0 -> flS r1 r2 (ih-r1 r2) l0.1 l0.2 } ;
+ 
+-flS (r1 r2 : Nat) : (n : Nat) -> IsT (ltb n (suc r1)) -> Fin (suc (plus r1 r2)) = split {
+-  zero -> \ h -> (zero, refl true) ;
+-  suc n -> \ h -> (suc (finL r1 r2 (n, h)).1, (finL r1 r2 (n, h)).2) } ;
+-
+ finR : (r1 r2 : Nat) -> Fin r2 -> Fin (plus r1 r2) = split {
+   zero -> \ r2 l0 -> l0 ;
+-  suc r1 -> \ r2 l0 -> (suc (finR r1 r2 l0).1, (finR r1 r2 l0).2) } ;
++  suc r1 | ih-r1 -> \ r2 l0 -> (suc (ih-r1 r2 l0).1, (ih-r1 r2 l0).2) } ;
+ 
+-splitL : (r1 r2 : Nat) (l0 : Fin r1) -> Id (Plus (Fin r1) (Fin r2)) (splitF r1 r2 (finL r1 r2 l0)) (inl l0) = split {
+-  zero -> \ r2 l0 -> absurd _ (false-true l0.2) ;
+-  suc r1 -> \ r2 l0 -> slS r1 r2 l0.1 l0.2 } ;
+-
+-slS (r1 r2 : Nat) : (n : Nat) (h : IsT (ltb n (suc r1)))
++slS (r1 r2 : Nat) (ih : (l0 : Fin r1) -> Id (Plus (Fin r1) (Fin r2)) (splitF r1 r2 (finL r1 r2 l0)) (inl l0))
++  : (n : Nat) (h : IsT (ltb n (suc r1)))
+   -> Id (Plus (Fin (suc r1)) (Fin r2)) (splitF (suc r1) r2 (finL (suc r1) r2 (n, h))) (inl (n, h)) = split {
+   zero -> \ h -> ap (IsT (ltb zero (suc r1))) (Plus (Fin (suc r1)) (Fin r2)) (\ z -> inl (zero, z)) (refl true) h (isProp-IsT' (ltb zero (suc r1)) (refl true) h) ;
+-  suc n -> \ h -> ap (Plus (Fin r1) (Fin r2)) (Plus (Fin (suc r1)) (Fin r2)) (plusSuc r1 r2) (splitF r1 r2 (finL r1 r2 (n, h))) (inl (n, h)) (splitL r1 r2 (n, h)) } ;
++  suc n -> \ h -> ap (Plus (Fin r1) (Fin r2)) (Plus (Fin (suc r1)) (Fin r2)) (plusSuc r1 r2) (splitF r1 r2 (finL r1 r2 (n, h))) (inl (n, h)) (ih (n, h)) } ;
+ 
++splitL : (r1 r2 : Nat) (l0 : Fin r1) -> Id (Plus (Fin r1) (Fin r2)) (splitF r1 r2 (finL r1 r2 l0)) (inl l0) = split {
++  zero -> \ r2 l0 -> absurd _ (false-true l0.2) ;
++  suc r1 | ih-r1 -> \ r2 l0 -> slS r1 r2 (ih-r1 r2) l0.1 l0.2 } ;
++
+ splitR : (r1 r2 : Nat) (l0 : Fin r2) -> Id (Plus (Fin r1) (Fin r2)) (splitF r1 r2 (finR r1 r2 l0)) (inr l0) = split {
+   zero -> \ r2 l0 -> refl (inr l0) ;
+-  suc r1 -> \ r2 l0 -> ap (Plus (Fin r1) (Fin r2)) (Plus (Fin (suc r1)) (Fin r2)) (plusSuc r1 r2) (splitF r1 r2 (finR r1 r2 l0)) (inr l0) (splitR r1 r2 l0) } ;
++  suc r1 | ih-r1 -> \ r2 l0 -> ap (Plus (Fin r1) (Fin r2)) (Plus (Fin (suc r1)) (Fin r2)) (plusSuc r1 r2) (splitF r1 r2 (finR r1 r2 l0)) (inr l0) (ih-r1 r2 l0) } ;
+ 
+ 
+ ------------------------------------------------------------------------
+@@ -667,12 +674,12 @@
+     subst (Plus (Fin r1) (Fin r2)) (\ s -> SR r1 r2 zero (plusSuc r1 r2 (splitF r1 r2 (n, h'))) s)
+       (splitF r1 r2 (n, h')) (splitF r1 r2 (n, h)) (splitF-irr r1 r2 n h' h)
+       (plusSuc-SR0 r1 r2 (splitF r1 r2 (n, h'))) ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> \ n hk h h' -> absurd (SR zero r2 (suc k) (splitF (suc zero) r2 (skipN (suc k) n, h')) (splitF zero r2 (n, h))) (false-true hk) ;
+     suc r1 -> split {
+       zero -> \ hk h h' -> refl zero ;
+       suc n -> \ hk h h' ->
+-        plusSuc-SR r1 r2 k (splitF (suc r1) r2 (skipN k n, h')) (splitF r1 r2 (n, h)) (ssk r2 k r1 n hk h h') } } } ;
++        plusSuc-SR r1 r2 k (splitF (suc r1) r2 (skipN k n, h')) (splitF r1 r2 (n, h)) (ih-k r1 n hk h h') } } } ;
+ 
+ split-skip (r1 r2 k n : Nat) (hk : IsT (leb k r1)) (h : IsT (ltb n (plus r1 r2))) (h' : IsT (ltb (skipN k n) (plus (suc r1) r2)))
+   : SR r1 r2 k (splitF (suc r1) r2 (skipN k n, h')) (splitF r1 r2 (n, h)) = ssk r2 k r1 n hk h h' ;
+@@ -686,16 +693,16 @@
+ 
+ skA (r2 : Nat) : (k r1 : Nat) (hk0 : IsT (leb k r1)) (hk : IsT (ltb k (plus (suc r1) r2))) -> SKTy r1 r2 k hk = split {
+   zero -> \ r1 hk0 hk -> ((zero, refl true), (refl zero, refl (inl (zero, refl true)))) ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> \ hk0 hk -> absurd (SKTy zero r2 (suc k) hk) (false-true hk0) ;
+-    suc r1 -> \ hk0 hk -> skSuc r1 r2 k hk (skA r2 k r1 hk0 hk) } } ;
++    suc r1 -> \ hk0 hk -> skSuc r1 r2 k hk (ih-k r1 hk0 hk) } } ;
+ 
+ split-k (r1 r2 k : Nat) (hk0 : IsT (leb k r1)) (hk : IsT (ltb k (plus (suc r1) r2))) : SKTy r1 r2 k hk = skA r2 k r1 hk0 hk ;
+ 
+ 
+ leb-plus : (m n : Nat) -> IsT (leb m (plus m n)) = split {
+   zero -> \ n -> refl true ;
+-  suc m -> \ n -> leb-plus m n } ;
++  suc m | ih-m -> \ n -> ih-m n } ;
+ 
+ ------------------------------------------------------------------------
+ -- the old index of a side once a side is inserted at k (inverse of skipN
+@@ -703,28 +710,28 @@
+ 
+ unsk : Nat -> Nat -> Nat = split {
+   zero -> \ l0 -> pred l0 ;
+-  suc k -> split { zero -> zero ; suc l0 -> suc (unsk k l0) } } ;
++  suc k | ih-k -> split { zero -> zero ; suc l0 -> suc (ih-k l0) } } ;
+ 
+ skipN-unsk : (k l0 : Nat) -> IsT (not (eqN l0 k)) -> Id Nat (skipN k (unsk k l0)) l0 = split {
+   zero -> split { zero -> \ n -> absurd _ (false-true n) ; suc l0 -> \ n -> refl (suc l0) } ;
+-  suc k -> split { zero -> \ n -> refl zero ; suc l0 -> \ n -> ap Nat Nat (\ z -> suc z) (skipN k (unsk k l0)) l0 (skipN-unsk k l0 n) } } ;
++  suc k | ih-k -> split { zero -> \ n -> refl zero ; suc l0 -> \ n -> ap Nat Nat (\ z -> suc z) (skipN k (unsk k l0)) l0 (ih-k l0 n) } } ;
+ 
+ unsk-lt : (k l0 r : Nat) -> IsT (leb k r) -> IsT (ltb l0 (suc r)) -> IsT (not (eqN l0 k)) -> IsT (ltb (unsk k l0) r) = split {
+   zero -> \ l0 r hk hl n -> unz l0 r hl n ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> \ r hk hl n -> leb-trans (suc zero) (suc k) r (refl true) hk ;
+     suc l0 -> split {
+       zero -> \ hk hl n -> absurd _ (false-true hk) ;
+-      suc r -> \ hk hl n -> unsk-lt k l0 r hk hl n } } }
++      suc r -> \ hk hl n -> ih-k l0 r hk hl n } } }
+  where { unz : (l0 r : Nat) -> IsT (ltb l0 (suc r)) -> IsT (not (eqN l0 zero)) -> IsT (ltb (pred l0) r) = split {
+            zero -> \ r hl n -> absurd _ (false-true n) ;
+            suc l0 -> \ r hl n -> hl } ; } ;
+ 
+ skipN-lt : (k n r : Nat) -> IsT (leb k r) -> IsT (ltb n r) -> IsT (ltb (skipN k n) (suc r)) = split {
+   zero -> \ n r hk hn -> hn ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> \ r hk hn -> refl true ;
+     suc n -> split {
+       zero -> \ hk hn -> absurd _ (false-true hn) ;
+-      suc r -> \ hk hn -> skipN-lt k n r hk hn } } } ;
++      suc r -> \ hk hn -> ih-k n r hk hn } } } ;
+ 
+diff -ru defenv/core/CBoxHorn.seg primrec/core/CBoxHorn.seg
+--- defenv/core/CBoxHorn.seg	2026-10-18 13:27:06
++++ primrec/core/CBoxHorn.seg	2026-10-19 10:29:32
+@@ -56,37 +56,38 @@
+ 
+ maxN : Nat -> Nat -> Nat = split {
+   zero -> \ k -> k ;
+-  suc j -> split { zero -> suc j ; suc k -> suc (maxN j k) } } ;
++  suc j | ih-j -> split { zero -> suc j ; suc k -> suc (ih-j k) } } ;
+ 
+ max-l : (j k : Nat) -> IsT (leb j (maxN j k)) = split {
+   zero -> \ k -> refl true ;
+-  suc j -> split { zero -> leb-refl j ; suc k -> max-l j k } } ;
++  suc j | ih-j -> split { zero -> leb-refl j ; suc k -> ih-j k } } ;
+ 
+ max-r : (j k : Nat) -> IsT (leb k (maxN j k)) = split {
+   zero -> \ k -> leb-refl k ;
+-  suc j -> split { zero -> refl true ; suc k -> max-r j k } } ;
++  suc j | ih-j -> split { zero -> refl true ; suc k -> ih-j k } } ;
+ 
+ max-le : (j k n : Nat) -> IsT (leb j n) -> IsT (leb k n) -> IsT (leb (maxN j k) n) = split {
+   zero -> \ k n hj hk -> hk ;
+-  suc j -> split {
++  suc j | ih-j -> split {
+     zero -> \ n hj hk -> hj ;
+     suc k -> split {
+       zero -> \ hj hk -> hj ;
+-      suc n -> \ hj hk -> max-le j k n hj hk } } } ;
++      suc n -> \ hj hk -> ih-j k n hj hk } } } ;
+ 
+ max-mono : (j j' k : Nat) -> IsT (leb j j') -> IsT (leb (maxN j k) (maxN j' k)) = split {
+   zero -> \ j' k h -> max-r j' k ;
+-  suc j -> split {
++  suc j | ih-j -> split {
+     zero -> \ k h -> absurd _ (false-true h) ;
+     suc j' -> split {
+       zero -> \ h -> h ;
+-      suc k -> \ h -> max-mono j j' k h } } } ;
++      suc k -> \ h -> ih-j j' k h } } } ;
+ 
+-max-or (P : Nat -> U a) : (j k : Nat) -> P j -> P k -> P (maxN j k) = split {
+-  zero -> \ k pj pk -> pk ;
+-  suc j -> split {
+-    zero -> \ pj pk -> pj ;
+-    suc k -> \ pj pk -> max-or (\ v -> P (suc v)) j k pj pk } } ;
++-- P after j k: it changes in the recursion, so it is part of the motive
++max-or : (j k : Nat) (P : Nat -> U a) -> P j -> P k -> P (maxN j k) = split {
++  zero -> \ k P pj pk -> pk ;
++  suc j | ih-j -> split {
++    zero -> \ P pj pk -> pj ;
++    suc k -> \ P pj pk -> ih-j k (\ v -> P (suc v)) pj pk } } ;
+ 
+ max-pos : (j k : Nat) -> IsT (not (eqN (maxN j (suc k)) zero)) = split {
+   zero -> \ k -> refl true ;
+@@ -261,7 +262,7 @@
+ PF (k y : Nat) (ky : IsT (not (eqN y (suc k)))) (j : Nat)
+   : (e : Nat) -> IsT (leb e (suc zero)) -> IsT (not (eqN j y)) -> IsT (not (eqN (rFN (suc k) j e) y)) = split {
+   zero -> \ he kj -> kj ;
+-  suc e -> \ he kj -> max-or (\ v -> IsT (not (eqN v y))) j (suc k) kj (neq-sym y (suc k) ky) } ;
++  suc e -> \ he kj -> max-or j (suc k) (\ v -> IsT (not (eqN v y))) kj (neq-sym y (suc k) ky) } ;
+ 
+ ------------------------------------------------------------------------
+ -- a retraction read on generalised points (f , i) : W -> [m+1] * [1]
+diff -ru defenv/core/CDCapBase.seg primrec/core/CDCapBase.seg
+--- defenv/core/CDCapBase.seg	2026-10-18 13:27:06
++++ primrec/core/CDCapBase.seg	2026-10-19 10:23:40
+@@ -32,22 +32,22 @@
+ 
+ subN : Nat -> Nat -> Nat = split {
+   zero -> \ d -> zero ;
+-  suc n -> split { zero -> suc n ; suc d -> subN n d } } ;
++  suc n | ih-n -> split { zero -> suc n ; suc d -> ih-n d } } ;
+ 
+ sub-plus : (n d : Nat) -> IsT (leb d n) -> Id Nat (plus (subN n d) d) n = split {
+   zero -> \ d h -> substH (\ x -> Id Nat (plus (subN zero x) x) zero) (symH (leb-zero d h)) (refl zero) ;
+-  suc n -> split {
++  suc n | ih-n -> split {
+     zero -> \ h -> plus-zero (suc n) ;
+-    suc d -> \ h -> transH (plus-suc (subN n d) d) (apH (\ x -> suc x) (sub-plus n d h)) } } ;
++    suc d -> \ h -> transH (plus-suc (subN n d) d) (apH (\ x -> suc x) (ih-n d h)) } } ;
+ 
+ sub-le : (n d : Nat) -> IsT (leb (subN n d) n) = split {
+   zero -> \ d -> refl true ;
+-  suc n -> split { zero -> leb-refl n ; suc d -> leb-trans (subN n d) n (suc n) (sub-le n d) (leb-suc n) } } ;
++  suc n | ih-n -> split { zero -> leb-refl n ; suc d -> leb-trans (subN n d) n (suc n) (ih-n d) (leb-suc n) } } ;
+ 
+ -- right cancellation
+ plus-cancel-r : (d x y : Nat) -> Id Nat (plus x d) (plus y d) -> Id Nat x y = split {
+   zero -> \ x y e -> transH (symH (plus-zero x)) (transH e (plus-zero y)) ;
+-  suc d -> \ x y e -> plus-cancel-r d x y (suc-inj (plus x d) (plus y d)
++  suc d | ih-d -> \ x y e -> ih-d x y (suc-inj (plus x d) (plus y d)
+                          (transH (symH (plus-suc x d)) (transH e (plus-suc y d)))) } ;
+ 
+ ------------------------------------------------------------------------
+diff -ru defenv/core/CDCapF.seg primrec/core/CDCapF.seg
+--- defenv/core/CDCapF.seg	2026-10-18 13:27:06
++++ primrec/core/CDCapF.seg	2026-10-19 10:28:16
+@@ -159,17 +159,6 @@
+                              (DHm.horn-lands W N (suc d) g i).2.1 (DHm.horn-lands W N (suc d) g i).2.2.1
+                              (of-miss W N (DHm.horn-lands W N (suc d) g i).1 g (DHm.horn-lands W N (suc d) g i).2.2.2))) ;
+ 
+-  ----------------------------------------------------------------------
+-  incF (W : Nat) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv) (s : IsT ((SF N (suc d)).1 W f j))
+-    : IsT (or ((SF N d).1 W f j) (DPm.memP N d W f j)) =
+-    or-elim (IsT (or ((SF N d).1 W f j) (DPm.memP N d W f j))) (or (bdB N W f) (lidB (suc zero) W j))
+-      (Stg[N, suc zero, condF (suc d)].shB W f j) s
+-      (\ s0 -> or-l ((SF N d).1 W f j) (DPm.memP N d W f j)
+-                  (or-l (or (bdB N W f) (lidB (suc zero) W j)) (Stg[N, suc zero, condF d].shB W f j) s0))
+-      (\ u -> incSh W f j (ex-e N (\ k' -> and (condF (suc d) k') (DPm.memP N k' W f j)) u).1
+-                 (ex-e N (\ k' -> and (condF (suc d) k') (DPm.memP N k' W f j)) u).2.1
+-                 (ex-e N (\ k' -> and (condF (suc d) k') (DPm.memP N k' W f j)) u).2.2) ;
+-
+   incSh (W : Nat) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv) (k' : Nat) (k'N : IsT (leb k' N))
+     (cu : IsT (and (condF (suc d) k') (DPm.memP N k' W f j))) : IsT (or ((SF N d).1 W f j) (DPm.memP N d W f j)) =
+     eqN-dec (IsT (or ((SF N d).1 W f j) (DPm.memP N d W f j))) k' d
+@@ -181,4 +170,16 @@
+                         (and-i (condF d k') (DPm.memP N k' W f j)
+                            (leb-neq k' d (and-l (condF (suc d) k') (DPm.memP N k' W f j) cu) ne)
+                            (and-r (condF (suc d) k') (DPm.memP N k' W f j) cu))))) ;
++
++  ----------------------------------------------------------------------
++  incF (W : Nat) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv) (s : IsT ((SF N (suc d)).1 W f j))
++    : IsT (or ((SF N d).1 W f j) (DPm.memP N d W f j)) =
++    or-elim (IsT (or ((SF N d).1 W f j) (DPm.memP N d W f j))) (or (bdB N W f) (lidB (suc zero) W j))
++      (Stg[N, suc zero, condF (suc d)].shB W f j) s
++      (\ s0 -> or-l ((SF N d).1 W f j) (DPm.memP N d W f j)
++                  (or-l (or (bdB N W f) (lidB (suc zero) W j)) (Stg[N, suc zero, condF d].shB W f j) s0))
++      (\ u -> incSh W f j (ex-e N (\ k' -> and (condF (suc d) k') (DPm.memP N k' W f j)) u).1
++                 (ex-e N (\ k' -> and (condF (suc d) k') (DPm.memP N k' W f j)) u).2.1
++                 (ex-e N (\ k' -> and (condF (suc d) k') (DPm.memP N k' W f j)) u).2.2) ;
++
+ } ;
+diff -ru defenv/core/CDCapT.seg primrec/core/CDCapT.seg
+--- defenv/core/CDCapT.seg	2026-10-18 13:27:06
++++ primrec/core/CDCapT.seg	2026-10-19 10:28:15
+@@ -32,7 +32,7 @@
+ 
+ le-antisym : (m n : Nat) -> IsT (leb m n) -> IsT (leb n m) -> Id Nat m n = split {
+   zero -> split { zero -> \ h h' -> refl zero ; suc n -> \ h h' -> absurd _ (false-true h') } ;
+-  suc m -> split { zero -> \ h h' -> absurd _ (false-true h) ; suc n -> \ h h' -> apH (\ x -> suc x) (le-antisym m n h h') } } ;
++  suc m | ih-m -> split { zero -> \ h h' -> absurd _ (false-true h) ; suc n -> \ h h' -> apH (\ x -> suc x) (ih-m n h h') } } ;
+ 
+ -- x /= y and x = y
+ neq-self (z : Nat) (h : IsT (not (eqN z z))) : Empty = false-true (transH (symH (apH not (eqN-refl z))) h) ;
+@@ -87,18 +87,6 @@
+         (substH (\ x -> IsT (DPm.memK k' x (valT W (suc zero) (jk W g) v))) (transH (valT-pg N k W g v hv) (apH (pc N k) e))
+           (fa-e W (\ v' -> DPm.memK k' (valT W N (gk W g) v') (valT W (suc zero) (jk W g) v')) u v hv))))) ;
+ 
+-  ----------------------------------------------------------------------
+-  capT1 (W : Nat) (g : Hom (lin W) (lin (suc N))) (s : IsT ((ST N d).1 W (gk W g) (jk W g)))
+-    : DS.Lands W (suc N) (DHm.hornS N k) g =
+-    or-elim (DS.Lands W (suc N) (DHm.hornS N k) g) (or (bdB N W (gk W g)) (lidB zero W (jk W g)))
+-      (Stg[N, zero, condT N d].shB W (gk W g) (jk W g)) s
+-      (\ s0 -> or-elim (DS.Lands W (suc N) (DHm.hornS N k) g) (bdB N W (gk W g)) (lidB zero W (jk W g)) s0
+-         (\ b -> bdCase W g (ex-e N (\ y -> missB W N (gk W g) y) b).1 (ex-e N (\ y -> missB W N (gk W g) y) b).2.1
+-                    (ex-e N (\ y -> missB W N (gk W g) y) b).2.2)
+-         (\ l -> toHorn W g (suc N) (leb-refl N) (neq-of-lt k (suc N) hk) (missLid W g l)))
+-      (\ u -> shCase W g (ex-e N (\ k' -> and (condT N d k') (DPm.memP N k' W (gk W g) (jk W g))) u).1
+-                 (ex-e N (\ k' -> and (condT N d k') (DPm.memP N k' W (gk W g) (jk W g))) u).2.2) ;
+-
+   bdCase (W : Nat) (g : Hom (lin W) (lin (suc N))) (z : Nat) (zN : IsT (leb z N)) (mz : IsT (missB W N (gk W g) z))
+     : DS.Lands W (suc N) (DHm.hornS N k) g =
+     ltb-dec (DS.Lands W (suc N) (DHm.hornS N k) g) z k
+@@ -112,6 +100,18 @@
+          (and-r (condT N d k') (DPm.memP N k' W (gk W g) (jk W g)) cu)) ;
+ 
+   ----------------------------------------------------------------------
++  capT1 (W : Nat) (g : Hom (lin W) (lin (suc N))) (s : IsT ((ST N d).1 W (gk W g) (jk W g)))
++    : DS.Lands W (suc N) (DHm.hornS N k) g =
++    or-elim (DS.Lands W (suc N) (DHm.hornS N k) g) (or (bdB N W (gk W g)) (lidB zero W (jk W g)))
++      (Stg[N, zero, condT N d].shB W (gk W g) (jk W g)) s
++      (\ s0 -> or-elim (DS.Lands W (suc N) (DHm.hornS N k) g) (bdB N W (gk W g)) (lidB zero W (jk W g)) s0
++         (\ b -> bdCase W g (ex-e N (\ y -> missB W N (gk W g) y) b).1 (ex-e N (\ y -> missB W N (gk W g) y) b).2.1
++                    (ex-e N (\ y -> missB W N (gk W g) y) b).2.2)
++         (\ l -> toHorn W g (suc N) (leb-refl N) (neq-of-lt k (suc N) hk) (missLid W g l)))
++      (\ u -> shCase W g (ex-e N (\ k' -> and (condT N d k') (DPm.memP N k' W (gk W g) (jk W g))) u).1
++                 (ex-e N (\ k' -> and (condT N d k') (DPm.memP N k' W (gk W g) (jk W g))) u).2.2) ;
++
++  ----------------------------------------------------------------------
+   -- the horn lies in ST N d along P_k
+ 
+   inBd (W : Nat) (g : Hom (lin W) (lin (suc N))) (z : Nat) (zN : IsT (leb z N)) (mz : IsT (missB W N (gk W g) z))
+@@ -188,16 +188,6 @@
+   ----------------------------------------------------------------------
+   -- ST N (d+1) is in ST N d u P_k
+ 
+-  incT (W : Nat) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv) (s : IsT ((ST N (suc d)).1 W f j))
+-    : IsT (or ((ST N d).1 W f j) (DPm.memP N k W f j)) =
+-    or-elim (IsT (or ((ST N d).1 W f j) (DPm.memP N k W f j))) (or (bdB N W f) (lidB zero W j))
+-      (Stg[N, zero, condT N (suc d)].shB W f j) s
+-      (\ s0 -> or-l ((ST N d).1 W f j) (DPm.memP N k W f j)
+-                  (or-l (or (bdB N W f) (lidB zero W j)) (Stg[N, zero, condT N d].shB W f j) s0))
+-      (\ u -> incSh W f j (ex-e N (\ k' -> and (condT N (suc d) k') (DPm.memP N k' W f j)) u).1
+-                 (ex-e N (\ k' -> and (condT N (suc d) k') (DPm.memP N k' W f j)) u).2.1
+-                 (ex-e N (\ k' -> and (condT N (suc d) k') (DPm.memP N k' W f j)) u).2.2) ;
+-
+   incSh (W : Nat) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv) (k' : Nat) (k'N : IsT (leb k' N))
+     (cu : IsT (and (condT N (suc d) k') (DPm.memP N k' W f j))) : IsT (or ((ST N d).1 W f j) (DPm.memP N k W f j)) =
+     ltb-dec (IsT (or ((ST N d).1 W f j) (DPm.memP N k W f j))) N (plus k' d)
+@@ -212,4 +202,15 @@
+                                                         (and-l (condT N (suc d) k') (DPm.memP N k' W f j) cu)))
+                                                    (symH kd)))
+                      (and-r (condT N (suc d) k') (DPm.memP N k' W f j) cu))) ;
++
++  incT (W : Nat) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv) (s : IsT ((ST N (suc d)).1 W f j))
++    : IsT (or ((ST N d).1 W f j) (DPm.memP N k W f j)) =
++    or-elim (IsT (or ((ST N d).1 W f j) (DPm.memP N k W f j))) (or (bdB N W f) (lidB zero W j))
++      (Stg[N, zero, condT N (suc d)].shB W f j) s
++      (\ s0 -> or-l ((ST N d).1 W f j) (DPm.memP N k W f j)
++                  (or-l (or (bdB N W f) (lidB zero W j)) (Stg[N, zero, condT N d].shB W f j) s0))
++      (\ u -> incSh W f j (ex-e N (\ k' -> and (condT N (suc d) k') (DPm.memP N k' W f j)) u).1
++                 (ex-e N (\ k' -> and (condT N (suc d) k') (DPm.memP N k' W f j)) u).2.1
++                 (ex-e N (\ k' -> and (condT N (suc d) k') (DPm.memP N k' W f j)) u).2.2) ;
++
+ } ;
+diff -ru defenv/core/CDChain.seg primrec/core/CDChain.seg
+--- defenv/core/CDChain.seg	2026-10-18 13:27:06
++++ primrec/core/CDChain.seg	2026-10-19 10:23:40
+@@ -75,6 +75,6 @@
+ 
+     chain : (d : Nat) -> IsT (leb d (suc N)) -> P.PLine[S d] = split {
+       zero -> \ hd -> L0 ;
+-      suc d -> \ hd -> Step[d, hd, chain d (leb-step d N hd)].next } ;
++      suc d | ih-d -> \ hd -> Step[d, hd, ih-d (leb-step d N hd)].next } ;
+   } ;
+ } ;
+diff -ru defenv/core/CDFactor.seg primrec/core/CDFactor.seg
+--- defenv/core/CDFactor.seg	2026-10-18 13:27:06
++++ primrec/core/CDFactor.seg	2026-10-19 10:29:20
+@@ -29,16 +29,17 @@
+ 
+ adjStr (m : Nat) (g : Nat -> Nat) (adj : (j : Nat) -> IsT (ltb j m) -> IsT (ltb (g j) (g (suc j)))) : Str m g = \ i j hj lt -> go i j hj lt
+  where {
++   -- i < j + 1 gives i = j or i < j
++   leb-split' (i j : Nat) (h : IsT (ltb i (suc j))) : IsT (or (eqN i j) (ltb i j)) =
++     ltb-dec (IsT (or (eqN i j) (ltb i j))) i j (\ l -> or-r (eqN i j) (ltb i j) l)
++       (\ ge -> or-l (eqN i j) (ltb i j) (substH (\ z -> IsT (eqN i z)) (le-antisym i j h ge) (eqN-refl i))) ;
+    go (i : Nat) : (j : Nat) -> IsT (leb j m) -> IsT (ltb i j) -> IsT (ltb (g i) (g j)) = split {
+      zero -> \ hj lt -> absurd _ (false-true (leb-trans (suc i) zero zero lt (refl true))) ;
+-     suc j -> \ hj lt -> or-elim (IsT (ltb (g i) (g (suc j)))) (eqN i j) (ltb i j) (leb-split' i j lt)
++     suc j | ih-j -> \ hj lt -> or-elim (IsT (ltb (g i) (g (suc j)))) (eqN i j) (ltb i j) (leb-split' i j lt)
+                            (\ e -> substH (\ z -> IsT (ltb (g z) (g (suc j)))) (symH (eqN-sound i j e)) (adj j hj))
+-                           (\ l -> leb-trans (suc (g i)) (g j) (g (suc j)) (go i j (leb-trans j (suc j) m (leb-suc j) hj) l)
++                           (\ l -> leb-trans (suc (g i)) (g j) (g (suc j)) (ih-j (leb-trans j (suc j) m (leb-suc j) hj) l)
+                                      (ltb-leb (g j) (g (suc j)) (adj j hj))) } ;
+-   -- i < j + 1 gives i = j or i < j
+-   leb-split' (i j : Nat) (h : IsT (ltb i (suc j))) : IsT (or (eqN i j) (ltb i j)) =
+-     ltb-dec (IsT (or (eqN i j) (ltb i j))) i j (\ l -> or-r (eqN i j) (ltb i j) l)
+-       (\ ge -> or-l (eqN i j) (ltb i j) (substH (\ z -> IsT (eqN i z)) (le-antisym i j h ge) (eqN-refl i))) ; } ;
++ } ;
+ 
+ ------------------------------------------------------------------------
+ -- injective or not
+diff -ru defenv/core/CDNormD.seg primrec/core/CDNormD.seg
+--- defenv/core/CDNormD.seg	2026-10-18 13:27:06
++++ primrec/core/CDNormD.seg	2026-10-19 10:23:44
+@@ -152,7 +152,7 @@
+ 
+   states : (N : Nat) -> State N = split {
+     zero -> (SDm.St0.F, (SDm.St0.sides, (SFm.cmp2-0, tt))) ;
+-    suc N -> step N (states N) } ;
++    suc N | ih-N -> step N (ih-N) } ;
+ 
+   K (N : Nat) : FillTy N = (states N).1 ;
+   sidesK (N : Nat) : SDm.Sides N (K N) = (states N).2.1 ;
+diff -ru defenv/core/CDNormE.seg primrec/core/CDNormE.seg
+--- defenv/core/CDNormE.seg	2026-10-18 13:27:06
++++ primrec/core/CDNormE.seg	2026-10-19 10:23:44
+@@ -143,7 +143,7 @@
+ 
+   unifS : (n : Nat) -> IH n = split {
+     zero -> \ Y X lt -> absurd _ (false-true lt) ;
+-    suc n -> \ Y X lt -> body n (unifS n) Y X lt } ;
++    suc n | ih-n -> \ Y X lt -> body n (ih-n) Y X lt } ;
+ 
+   unif (Y X : Nat) : UnifT Y X = unifS (suc (plus Y X)) Y X (leb-refl (plus Y X)) ;
+ 
+diff -ru defenv/core/CDPrism.seg primrec/core/CDPrism.seg
+--- defenv/core/CDPrism.seg	2026-10-18 13:27:09
++++ primrec/core/CDPrism.seg	2026-10-19 10:23:44
+@@ -46,11 +46,11 @@
+ -- a point of the shuffle is determined by its two coordinates
+ pcpl : (k n i : Nat) -> Id Nat (plus (pl n k i) (pc n k i)) i = split {
+   zero -> \ n -> split { zero -> refl zero ; suc i -> refl (suc i) } ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> split { zero -> refl zero ; suc i -> refl (suc i) } ;
+     suc n -> split {
+       zero -> refl zero ;
+-      suc i -> transH (plus-suc (pl n k i) (pc n k i)) (apH (\ x -> suc x) (pcpl k n i)) } } } ;
++      suc i -> transH (plus-suc (pl n k i) (pc n k i)) (apH (\ x -> suc x) (ih-k n i)) } } } ;
+ 
+ ------------------------------------------------------------------------
+ -- the points of P_k
+diff -ru defenv/core/CDPrismFill.seg primrec/core/CDPrismFill.seg
+--- defenv/core/CDPrismFill.seg	2026-10-18 13:27:06
++++ primrec/core/CDPrismFill.seg	2026-10-19 10:23:45
+@@ -94,9 +94,9 @@
+     pres : (d : Nat) (hd : IsT (leb d (suc N))) (W : Nat) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv)
+       (s : IsT ((ST N d).1 W f j)) (t : IsT ((S0 N zero).1 W f j)) -> Id (EI W) ((C.chain d hd).v W f j s) (L0.v W f j t) = split {
+       zero -> \ hd W f j s t -> apH (L0.v W f j) (isProp-IsT' ((S0 N zero).1 W f j) (inc0 W f j s) t) ;
+-      suc d -> \ hd W f j s t ->
++      suc d | ih-d -> \ hd W f j s t ->
+         transH (C.Step[d, hd, C.chain d (leb-step d N hd)].Gl.vS W f j (DT.CT[N, d, hd].incT W f j s) (in0 d W f j t))
+-               (pres d (leb-step d N hd) W f j (in0 d W f j t) t) } ;
++               (ih-d (leb-step d N hd) W f j (in0 d W f j t) t) } ;
+ 
+     tot-S0 (W : Nat) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv) (t : IsT ((S0 N zero).1 W f j)) : Id (EI W) (tot W f j) (L0.v W f j t) =
+       pres (suc N) (leb-refl N) W f j (inAll W f j) t ;
+@@ -143,9 +143,9 @@
+     pres : (d : Nat) (hd : IsT (leb d (suc N))) (W : Nat) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv)
+       (s : IsT ((SF N d).1 W f j)) (t : IsT ((S0 N (suc zero)).1 W f j)) -> Id (EI W) ((C.chain d hd).v W f j s) (L0.v W f j t) = split {
+       zero -> \ hd W f j s t -> apH (L0.v W f j) (isProp-IsT' ((S0 N (suc zero)).1 W f j) (inc0 W f j s) t) ;
+-      suc d -> \ hd W f j s t ->
++      suc d | ih-d -> \ hd W f j s t ->
+         transH (C.Step[d, hd, C.chain d (leb-step d N hd)].Gl.vS W f j (DF.CF[N, d, hd].incF W f j s) (in0 d W f j t))
+-               (pres d (leb-step d N hd) W f j (in0 d W f j t) t) } ;
++               (ih-d (leb-step d N hd) W f j (in0 d W f j t) t) } ;
+ 
+     tot-S0 (W : Nat) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv) (t : IsT ((S0 N (suc zero)).1 W f j)) : Id (EI W) (tot W f j) (L0.v W f j t) =
+       pres (suc N) (leb-refl N) W f j (inAll W f j) t ;
+diff -ru defenv/core/CDPrismPt.seg primrec/core/CDPrismPt.seg
+--- defenv/core/CDPrismPt.seg	2026-10-18 13:27:09
++++ primrec/core/CDPrismPt.seg	2026-10-19 10:23:45
+@@ -105,7 +105,7 @@
+ -- k' < k gives not (k <= k')
+ lt-not-le : (k' k : Nat) -> IsT (ltb k' k) -> IsT (not (leb k k')) = split {
+   zero -> split { zero -> \ h -> absurd _ (false-true h) ; suc k -> \ h -> refl true } ;
+-  suc k' -> split { zero -> \ h -> absurd _ (false-true h) ; suc k -> \ h -> lt-not-le k' k h } } ;
++  suc k' | ih-k' -> split { zero -> \ h -> absurd _ (false-true h) ; suc k -> \ h -> ih-k' k h } } ;
+ 
+ -- H: (k , 1) = P_k (k+1) is in no P_{k'} with k < k'
+ ptH (N k k' : Nat) (hk : IsT (leb k N)) (hkk : IsT (ltb k k')) (kN : IsT (leb (suc k) (suc N)))
+diff -ru defenv/core/CDSimpId.seg primrec/core/CDSimpId.seg
+--- defenv/core/CDSimpId.seg	2026-10-18 13:27:09
++++ primrec/core/CDSimpId.seg	2026-10-19 10:29:09
+@@ -30,27 +30,27 @@
+ 
+ dgLoY : (y n j : Nat) -> IsT (leb j y) -> IsT (leb j n) -> Id Nat (dg n y j) j = split {
+   zero -> \ n j hjy hjn -> substH (\ x -> Id Nat (dg n zero x) x) (symH (leb-zero j hjy)) (refl zero) ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> \ j hjy hjn -> substH (\ x -> Id Nat (dg zero (suc y) x) x) (symH (leb-zero j hjn)) (refl zero) ;
+     suc n -> split {
+       zero -> \ hjy hjn -> refl zero ;
+-      suc j -> \ hjy hjn -> apH (\ k -> suc k) (dgLoY y n j hjy hjn) } } } ;
++      suc j -> \ hjy hjn -> apH (\ k -> suc k) (ih-y n j hjy hjn) } } } ;
+ 
+ dg-lo (n y j : Nat) (hjy : IsT (leb j y)) (hjn : IsT (leb j n)) : Id Nat (dg n y j) j = dgLoY y n j hjy hjn ;
+ 
+ dgHiY : (y n x : Nat) -> IsT (leb y x) -> IsT (leb x n) -> Id Nat (dg n y (suc x)) x = split {
+   zero -> \ n x h1 h2 -> refl x ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> \ x h1 h2 -> absurd _ (false-true (substH (\ z -> IsT (leb (suc y) z)) (leb-zero x h2) h1)) ;
+     suc n -> split {
+       zero -> \ h1 h2 -> absurd _ (false-true h1) ;
+-      suc x -> \ h1 h2 -> apH (\ k -> suc k) (dgHiY y n x h1 h2) } } } ;
++      suc x -> \ h1 h2 -> apH (\ k -> suc k) (ih-y n x h1 h2) } } } ;
+ 
+ dg-hi (n y x : Nat) (h1 : IsT (leb y x)) (h2 : IsT (leb x n)) : Id Nat (dg n y (suc x)) x = dgHiY y n x h1 h2 ;
+ 
+ skipGeSelf : (y x : Nat) -> IsT (leb x (skip y x)) = split {
+   zero -> \ x -> leb-suc x ;
+-  suc y -> split { zero -> refl true ; suc x -> skipGeSelf y x } } ;
++  suc y | ih-y -> split { zero -> refl true ; suc x -> ih-y x } } ;
+ 
+ ------------------------------------------------------------------------
+ -- maps through their values
+@@ -135,6 +135,10 @@
+                                (dg-lo n i x ge (xn x ge))))))
+  where {
+    xn (x'' : Nat) (ge : IsT (leb x'' i)) : IsT (leb x'' n) = leb-trans x'' j n (leb-trans x'' i j ge ij) jn ;
++   up2 : (z : Nat) -> IsT (ltb j z) -> IsT (leb i z) -> IsT (leb z (suc n)) -> Id Nat (dg n j z) (dg n i (dg (suc n) (suc j) (suc z))) = split {
++     zero -> \ lt2 lt h -> absurd _ (false-true lt2) ;
++     suc w -> \ lt2 lt h -> transH (dg-hi n j w lt2 h)
++                (symH (transH (apH (dg n i) (dg-hi (suc n) (suc j) (suc w) lt2 h)) (dg-hi n i w (leb-trans i j w ij lt2) h))) } ;
+    up : (x' : Nat) -> IsT (ltb i x') -> IsT (leb x' (suc (suc n))) -> Id Nat (dg n j (dg (suc n) i x')) (dg n i (dg (suc n) (suc j) x')) = split {
+      zero -> \ lt h -> absurd _ (false-true lt) ;
+      suc z -> \ lt h -> transH (apH (dg n j) (dg-hi (suc n) i z lt h))
+@@ -142,11 +146,7 @@
+           (\ lt2 -> up2 z lt2 lt h)
+           (\ ge2 -> transH (dg-lo n j z ge2 (leb-trans z j n ge2 jn))
+                       (symH (transH (apH (dg n i) (dg-lo (suc n) (suc j) (suc z) ge2 (leb-trans z j n ge2 jn)))
+-                                    (dg-hi n i z lt (leb-trans z j n ge2 jn)))))) } ;
+-   up2 : (z : Nat) -> IsT (ltb j z) -> IsT (leb i z) -> IsT (leb z (suc n)) -> Id Nat (dg n j z) (dg n i (dg (suc n) (suc j) (suc z))) = split {
+-     zero -> \ lt2 lt h -> absurd _ (false-true lt2) ;
+-     suc w -> \ lt2 lt h -> transH (dg-hi n j w lt2 h)
+-                (symH (transH (apH (dg n i) (dg-hi (suc n) (suc j) (suc w) lt2 h)) (dg-hi n i w (leb-trans i j w ij lt2) h))) } ; } ;
++                                    (dg-hi n i z lt (leb-trans z j n ge2 jn)))))) } ; } ;
+ 
+ ------------------------------------------------------------------------
+ -- the identities, as maps
+diff -ru defenv/core/CDStageF.seg primrec/core/CDStageF.seg
+--- defenv/core/CDStageF.seg	2026-10-18 13:27:09
++++ primrec/core/CDStageF.seg	2026-10-19 10:28:35
+@@ -53,6 +53,13 @@
+      zero -> \ h n2 n3 -> false-true n3 ;
+      suc k -> \ h n2 n3 -> false-true (substH (\ m -> IsT (not (eqN (suc zero) (suc m)))) (leb-zero k h) n2) } ; } ;
+ 
++-- dl y dl z = dl (z+1) dl y  (y <= z)
++dldl (N' y z : Nat) (yz : IsT (leb y z))
++  : Id (Hom (lin N') (lin (suc (suc N'))))
++       (compH (lin N') (lin (suc N')) (lin (suc (suc N'))) (dl (suc N') y) (dl N' z))
++       (compH (lin N') (lin (suc N')) (lin (suc (suc N'))) (dl (suc N') (suc z)) (dl N' y)) =
++  symH (hom-eq (lin N') (lin (suc (suc N'))) _ _ (pw-dl-dl N' y z yz)) ;
++
+ -- the codimension-2 factorisation, for f missing y and z + 1 (y <= z):
+ -- dgH z (dgH y f) = dgH y (dgH (z+1) f), and the simplicial identity
+ f2eq (N' y z : Nat) (yz : IsT (leb y z)) (hz : IsT (leb (suc z) (suc (suc N')))) (hy : IsT (leb y (suc (suc N'))))
+@@ -81,13 +88,6 @@
+       f2' }
+  where { f2' : Hom (lin W) (lin N') = compH (lin W) (lin (suc N')) (lin N') (dgH N' y) (compH (lin W) (lin (suc (suc N'))) (lin (suc N')) (dgH (suc N') (suc z)) f) ; } ;
+ 
+--- dl y dl z = dl (z+1) dl y  (y <= z)
+-dldl (N' y z : Nat) (yz : IsT (leb y z))
+-  : Id (Hom (lin N') (lin (suc (suc N'))))
+-       (compH (lin N') (lin (suc N')) (lin (suc (suc N'))) (dl (suc N') y) (dl N' z))
+-       (compH (lin N') (lin (suc N')) (lin (suc (suc N'))) (dl (suc N') (suc z)) (dl N' y)) =
+-  symH (hom-eq (lin N') (lin (suc (suc N'))) _ _ (pw-dl-dl N' y z yz)) ;
+-
+ opaque f2eq ; opaque dldl ;
+ 
+ module SF (G : DB.GPre[lz].PS.PCtx) (A : DB.GPre[lz].PS.PTy[G]) (e : El Iv) (eN : Nat) (eE : Id Tree e.1 (leaf eN))
+@@ -207,7 +207,7 @@
+ 
+   stages : (N : Nat) -> State N = split {
+     zero -> (SDm.St0.F, (SDm.St0.sides, cmp2-0)) ;
+-    suc N' -> step N' (stages N') } ;
++    suc N' | ih-N' -> step N' (ih-N') } ;
+ 
+   fill (N : Nat) : FillTy N = (stages N).1 ;
+ 
+diff -ru defenv/core/CDSurj.seg primrec/core/CDSurj.seg
+--- defenv/core/CDSurj.seg	2026-10-18 13:27:06
++++ primrec/core/CDSurj.seg	2026-10-19 10:28:27
+@@ -28,35 +28,37 @@
+ 
+ first : Nat -> (Nat -> Bool) -> Nat = split {
+   zero -> \ P -> zero ;
+-  suc W -> \ P -> ifB (P zero) zero (suc (first W (\ v -> P (suc v)))) } ;
++  suc W | ih-W -> \ P -> ifB (P zero) zero (suc (ih-W (\ v -> P (suc v)))) } ;
+ 
+ first-le : (W : Nat) (P : Nat -> Bool) -> IsT (leb (first W P) W) = split {
+   zero -> \ P -> refl true ;
+-  suc W -> \ P -> bcase (IsT (leb (first (suc W) P) (suc W))) (P zero)
++  suc W | ih-W -> \ P -> bcase (IsT (leb (first (suc W) P) (suc W))) (P zero)
+     (\ t -> substH (\ x -> IsT (leb x (suc W))) (symH (ifB-t (P zero) zero (suc (first W (\ v -> P (suc v)))) t)) (refl true))
+     (\ f -> substH (\ x -> IsT (leb x (suc W))) (symH (ifB-f (P zero) zero (suc (first W (\ v -> P (suc v)))) f))
+-               (first-le W (\ v -> P (suc v)))) } ;
++               (ih-W (\ v -> P (suc v)))) } ;
+ 
+ -- if some v <= W has P v, the first one has P and is below v
+ first-spec : (W : Nat) (P : Nat -> Bool) (v : Nat) -> IsT (leb v W) -> IsT (P v)
+   -> IsT (P (first W P)) * IsT (leb (first W P) v) = split {
+   zero -> \ P v hv pv -> (substH (\ x -> IsT (P x)) (leb-zero v hv) pv, refl true) ;
+-  suc W -> \ P v hv pv -> bcase (IsT (P (first (suc W) P)) * IsT (leb (first (suc W) P) v)) (P zero)
++  suc W | ih-W -> \ P v hv pv -> bcase (IsT (P (first (suc W) P)) * IsT (leb (first (suc W) P) v)) (P zero)
+     (\ t -> substH (\ x -> IsT (P x) * IsT (leb x v)) (symH (ifB-t (P zero) zero (suc (first W (\ v' -> P (suc v')))) t)) (t, refl true))
+     (\ f -> substH (\ x -> IsT (P x) * IsT (leb x v)) (symH (ifB-f (P zero) zero (suc (first W (\ v' -> P (suc v')))) f))
+-              (sucCase W P f v hv pv)) }
+- where { sucCase (W : Nat) (P : Nat -> Bool) (f : Id Bool (P zero) false) : (v : Nat) -> IsT (leb v (suc W)) -> IsT (P v)
++              (sucCase W P f ih-W v hv pv)) }
++ where { sucCase (W : Nat) (P : Nat -> Bool) (f : Id Bool (P zero) false)
++           (ih : (P' : Nat -> Bool) (v' : Nat) -> IsT (leb v' W) -> IsT (P' v') -> IsT (P' (first W P')) * IsT (leb (first W P') v'))
++           : (v : Nat) -> IsT (leb v (suc W)) -> IsT (P v)
+            -> IsT (P (suc (first W (\ v' -> P (suc v'))))) * IsT (leb (suc (first W (\ v' -> P (suc v')))) v) = split {
+            zero -> \ hv pv -> absurd _ (false-true (transH (symH f) pv)) ;
+-           suc v -> \ hv pv -> first-spec W (\ v' -> P (suc v')) v hv pv } ; } ;
++           suc v -> \ hv pv -> ih (\ v' -> P (suc v')) v hv pv } ; } ;
+ 
+ -- a false forall has a counterexample
+ fa-false : (W : Nat) (P : Nat -> Bool) -> Id Bool (forallUp W P) false -> (v : Nat) * (IsT (leb v W) * Id Bool (P v) false) = split {
+   zero -> \ P h -> (zero, (refl true, h)) ;
+-  suc W -> \ P h -> bcase ((v : Nat) * (IsT (leb v (suc W)) * Id Bool (P v) false)) (P (suc W))
+-    (\ t -> ((fa-false W P (andFl (forallUp W P) (P (suc W)) h t)).1,
+-             (leb-step (fa-false W P (andFl (forallUp W P) (P (suc W)) h t)).1 W (fa-false W P (andFl (forallUp W P) (P (suc W)) h t)).2.1,
+-              (fa-false W P (andFl (forallUp W P) (P (suc W)) h t)).2.2)))
++  suc W | ih-W -> \ P h -> bcase ((v : Nat) * (IsT (leb v (suc W)) * Id Bool (P v) false)) (P (suc W))
++    (\ t -> ((ih-W P (andFl (forallUp W P) (P (suc W)) h t)).1,
++             (leb-step (ih-W P (andFl (forallUp W P) (P (suc W)) h t)).1 W (ih-W P (andFl (forallUp W P) (P (suc W)) h t)).2.1,
++              (ih-W P (andFl (forallUp W P) (P (suc W)) h t)).2.2)))
+     (\ f -> (suc W, (leb-refl W, f))) }
+  where { andFl : (x y : Bool) -> Id Bool (and x y) false -> IsT y -> Id Bool x false = split {
+            true -> \ y h t -> absurd _ (false-true (transH (symH h) t)) ;
+diff -ru defenv/core/CDeltaHornBox.seg primrec/core/CDeltaHornBox.seg
+--- defenv/core/CDeltaHornBox.seg	2026-10-18 13:27:06
++++ primrec/core/CDeltaHornBox.seg	2026-10-19 10:29:40
+@@ -82,19 +82,20 @@
+ 
+   search (N : Nat) (b : Prob (suc N)) : (k : Nat) -> Found N b k = split {
+     zero -> z0 (decDeg N b zero) ;
+-    suc k -> sk k (search N b k) }
++    suc k | ih-k -> sk k (ih-k) }
+    where {
+      z0 : Arith[lz].Plus (DegR N b zero) (DegR N b zero -> Empty) -> Found N b zero = split {
+        inl d -> inl (zero, (refl true, (d, \ i' lt d' -> absurd _ (false-true lt)))) ;
+        inr n -> inr (\ i hi d -> n (substH (\ x -> DegR N b x) (leb-zero i hi) d)) } ;
+-     sk (k : Nat) : Found N b k -> Found N b (suc k) = split {
+-       inl w -> inl (w.1, (leb-step w.1 k w.2.1, w.2.2)) ;
+-       inr n -> sk2 k n (decDeg N b (suc k)) } ;
+      sk2 (k : Nat) (n : (i : Nat) -> IsT (leb i k) -> DegR N b i -> Empty) : Arith[lz].Plus (DegR N b (suc k)) (DegR N b (suc k) -> Empty) -> Found N b (suc k) = split {
+        inl d -> inl (suc k, (leb-refl k, (d, \ i' lt d' -> n i' lt d'))) ;
+        inr n' -> inr (\ i hi d -> orE Empty (eqN i (suc k)) (leb i k) (leb-suc-split i k hi)
+                                      (\ q -> n' (substH (\ x -> DegR N b x) (eqN-sound i (suc k) q) d))
+-                                     (\ q -> n i q d)) } ; } ;
++                                     (\ q -> n i q d)) } ;
++     sk (k : Nat) : Found N b k -> Found N b (suc k) = split {
++       inl w -> inl (w.1, (leb-step w.1 k w.2.1, w.2.2)) ;
++       inr n -> sk2 k n (decDeg N b (suc k)) } ;
++ } ;
+ 
+   -- the decision, as the normalised fillers use it (DNormA.DegFound)
+   toFound (N : Nat) (b : Prob (suc N)) : Found N b N -> CDNormA[a, lz].NA[G, A, e].DegFound N b = split {
+diff -ru defenv/core/CDeltaNat.seg primrec/core/CDeltaNat.seg
+--- defenv/core/CDeltaNat.seg	2026-10-18 13:27:08
++++ primrec/core/CDeltaNat.seg	2026-10-19 10:23:42
+@@ -63,61 +63,61 @@
+ 
+ forallUp : Nat -> (Nat -> Bool) -> Bool = split {
+   zero -> \ P -> P zero ;
+-  suc n -> \ P -> and (forallUp n P) (P (suc n)) } ;
++  suc n | ih-n -> \ P -> and (ih-n P) (P (suc n)) } ;
+ 
+ fa-e : (n : Nat) (P : Nat -> Bool) -> IsT (forallUp n P) -> (x : Nat) -> IsT (leb x n) -> IsT (P x) = split {
+   zero -> \ P h x hx -> substH (\ y -> IsT (P y)) (symH (leb-zero x hx)) h ;
+-  suc n -> \ P h x hx ->
++  suc n | ih-n -> \ P h x hx ->
+     or-elim (IsT (P x)) (eqN x (suc n)) (leb x n) (leb-suc-split x n hx)
+       (\ e -> substH (\ y -> IsT (P y)) (symH (eqN-sound x (suc n) e)) (and-r (forallUp n P) (P (suc n)) h))
+-      (\ l -> fa-e n P (and-l (forallUp n P) (P (suc n)) h) x l) } ;
++      (\ l -> ih-n P (and-l (forallUp n P) (P (suc n)) h) x l) } ;
+ 
+ fa-i : (n : Nat) (P : Nat -> Bool) -> ((x : Nat) -> IsT (leb x n) -> IsT (P x)) -> IsT (forallUp n P) = split {
+   zero -> \ P k -> k zero (refl true) ;
+-  suc n -> \ P k -> and-i (forallUp n P) (P (suc n)) (fa-i n P (\ x l -> k x (leb-step x n l))) (k (suc n) (leb-refl n)) } ;
++  suc n | ih-n -> \ P k -> and-i (forallUp n P) (P (suc n)) (ih-n P (\ x l -> k x (leb-step x n l))) (k (suc n) (leb-refl n)) } ;
+ 
+ existsUp : Nat -> (Nat -> Bool) -> Bool = split {
+   zero -> \ P -> P zero ;
+-  suc n -> \ P -> or (existsUp n P) (P (suc n)) } ;
++  suc n | ih-n -> \ P -> or (ih-n P) (P (suc n)) } ;
+ 
+ ex-e : (n : Nat) (P : Nat -> Bool) -> IsT (existsUp n P) -> (x : Nat) * (IsT (leb x n) * IsT (P x)) = split {
+   zero -> \ P h -> (zero, (refl true, h)) ;
+-  suc n -> \ P h ->
++  suc n | ih-n -> \ P h ->
+     or-elim ((x : Nat) * (IsT (leb x (suc n)) * IsT (P x))) (existsUp n P) (P (suc n)) h
+-      (\ h1 -> ((ex-e n P h1).1, (leb-step (ex-e n P h1).1 n (ex-e n P h1).2.1, (ex-e n P h1).2.2)))
++      (\ h1 -> ((ih-n P h1).1, (leb-step (ih-n P h1).1 n (ih-n P h1).2.1, (ih-n P h1).2.2)))
+       (\ h2 -> (suc n, (leb-refl n, h2))) } ;
+ 
+ ex-i : (n : Nat) (P : Nat -> Bool) (x : Nat) -> IsT (leb x n) -> IsT (P x) -> IsT (existsUp n P) = split {
+   zero -> \ P x hx p -> substH (\ y -> IsT (P y)) (leb-zero x hx) p ;
+-  suc n -> \ P x hx p ->
++  suc n | ih-n -> \ P x hx p ->
+     or-elim (IsT (existsUp (suc n) P)) (eqN x (suc n)) (leb x n) (leb-suc-split x n hx)
+       (\ e -> or-r (existsUp n P) (P (suc n)) (substH (\ y -> IsT (P y)) (eqN-sound x (suc n) e) p))
+-      (\ l -> or-l (existsUp n P) (P (suc n)) (ex-i n P x l p)) } ;
++      (\ l -> or-l (existsUp n P) (P (suc n)) (ih-n P x l p)) } ;
+ 
+ -- over a finite index set Fin k
+ existsF : (k : Nat) -> ((j : Nat) -> IsT (ltb j k) -> Bool) -> Bool = split {
+   zero -> \ P -> false ;
+-  suc k -> \ P -> or (P k (leb-refl k)) (existsF k (\ j h -> P j (ltb-leb j k h))) } ;
++  suc k | ih-k -> \ P -> or (P k (leb-refl k)) (ih-k (\ j h -> P j (ltb-leb j k h))) } ;
+ 
+ exF-e : (k : Nat) (P : (j : Nat) -> IsT (ltb j k) -> Bool) -> IsT (existsF k P)
+   -> (j : Nat) * ((h : IsT (ltb j k)) * IsT (P j h)) = split {
+   zero -> \ P h -> absurd ((j : Nat) * ((h'' : IsT (ltb j zero)) * IsT (P j h''))) (false-true h) ;
+-  suc k -> \ P h ->
++  suc k | ih-k -> \ P h ->
+     or-elim ((j : Nat) * ((h' : IsT (ltb j (suc k))) * IsT (P j h'))) (P k (leb-refl k)) (existsF k (\ j h' -> P j (ltb-leb j k h'))) h
+       (\ h1 -> (k, (leb-refl k, h1)))
+-      (\ h2 -> ((exF-e k (\ j h' -> P j (ltb-leb j k h')) h2).1,
+-                (ltb-leb (exF-e k (\ j h' -> P j (ltb-leb j k h')) h2).1 k (exF-e k (\ j h' -> P j (ltb-leb j k h')) h2).2.1,
+-                 (exF-e k (\ j h' -> P j (ltb-leb j k h')) h2).2.2))) } ;
++      (\ h2 -> ((ih-k (\ j h' -> P j (ltb-leb j k h')) h2).1,
++                (ltb-leb (ih-k (\ j h' -> P j (ltb-leb j k h')) h2).1 k (ih-k (\ j h' -> P j (ltb-leb j k h')) h2).2.1,
++                 (ih-k (\ j h' -> P j (ltb-leb j k h')) h2).2.2))) } ;
+ 
+ exF-i : (k : Nat) (P : (j : Nat) -> IsT (ltb j k) -> Bool) (j : Nat) (h : IsT (ltb j k)) -> IsT (P j h) -> IsT (existsF k P) = split {
+   zero -> \ P j h p -> absurd (IsT false) (false-true h) ;
+-  suc k -> \ P j h p ->
++  suc k | ih-k -> \ P j h p ->
+     eqN-dec (IsT (existsF (suc k) P)) j k
+       (\ e -> or-l (P k (leb-refl k)) (existsF k (\ j' h' -> P j' (ltb-leb j' k h')))
+                 (idJ Nat k (\ j2 e2 -> (h2 : IsT (ltb j2 (suc k))) -> IsT (P j2 h2) -> IsT (P k (leb-refl k)))
+                    (\ h2 p2 -> substH (\ hh -> IsT (P k hh)) (isProp-IsT' (ltb k (suc k)) h2 (leb-refl k)) p2) j (symH e) h p))
+       (\ ne -> or-r (P k (leb-refl k)) (existsF k (\ j' h' -> P j' (ltb-leb j' k h')))
+-                 (exF-i k (\ j' h' -> P j' (ltb-leb j' k h')) j (leb-neq j k h ne)
++                 (ih-k (\ j' h' -> P j' (ltb-leb j' k h')) j (leb-neq j k h ne)
+                     (substH (\ hh -> IsT (P j hh)) (isProp-IsT' (ltb j (suc k)) h (ltb-leb j k (leb-neq j k h ne))) p))) } ;
+ 
+ ------------------------------------------------------------------------
+@@ -144,52 +144,52 @@
+ 
+ maxUp : Nat -> (Nat -> Nat) -> Nat = split {
+   zero -> \ z -> z zero ;
+-  suc p -> \ z -> maxN (maxUp p z) (z (suc p)) } ;
++  suc p | ih-p -> \ z -> maxN (ih-p z) (z (suc p)) } ;
+ 
+ le-maxUp : (p : Nat) (z : Nat -> Nat) (i : Nat) -> IsT (leb i p) -> IsT (leb (z i) (maxUp p z)) = split {
+   zero -> \ z i hi -> substH (\ y -> IsT (leb (z y) (z zero))) (symH (leb-zero i hi)) (leb-refl (z zero)) ;
+-  suc p -> \ z i hi ->
++  suc p | ih-p -> \ z i hi ->
+     or-elim (IsT (leb (z i) (maxUp (suc p) z))) (eqN i (suc p)) (leb i p) (leb-suc-split i p hi)
+       (\ e -> substH (\ y -> IsT (leb (z y) (maxUp (suc p) z))) (symH (eqN-sound i (suc p) e)) (le-maxr (maxUp p z) (z (suc p))))
+-      (\ l -> leb-trans (z i) (maxUp p z) (maxUp (suc p) z) (le-maxUp p z i l) (le-maxl (maxUp p z) (z (suc p)))) } ;
++      (\ l -> leb-trans (z i) (maxUp p z) (maxUp (suc p) z) (ih-p z i l) (le-maxl (maxUp p z) (z (suc p)))) } ;
+ 
+ maxUp-le : (p : Nat) (z : Nat -> Nat) (c : Nat) -> ((i : Nat) -> IsT (leb i p) -> IsT (leb (z i) c)) -> IsT (leb (maxUp p z) c) = split {
+   zero -> \ z c k -> k zero (refl true) ;
+-  suc p -> \ z c k -> max-le (maxUp p z) (z (suc p)) c (maxUp-le p z c (\ i l -> k i (leb-step i p l))) (k (suc p) (leb-refl p)) } ;
++  suc p | ih-p -> \ z c k -> max-le (maxUp p z) (z (suc p)) c (ih-p z c (\ i l -> k i (leb-step i p l))) (k (suc p) (leb-refl p)) } ;
+ 
+ ------------------------------------------------------------------------
+ -- the shuffles P_k below and above k  (k <= n)
+ 
+ pc-low : (k n x : Nat) -> IsT (leb x k) -> IsT (leb x n) -> Id Nat (pc n k x) x = split {
+   zero -> \ n x hk hn -> substH (\ y -> Id Nat (pc n zero y) y) (symH (leb-zero x hk)) (refl zero) ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> \ x hk hn -> substH (\ y -> Id Nat (pc zero (suc k) y) y) (symH (leb-zero x hn)) (refl zero) ;
+     suc n -> split {
+       zero -> \ hk hn -> refl zero ;
+-      suc x -> \ hk hn -> apH (\ m -> suc m) (pc-low k n x hk hn) } } } ;
++      suc x -> \ hk hn -> apH (\ m -> suc m) (ih-k n x hk hn) } } } ;
+ 
+ pc-high : (k n x : Nat) -> IsT (leb k x) -> IsT (leb x n) -> Id Nat (pc n k (suc x)) x = split {
+   zero -> \ n x hk hn -> refl x ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> \ x hk hn -> absurd (Id Nat (pc zero (suc k) (suc x)) x)
+                           (false-true (substH (\ y -> IsT (leb (suc k) y)) (leb-zero x hn) hk)) ;
+     suc n -> split {
+       zero -> \ hk hn -> absurd (Id Nat (pc (suc n) (suc k) (suc zero)) zero) (false-true hk) ;
+-      suc x -> \ hk hn -> apH (\ m -> suc m) (pc-high k n x hk hn) } } } ;
++      suc x -> \ hk hn -> apH (\ m -> suc m) (ih-k n x hk hn) } } } ;
+ 
+ pl-low : (k n x : Nat) -> IsT (leb x k) -> IsT (leb x n) -> Id Nat (pl n k x) zero = split {
+   zero -> \ n x hk hn -> substH (\ y -> Id Nat (pl n zero y) zero) (symH (leb-zero x hk)) (refl zero) ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> \ x hk hn -> substH (\ y -> Id Nat (pl zero (suc k) y) zero) (symH (leb-zero x hn)) (refl zero) ;
+     suc n -> split {
+       zero -> \ hk hn -> refl zero ;
+-      suc x -> \ hk hn -> pl-low k n x hk hn } } } ;
++      suc x -> \ hk hn -> ih-k n x hk hn } } } ;
+ 
+ pl-high : (k n x : Nat) -> IsT (leb k x) -> IsT (leb x n) -> Id Nat (pl n k (suc x)) (suc zero) = split {
+   zero -> \ n x hk hn -> refl (suc zero) ;
+-  suc k -> split {
++  suc k | ih-k -> split {
+     zero -> \ x hk hn -> absurd (Id Nat (pl zero (suc k) (suc x)) (suc zero))
+                           (false-true (substH (\ y -> IsT (leb (suc k) y)) (leb-zero x hn) hk)) ;
+     suc n -> split {
+       zero -> \ hk hn -> absurd (Id Nat (pl (suc n) (suc k) (suc zero)) (suc zero)) (false-true hk) ;
+-      suc x -> \ hk hn -> pl-high k n x hk hn } } } ;
++      suc x -> \ hk hn -> ih-k n x hk hn } } } ;
+diff -ru defenv/core/CLocD.seg primrec/core/CLocD.seg
+--- defenv/core/CLocD.seg	2026-10-18 17:48:11
++++ primrec/core/CLocD.seg	2026-10-19 10:30:26
+@@ -201,13 +201,14 @@
+         substH (\ v -> IsT (leb v n)) (symH (gam-eq i h))
+                (vnum-range n (app (lin m) (lin n) g (leaf i, h)).1 (app (lin m) (lin n) g (leaf i, h)).2) ;
+ 
++      hi (i j : Nat) (hj : IsT (leb j m)) (l0 : IsT (ltb i j)) : IsT (leb i m) = leb-trans i j m (ltb-leb i j l0) hj ;
++
+       str (s : Strict (lin m) (lin n) g) : Str m gam = \ i j hj l0 ->
+         lt-lin (gam i) (gam j)
+           (substH (\ t -> IsT (lt (lin n) t (leaf (gam j)))) (leaf-eq i (hi i j hj l0))
+             (substH (\ t -> IsT (lt (lin n) (app (lin m) (lin n) g (leaf i, hi i j hj l0)).1 t)) (leaf-eq j hj)
+               (s (leaf i, hi i j hj l0) (leaf j, hj) (lin-lt i j l0)))) ;
+ 
+-      hi (i j : Nat) (hj : IsT (leb j m)) (l0 : IsT (ltb i j)) : IsT (leb i m) = leb-trans i j m (ltb-leb i j l0) hj ;
+     } ;
+ 
+     -- dg restricted to the vertices other than y is strict
+@@ -223,14 +224,6 @@
+     Goal (m n : Nat) (g : Hom (lin m) (lin n)) (f : Hom (lin n) X) : U l =
+       Id (EI (lin m)) (E.act (lin m) (lin n) g (rd X x u n f)) (rd X x u m (compH (lin m) (lin n) X f g)) ;
+ 
+-    fg (n m : Nat) (g : Hom (lin m) (lin n)) (s : Strict (lin m) (lin n) g) (f : Hom (lin n) X) : Goal m n g f =
+-      cases n m g s f (missing n m Vx[m, n, g].gam Vx[m, n, g].rng (Vx[m, n, g].str s)) ;
+-
+-    cases (n m : Nat) (g : Hom (lin m) (lin n)) (s : Strict (lin m) (lin n) g) (f : Hom (lin n) X)
+-      : Arith[a].Plus (IsId m n Vx[m, n, g].gam) (Misses m n Vx[m, n, g].gam) -> Goal m n g f = split {
+-      inl d -> idcase m n f d.1 g (pw-id m n g d.1 d.2) ;
+-      inr w -> miss m n g s f Vx[m, n, g].gam Vx[m, n, g].leaf-eq w.1 w.2.1 w.2.2 } ;
+-
+     -- Agda matches e : m' = n against refl
+     idcase (m' n : Nat) (f : Hom (lin n) X) (e : Id Nat m' n) (g' : Hom (lin m') (lin n))
+       (p : PW (lin m') (lin n) g' (substH (\ k -> Hom (lin m') (lin k)) e (idH (lin m')))) : Goal m' n g' f =
+@@ -252,28 +245,6 @@
+                                           (transH (apH (\ k1 -> leaf k1) (d1 i h)) (symH (app-idH1 (lin m) (leaf i, h))))))
+         n e g d ;
+ 
+-    miss (m : Nat) : (n : Nat) (g : Hom (lin m) (lin n)) (s : Strict (lin m) (lin n) g) (f : Hom (lin n) X)
+-      (gam : Nat -> Nat) (le : (i : Nat) (h : IsT (leb i m)) -> Id Tree (app (lin m) (lin n) g (leaf i, h)).1 (leaf (gam i)))
+-      (y : Nat) (hy : IsT (leb y n)) (ms : (i : Nat) -> IsT (leb i m) -> IsT (not (eqN (gam i) y)))
+-      -> Goal m n g f = split {
+-      zero -> \ g s f gam le y hy ms ->
+-        absurd _ (false-true (substH (\ w -> IsT (not (eqN zero w))) (leb-zero y hy)
+-                               (substH (\ v -> IsT (not (eqN v y)))
+-                                  (leb-zero (gam zero)
+-                                     (substH (\ t -> IsT (car (lin zero) t)) (le zero (refl true))
+-                                             (app (lin m) (lin zero) g (leaf zero, refl true)).2))
+-                                  (ms zero (refl true))))) ;
+-      suc n' -> \ g s f gam le y hy ms ->
+-        transH (symH (PR.TyL[G, A].PE.actEq (lin m) (lin (suc n')) (compH (lin m) (lin n') (lin (suc n')) (dl n' y) (g' m n' g y)) g (hom-eq (lin m) (lin (suc n')) (compH (lin m) (lin n') (lin (suc n')) (dl n' y) (g' m n' g y)) g (pwf m n' g gam le y hy ms)) (rd X x u (suc n') f)))
+-         (transH (E.act-o (lin m) (lin n') (lin (suc n')) (dl n' y) (g' m n' g y) (rd X x u (suc n') f))
+-          (transH (apH (E.act (lin m) (lin n') (g' m n' g y)) (fc n' f y hy))
+-           (transH (fg n' m (g' m n' g y) (s' m n' g s gam le y hy ms) (compH (lin n') (lin (suc n')) X f (dl n' y)))
+-            (transH (apH (\ f2 -> rd X x u m f2) (comp-assoc (lin m) (lin n') (lin (suc n')) X f (dl n' y) (g' m n' g y)))
+-                   (apH (\ f2 -> rd X x u m f2)
+-                        (hom-eq (lin m) X _ _
+-                           (pw-post (lin m) (lin (suc n')) X (compH (lin m) (lin n') (lin (suc n')) (dl n' y) (g' m n' g y)) g f
+-                                    (pwf m n' g gam le y hy ms)))))))) } ;
+-
+     g' (m n' : Nat) (g : Hom (lin m) (lin (suc n'))) (y : Nat) : Hom (lin m) (lin n') =
+       compH (lin m) (lin (suc n')) (lin n') (dgH n' y) g ;
+ 
+@@ -303,6 +274,48 @@
+       (dg-str n' y hy (app (lin m) (lin (suc n')) g s1).1 (app (lin m) (lin (suc n')) g t1).1
+         (app (lin m) (lin (suc n')) g s1).2 (app (lin m) (lin (suc n')) g t1).2
+         (msT m n' g gam le y ms s1) (msT m n' g gam le y ms t1) (s s1 t1 l0))) ;
++
++    -- the type of miss at m, n: given to fg and cases, which miss calls on
++    -- n' at  suc n'  (its recursive result: PRIMREC.md)
++    MissT (m n : Nat) : U l =
++      (g : Hom (lin m) (lin n)) (s : Strict (lin m) (lin n) g) (f : Hom (lin n) X)
++      (gam : Nat -> Nat) (le : (i : Nat) (h : IsT (leb i m)) -> Id Tree (app (lin m) (lin n) g (leaf i, h)).1 (leaf (gam i)))
++      (y : Nat) (hy : IsT (leb y n)) (ms : (i : Nat) -> IsT (leb i m) -> IsT (not (eqN (gam i) y)))
++      -> Goal m n g f ;
++
++    cases (n m : Nat) (mi : MissT m n) (g : Hom (lin m) (lin n)) (s : Strict (lin m) (lin n) g) (f : Hom (lin n) X)
++      : Arith[a].Plus (IsId m n Vx[m, n, g].gam) (Misses m n Vx[m, n, g].gam) -> Goal m n g f = split {
++      inl d -> idcase m n f d.1 g (pw-id m n g d.1 d.2) ;
++      inr w -> mi g s f Vx[m, n, g].gam Vx[m, n, g].leaf-eq w.1 w.2.1 w.2.2 } ;
++
++    fgM (n m : Nat) (mi : MissT m n) (g : Hom (lin m) (lin n)) (s : Strict (lin m) (lin n) g) (f : Hom (lin n) X)
++      : Goal m n g f =
++      cases n m mi g s f (missing n m Vx[m, n, g].gam Vx[m, n, g].rng (Vx[m, n, g].str s)) ;
++
++    miss (m : Nat) : (n : Nat) (g : Hom (lin m) (lin n)) (s : Strict (lin m) (lin n) g) (f : Hom (lin n) X)
++      (gam : Nat -> Nat) (le : (i : Nat) (h : IsT (leb i m)) -> Id Tree (app (lin m) (lin n) g (leaf i, h)).1 (leaf (gam i)))
++      (y : Nat) (hy : IsT (leb y n)) (ms : (i : Nat) -> IsT (leb i m) -> IsT (not (eqN (gam i) y)))
++      -> Goal m n g f = split {
++      zero -> \ g s f gam le y hy ms ->
++        absurd _ (false-true (substH (\ w -> IsT (not (eqN zero w))) (leb-zero y hy)
++                               (substH (\ v -> IsT (not (eqN v y)))
++                                  (leb-zero (gam zero)
++                                     (substH (\ t -> IsT (car (lin zero) t)) (le zero (refl true))
++                                             (app (lin m) (lin zero) g (leaf zero, refl true)).2))
++                                  (ms zero (refl true))))) ;
++      suc n' | ih-n' -> \ g s f gam le y hy ms ->
++        transH (symH (PR.TyL[G, A].PE.actEq (lin m) (lin (suc n')) (compH (lin m) (lin n') (lin (suc n')) (dl n' y) (g' m n' g y)) g (hom-eq (lin m) (lin (suc n')) (compH (lin m) (lin n') (lin (suc n')) (dl n' y) (g' m n' g y)) g (pwf m n' g gam le y hy ms)) (rd X x u (suc n') f)))
++         (transH (E.act-o (lin m) (lin n') (lin (suc n')) (dl n' y) (g' m n' g y) (rd X x u (suc n') f))
++          (transH (apH (E.act (lin m) (lin n') (g' m n' g y)) (fc n' f y hy))
++           (transH (fgM n' m ih-n' (g' m n' g y) (s' m n' g s gam le y hy ms) (compH (lin n') (lin (suc n')) X f (dl n' y)))
++            (transH (apH (\ f2 -> rd X x u m f2) (comp-assoc (lin m) (lin n') (lin (suc n')) X f (dl n' y) (g' m n' g y)))
++                   (apH (\ f2 -> rd X x u m f2)
++                        (hom-eq (lin m) X _ _
++                           (pw-post (lin m) (lin (suc n')) X (compH (lin m) (lin n') (lin (suc n')) (dl n' y) (g' m n' g y)) g f
++                                    (pwf m n' g gam le y hy ms)))))))) } ;
++
++    fg (n m : Nat) (g : Hom (lin m) (lin n)) (s : Strict (lin m) (lin n) g) (f : Hom (lin n) X) : Goal m n g f =
++      fgM n m (miss m n) g s f ;
+ 
+     facesGen : Compat X x u = \ m n g s f -> fg n m g s f ;
+   } ;
+diff -ru defenv/core/CLocEZ.seg primrec/core/CLocEZ.seg
+--- defenv/core/CLocEZ.seg	2026-10-18 13:27:06
++++ primrec/core/CLocEZ.seg	2026-10-19 10:24:06
+@@ -33,17 +33,17 @@
+   zero -> split {
+     zero -> \ h k -> refl true ;
+     suc i -> \ h k -> absurd _ (false-true (transH (symH (apH not (eqN-refl zero))) (substH (\ x -> IsT (not (eqN (suc x) (suc zero)))) (leb-zero i h) k))) } ;
+-  suc j -> split {
++  suc j | ih-j -> split {
+     zero -> \ h k -> refl true ;
+-    suc i -> \ h k -> leb-suc-ne j i h k } } ;
++    suc i -> \ h k -> ih-j i h k } } ;
+ 
+ -- x <= y <= suc x gives y = x or y = suc x
+ two-way (x y : Nat) (l : IsT (leb x y)) (u : IsT (leb y (suc x))) (R : U a) (k0 : Id Nat y x -> R) (k1 : Id Nat y (suc x) -> R) : R =
+   eqN-dec R y (suc x) k1 (\ ne -> k0 (leb-antisym y x (leb-suc-ne x y u ne) l))
+  where { leb-antisym : (p q : Nat) -> IsT (leb p q) -> IsT (leb q p) -> Id Nat p q = split {
+            zero -> split { zero -> \ h k -> refl zero ; suc q -> \ h k -> absurd _ (false-true k) } ;
+-           suc p -> split { zero -> \ h k -> absurd _ (false-true h) ;
+-                            suc q -> \ h k -> apH (\ z -> suc z) (leb-antisym p q h k) } } ; } ;
++           suc p | ih-p -> split { zero -> \ h k -> absurd _ (false-true h) ;
++                            suc q -> \ h k -> apH (\ z -> suc z) (ih-p q h k) } } ; } ;
+ 
+ -- not b = false gives b
+ notF : (b : Bool) -> Id Bool (not b) false -> IsT b = split {
+@@ -51,7 +51,7 @@
+   false -> \ e -> absurd _ (false-true (symH e)) } ;
+ 
+ ltb-irr' (x : Nat) (l : IsT (ltb x x)) : Empty = false-true (transH (symH (ltb-self x)) l)
+- where { ltb-self : (y : Nat) -> Id Bool (ltb y y) false = split { zero -> refl false ; suc y -> ltb-self y } ; } ;
++ where { ltb-self : (y : Nat) -> Id Bool (ltb y y) false = split { zero -> refl false ; suc y | ih-y -> ih-y } ; } ;
+ 
+ ------------------------------------------------------------------------
+ -- the factorisation of a monotone h
+@@ -62,7 +62,7 @@
+ 
+   sN : Nat -> Nat = split {
+     zero -> zero ;
+-    suc v -> ifB (jp v) (suc (sN v)) (sN v) } ;
++    suc v | ih-v -> ifB (jp v) (suc (ih-v)) (ih-v) } ;
+ 
+   -- the steps
+   step (v : Nat) (R : U a) (k0 : Id Bool (jp v) false -> Id Nat (sN (suc v)) (sN v) -> R)
+@@ -94,23 +94,23 @@
+   -- monotone
+   smono : (j i : Nat) -> IsT (leb i j) -> IsT (leb (sN i) (sN j)) = split {
+     zero -> \ i l -> substH (\ z -> IsT (leb (sN z) zero)) (symH (leb-zero i l)) (refl true) ;
+-    suc j -> \ i l -> eqN-dec (IsT (leb (sN i) (sN (suc j)))) i (suc j)
++    suc j | ih-j -> \ i l -> eqN-dec (IsT (leb (sN i) (sN (suc j)))) i (suc j)
+       (\ e -> substH (\ z -> IsT (leb (sN z) (sN (suc j)))) (symH e) (leb-refl (sN (suc j))))
+-      (\ ne -> leb-trans (sN i) (sN j) (sN (suc j)) (smono j i (leb-suc-ne j i l ne)) (step-lo j)) } ;
++      (\ ne -> leb-trans (sN i) (sN j) (sN (suc j)) (ih-j i (leb-suc-ne j i l ne)) (step-lo j)) } ;
+ 
+   -- an intermediate value: every t <= sN v is a value below v
+   ivt : (v t : Nat) -> IsT (leb t (sN v)) -> (u : Nat) * (IsT (leb u v) * Id Nat (sN u) t) = split {
+     zero -> \ t l -> (zero, (refl true, symH (leb-zero t l))) ;
+-    suc v -> \ t l -> ltb-dec ((u : Nat) * (IsT (leb u (suc v)) * Id Nat (sN u) t)) (sN v) t
++    suc v | ih-v -> \ t l -> ltb-dec ((u : Nat) * (IsT (leb u (suc v)) * Id Nat (sN u) t)) (sN v) t
+       (\ gt -> (suc v, (leb-refl v,
+           two-way (sN v) (sN (suc v)) (step-lo v) (step-hi v) (Id Nat (sN (suc v)) t)
+             (\ e -> absurd _ (ltb-irr' (sN v) (ltb-leb-trans (sN v) t (sN v) gt (substH (\ z -> IsT (leb t z)) e l))))
+             (\ e -> leb-anti (sN (suc v)) t (substH (\ z -> IsT (leb z t)) (symH e) gt) l))))
+-      (\ le -> ((ivt v t le).1, (leb-trans (ivt v t le).1 v (suc v) (ivt v t le).2.1 (leb-suc v), (ivt v t le).2.2))) }
++      (\ le -> ((ih-v t le).1, (leb-trans (ih-v t le).1 v (suc v) (ih-v t le).2.1 (leb-suc v), (ih-v t le).2.2))) }
+    where {
+     leb-anti : (p q : Nat) -> IsT (leb p q) -> IsT (leb q p) -> Id Nat p q = split {
+       zero -> split { zero -> \ x y -> refl zero ; suc q -> \ x y -> absurd _ (false-true y) } ;
+-      suc p -> split { zero -> \ x y -> absurd _ (false-true x) ; suc q -> \ x y -> apH (\ z -> suc z) (leb-anti p q x y) } } ; } ;
++      suc p | ih-p -> split { zero -> \ x y -> absurd _ (false-true x) ; suc q -> \ x y -> apH (\ z -> suc z) (ih-p q x y) } } ; } ;
+ 
+   r : Nat = sN W ;
+ 
+@@ -132,14 +132,14 @@
+   -- h is constant where sN is
+   const-on : (v u : Nat) -> IsT (leb u v) -> Id Nat (sN u) (sN v) -> Id Nat (h u) (h v) = split {
+     zero -> \ u l e -> apH h (leb-zero u l) ;
+-    suc v -> \ u l e -> eqN-dec (Id Nat (h u) (h (suc v))) u (suc v)
++    suc v | ih-v -> \ u l e -> eqN-dec (Id Nat (h u) (h (suc v))) u (suc v)
+       (\ q -> apH h q)
+-      (\ ne -> transH (const-on v u (leb-suc-ne v u l ne)
++      (\ ne -> transH (ih-v u (leb-suc-ne v u l ne)
+                          (leb-anti2 (sN u) (sN v) (smono v u (leb-suc-ne v u l ne)) (substH (\ z -> IsT (leb (sN v) z)) (symH e) (step-lo v))))
+                       (no-jump v (transH (symH e) (leb-anti2 (sN u) (sN v) (smono v u (leb-suc-ne v u l ne)) (substH (\ z -> IsT (leb (sN v) z)) (symH e) (step-lo v)))))) }
+    where { leb-anti2 : (p q : Nat) -> IsT (leb p q) -> IsT (leb q p) -> Id Nat p q = split {
+              zero -> split { zero -> \ x y -> refl zero ; suc q -> \ x y -> absurd _ (false-true y) } ;
+-             suc p -> split { zero -> \ x y -> absurd _ (false-true x) ; suc q -> \ x y -> apH (\ z -> suc z) (leb-anti2 p q x y) } } ; } ;
++             suc p | ih-p -> split { zero -> \ x y -> absurd _ (false-true x) ; suc q -> \ x y -> apH (\ z -> suc z) (ih-p q x y) } } ; } ;
+ 
+   mN (t : Nat) : Nat = h (secN t) ;
+ 
+@@ -234,10 +234,10 @@
+ 
+     go : (v : Nat) -> IsT (leb v W) -> Id Nat (s' v) (sN v) = split {
+       zero -> \ hv -> s0 ;
+-      suc v -> \ hv ->
++      suc v | ih-v -> \ hv ->
+         step v (Id Nat (s' (suc v)) (sN (suc v)))
+           (\ f e -> two-way (s' v) (s' (suc v)) (slo v) (shi v) (Id Nat (s' (suc v)) (sN (suc v)))
+-             (\ e2 -> transH e2 (transH (go v (leb-trans v (suc v) W (leb-suc v) hv)) (symH e)))
++             (\ e2 -> transH e2 (transH (ih-v (leb-trans v (suc v) W (leb-suc v) hv)) (symH e)))
+              (\ e2 -> absurd _ (ltb-irr' (m' (s' v))
+                  (substH {Nat} (\ z -> IsT (ltb (m' (s' v)) z)) {m' (suc (s' v))} {m' (s' v)}
+                     (symH (transH (symH (hf v (leb-trans v (suc v) W (leb-suc v) hv)))
+@@ -248,7 +248,7 @@
+                  (substH {Nat} (\ z -> IsT (not (eqN (h v) z))) {h (suc v)} {h v}
+                     (symH (transH (hf v (leb-trans v (suc v) W (leb-suc v) hv)) (transH (apH m' (symH e2)) (symH (hf (suc v) hv)))))
+                     t))))
+-             (\ e2 -> transH e2 (transH (apH (\ z -> suc z) (go v (leb-trans v (suc v) W (leb-suc v) hv))) (symH e)))) } ;
++             (\ e2 -> transH e2 (transH (apH (\ z -> suc z) (ih-v (leb-trans v (suc v) W (leb-suc v) hv))) (symH e)))) } ;
+   } ;
+ 
+   -- the factorisation is characterised by the lemmas above (Uq): lock it
+diff -ru defenv/core/CLocHorn.seg primrec/core/CLocHorn.seg
+--- defenv/core/CLocHorn.seg	2026-10-18 14:25:48
++++ primrec/core/CLocHorn.seg	2026-10-19 10:24:07
+@@ -29,7 +29,7 @@
+ -- leb at the two levels a and l agrees (the decisions are taken at level l)
+ leb-lvl : (m : Nat) -> (n : Nat) -> Id Bool (TL.leb m n) (leb m n) = split {
+   zero -> \ n -> refl true ;
+-  suc m -> split { zero -> refl false ; suc n -> leb-lvl m n } } ;
++  suc m | ih-m -> split { zero -> refl false ; suc n -> ih-m n } } ;
+ open Cat[a] ;
+ open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+ open CPosC[a] ;
+diff -ru defenv/core/CPathProb.seg primrec/core/CPathProb.seg
+--- defenv/core/CPathProb.seg	2026-10-18 13:27:06
++++ primrec/core/CPathProb.seg	2026-10-19 10:27:27
+@@ -365,38 +365,38 @@
+     disj (V : Ob) (g : Hom V W) (h : Lands V W B0.Q g) (h' : Lands V W B1.Q g) : Empty =
+       CPath[l].disjD dd V (compH V W Iv i g) (lands-pre V W Iv i (ptS (src dd)) g h) (lands-pre V W Iv i (ptS (tgt dd)) g h') ;
+ 
+-    c1 : (n' : Nat) -> CTy (suc zero) n' = split {
+-      zero -> \ V g h h' -> absurd _ (disj V g h' h) ;
+-      suc m -> c1s m } ;
+     c1s : (m : Nat) -> CTy (suc zero) (suc m) = split {
+       zero -> \ V g h h' -> CA.PT.pv-irr W x' B1.side V g h h' ;
+       suc k -> \ V g h h' -> agree (suc zero) (suc (suc k)) V g h h'
+          (\ V' g' j -> transH (B1.pv-lev V g h V' g' j) (symH (SL.O1.on V g h' h V' g' j))) } ;
+ 
+-    c2 : (n' : Nat) -> CTy (suc (suc zero)) n' = split {
+-      zero -> \ V g h h' -> agree (suc (suc zero)) zero V g h h'
+-         (\ V' g' j -> transH (SL.O0.on V g h h' V' g' j) (symH (B0.pv-lev V g h' V' g' j))) ;
+-      suc m -> c2s m } ;
++    c1 : (n' : Nat) -> CTy (suc zero) n' = split {
++      zero -> \ V g h h' -> absurd _ (disj V g h' h) ;
++      suc m -> c1s m } ;
+     c2s : (m : Nat) -> CTy (suc (suc zero)) (suc m) = split {
+       zero -> \ V g h h' -> agree (suc (suc zero)) (suc zero) V g h h'
+          (\ V' g' j -> transH (SL.O1.on V g h h' V' g' j) (symH (B1.pv-lev V g h' V' g' j))) ;
+       suc k -> \ V g h h' -> CA.PT.pv-irr W x' SL.side V g h h' } ;
+ 
+-    c0 : (n' : Nat) -> CTy zero n' = split {
+-      zero -> \ V g h h' -> CA.PT.pv-irr W x' B0.side V g h h' ;
+-      suc m -> c0s m } ;
++    c2 : (n' : Nat) -> CTy (suc (suc zero)) n' = split {
++      zero -> \ V g h h' -> agree (suc (suc zero)) zero V g h h'
++         (\ V' g' j -> transH (SL.O0.on V g h h' V' g' j) (symH (B0.pv-lev V g h' V' g' j))) ;
++      suc m -> c2s m } ;
+     c0s : (m : Nat) -> CTy zero (suc m) = split {
+       zero -> \ V g h h' -> absurd _ (disj V g h h') ;
+       suc k -> \ V g h h' -> agree zero (suc (suc k)) V g h h'
+          (\ V' g' j -> transH (B0.pv-lev V g h V' g' j) (symH (SL.O0.on V g h' h V' g' j))) } ;
+ 
+-    cc : (n n' : Nat) -> CTy n n' = split {
+-      zero -> c0 ;
+-      suc m -> ccs m } ;
++    c0 : (n' : Nat) -> CTy zero n' = split {
++      zero -> \ V g h h' -> CA.PT.pv-irr W x' B0.side V g h h' ;
++      suc m -> c0s m } ;
+     ccs : (m : Nat) -> (n' : Nat) -> CTy (suc m) n' = split {
+       zero -> c1 ;
+       suc k -> c2 } ;
+ 
++    cc : (n n' : Nat) -> CTy n n' = split {
++      zero -> c0 ;
++      suc m -> ccs m } ;
+     module J = CPartial[l].Join[CA.TV.E, CA.SFm.SF, W, x', suc (suc (suc zero)), \ k -> pick k.1, \ k k' -> cc k.1 k'.1] ;
+ 
+     side : CA.PT.Side[W, x'] = J.side ;
+diff -ru defenv/core/CPosBase.seg primrec/core/CPosBase.seg
+--- defenv/core/CPosBase.seg	2026-10-18 13:27:06
++++ primrec/core/CPosBase.seg	2026-10-19 10:27:59
+@@ -150,6 +150,10 @@
+   zero -> \ hb -> refl true ;
+   suc y -> \ hb -> absurd _ (false-true hb) } ;
+ 
++cnm-f1 (x' : Nat) : (y : Nat) -> IsT (leb y (suc zero)) -> IsT (leb y (suc x')) = split {
++  zero -> \ hb -> refl true ;
++  suc y -> \ hb -> cnm-f0 x' y hb } ;
++
+ cN-mono : (d : Bool) (x y x' y' : Nat) -> IsT (leb y (suc zero))
+   -> IsT (leb x x') -> IsT (leb y y') -> IsT (leb (cN d x y) (cN d x' y')) = split {
+   true -> split {
+@@ -164,10 +168,6 @@
+     suc x -> \ y -> split {
+       zero -> \ y' hb ha hbb -> absurd _ (false-true ha) ;
+       suc x' -> \ y' hb ha hbb -> ha } } } ;
+-
+-cnm-f1 (x' : Nat) : (y : Nat) -> IsT (leb y (suc zero)) -> IsT (leb y (suc x')) = split {
+-  zero -> \ hb -> refl true ;
+-  suc y -> \ hb -> cnm-f0 x' y hb } ;
+ 
+ -- at j = src d : constant
+ cN-src : (d : Bool) (x : Nat) -> IsT (leb x (suc zero)) -> Id Nat (cN d x (sN d)) (sN d) = split {
+diff -ru defenv/core/CPosC.seg primrec/core/CPosC.seg
+--- defenv/core/CPosC.seg	2026-10-18 13:27:06
++++ primrec/core/CPosC.seg	2026-10-19 10:24:14
+@@ -237,20 +237,20 @@
+ 
+ allL (P : Tree -> Bool) : Tree -> Bool = split {
+   leaf n -> true ;
+-  node t l -> and (P t) (allL P l) } ;
++  node t l | ih-t ih-l -> and (P t) (ih-l) } ;
+ 
+ allL-sound (P : Tree -> Bool) : (l x : Tree) -> IsT (allL P l) -> IsT (mem x l) -> IsT (P x) = split {
+   leaf n -> \ x h m -> absurd _ (false-true m) ;
+-  node t l -> \ x h m ->
++  node t l | ih-t ih-l -> \ x h m ->
+     or-elim (IsT (P x)) (eqT x t) (mem x l) m
+       (\ e -> substH (\ y -> IsT (P y)) (symH (eqT-sound x t e)) (and-l (P t) (allL P l) h))
+-      (\ m' -> allL-sound P l x (and-r (P t) (allL P l) h) m') } ;
++      (\ m' -> ih-l x (and-r (P t) (allL P l) h) m') } ;
+ 
+ allL-complete (P : Tree -> Bool) : (l : Tree) -> ((x : Tree) -> IsT (mem x l) -> IsT (P x)) -> IsT (allL P l) = split {
+   leaf n -> \ k -> refl true ;
+-  node t l -> \ k ->
++  node t l | ih-t ih-l -> \ k ->
+     and-i (P t) (allL P l) (k t (or-l (eqT t t) (mem t l) (eqT-refl t)))
+-          (allL-complete P l (\ x m -> k x (or-r (eqT x t) (mem x l) m))) } ;
++          (ih-l (\ x m -> k x (or-r (eqT x t) (mem x l) m))) } ;
+ 
+ impl (c q : Bool) : Bool = or (not c) q ;
+ 
+diff -ru defenv/core/CSimp.seg primrec/core/CSimp.seg
+--- defenv/core/CSimp.seg	2026-10-18 13:27:06
++++ primrec/core/CSimp.seg	2026-10-19 10:28:13
+@@ -47,7 +47,7 @@
+ 
+   find : (t : Tree) -> Res t = split {
+     leaf n -> inr (\ x h -> absurd (Id Bool (P x) false) (false-true h)) ;
+-    node s t -> step s t (P s) (refl (P s)) (find t) } ;
++    node s t | ih-s ih-t -> step s t (P s) (refl (P s)) (ih-t) } ;
+ } ;
+ 
+ decSub (X : Ob) (Q : Subset X) : Plus (SubPt X Q) ((s : El X) -> Id Bool (Q s) false) =
+@@ -408,34 +408,6 @@
+     (\ e -> subst Nat (\ j -> IsT (leb (g i) (g j))) i m e (leb-refl (g i)))
+     (\ k -> ltb-leb (g i) (g m) (s i m (leb-refl m) (leb-neq i m h k))) ;
+ 
+-missing : (n m : Nat) (g : Nat -> Nat) -> Rng m n g -> Str m g -> Arith[a].Plus (IsId m n g) (Misses m n g) = split {
+-  zero -> split {
+-    zero -> \ g r s ->
+-      inl (refl zero, \ i h -> trans Nat (g i) zero i (leb-zero (g i) (r i h)) (sym Nat i zero (leb-zero i h))) ;
+-    suc m -> \ g r s ->
+-      absurd (Arith[a].Plus (IsId (suc m) zero g) (Misses (suc m) zero g))
+-        (false-true (leb-trans (suc (g zero)) (g (suc zero)) zero
+-          (s zero (suc zero) (leb-trans (suc zero) (suc m) (suc m) (refl true) (leb-refl (suc m))) (refl true))
+-          (r (suc zero) (refl true)))) } ;
+-  suc n -> \ m g r s ->
+-    ltb-dec (Arith[a].Plus (IsId m (suc n) g) (Misses m (suc n) g)) (g m) (suc n)
+-      (\ lt -> inr (suc n, (leb-refl n, \ i h ->
+-                 ltb-neq (g i) (suc n) (leb-ltb-trans (g i) (g m) (suc n) (below m g s i h) lt))))
+-      (\ ge -> top n m g r s (leb-anti (g m) (suc n) (r m (leb-refl m)) ge)) } ;
+-
+-top (n : Nat) : (m : Nat) (g : Nat -> Nat) -> Rng m (suc n) g -> Str m g -> Id Nat (g m) (suc n)
+-  -> Arith[a].Plus (IsId m (suc n) g) (Misses m (suc n) g) = split {
+-  zero -> \ g r s e ->
+-    inr (zero, (refl true, \ i h ->
+-      subst Nat (\ j -> IsT (not (eqN (g j) zero))) zero i (sym Nat i zero (leb-zero i h))
+-        (subst Nat (\ v -> IsT (not (eqN v zero))) (suc n) (g zero) (sym Nat (g zero) (suc n) e) (refl true)))) ;
+-  suc m -> \ g r s e ->
+-    step n m g e
+-      (missing n m g
+-         (\ i h -> subst Nat (\ v -> IsT (ltb (g i) v)) (g (suc m)) (suc n) e
+-                     (s i (suc m) (leb-refl (suc m)) (leb-ltb-trans i m (suc m) h (leb-refl m))))
+-         (\ i j h l -> s i j (leb-step j m h) l)) } ;
+-
+ step (n m : Nat) (g : Nat -> Nat) (e : Id Nat (g (suc m)) (suc n))
+   : Arith[a].Plus (IsId m n g) (Misses m n g) -> Arith[a].Plus (IsId (suc m) (suc n) g) (Misses (suc m) (suc n) g) = split {
+   inl p -> inl (ap Nat Nat (\ k -> suc k) m n p.1, \ i h ->
+@@ -451,3 +423,34 @@
+                 (subst Nat (\ v -> IsT (not (eqN v w.1))) (suc n) (g (suc m)) (sym Nat (g (suc m)) (suc n) e)
+                    (neq-sym w.1 (suc n) (ltb-neq w.1 (suc n) (leb-ltb-trans w.1 n (suc n) w.2.1 (leb-refl n))))))
+       (\ q -> w.2.2 i q))) } ;
++
++top (n : Nat)
++  (ih : (m : Nat) (g : Nat -> Nat) -> Rng m n g -> Str m g -> Arith[a].Plus (IsId m n g) (Misses m n g))
++  : (m : Nat) (g : Nat -> Nat) -> Rng m (suc n) g -> Str m g -> Id Nat (g m) (suc n)
++  -> Arith[a].Plus (IsId m (suc n) g) (Misses m (suc n) g) = split {
++  zero -> \ g r s e ->
++    inr (zero, (refl true, \ i h ->
++      subst Nat (\ j -> IsT (not (eqN (g j) zero))) zero i (sym Nat i zero (leb-zero i h))
++        (subst Nat (\ v -> IsT (not (eqN v zero))) (suc n) (g zero) (sym Nat (g zero) (suc n) e) (refl true)))) ;
++  suc m -> \ g r s e ->
++    step n m g e
++      (ih m g
++         (\ i h -> subst Nat (\ v -> IsT (ltb (g i) v)) (g (suc m)) (suc n) e
++                     (s i (suc m) (leb-refl (suc m)) (leb-ltb-trans i m (suc m) h (leb-refl m))))
++         (\ i j h l -> s i j (leb-step j m h) l)) } ;
++
++missing : (n m : Nat) (g : Nat -> Nat) -> Rng m n g -> Str m g -> Arith[a].Plus (IsId m n g) (Misses m n g) = split {
++  zero -> split {
++    zero -> \ g r s ->
++      inl (refl zero, \ i h -> trans Nat (g i) zero i (leb-zero (g i) (r i h)) (sym Nat i zero (leb-zero i h))) ;
++    suc m -> \ g r s ->
++      absurd (Arith[a].Plus (IsId (suc m) zero g) (Misses (suc m) zero g))
++        (false-true (leb-trans (suc (g zero)) (g (suc zero)) zero
++          (s zero (suc zero) (leb-trans (suc zero) (suc m) (suc m) (refl true) (leb-refl (suc m))) (refl true))
++          (r (suc zero) (refl true)))) } ;
++  suc n | ih-n -> \ m g r s ->
++    ltb-dec (Arith[a].Plus (IsId m (suc n) g) (Misses m (suc n) g)) (g m) (suc n)
++      (\ lt -> inr (suc n, (leb-refl n, \ i h ->
++                 ltb-neq (g i) (suc n) (leb-ltb-trans (g i) (g m) (suc n) (below m g s i h) lt))))
++      (\ ge -> top n ih-n m g r s (leb-anti (g m) (suc n) (r m (leb-refl m)) ge)) } ;
++
+diff -ru defenv/core/Cat.seg primrec/core/Cat.seg
+--- defenv/core/Cat.seg	2026-10-18 13:27:06
++++ primrec/core/Cat.seg	2026-10-19 10:27:48
+@@ -26,17 +26,19 @@
+ 
+ encT : Tree -> W.V = split {
+   leaf n -> W.pairV (W.num zero) (W.num n) ;
+-  node s t -> W.pairV (W.num (suc zero)) (W.pairV (encT s) (encT t)) } ;
++  node s t | ih-s ih-t -> W.pairV (W.num (suc zero)) (W.pairV (ih-s) (ih-t)) } ;
+ 
+ FZ : Nat -> U a = split { zero -> Top ; suc n -> Empty } ;
+ 
+ zero-suc (n : Nat) (P : Id Nat zero (suc n)) : Empty = subst Nat (\ m -> FZ m) zero (suc n) P tt ;
+ 
+--- the case  node , node  of encT-inj
++-- the case  node , node  of encT-inj, given its recursive results on s, t
+ encT-inj-nn (s t s' t' : Tree)
++  (ihs : (a' : Tree) -> Id W.M (encT s).1 (encT a').1 -> Id Tree s a')
++  (iht : (a' : Tree) -> Id W.M (encT t).1 (encT a').1 -> Id Tree t a')
+   (P : Id W.M (encT (node s t)).1 (encT (node s' t')).1) : Id Tree (node s t) (node s' t') =
+-  node-eq s t s' t' (encT-inj s s' (W.pair-inj (encT s) (encT t) (encT s') (encT t') Q).1)
+-                    (encT-inj t t' (W.pair-inj (encT s) (encT t) (encT s') (encT t') Q).2)
++  node-eq s t s' t' (ihs s' (W.pair-inj (encT s) (encT t) (encT s') (encT t') Q).1)
++                    (iht t' (W.pair-inj (encT s) (encT t) (encT s') (encT t') Q).2)
+  where { Q : Id W.M (W.pairV (encT s) (encT t)).1 (W.pairV (encT s') (encT t')).1 =
+            (W.pair-inj (W.num (suc zero)) (W.pairV (encT s) (encT t))
+                        (W.num (suc zero)) (W.pairV (encT s') (encT t')) P).2 ; } ;
+@@ -48,12 +50,12 @@
+     node c d -> \ P -> absurd (Id Tree (leaf m) (node c d))
+                         (zero-suc zero (W.num-inj zero (suc zero)
+                            (W.pair-inj (W.num zero) (W.num m) (W.num (suc zero)) (W.pairV (encT c) (encT d)) P).1)) } ;
+-  node s t -> split {
++  node s t | ih-s ih-t -> split {
+     leaf n -> \ P -> absurd (Id Tree (node s t) (leaf n))
+                         (zero-suc zero (W.num-inj zero (suc zero)
+                            (sym W.M (W.num (suc zero)).1 (W.num zero).1
+                               (W.pair-inj (W.num (suc zero)) (W.pairV (encT s) (encT t)) (W.num zero) (W.num n) P).1))) ;
+-    node c d -> encT-inj-nn s t c d } } ;
++    node c d -> encT-inj-nn s t c d ih-s ih-t } } ;
+ 
+ treeV : W.V = W.mkV Tree encT encT-inj ;
+ 
+diff -ru defenv/core/FunExtUA.seg primrec/core/FunExtUA.seg
+--- defenv/core/FunExtUA.seg	2026-10-18 13:27:07
++++ primrec/core/FunExtUA.seg	2026-10-19 10:25:01
+@@ -65,10 +65,10 @@
+      \ w -> ap ((x : A) -> (y : B x) * Id (B x) (f x) y) ((g : (x : A) -> B x) * ((x : A) -> Id (B x) (f x) (g x)))
+               (\ t -> (\ x -> (t x).1, \ x -> (t x).2)) k1.1 (\ x -> (w.1 x, w.2 x)) (k1.2 (\ x -> (w.1 x, w.2 x))))
+    where {
+-     k1 : isContr ((x : A) -> (y : B x) * Id (B x) (f x) y) =
+-       wfe A (\ x'' -> (y : B x'') * Id (B x'') (f x'') y) (\ x' -> singL (B x') (f x')) ;
+      singL (T : U l) (t : T) : isContr ((y : T) * Id T t y) =
+        ((t, refl t), \ w -> idJ T t (\ y' q' -> Id ((y : T) * Id T t y) (t, refl t) (y', q')) (refl (t, refl t)) w.1 w.2) ;
++     k1 : isContr ((x : A) -> (y : B x) * Id (B x) (f x) y) =
++       wfe A (\ x'' -> (y : B x'') * Id (B x'') (f x'') y) (\ x' -> singL (B x') (f x')) ;
+    } ;
+ 
+   fe : Axioms[l].FunExt = \ A B f g ->
+diff -ru defenv/core/PresheafPi.seg primrec/core/PresheafPi.seg
+--- defenv/core/PresheafPi.seg	2026-10-18 13:27:06
++++ primrec/core/PresheafPi.seg	2026-10-19 10:27:16
+@@ -351,20 +351,6 @@
+            funext (Hom J I) (\ f1 -> W.Ix (G.ob J)) (pt J) (pt' J) (h J)))
+         h c' eB' R a ;
+ 
+-    -- two transported values of phi agree when their morphisms do
+-    val-coh (K : Ob) (H : U l) (pt : H -> W.Ix (G.ob K))
+-      (phi : (f : H) (a : FA K (pt f)) -> FB K (pt f, a))
+-      (f f' : H) (m : Id H f f') (a : FA K (pt f)) (a' : FA K (pt f')) (w : Pts K)
+-      (Q : Id (Pts K) (pt f, a) w) (Q' : Id (Pts K) (pt f', a') w)
+-      : Id (FB K w) (subst (Pts K) (\ w1 -> FB K w1) (pt f, a) w Q (phi f a))
+-                    (subst (Pts K) (\ w1 -> FB K w1) (pt f', a') w Q' (phi f' a')) =
+-      idJ H f
+-        (\ f1 m1 -> (a1 : FA K (pt f1)) (Q1 : Id (Pts K) (pt f1, a1) w)
+-           -> Id (FB K w) (subst (Pts K) (\ w1 -> FB K w1) (pt f, a) w Q (phi f a))
+-                          (subst (Pts K) (\ w1 -> FB K w1) (pt f1, a1) w Q1 (phi f1 a1)))
+-        (\ a1 Q1 -> vc-aux K H pt phi f a a1 w Q Q1)
+-        f' m a' Q' ;
+-
+     vc-aux (K : Ob) (H : U l) (pt : H -> W.Ix (G.ob K))
+       (phi : (f : H) (a : FA K (pt f)) -> FB K (pt f, a))
+       (f : H) (a a1 : FA K (pt f)) (w : Pts K)
+@@ -392,6 +378,20 @@
+           (Sigma-snd (W.Ix (G.ob K)) (\ y -> FA K y) (pt f) (pt f) a a1 R) ;
+      } ;
+ 
++    -- two transported values of phi agree when their morphisms do
++    val-coh (K : Ob) (H : U l) (pt : H -> W.Ix (G.ob K))
++      (phi : (f : H) (a : FA K (pt f)) -> FB K (pt f, a))
++      (f f' : H) (m : Id H f f') (a : FA K (pt f)) (a' : FA K (pt f')) (w : Pts K)
++      (Q : Id (Pts K) (pt f, a) w) (Q' : Id (Pts K) (pt f', a') w)
++      : Id (FB K w) (subst (Pts K) (\ w1 -> FB K w1) (pt f, a) w Q (phi f a))
++                    (subst (Pts K) (\ w1 -> FB K w1) (pt f', a') w Q' (phi f' a')) =
++      idJ H f
++        (\ f1 m1 -> (a1 : FA K (pt f1)) (Q1 : Id (Pts K) (pt f1, a1) w)
++           -> Id (FB K w) (subst (Pts K) (\ w1 -> FB K w1) (pt f, a) w Q (phi f a))
++                          (subst (Pts K) (\ w1 -> FB K w1) (pt f1, a1) w Q1 (phi f1 a1)))
++        (\ a1 Q1 -> vc-aux K H pt phi f a a1 w Q Q1)
++        f' m a' Q' ;
++
+     opaque piCode-eq ; opaque piCode-path ; opaque piCode-fst ; opaque piTr ; opaque val-coh ;
+ 
+     --------------------------------------------------------------------
+@@ -478,15 +478,6 @@
+                       (pairpath G A K (G.act K I (oC K I I (idC I) f) x) (G.act K I f x) (piPt I I (idC I) x x e K f) a)
+                       (refl (G.act K I f x, a))) ;
+ 
+-    piOL (K J I : Ob) (f : Hom J I) (g : Hom K J)
+-      (x : W.Ix (G.ob I)) (y : W.Ix (G.ob J)) (z : W.Ix (G.ob K))
+-      (e1 : Id (W.Ix (G.ob J)) (G.act J I f x) y) (e2 : Id (W.Ix (G.ob K)) (G.act K J g y) z)
+-      (e3 : Id (W.Ix (G.ob K)) (G.act K I (oC K J I f g) x) z) (u : W.Ix (PiO I x))
+-      : Id (W.Ix (PiO K z)) (piAct K I (oC K J I f g) x z e3 u) (piAct K J g y z e2 (piAct J I f x y e1 u)) =
+-      piCode-eq K (ptOf K z) (cOf K z) (eOf K z)
+-        (piAct K I (oC K J I f g) x z e3 u) (piAct K J g y z e2 (piAct J I f x y e1 u))
+-        (\ L k0 a -> ol-pt K J I f g x y z e1 e2 e3 u L k0 a) ;
+-
+     ol-pt (K J I : Ob) (f : Hom J I) (g : Hom K J)
+       (x : W.Ix (G.ob I)) (y : W.Ix (G.ob J)) (z : W.Ix (G.ob K))
+       (e1 : Id (W.Ix (G.ob J)) (G.act J I f x) y) (e2 : Id (W.Ix (G.ob K)) (G.act K J g y) z)
+@@ -522,6 +513,15 @@
+         pairpath G A L (G.act L I (oC L K I (oC K J I f g) k0) x) (G.act L K k0 z) (piPt K I (oC K J I f g) x z e3 L k0) a ;
+      } ;
+ 
++    piOL (K J I : Ob) (f : Hom J I) (g : Hom K J)
++      (x : W.Ix (G.ob I)) (y : W.Ix (G.ob J)) (z : W.Ix (G.ob K))
++      (e1 : Id (W.Ix (G.ob J)) (G.act J I f x) y) (e2 : Id (W.Ix (G.ob K)) (G.act K J g y) z)
++      (e3 : Id (W.Ix (G.ob K)) (G.act K I (oC K J I f g) x) z) (u : W.Ix (PiO I x))
++      : Id (W.Ix (PiO K z)) (piAct K I (oC K J I f g) x z e3 u) (piAct K J g y z e2 (piAct J I f x y e1 u)) =
++      piCode-eq K (ptOf K z) (cOf K z) (eOf K z)
++        (piAct K I (oC K J I f g) x z e3 u) (piAct K J g y z e2 (piAct J I f x y e1 u))
++        (\ L k0 a -> ol-pt K J I f g x y z e1 e2 e3 u L k0 a) ;
++
+     opaque piNat ; opaque piId ; opaque ol-pt ;
+ 
+     PiP : PTy[G] = (mkTy G PiO piAct piId piOL) ;
+@@ -628,11 +628,6 @@
+           (G.act I I (idC I) w.1, bk G A I (G.act I I (idC I) w.1) w.1 (G.act-id I w.1) w.2) w
+           (pairpath G A I (G.act I I (idC I) w.1) w.1 (G.act-id I w.1) w.2)) ;
+ 
+-    lam-app (u : PEl[G, PiP]) : Id (PEl[G, PiP]) (lamEl (appEl u)) u =
+-      el-ext G PiP (lamEl (appEl u)) u (\ I x ->
+-        piCode-eq I (ptOf I x) (cOf I x) (eOf I x) ((lamEl (appEl u)).eob I x) (u.eob I x)
+-          (\ K f a -> la-pt u I x K f a)) ;
+-
+     la-pt (u : PEl[G, PiP]) (I : Ob) (x : W.Ix (G.ob I)) (K : Ob) (f : Hom K I) (a : FA K (G.act K I f x))
+       : Id (FB K (G.act K I f x, a)) (appFun u K (G.act K I f x, a)) ((u.eob I x).1 K f a) =
+       trans (FB K (y, a)) (appFun u K (y, a))
+@@ -674,6 +669,11 @@
+       Qd : Id (Pts K) (G.act K I (oC K K I f (idC K)) x, a1) (G.act K K (idC K) y, a0) =
+         pairpath G A K (G.act K I (oC K K I f (idC K)) x) (G.act K K (idC K) y) (piPt K I f x y (refl y) K (idC K)) a0 ;
+      } ;
++
++    lam-app (u : PEl[G, PiP]) : Id (PEl[G, PiP]) (lamEl (appEl u)) u =
++      el-ext G PiP (lamEl (appEl u)) u (\ I x ->
++        piCode-eq I (ptOf I x) (cOf I x) (eOf I x) ((lamEl (appEl u)).eob I x) (u.eob I x)
++          (\ K f a -> la-pt u I x K f a)) ;
+ 
+     opaque app-lam ; opaque lam-app ; opaque la-pt ;
+ 
+diff -ru defenv/core/Sum.seg primrec/core/Sum.seg
+--- defenv/core/Sum.seg	2026-10-18 13:27:06
++++ primrec/core/Sum.seg	2026-10-19 10:26:15
+@@ -25,60 +25,60 @@
+ 
+ monusN : Nat -> Nat -> Nat = split {
+   zero -> \ m -> m ;
+-  suc n -> split { zero -> zero ; suc m -> monusN n m } } ;
++  suc n | ih-n -> split { zero -> zero ; suc m -> ih-n m } } ;
+ 
+ monus (m n : Nat) : Nat = monusN n m ;
+ 
+ plus-monus : (b j : Nat) -> IsT (leb b j) -> Id Nat (plus b (monus j b)) j = split {
+   zero -> \ j h -> refl j ;
+-  suc b -> split {
++  suc b | ih-b -> split {
+     zero -> \ h -> absurd _ (false-true h) ;
+-    suc j -> \ h -> apH (\ k -> suc k) (plus-monus b j h) } } ;
++    suc j -> \ h -> apH (\ k -> suc k) (ih-b j h) } } ;
+ 
+ monus-plus : (b d : Nat) -> Id Nat (monus (plus b d) b) d = split {
+   zero -> \ d -> refl d ;
+-  suc b -> \ d -> monus-plus b d } ;
++  suc b | ih-b -> \ d -> ih-b d } ;
+ 
+ leb-plus-l : (b d : Nat) -> IsT (leb b (plus b d)) = split {
+   zero -> \ d -> refl true ;
+-  suc b -> \ d -> leb-plus-l b d } ;
++  suc b | ih-b -> \ d -> ih-b d } ;
+ 
+ plus-mono-r : (x d d' : Nat) -> IsT (leb d d') -> IsT (leb (plus x d) (plus x d')) = split {
+   zero -> \ d d' h -> h ;
+-  suc x -> \ d d' h -> plus-mono-r x d d' h } ;
++  suc x | ih-x -> \ d d' h -> ih-x d d' h } ;
+ 
+ plus-comm' (x : Nat) : (y : Nat) -> Id Nat (plus y x) (plus x y) = split {
+   zero -> symH (plus-zero x) ;
+-  suc y -> transH (apH (\ k -> suc k) (plus-comm' x y)) (symH (plus-suc x y)) } ;
++  suc y | ih-y -> transH (apH (\ k -> suc k) (ih-y)) (symH (plus-suc x y)) } ;
+ 
+ plus-mono-l : (x x' d : Nat) -> IsT (leb x x') -> IsT (leb (plus x d) (plus x' d)) = split {
+   zero -> \ x' d h -> substH (\ v -> IsT (leb d v)) (plus-comm' x' d) (leb-plus-l d x') ;
+-  suc x -> split {
++  suc x | ih-x -> split {
+     zero -> \ d h -> absurd _ (false-true h) ;
+-    suc x' -> \ d h -> plus-mono-l x x' d h } } ;
++    suc x' -> \ d h -> ih-x x' d h } } ;
+ 
+ plus-strict-r : (x d d' : Nat) -> IsT (ltb d d') -> IsT (ltb (plus x d) (plus x d')) = split {
+   zero -> \ d d' h -> h ;
+-  suc x -> \ d d' h -> plus-strict-r x d d' h } ;
++  suc x | ih-x -> \ d d' h -> ih-x d d' h } ;
+ 
+ mmB : (b j j' : Nat) -> IsT (leb j j') -> IsT (leb (monus j b) (monus j' b)) = split {
+   zero -> \ j j' h -> h ;
+-  suc b -> split {
++  suc b | ih-b -> split {
+     zero -> \ j' h -> refl true ;
+     suc j -> split {
+       zero -> \ h -> absurd _ (false-true h) ;
+-      suc j' -> \ h -> mmB b j j' h } } } ;
++      suc j' -> \ h -> ih-b j j' h } } } ;
+ 
+ monus-mono (j j' b : Nat) : IsT (leb j j') -> IsT (leb (monus j b) (monus j' b)) = mmB b j j' ;
+ 
+ -- j - b <= j' - b strictly, when b <= j
+ msB : (b j j' : Nat) -> IsT (leb b j) -> IsT (ltb j j') -> IsT (ltb (monus j b) (monus j' b)) = split {
+   zero -> \ j j' hb h -> h ;
+-  suc b -> split {
++  suc b | ih-b -> split {
+     zero -> \ j' hb h -> absurd _ (false-true hb) ;
+     suc j -> split {
+       zero -> \ hb h -> absurd _ (false-true h) ;
+-      suc j' -> \ hb h -> msB b j j' hb h } } } ;
++      suc j' -> \ hb h -> ih-b j j' hb h } } } ;
+ 
+ monus-strict (j j' b : Nat) : IsT (leb b j) -> IsT (ltb j j') -> IsT (ltb (monus j b) (monus j' b)) = msB b j j' ;
+ 
+@@ -87,7 +87,7 @@
+ 
+ plus-assoc : (x y z : Nat) -> Id Nat (plus (plus x y) z) (plus x (plus y z)) = split {
+   zero -> \ y z -> refl (plus y z) ;
+-  suc x -> \ y z -> apH (\ k -> suc k) (plus-assoc x y z) } ;
++  suc x | ih-x -> \ y z -> apH (\ k -> suc k) (ih-x y z) } ;
+ 
+ ite : Bool -> Nat -> Nat -> Nat = split { true -> \ x y -> x ; false -> \ x y -> y } ;
+ 
+@@ -106,33 +106,33 @@
+ 
+ lfY : (y x : Nat) -> IsT (leb y x) -> Id Bool (ltb x y) false = split {
+   zero -> split { zero -> \ h -> refl false ; suc x -> \ h -> refl false } ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> \ h -> absurd _ (false-true h) ;
+-    suc x -> \ h -> lfY y x h } } ;
++    suc x -> \ h -> ih-y x h } } ;
+ 
+ lt-false (x y : Nat) : IsT (leb y x) -> Id Bool (ltb x y) false = lfY y x ;
+ 
+ -- the number of j <= m with p j
+ cnt (p : Nat -> Bool) : Nat -> Nat = split {
+   zero -> b2n (p zero) ;
+-  suc m -> plus (cnt p m) (b2n (p (suc m))) } ;
++  suc m | ih-m -> plus (ih-m) (b2n (p (suc m))) } ;
+ 
+ cl0 : (b : Bool) -> IsT (leb (b2n b) (suc zero)) = split { true -> refl true ; false -> refl true } ;
+ 
++cl1 (p : Nat -> Bool) (m : Nat) (ih : IsT (leb (cnt p m) (suc m))) : (b : Bool) -> IsT (leb (plus (cnt p m) (b2n b)) (suc (suc m))) = split {
++  true -> substH {Nat} (\ v -> IsT (leb v (suc (suc m)))) {suc (cnt p m)} {plus (cnt p m) (suc zero)}
++            (symH (transH (plus-suc (cnt p m) zero) (apH (\ k -> suc k) (plus-zero (cnt p m))))) ih ;
++  false -> substH {Nat} (\ v -> IsT (leb v (suc (suc m)))) (symH (plus-zero (cnt p m))) (leb-step (cnt p m) (suc m) ih) } ;
++
+ cnt-le (p : Nat -> Bool) : (m : Nat) -> IsT (leb (cnt p m) (suc m)) = split {
+   zero -> cl0 (p zero) ;
+-  suc m -> cl1 p m (p (suc m)) } ;
++  suc m | ih-m -> cl1 p m ih-m (p (suc m)) } ;
+ 
+-cl1 (p : Nat -> Bool) (m : Nat) : (b : Bool) -> IsT (leb (plus (cnt p m) (b2n b)) (suc (suc m))) = split {
+-  true -> substH {Nat} (\ v -> IsT (leb v (suc (suc m)))) {suc (cnt p m)} {plus (cnt p m) (suc zero)}
+-            (symH (transH (plus-suc (cnt p m) zero) (apH (\ k -> suc k) (plus-zero (cnt p m))))) (cnt-le p m) ;
+-  false -> substH {Nat} (\ v -> IsT (leb v (suc (suc m)))) (symH (plus-zero (cnt p m))) (leb-step (cnt p m) (suc m) (cnt-le p m)) } ;
+-
+ -- if p holds everywhere on [0 .. m] then cnt p m = m + 1
+ cnt-all (p : Nat -> Bool) : (m : Nat) -> ((j : Nat) -> IsT (leb j m) -> IsT (p j)) -> Id Nat (cnt p m) (suc m) = split {
+   zero -> \ h -> apH {Bool} {Nat} b2n (h zero (refl true)) ;
+-  suc m -> \ h ->
+-    transH {Nat} {_} {plus (suc m) (b2n (p (suc m)))} (apH {Nat} (\ v -> plus v (b2n (p (suc m)))) (cnt-all p m (\ j hj -> h j (leb-step j m hj))))
++  suc m | ih-m -> \ h ->
++    transH {Nat} {_} {plus (suc m) (b2n (p (suc m)))} (apH {Nat} (\ v -> plus v (b2n (p (suc m)))) (ih-m (\ j hj -> h j (leb-step j m hj))))
+      (transH {Nat} {_} {suc (plus m (suc zero))} (apH {Bool} (\ v -> suc (plus m (b2n v))) (h (suc m) (leb-refl m)))
+              (apH {Nat} (\ k -> suc k) (transH (plus-suc m zero) (apH {Nat} (\ k -> suc k) (plus-zero m))))) } ;
+ 
+@@ -140,13 +140,9 @@
+   true -> \ e -> transH (apH (\ v -> ltb zero (b2n v)) e) (symH e) ;
+   false -> \ e -> transH (apH (\ v -> ltb zero (b2n v)) e) (symH e) } ;
+ 
+--- the characterisation:  j < cnt p m  iff  p j   (j <= m)
+-cnt-char (p : Nat -> Bool) : (m : Nat) -> DownC p m -> (j : Nat) -> IsT (leb j m) -> Id Bool (ltb j (cnt p m)) (p j) = split {
+-  zero -> \ dc j hj ->
+-    idJR Nat zero (\ j1 e1 -> Id Bool (ltb j1 (b2n (p zero))) (p j1)) (cc0b p (p zero) (refl (p zero))) j (leb-zero j hj) ;
+-  suc m -> \ dc j hj -> cctop p m dc j hj (p (suc m)) (refl (p (suc m))) } ;
+-
+-cctop (p : Nat -> Bool) (m : Nat) (dc : DownC p (suc m)) (j : Nat) (hj : IsT (leb j (suc m)))
++cctop (p : Nat -> Bool) (m : Nat)
++  (ih : (dc0 : DownC p m) (j0 : Nat) -> IsT (leb j0 m) -> Id Bool (ltb j0 (cnt p m)) (p j0))
++  (dc : DownC p (suc m)) (j : Nat) (hj : IsT (leb j (suc m)))
+   : (b : Bool) -> Id Bool (p (suc m)) b -> Id Bool (ltb j (plus (cnt p m) (b2n (p (suc m))))) (p j) = split {
+   true -> \ e ->
+     transH (apH {Nat} (\ v -> ltb j (plus v (b2n (p (suc m))))) (cnt-all p m (\ i hi -> dc i (suc m) (leb-step i m hi) (leb-refl m) e)))
+@@ -160,23 +156,29 @@
+                 (\ q -> transH (apH {Nat} (\ v -> ltb v (cnt p m)) (eqN-sound j (suc m) q))
+                          (transH (lt-false (suc m) (cnt p m) (cnt-le p m))
+                                  (symH (transH (apH p (eqN-sound j (suc m) q)) e))))
+-                (\ q -> cnt-char p m (\ i j' hij hj' -> dc i j' hij (leb-step j' m hj')) j q))) } ;
++                (\ q -> ih (\ i j' hij hj' -> dc i j' hij (leb-step j' m hj')) j q))) } ;
+ 
++-- the characterisation:  j < cnt p m  iff  p j   (j <= m)
++cnt-char (p : Nat -> Bool) : (m : Nat) -> DownC p m -> (j : Nat) -> IsT (leb j m) -> Id Bool (ltb j (cnt p m)) (p j) = split {
++  zero -> \ dc j hj ->
++    idJR Nat zero (\ j1 e1 -> Id Bool (ltb j1 (b2n (p zero))) (p j1)) (cc0b p (p zero) (refl (p zero))) j (leb-zero j hj) ;
++  suc m | ih-m -> \ dc j hj -> cctop p m ih-m dc j hj (p (suc m)) (refl (p (suc m))) } ;
++
+ msA : (x n : Nat) -> IsT (leb x n) -> Id Nat (monus (suc n) x) (suc (monus n x)) = split {
+   zero -> \ n h -> refl (suc n) ;
+-  suc x -> split {
++  suc x | ih-x -> split {
+     zero -> \ h -> absurd _ (false-true h) ;
+-    suc n -> \ h -> msA x n h } } ;
++    suc n -> \ h -> ih-x n h } } ;
+ 
+ monus-suc (n x : Nat) : IsT (leb x n) -> Id Nat (monus (suc n) x) (suc (monus n x)) = msA x n ;
+ 
+-monus-self : (x : Nat) -> Id Nat (monus x x) zero = split { zero -> refl zero ; suc x -> monus-self x } ;
++monus-self : (x : Nat) -> Id Nat (monus x x) zero = split { zero -> refl zero ; suc x | ih-x -> ih-x } ;
+ 
+ gofY : (y x : Nat) -> Id Bool (ltb x y) false -> IsT (leb y x) = split {
+   zero -> \ x e -> refl true ;
+-  suc y -> split {
++  suc y | ih-y -> split {
+     zero -> \ e -> absurd _ (false-true (symH e)) ;
+-    suc x -> \ e -> gofY y x e } } ;
++    suc x -> \ e -> ih-y x e } } ;
+ 
+ ge-of-false (x y : Nat) : Id Bool (ltb x y) false -> IsT (leb y x) = gofY y x ;
+ 
+@@ -186,14 +188,14 @@
+ 
+ cnt-none (p : Nat -> Bool) : (n : Nat) -> ((j : Nat) -> IsT (leb j n) -> Id Bool (p j) false) -> Id Nat (cnt p n) zero = split {
+   zero -> \ h -> apH {Bool} {Nat} b2n (h zero (refl true)) ;
+-  suc n -> \ h ->
+-    transH (apH (\ v -> plus v (b2n (p (suc n)))) (cnt-none p n (\ j hj -> h j (leb-step j n hj))))
++  suc n | ih-n -> \ h ->
++    transH (apH (\ v -> plus v (b2n (p (suc n)))) (ih-n (\ j hj -> h j (leb-step j n hj))))
+            (apH {Bool} {Nat} b2n (h (suc n) (leb-refl n))) } ;
+ 
+ cnt-ext (p q : Nat -> Bool) : (m : Nat) -> ((j : Nat) -> IsT (leb j m) -> Id Bool (p j) (q j)) -> Id Nat (cnt p m) (cnt q m) = split {
+   zero -> \ h -> apH {Bool} {Nat} b2n (h zero (refl true)) ;
+-  suc m -> \ h ->
+-    transH (apH (\ v -> plus v (b2n (p (suc m)))) (cnt-ext p q m (\ j hj -> h j (leb-step j m hj))))
++  suc m | ih-m -> \ h ->
++    transH (apH (\ v -> plus v (b2n (p (suc m)))) (ih-m (\ j hj -> h j (leb-step j m hj))))
+            (apH (\ v -> plus (cnt q m) (b2n v)) (h (suc m) (leb-refl m))) } ;
+ 
+ opaque cnt ; opaque cnt-le ; opaque cnt-all ; opaque cnt-char ; opaque cnt-none ; opaque cnt-ext ;
+@@ -446,6 +448,9 @@
+             (O1.c-lo (leb-trans a (G (x j)) n (x-A1 j (x-rng j ge hj)) (Grng (x j) (x-rng j ge hj))))
+             (plus-mono-r O1.b (monus (G (x j)) a) (monus n a) (monus-mono (G (x j)) n a (Grng (x j) (x-rng j ge hj)))))) ;
+ 
++  hxi (i j : Nat) (hj : IsT (leb j O2.c)) (hij : IsT (ltb i j)) (gej : Id Bool (ltb j B) false) : IsT (leb (x i) n') =
++    leb-trans (x i) (x j) n' (plus-mono-r a2 (monus i B) (monus j B) (monus-mono i j B (ltb-leb i j hij))) (x-rng j gej hj) ;
++
+   t-str (i j : Nat) (hj : IsT (leb j O2.c)) (hij : IsT (ltb i j)) : IsT (ltb (t i) (t j)) = caseLt (IsT (ltb (t i) (t j))) j B
+     (\ ltj -> ltL (t j) (tt' i (leb-trans (suc i) j B hij (ltb-leb j B ltj))) (ltR i (tt' j ltj) hij))
+     (\ gej -> caseLt (IsT (ltb (t i) (t j))) i B
+@@ -458,9 +463,6 @@
+                          (monus-strict (G (x i)) (G (x j)) a (x-A1 i (hxi i j hj hij gej))
+                             (Gstr (x i) (x j) (x-rng j gej hj)
+                                (plus-strict-r a2 (monus i B) (monus j B) (monus-strict i j B (ge-of-false i B gei) hij)))))))) ;
+-
+-  hxi (i j : Nat) (hj : IsT (leb j O2.c)) (hij : IsT (ltb i j)) (gej : Id Bool (ltb j B) false) : IsT (leb (x i) n') =
+-    leb-trans (x i) (x j) n' (plus-mono-r a2 (monus i B) (monus j B) (monus-mono i j B (ltb-leb i j hij))) (x-rng j gej hj) ;
+ 
+   t-k1 (j : Nat) (hj : IsT (leb j O2.c)) : Id Nat (G (O2.k1 j)) (O1.k1 (t j)) = caseLt (Id Nat (G (O2.k1 j)) (O1.k1 (t j))) j B
+     (\ lt -> transH (apH G (O2.k1t j lt))
+diff -ru defenv/core/Trees.seg primrec/core/Trees.seg
+--- defenv/core/Trees.seg	2026-10-18 13:27:06
++++ primrec/core/Trees.seg	2026-10-19 10:24:26
+@@ -61,43 +61,43 @@
+ 
+ leb : Nat -> Nat -> Bool = split {
+   zero -> \ n -> true ;
+-  suc m -> split { zero -> false ; suc n -> leb m n } } ;
++  suc m | ih-m -> split { zero -> false ; suc n -> ih-m n } } ;
+ 
+ eqN : Nat -> Nat -> Bool = split {
+   zero -> split { zero -> true ; suc n -> false } ;
+-  suc m -> split { zero -> false ; suc n -> eqN m n } } ;
++  suc m | ih-m -> split { zero -> false ; suc n -> ih-m n } } ;
+ 
+-leb-refl : (n : Nat) -> IsT (leb n n) = split { zero -> refl true ; suc n -> leb-refl n } ;
++leb-refl : (n : Nat) -> IsT (leb n n) = split { zero -> refl true ; suc n | ih-n -> ih-n } ;
+ 
+ leb-trans : (i m n : Nat) -> IsT (leb i m) -> IsT (leb m n) -> IsT (leb i n) = split {
+   zero -> \ m n h1 h2 -> refl true ;
+-  suc i -> split {
++  suc i | ih-i -> split {
+     zero -> \ n h1 h2 -> absurd (IsT (leb (suc i) n)) (false-true h1) ;
+     suc m -> split {
+       zero -> \ h1 h2 -> absurd (IsT false) (false-true h2) ;
+-      suc n -> \ h1 h2 -> leb-trans i m n h1 h2 } } } ;
++      suc n -> \ h1 h2 -> ih-i m n h1 h2 } } } ;
+ 
+ leb-anti : (m n : Nat) -> IsT (leb m n) -> IsT (leb n m) -> Id Nat m n = split {
+   zero -> split {
+     zero -> \ h1 h2 -> refl zero ;
+     suc n -> \ h1 h2 -> absurd (Id Nat zero (suc n)) (false-true h2) } ;
+-  suc m -> split {
++  suc m | ih-m -> split {
+     zero -> \ h1 h2 -> absurd (Id Nat (suc m) zero) (false-true h1) ;
+-    suc n -> \ h1 h2 -> ap Nat Nat (\ k -> suc k) m n (leb-anti m n h1 h2) } } ;
++    suc n -> \ h1 h2 -> ap Nat Nat (\ k -> suc k) m n (ih-m n h1 h2) } } ;
+ 
+ leb-total : (m n : Nat) -> IsT (or (leb m n) (leb n m)) = split {
+   zero -> \ n -> refl true ;
+-  suc m -> split { zero -> refl true ; suc n -> leb-total m n } } ;
++  suc m | ih-m -> split { zero -> refl true ; suc n -> ih-m n } } ;
+ 
+-eqN-refl : (n : Nat) -> IsT (eqN n n) = split { zero -> refl true ; suc n -> eqN-refl n } ;
++eqN-refl : (n : Nat) -> IsT (eqN n n) = split { zero -> refl true ; suc n | ih-n -> ih-n } ;
+ 
+ eqN-sound : (m n : Nat) -> IsT (eqN m n) -> Id Nat m n = split {
+   zero -> split {
+     zero -> \ h -> refl zero ;
+     suc n -> \ h -> absurd (Id Nat zero (suc n)) (false-true h) } ;
+-  suc m -> split {
++  suc m | ih-m -> split {
+     zero -> \ h -> absurd (Id Nat (suc m) zero) (false-true h) ;
+-    suc n -> \ h -> ap Nat Nat (\ k -> suc k) m n (eqN-sound m n h) } } ;
++    suc n -> \ h -> ap Nat Nat (\ k -> suc k) m n (ih-m n h) } } ;
+ 
+ -- the case  suc i , zero  of leb-suc-split
+ lss0 : (i : Nat) -> IsT (leb (suc i) (suc zero)) -> IsT (or (eqN (suc i) (suc zero)) (leb (suc i) zero)) = split {
+@@ -107,9 +107,9 @@
+ -- i <= n+1  gives  i = n+1  or  i <= n
+ leb-suc-split : (i n : Nat) -> IsT (leb i (suc n)) -> IsT (or (eqN i (suc n)) (leb i n)) = split {
+   zero -> \ n h -> refl true ;
+-  suc i -> split {
++  suc i | ih-i -> split {
+     zero -> lss0 i ;
+-    suc n -> \ h -> leb-suc-split i n h } } ;
++    suc n -> \ h -> ih-i n h } } ;
+ 
+ ------------------------------------------------------------------------
+ -- Trees
+@@ -118,11 +118,11 @@
+ 
+ eqT : Tree -> Tree -> Bool = split {
+   leaf m -> split { leaf n -> eqN m n ; node c d -> false } ;
+-  node a b -> split { leaf n -> false ; node c d -> and (eqT a c) (eqT b d) } } ;
++  node a b | ih-a ih-b -> split { leaf n -> false ; node c d -> and (ih-a c) (ih-b d) } } ;
+ 
+ eqT-refl : (t : Tree) -> IsT (eqT t t) = split {
+   leaf n -> eqN-refl n ;
+-  node a b -> and-i (eqT a a) (eqT b b) (eqT-refl a) (eqT-refl b) } ;
++  node a b | ih-a ih-b -> and-i (eqT a a) (eqT b b) (ih-a) (ih-b) } ;
+ 
+ node-eq (a b c d : Tree) (p : Id Tree a c) (q : Id Tree b d) : Id Tree (node a b) (node c d) =
+   idJ Tree a (\ c1 p1 -> Id Tree (node a b) (node c1 d))
+@@ -139,55 +139,55 @@
+   leaf m -> split {
+     leaf n -> \ h -> ap Nat Tree (\ k -> leaf k) m n (eqN-sound m n h) ;
+     node c d -> \ h -> absurd (Id Tree (leaf m) (node c d)) (false-true h) } ;
+-  node a b -> split {
++  node a b | ih-a ih-b -> split {
+     leaf n -> \ h -> absurd (Id Tree (node a b) (leaf n)) (false-true h) ;
+-    node c d -> \ h -> node-eq a b c d (eqT-sound a c (and-l (eqT a c) (eqT b d) h))
+-                                       (eqT-sound b d (and-r (eqT a c) (eqT b d) h)) } } ;
++    node c d -> \ h -> node-eq a b c d (ih-a c (and-l (eqT a c) (eqT b d) h))
++                                       (ih-b d (and-r (eqT a c) (eqT b d) h)) } } ;
+ 
+ ------------------------------------------------------------------------
+ -- Lists, as trees:  nil = leaf 0 ,  cons = node
+ 
+ nilT : Tree = leaf zero ;
+ 
+-mem (x : Tree) : Tree -> Bool = split { leaf n -> false ; node a t -> or (eqT x a) (mem x t) } ;
++mem (x : Tree) : Tree -> Bool = split { leaf n -> false ; node a t | ih-a ih-t -> or (eqT x a) (ih-t) } ;
+ 
+-appL : Tree -> Tree -> Tree = split { leaf n -> \ t' -> t' ; node a t -> \ t' -> node a (appL t t') } ;
++appL : Tree -> Tree -> Tree = split { leaf n -> \ t' -> t' ; node a t | ih-a ih-t -> \ t' -> node a (ih-t t') } ;
+ 
+ mem-appL-l (x : Tree) : (t t' : Tree) -> IsT (mem x t) -> IsT (mem x (appL t t')) = split {
+   leaf n -> \ t' h -> absurd (IsT (mem x t')) (false-true h) ;
+-  node a t -> \ t' h ->
++  node a t | ih-a ih-t -> \ t' h ->
+     or-elim (IsT (or (eqT x a) (mem x (appL t t')))) (eqT x a) (mem x t) h
+       (or-l (eqT x a) (mem x (appL t t')))
+-      (\ h' -> or-r (eqT x a) (mem x (appL t t')) (mem-appL-l x t t' h')) } ;
++      (\ h' -> or-r (eqT x a) (mem x (appL t t')) (ih-t t' h')) } ;
+ 
+ mem-appL-r (x : Tree) : (t t' : Tree) -> IsT (mem x t') -> IsT (mem x (appL t t')) = split {
+   leaf n -> \ t' h -> h ;
+-  node a t -> \ t' h -> or-r (eqT x a) (mem x (appL t t')) (mem-appL-r x t t' h) } ;
++  node a t | ih-a ih-t -> \ t' h -> or-r (eqT x a) (mem x (appL t t')) (ih-t t' h) } ;
+ 
+ -- [ node a b | b <- t ]
+-mapL (a : Tree) : Tree -> Tree = split { leaf n -> nilT ; node b t -> node (node a b) (mapL a t) } ;
++mapL (a : Tree) : Tree -> Tree = split { leaf n -> nilT ; node b t | ih-b ih-t -> node (node a b) (ih-t) } ;
+ 
+ mem-mapL (a b : Tree) : (t : Tree) -> IsT (mem b t) -> IsT (mem (node a b) (mapL a t)) = split {
+   leaf n -> \ h -> absurd (IsT false) (false-true h) ;
+-  node c t -> \ h ->
++  node c t | ih-c ih-t -> \ h ->
+     or-elim (IsT (or (and (eqT a a) (eqT b c)) (mem (node a b) (mapL a t)))) (eqT b c) (mem b t) h
+       (\ h' -> or-l (and (eqT a a) (eqT b c)) (mem (node a b) (mapL a t)) (and-i (eqT a a) (eqT b c) (eqT-refl a) h'))
+-      (\ h' -> or-r (and (eqT a a) (eqT b c)) (mem (node a b) (mapL a t)) (mem-mapL a b t h')) } ;
++      (\ h' -> or-r (and (eqT a a) (eqT b c)) (mem (node a b) (mapL a t)) (ih-t h')) } ;
+ 
+ -- [ node a b | a <- t1 , b <- t2 ]
+-prodL : Tree -> Tree -> Tree = split { leaf n -> \ t2 -> nilT ; node a t -> \ t2 -> appL (mapL a t2) (prodL t t2) } ;
++prodL : Tree -> Tree -> Tree = split { leaf n -> \ t2 -> nilT ; node a t | ih-a ih-t -> \ t2 -> appL (mapL a t2) (ih-t t2) } ;
+ 
+ mem-prodL (a b : Tree) : (t1 t2 : Tree) -> IsT (mem a t1) -> IsT (mem b t2) -> IsT (mem (node a b) (prodL t1 t2)) = split {
+   leaf n -> \ t2 h1 h2 -> absurd (IsT false) (false-true h1) ;
+-  node a' t -> \ t2 h1 h2 ->
++  node a' t | ih-a' ih-t -> \ t2 h1 h2 ->
+     or-elim (IsT (mem (node a b) (prodL (node a' t) t2))) (eqT a a') (mem a t) h1
+       (\ e -> mem-appL-l (node a b) (mapL a' t2) (prodL t t2)
+                 (subst Tree (\ c -> IsT (mem (node c b) (mapL a' t2))) a' a (sym Tree a a' (eqT-sound a a' e))
+                        (mem-mapL a' b t2 h2)))
+-      (\ h -> mem-appL-r (node a b) (mapL a' t2) (prodL t t2) (mem-prodL a b t t2 h h2)) } ;
++      (\ h -> mem-appL-r (node a b) (mapL a' t2) (prodL t t2) (ih-t t2 h h2)) } ;
+ 
+ -- [ leaf 0 , ... , leaf n ]
+-upto : Nat -> Tree = split { zero -> node (leaf zero) nilT ; suc n -> node (leaf (suc n)) (upto n) } ;
++upto : Nat -> Tree = split { zero -> node (leaf zero) nilT ; suc n | ih-n -> node (leaf (suc n)) (ih-n) } ;
+ 
+ -- the case  n = zero  of mem-upto
+ mu0 : (i : Nat) -> IsT (leb i zero) -> IsT (mem (leaf i) (upto zero)) = split {
+@@ -196,7 +196,7 @@
+ 
+ mem-upto (i : Nat) : (n : Nat) -> IsT (leb i n) -> IsT (mem (leaf i) (upto n)) = split {
+   zero -> mu0 i ;
+-  suc n -> \ h ->
++  suc n | ih-n -> \ h ->
+     or-elim (IsT (mem (leaf i) (upto (suc n)))) (eqN i (suc n)) (leb i n) (leb-suc-split i n h)
+       (\ e -> or-l (eqN i (suc n)) (mem (leaf i) (upto n)) e)
+-      (\ h' -> or-r (eqN i (suc n)) (mem (leaf i) (upto n)) (mem-upto i n h')) } ;
++      (\ h' -> or-r (eqN i (suc n)) (mem (leaf i) (upto n)) (ih-n h')) } ;
+diff -ru defenv/core/V.seg primrec/core/V.seg
+--- defenv/core/V.seg	2026-10-18 13:27:09
++++ primrec/core/V.seg	2026-10-19 10:24:27
+@@ -46,16 +46,16 @@
+ ------------------------------------------------------------------------
+ -- Iterative sets
+ 
+-isIt : M -> U l+ = split { sup A f -> isEmb A f * ((a : A) -> isIt (f a)) } ;
++isIt : M -> U l+ = split { sup A f | ih-f -> isEmb A f * ((a : A) -> (ih-f a)) } ;
+ 
+ embOf : (x : M) -> isIt x -> isEmb (Idx x) (elt x) = split { sup A f -> \ i -> i.1 } ;
+ 
+ itOf : (x : M) (i : isIt x) (a : Idx x) -> isIt (elt x a) = split { sup A f -> \ i -> i.2 } ;
+ 
+ isProp-isIt : (x : M) -> isProp (isIt x) = split {
+-  sup A f -> isProp-Sigma (isEmb A f) (\ e -> (a : A) -> isIt (f a))
++  sup A f | ih-f -> isProp-Sigma (isEmb A f) (\ e -> (a : A) -> isIt (f a))
+                (isProp-Pi M (\ z -> isProp (Fib A M f z)) (\ z -> isProp-isProp (Fib A M f z)))
+-               (\ e -> isProp-Pi A (\ a -> isIt (f a)) (\ a -> isProp-isIt (f a)))
++               (\ e -> isProp-Pi A (\ a -> isIt (f a)) (\ a -> (ih-f a)))
+ } ;
+ 
+ ------------------------------------------------------------------------
+@@ -330,15 +330,15 @@
+ IsTV (b : Bool) : V = IdV boolV b true ;
+ 
+ -- Zermelo numerals:  0 = emptyV,  n+1 = {n}
+-num : Nat -> V = split { zero -> emptyV ; suc n -> sing (num n) } ;
++num : Nat -> V = split { zero -> emptyV ; suc n | ih-n -> sing (ih-n) } ;
+ 
+ num-inj : (m n : Nat) -> Id M (num m).1 (num n).1 -> Id Nat m n = split {
+   zero -> split {
+     zero  -> \ P -> refl zero ;
+     suc n -> \ P -> absurd (Id Nat zero (suc n)) (empty-sing (num n) P) } ;
+-  suc m -> split {
++  suc m | ih-m -> split {
+     zero  -> \ P -> absurd (Id Nat (suc m) zero) (empty-sing (num m) (sym M (sing (num m)).1 emptyV.1 P)) ;
+-    suc n -> \ P -> ap Nat Nat (\ k -> suc k) m n (num-inj m n (sing-inj (num m) (num n) P)) }
++    suc n -> \ P -> ap Nat Nat (\ k -> suc k) m n (ih-m n (sing-inj (num m) (num n) P)) }
+ } ;
+ 
+ natV : V = mkV Nat num num-inj ;
+diff -ru defenv/core/VLift.seg primrec/core/VLift.seg
+--- defenv/core/VLift.seg	2026-10-19 09:25:08
++++ primrec/core/VLift.seg	2026-10-19 10:27:26
+@@ -26,44 +26,58 @@
+ ------------------------------------------------------------------------
+ -- The lift on multisets
+ 
+-liftM : V0.M -> W.M = split { sup A f -> sup A (\ a -> liftM (f a)) } ;
++liftM : V0.M -> W.M = split { sup A f | ih-f -> sup A (\ a -> (ih-f a)) } ;
+ 
+--- equality of lifts of iterative sets is equality
++-- The recursive result of lift-refl on the members f a of sup A f (it
++-- quantifies over y, the second argument: PRIMREC.md 6)
++LR (A : U k) (f : A -> V0.M) : U l+ =
++  (a : A) -> V0.isIt (f a) -> (y : V0.M) -> V0.isIt y -> Id W.M (liftM (f a)) (liftM y) -> Id V0.M (f a) y ;
++
++-- a member of liftM x is a member of liftM y (Agda's fwd).  The equality
++-- found is between g b and f a, the arguments in the order opposite to the
++-- recursive result: it is read through sym
++lr-fwd (A : U k) (f : A -> V0.M) (ix : V0.isIt (sup A f)) (r : LR A f)
++  (B : U k) (g : B -> V0.M) (iy : V0.isIt (sup B g))
++  (P : Id W.M (liftM (sup A f)) (liftM (sup B g))) (a : A) : V0.Mem (f a) (sup B g) =
++  ((W.memT (liftM (sup A f)) (liftM (sup B g)) P a).1,
++   sym V0.M (f a) (g (W.memT (liftM (sup A f)) (liftM (sup B g)) P a).1)
++     (r a (ix.2 a) (g (W.memT (liftM (sup A f)) (liftM (sup B g)) P a).1)
++          (iy.2 (W.memT (liftM (sup A f)) (liftM (sup B g)) P a).1)
++          (sym W.M (liftM (g (W.memT (liftM (sup A f)) (liftM (sup B g)) P a).1)) (liftM (f a))
++               (W.memT (liftM (sup A f)) (liftM (sup B g)) P a).2))) ;
++
++-- a member of liftM y is a member of liftM x (Agda's bwd: fwd on sym P)
++lr-bwd (A : U k) (f : A -> V0.M) (ix : V0.isIt (sup A f)) (r : LR A f)
++  (B : U k) (g : B -> V0.M) (iy : V0.isIt (sup B g))
++  (P : Id W.M (liftM (sup A f)) (liftM (sup B g))) (b : B) : V0.Mem (g b) (sup A f) =
++  ((W.memT (liftM (sup B g)) (liftM (sup A f)) (sym W.M (liftM (sup A f)) (liftM (sup B g)) P) b).1,
++   r (W.memT (liftM (sup B g)) (liftM (sup A f)) (sym W.M (liftM (sup A f)) (liftM (sup B g)) P) b).1
++     (ix.2 (W.memT (liftM (sup B g)) (liftM (sup A f)) (sym W.M (liftM (sup A f)) (liftM (sup B g)) P) b).1)
++     (g b) (iy.2 b)
++     (W.memT (liftM (sup B g)) (liftM (sup A f)) (sym W.M (liftM (sup A f)) (liftM (sup B g)) P) b).2) ;
++
++-- equality of lifts of iterative sets is equality: recursion on x alone
+ lift-refl : (x : V0.M) -> V0.isIt x -> (y : V0.M) -> V0.isIt y
+   -> Id W.M (liftM x) (liftM y) -> Id V0.M x y = split {
+-  sup A f -> \ ix -> split {
++  sup A f | r -> \ ix -> split {
+     sup B g -> \ iy P ->
+       V0.ext (sup A f) (sup B g) ix iy
+-        (\ z -> (\ m -> ((lr-fwd (sup A f) ix (sup B g) iy P m.1).1,
+-                         trans V0.M (g (lr-fwd (sup A f) ix (sup B g) iy P m.1).1) (f m.1) z
+-                           (lr-fwd (sup A f) ix (sup B g) iy P m.1).2 m.2),
+-                 \ m -> ((lr-fwd (sup B g) iy (sup A f) ix (sym W.M (liftM (sup A f)) (liftM (sup B g)) P) m.1).1,
+-                         trans V0.M (f (lr-fwd (sup B g) iy (sup A f) ix (sym W.M (liftM (sup A f)) (liftM (sup B g)) P) m.1).1)
+-                           (g m.1) z
+-                           (lr-fwd (sup B g) iy (sup A f) ix (sym W.M (liftM (sup A f)) (liftM (sup B g)) P) m.1).2 m.2))) }
++        (\ z -> (\ m -> ((lr-fwd A f ix r B g iy P m.1).1,
++                         trans V0.M (g (lr-fwd A f ix r B g iy P m.1).1) (f m.1) z
++                           (lr-fwd A f ix r B g iy P m.1).2 m.2),
++                 \ m -> ((lr-bwd A f ix r B g iy P m.1).1,
++                         trans V0.M (f (lr-bwd A f ix r B g iy P m.1).1) (g m.1) z
++                           (lr-bwd A f ix r B g iy P m.1).2 m.2))) }
+ } ;
+ 
+--- a member of liftM x is a member of liftM y (Agda's fwd; bwd is fwd on
+--- sym P).  It splits x and y itself, so that lift-refl's recursive calls
+--- are on f a and g b for pattern variables f, g (termination by size change)
+-lr-fwd : (x : V0.M) -> V0.isIt x -> (y : V0.M) -> V0.isIt y
+-  -> Id W.M (liftM x) (liftM y) -> (a : V0.Idx x) -> V0.Mem (V0.elt x a) y = split {
+-  sup A f -> \ ix -> split {
+-    sup B g -> \ iy P a ->
+-      ((W.memT (liftM (sup A f)) (liftM (sup B g)) P a).1,
+-       lift-refl (g (W.memT (liftM (sup A f)) (liftM (sup B g)) P a).1)
+-                 (iy.2 (W.memT (liftM (sup A f)) (liftM (sup B g)) P a).1)
+-                 (f a) (ix.2 a) (W.memT (liftM (sup A f)) (liftM (sup B g)) P a).2) }
+-} ;
+-
+ lift-isIt : (x : V0.M) -> V0.isIt x -> W.isIt (liftM x) = split {
+-  sup A f -> \ i ->
++  sup A f | ih-f -> \ i ->
+     (\ z u v -> Sigma-eq A (\ a -> Id W.M (liftM (f a)) z) u.1 v.1 u.2 v.2
+                   (V0.emb-inj A f i.1 u.1 v.1
+                      (lift-refl (f u.1) (i.2 u.1) (f v.1) (i.2 v.1)
+                         (trans W.M (liftM (f u.1)) z (liftM (f v.1)) u.2 (sym W.M (liftM (f v.1)) z v.2))))
+-                  (W.paths-prop (liftM (f v.1)) (lift-isIt (f v.1) (i.2 v.1)) z),
+-     \ a -> lift-isIt (f a) (i.2 a))
++                  (W.paths-prop (liftM (f v.1)) ((ih-f v.1) (i.2 v.1)) z),
++     \ a -> (ih-f a) (i.2 a))
+ } ;
+ 
+ ------------------------------------------------------------------------
+Only in defenv/core: segd.prof

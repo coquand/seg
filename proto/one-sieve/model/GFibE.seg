@@ -1,0 +1,30 @@
+-- GFibE.seg (inside IvBase): fibrant types over ANY base, with composition
+-- in line form at the family path object (CYLINDER.md step 3):
+--
+--   FibEL G = (A : PTy G) * (c : Comp A) * ESIC c
+--   Comp A  = CompAt e0 e1 * CompAt e1 e0        (line composition)
+--   ESIC c  = CESI c.1 * CESI c.2                (line ESI)
+--
+-- The poset FibE (box composites, FibExt) is reached by the bridges
+-- (PosetFibE.seg).
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module FE (G : PCtx) (A : PTy[G]) {
+  module C01 = CompAtP[GFam[lv].famPath, G, A, e0, e1] ;
+  module C10 = CompAtP[GFam[lv].famPath, G, A, e1, e0] ;
+
+  Comp : U lv+ = C01.CompAt * C10.CompAt ;
+
+  ESIC (c : Comp) : U lv = C01.CESI c.1 * C10.CESI c.2 ;
+} ;
+
+FibEL (G : PCtx) : U lv+ = (A : PTy[G]) * ((c : FE[G, A].Comp) * FE[G, A].ESIC c) ;

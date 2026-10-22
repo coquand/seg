@@ -1,0 +1,40 @@
+-- PUaOp.seg: univalence for the poset universe U_L (on PosS: sieves are
+-- decidable sieves, closed under union), from the universal datum
+-- (GUaOpN at the line classifier, GUaOpNL), used on one-sided partial
+-- elements (GCofOne.Wrap: a list of sides is its union).  El's fibration is
+-- PElL2.fibEGen, the fillers of EGen are made from it with the poset
+-- connections (GFillFib), their ends are fibEGen (EndC, by cI-itgt and
+-- ESI), and El at a Yoneda code is the code (PElYon).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosS[a] ; open PSB ;
+module PS = PosS[a] ;
+module BaseP = PS.PSB ;
+module UL = BaseP.GUnivL.UL ;
+module PE2 = PElL2[a] ;
+module PY = PElYon2[a] ;
+
+cE : BaseP.GFibE[a+].FE[UL.UCtx, UL.EGen].Comp = PE2.fibEGen.2.1 ;
+eE : BaseP.GFibE[a+].FE[UL.UCtx, UL.EGen].ESIC cE = PE2.fibEGen.2.2 ;
+
+module FL0 = PS.PSCn.GFillFib[a+].FillLineFib[BaseP.GFam[a+].famPath, BaseP.GFam[a+].famConn, UL.UCtx, UL.EGen, true, cE.1] ;
+module FL1 = PS.PSCn.GFillFib[a+].FillLineFib[BaseP.GFam[a+].famPath, BaseP.GFam[a+].famConn, UL.UCtx, UL.EGen, false, cE.2] ;
+
+-- the univalence operation from the universal datum (GUaOpN at ClL)
+module UAN = PS.PSFaU.GUaOpNL.UaNL[FL0.fibAt, FL1.fibAt, FL0.Kesi[eE.1].kesi, FL1.Kesi[eE.2].kesi, cE, eE,
+  FL0.EndC[eE.1].endCa, FL1.EndC[eE.2].endCa, \ Z F1 -> PY.EY[Z, F1].elYonCl] ;
+
+-- ... on the union of the sides
+module W = BaseP.GCofOne[a+].Un[PS.bigU, PS.bigU-in, PS.bigU-out].One[UL.UCtx,
+  BaseP.GUnivEq.UaU[BaseP.GUnivL.ClL, BaseP.GUnivL.clSubL, BaseP.GUnivL.clSub-idL, BaseP.GUnivL.clSub-oL, \ X A -> BaseP.GUnivL.encClL (BaseP.GYon[a].yP X) A].UaTy].Wrap[UAN.ua] ;
+
+-- Sigma (X : U_L) Equiv (X , A) is contractible, uniformly
+ua : BaseP.GCofib[a+].Partials[UL.UCtx, BaseP.GUnivEq.UaU[BaseP.GUnivL.ClL, BaseP.GUnivL.clSubL, BaseP.GUnivL.clSub-idL, BaseP.GUnivL.clSub-oL, \ X A -> BaseP.GUnivL.encClL (BaseP.GYon[a].yP X) A].UaTy].ContrOp = W.contr ;
+
+-- ... and it does not see an inserted empty side (the union is the same sieve)
+uaKesi : BaseP.GCofEsi[a+].PartialsEsi[UL.UCtx, BaseP.GUnivEq.UaU[BaseP.GUnivL.ClL, BaseP.GUnivL.clSubL, BaseP.GUnivL.clSub-idL, BaseP.GUnivL.clSub-oL, \ X A -> BaseP.GUnivL.encClL (BaseP.GYon[a].yP X) A].UaTy].KESI ua = W.kesi ;

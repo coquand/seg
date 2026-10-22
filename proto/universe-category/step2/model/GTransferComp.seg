@@ -1,0 +1,216 @@
+-- GTransferComp.seg (inside IvBase): transfer of fillers along a composite.
+-- For (D2 , B2) -> (D , B) by (s1 , ph1) (TrM, one level) and
+-- (D , B) -> (D0 , B0) by (sg2 , ph2), a filler k0 of B0 moved down along
+-- the composite (sg2 o s1 , ph2 o ph1) is, moved along (s1 , ph1), the
+-- filler moved down along (sg2 , ph2) of the moved problem (compF; ONE
+-- congruence: the B0-problems are equal, kop-cong).  The composite data
+-- (naturality, inverse, PhN) are computed here, so F12 is THE transfer
+-- along the composite.
+
+level k l m ;
+constraint a <= k ;
+constraint a <= l ;
+constraint k <= m ;
+constraint l <= m ;
+open Base ;
+open Prelude[m+] ;
+open Paths[m+] ;
+open Trees[a] ;
+open Arith[a] ;
+module W0 = V[k] ;
+module W1 = V[l] ;
+module P0 = GPre[k] ;
+module P1 = GPre[l] ;
+module L0 = GLine[k] ;
+module L1 = GLine[l] ;
+module F0 = GFam[k] ;
+module F1 = GFam[l] ;
+
+module TrFComp (D2 : P1.PS.PCtx) (B2 : P1.PS.PTy[D2]) (D : P1.PS.PCtx) (B : P1.PS.PTy[D]) (D0 : P0.PS.PCtx) (B0 : P0.PS.PTy[D0])
+  (s1 : (W : Ob) -> W1.Ix (D2.ob W) -> W1.Ix (D.ob W))
+  (s1-nat : (V W : Ob) (g : Hom V W) (d : W1.Ix (D2.ob W)) -> Id (W1.Ix (D.ob V)) (s1 V (D2.act V W g d)) (D.act V W g (s1 W d)))
+  (ph1 : (W : Ob) (d : W1.Ix (D2.ob W)) -> W1.Ix (B2.tob W d) -> W1.Ix (B.tob W (s1 W d)))
+  (ps1 : (W : Ob) (d : W1.Ix (D2.ob W)) -> W1.Ix (B.tob W (s1 W d)) -> W1.Ix (B2.tob W d))
+  (ph-ps1 : (W : Ob) (d : W1.Ix (D2.ob W)) (b : W1.Ix (B.tob W (s1 W d))) -> Id (W1.Ix (B.tob W (s1 W d))) (ph1 W d (ps1 W d b)) b)
+  (ps-ph1 : (W : Ob) (d : W1.Ix (D2.ob W)) (b : W1.Ix (B2.tob W d)) -> Id (W1.Ix (B2.tob W d)) (ps1 W d (ph1 W d b)) b)
+  (PhN1 : (V W : Ob) (g : Hom V W) (w : P1.TyL[D2, B2].EI W)
+     -> Id (P1.TyL[D, B].EI V)
+           (s1 V (P1.TyL[D2, B2].E.act V W g w).1, ph1 V (P1.TyL[D2, B2].E.act V W g w).1 (P1.TyL[D2, B2].E.act V W g w).2)
+           (P1.TyL[D, B].E.act V W g (s1 W w.1, ph1 W w.1 w.2)))
+  (sg2 : (W : Ob) -> W1.Ix (D.ob W) -> W0.Ix (D0.ob W))
+  (sg2-nat : (V W : Ob) (g : Hom V W) (d : W1.Ix (D.ob W)) -> Id (W0.Ix (D0.ob V)) (sg2 V (D.act V W g d)) (D0.act V W g (sg2 W d)))
+  (ph2 : (W : Ob) (d : W1.Ix (D.ob W)) -> W1.Ix (B.tob W d) -> W0.Ix (B0.tob W (sg2 W d)))
+  (ps2 : (W : Ob) (d : W1.Ix (D.ob W)) -> W0.Ix (B0.tob W (sg2 W d)) -> W1.Ix (B.tob W d))
+  (ph-ps2 : (W : Ob) (d : W1.Ix (D.ob W)) (b : W0.Ix (B0.tob W (sg2 W d))) -> Id (W0.Ix (B0.tob W (sg2 W d))) (ph2 W d (ps2 W d b)) b)
+  (ps-ph2 : (W : Ob) (d : W1.Ix (D.ob W)) (b : W1.Ix (B.tob W d)) -> Id (W1.Ix (B.tob W d)) (ps2 W d (ph2 W d b)) b)
+  (PhN2 : (V W : Ob) (g : Hom V W) (w : P1.TyL[D, B].EI W)
+     -> Id (P0.TyL[D0, B0].EI V)
+           (sg2 V (P1.TyL[D, B].E.act V W g w).1, ph2 V (P1.TyL[D, B].E.act V W g w).1 (P1.TyL[D, B].E.act V W g w).2)
+           (P0.TyL[D0, B0].E.act V W g (sg2 W w.1, ph2 W w.1 w.2)))
+  (e : IPt) (k0 : L0.LineFibP[F0.famPath, D0, B0].FibAt e)
+  (ke0 : GCofEsi[k].PartialsEsi[L0.EndKit[F0.famPath, D0, B0, e].TV.E, L0.EndKit[F0.famPath, D0, B0, e].SFm.SF].KESI k0) {
+  -- the composite
+  s12-nat (V W : Ob) (g : Hom V W) (d : W1.Ix (D2.ob W)) : Id (W0.Ix (D0.ob V)) (sg2 V (s1 V (D2.act V W g d))) (D0.act V W g (sg2 W (s1 W d))) =
+    transH (apH (sg2 V) (s1-nat V W g d)) (sg2-nat V W g (s1 W d)) ;
+
+  ps12 (W : Ob) (d : W1.Ix (D2.ob W)) (b : W0.Ix (B0.tob W (sg2 W (s1 W d)))) : W1.Ix (B2.tob W d) = ps1 W d (ps2 W (s1 W d) b) ;
+
+  ph-ps12 (W : Ob) (d : W1.Ix (D2.ob W)) (b : W0.Ix (B0.tob W (sg2 W (s1 W d))))
+    : Id (W0.Ix (B0.tob W (sg2 W (s1 W d)))) (ph2 W (s1 W d) (ph1 W d (ps12 W d b))) b =
+    transH (apH (ph2 W (s1 W d)) (ph-ps1 W d (ps2 W (s1 W d) b))) (ph-ps2 W (s1 W d) b) ;
+
+  ps-ph12 (W : Ob) (d : W1.Ix (D2.ob W)) (b : W1.Ix (B2.tob W d)) : Id (W1.Ix (B2.tob W d)) (ps12 W d (ph2 W (s1 W d) (ph1 W d b))) b =
+    transH (apH (ps1 W d) (ps-ph2 W (s1 W d) (ph1 W d b))) (ps-ph1 W d b) ;
+
+  PhN12 (V W : Ob) (g : Hom V W) (w : P1.TyL[D2, B2].EI W)
+    : Id (P0.TyL[D0, B0].EI V)
+         (sg2 V (s1 V (P1.TyL[D2, B2].E.act V W g w).1),
+          ph2 V (s1 V (P1.TyL[D2, B2].E.act V W g w).1) (ph1 V (P1.TyL[D2, B2].E.act V W g w).1 (P1.TyL[D2, B2].E.act V W g w).2))
+         (P0.TyL[D0, B0].E.act V W g (sg2 W (s1 W w.1), ph2 W (s1 W w.1) (ph1 W w.1 w.2))) =
+    transH (apH {P1.TyL[D, B].EI V} {P0.TyL[D0, B0].EI V} (\ z -> (sg2 V z.1, ph2 V z.1 z.2)) (PhN1 V W g w))
+           (PhN2 V W g (s1 W w.1, ph1 W w.1 w.2)) ;
+
+  module M1 = GTransfer[l, l, l].TrM[D2, B2, D, B, s1, s1-nat, ph1, ps1, ph-ps1, ps-ph1, PhN1, e] ;
+  module F2 = GTransfer[k, l, m].TrF[D, B, D0, B0, sg2, sg2-nat, ph2, ps2, ph-ps2, ps-ph2, PhN2, e, k0, ke0] ;
+  module F12 = GTransfer[k, l, m].TrF[D2, B2, D0, B0, \ W d -> sg2 W (s1 W d), s12-nat,
+      \ W d b -> ph2 W (s1 W d) (ph1 W d b), ps12, ph-ps12, ps-ph12, PhN12, e, k0, ke0] ;
+
+  -- the moved points agree
+  tvEq (X : Ob) (w : F12.CD.TV.EI X) : Id (F12.CD0.TV.EI X) (F12.M.tvN X w) (F2.M.tvN X (M1.tvN X w)) =
+    F12.CD0.EK.tv-eq X (F12.M.tvN X w) (F2.M.tvN X (M1.tvN X w))
+      (F12.M.FD0.fam-eq X (F12.M.tvN X w).1 (F2.M.tvN X (M1.tvN X w)).1 (\ W f i -> refl (sg2 W (s1 W (w.1.1 W f i)))))
+      (refl (F12.CD0.EK.endE X (F12.M.tvN X w))) ;
+
+  -- the moved elements of the fibres agree
+  tsEq (W : Ob) (u : F12.CD.TS.EI W) : Id (F12.CD0.TS.EI W) (F12.M.tsN W u) (F2.M.tsN W (M1.tsN W u)) =
+    F12.LD0.ts-ext W (F12.M.tsN W u) (F2.M.tsN W (M1.tsN W u))
+      (transH F12.M.TSN[W, u].res-pt
+        (transH (tvEq W u.1)
+          (symH (transH F2.M.TSN[W, M1.tsN W u].res-pt (apH (F2.M.tvN W) M1.TSN[W, u].res-pt)))))
+      (\ V g j -> transH (F12.M.TSN[W, u].res-lev V g j)
+         (symH (transH (F2.M.TSN[W, M1.tsN W u].res-lev V g j) (apH (F2.M.PhE V) (M1.TSN[W, u].res-lev V g j))))) ;
+
+  module Pb (X : Ob) (w : F12.CD.TV.EI X) (p : F12.PC.Partial[X, w]) {
+    mpEq : Id (F12.CD0.PT.Partial[X, F2.M.tvN X (M1.tvN X w)])
+              (subst (F12.CD0.TV.EI X) (\ z -> F12.CD0.PT.Partial[X, z]) (F12.M.tvN X w) (F2.M.tvN X (M1.tvN X w)) (tvEq X w)
+                 (F12.M.mapP X w p))
+              (F2.M.mapP X (M1.tvN X w) (M1.mapP X w p)) =
+      F12.CD0.PT.partExtH X (F12.M.tvN X w) (F2.M.tvN X (M1.tvN X w)) (tvEq X w)
+        (F12.M.mapP X w p) (F2.M.mapP X (M1.tvN X w) (M1.mapP X w p)) (refl p.pr) (\ l -> refl (p.ps l).pQ)
+        (\ l W f i i' -> transH (apH (F12.M.tsN W) (F12.CD.PT.pv-irr X w (p.ps l) W f i i')) (tsEq W ((p.ps l).pv W f i'))) ;
+
+    uEq : Id (F12.CD0.TS.EI X) (F12.u0 X w p) (F2.u0 X (M1.tvN X w) (M1.mapP X w p)) =
+      F12.PC0.kop-cong k0 X (F12.M.tvN X w) (F2.M.tvN X (M1.tvN X w)) (tvEq X w)
+        (F12.M.mapP X w p) (F2.M.mapP X (M1.tvN X w) (M1.mapP X w p)) mpEq ;
+
+    module BK12 = F12.Back[X, w, F12.u0 X w p, refl (F12.M.tvN X w)] ;
+    module BK2 = F2.Back[X, M1.tvN X w, F2.u0 X (M1.tvN X w) (M1.mapP X w p), refl (F2.M.tvN X (M1.tvN X w))] ;
+
+    tEq (V : Ob) (g : Hom V X) (j : Hom V Iv) : Id (F2.TB.EI V) (M1.PhE V (BK12.t V g j)) (BK2.t V g j) =
+      F2.M.tbEq V (M1.PhE V (BK12.t V g j)) (BK2.t V g j) (refl (s1 V (w.1.1 V g j)))
+        (transH (BK12.tPh V g j) (transH (apH (\ z -> z.2.1.1.1 V g j) uEq) (symH (BK2.tPh V g j)))) ;
+  } ;
+
+  -- the congruence
+  compF (X : Ob) (w : F12.CD.TV.EI X) (p : F12.PC.Partial[X, w])
+    : Id (F2.CD.TS.EI X) (M1.tsN X (w, F12.kop X w p)) (M1.tvN X w, F2.kop X (M1.tvN X w) (M1.mapP X w p)) =
+    F2.LD.ts-ext X (M1.tsN X (w, F12.kop X w p)) (M1.tvN X w, F2.kop X (M1.tvN X w) (M1.mapP X w p))
+      M1.TSN[X, (w, F12.kop X w p)].res-pt
+      (\ V g j -> transH (M1.TSN[X, (w, F12.kop X w p)].res-lev V g j)
+         (transH (apH (\ z -> M1.PhE V (F1.famConn.levA D2 B2 X (F12.CD.EK.lineL X z) V g j)) (F12.kop-E X w p))
+           (transH (apH (M1.PhE V) (Pb[X, w, p].BK12.res-lev V g j))
+             (transH (Pb[X, w, p].tEq V g j)
+               (symH (transH (apH (\ z -> F1.famConn.levA D B X (F2.CD.EK.lineL X z) V g j) (F2.kop-E X (M1.tvN X w) (M1.mapP X w p)))
+                             (Pb[X, w, p].BK2.res-lev V g j))))))) ;
+
+  opaque tvEq ; opaque tsEq ; opaque compF ;
+} ;
+
+
+------------------------------------------------------------------------
+-- the same for compositions: Tr along the composite, read through ph1, is
+-- Tr along (sg2 , ph2) at the problem moved along (s1 , ph1)
+
+module TrCComp (D2 : P1.PS.PCtx) (B2 : P1.PS.PTy[D2]) (D : P1.PS.PCtx) (B : P1.PS.PTy[D]) (D0 : P0.PS.PCtx) (B0 : P0.PS.PTy[D0])
+  (s1 : (W : Ob) -> W1.Ix (D2.ob W) -> W1.Ix (D.ob W))
+  (s1-nat : (V W : Ob) (g : Hom V W) (d : W1.Ix (D2.ob W)) -> Id (W1.Ix (D.ob V)) (s1 V (D2.act V W g d)) (D.act V W g (s1 W d)))
+  (ph1 : (W : Ob) (d : W1.Ix (D2.ob W)) -> W1.Ix (B2.tob W d) -> W1.Ix (B.tob W (s1 W d)))
+  (ps1 : (W : Ob) (d : W1.Ix (D2.ob W)) -> W1.Ix (B.tob W (s1 W d)) -> W1.Ix (B2.tob W d))
+  (ph-ps1 : (W : Ob) (d : W1.Ix (D2.ob W)) (b : W1.Ix (B.tob W (s1 W d))) -> Id (W1.Ix (B.tob W (s1 W d))) (ph1 W d (ps1 W d b)) b)
+  (ps-ph1 : (W : Ob) (d : W1.Ix (D2.ob W)) (b : W1.Ix (B2.tob W d)) -> Id (W1.Ix (B2.tob W d)) (ps1 W d (ph1 W d b)) b)
+  (PhN1 : (V W : Ob) (g : Hom V W) (w : P1.TyL[D2, B2].EI W)
+     -> Id (P1.TyL[D, B].EI V)
+           (s1 V (P1.TyL[D2, B2].E.act V W g w).1, ph1 V (P1.TyL[D2, B2].E.act V W g w).1 (P1.TyL[D2, B2].E.act V W g w).2)
+           (P1.TyL[D, B].E.act V W g (s1 W w.1, ph1 W w.1 w.2)))
+  (sg2 : (W : Ob) -> W1.Ix (D.ob W) -> W0.Ix (D0.ob W))
+  (sg2-nat : (V W : Ob) (g : Hom V W) (d : W1.Ix (D.ob W)) -> Id (W0.Ix (D0.ob V)) (sg2 V (D.act V W g d)) (D0.act V W g (sg2 W d)))
+  (ph2 : (W : Ob) (d : W1.Ix (D.ob W)) -> W1.Ix (B.tob W d) -> W0.Ix (B0.tob W (sg2 W d)))
+  (ps2 : (W : Ob) (d : W1.Ix (D.ob W)) -> W0.Ix (B0.tob W (sg2 W d)) -> W1.Ix (B.tob W d))
+  (ph-ps2 : (W : Ob) (d : W1.Ix (D.ob W)) (b : W0.Ix (B0.tob W (sg2 W d))) -> Id (W0.Ix (B0.tob W (sg2 W d))) (ph2 W d (ps2 W d b)) b)
+  (ps-ph2 : (W : Ob) (d : W1.Ix (D.ob W)) (b : W1.Ix (B.tob W d)) -> Id (W1.Ix (B.tob W d)) (ps2 W d (ph2 W d b)) b)
+  (PhN2 : (V W : Ob) (g : Hom V W) (w : P1.TyL[D, B].EI W)
+     -> Id (P0.TyL[D0, B0].EI V)
+           (sg2 V (P1.TyL[D, B].E.act V W g w).1, ph2 V (P1.TyL[D, B].E.act V W g w).1 (P1.TyL[D, B].E.act V W g w).2)
+           (P0.TyL[D0, B0].E.act V W g (sg2 W w.1, ph2 W w.1 w.2)))
+  (e e' : IPt) (c0 : L0.CompAtP[F0.famPath, D0, B0, e, e'].CompAt) {
+  -- the composite
+  s12-nat (V W : Ob) (g : Hom V W) (d : W1.Ix (D2.ob W)) : Id (W0.Ix (D0.ob V)) (sg2 V (s1 V (D2.act V W g d))) (D0.act V W g (sg2 W (s1 W d))) =
+    transH (apH (sg2 V) (s1-nat V W g d)) (sg2-nat V W g (s1 W d)) ;
+
+  ps12 (W : Ob) (d : W1.Ix (D2.ob W)) (b : W0.Ix (B0.tob W (sg2 W (s1 W d)))) : W1.Ix (B2.tob W d) = ps1 W d (ps2 W (s1 W d) b) ;
+
+  ph-ps12 (W : Ob) (d : W1.Ix (D2.ob W)) (b : W0.Ix (B0.tob W (sg2 W (s1 W d))))
+    : Id (W0.Ix (B0.tob W (sg2 W (s1 W d)))) (ph2 W (s1 W d) (ph1 W d (ps12 W d b))) b =
+    transH (apH (ph2 W (s1 W d)) (ph-ps1 W d (ps2 W (s1 W d) b))) (ph-ps2 W (s1 W d) b) ;
+
+  ps-ph12 (W : Ob) (d : W1.Ix (D2.ob W)) (b : W1.Ix (B2.tob W d)) : Id (W1.Ix (B2.tob W d)) (ps12 W d (ph2 W (s1 W d) (ph1 W d b))) b =
+    transH (apH (ps1 W d) (ps-ph2 W (s1 W d) (ph1 W d b))) (ps-ph1 W d b) ;
+
+  PhN12 (V W : Ob) (g : Hom V W) (w : P1.TyL[D2, B2].EI W)
+    : Id (P0.TyL[D0, B0].EI V)
+         (sg2 V (s1 V (P1.TyL[D2, B2].E.act V W g w).1),
+          ph2 V (s1 V (P1.TyL[D2, B2].E.act V W g w).1) (ph1 V (P1.TyL[D2, B2].E.act V W g w).1 (P1.TyL[D2, B2].E.act V W g w).2))
+         (P0.TyL[D0, B0].E.act V W g (sg2 W (s1 W w.1), ph2 W (s1 W w.1) (ph1 W w.1 w.2))) =
+    transH (apH {P1.TyL[D, B].EI V} {P0.TyL[D0, B0].EI V} (\ z -> (sg2 V z.1, ph2 V z.1 z.2)) (PhN1 V W g w))
+           (PhN2 V W g (s1 W w.1, ph1 W w.1 w.2)) ;
+
+  module M1 = GTransfer[l, l, l].TrM[D2, B2, D, B, s1, s1-nat, ph1, ps1, ph-ps1, ps-ph1, PhN1, e] ;
+  module T2 = GTransfer[k, l, m].Tr[D, B, D0, B0, sg2, sg2-nat, ph2, ps2, ph-ps2, ps-ph2, PhN2, e, e', c0] ;
+  module T12 = GTransfer[k, l, m].Tr[D2, B2, D0, B0, \ W d -> sg2 W (s1 W d), s12-nat,
+      \ W d b -> ph2 W (s1 W d) (ph1 W d b), ps12, ph-ps12, ps-ph12, PhN12, e, e', c0] ;
+  -- the moved problems agree (as for fillers)
+  tvEq (X : Ob) (w : T12.CD.TV.EI X) : Id (T12.CD0.TV.EI X) (T12.M.tvN X w) (T2.M.tvN X (M1.tvN X w)) =
+    T12.CD0.EK.tv-eq X (T12.M.tvN X w) (T2.M.tvN X (M1.tvN X w))
+      (T12.M.FD0.fam-eq X (T12.M.tvN X w).1 (T2.M.tvN X (M1.tvN X w)).1 (\ W f i -> refl (sg2 W (s1 W (w.1.1 W f i)))))
+      (refl (T12.CD0.EK.endE X (T12.M.tvN X w))) ;
+
+  tsEq (W : Ob) (u : T12.CD.TS.EI W) : Id (T12.CD0.TS.EI W) (T12.M.tsN W u) (T2.M.tsN W (M1.tsN W u)) =
+    T12.LD0.ts-ext W (T12.M.tsN W u) (T2.M.tsN W (M1.tsN W u))
+      (transH T12.M.TSN[W, u].res-pt
+        (transH (tvEq W u.1)
+          (symH (transH T2.M.TSN[W, M1.tsN W u].res-pt (apH (T2.M.tvN W) M1.TSN[W, u].res-pt)))))
+      (\ V g j -> transH (T12.M.TSN[W, u].res-lev V g j)
+         (symH (transH (T2.M.TSN[W, M1.tsN W u].res-lev V g j) (apH (T2.M.PhE V) (M1.TSN[W, u].res-lev V g j))))) ;
+
+  mpEq (X : Ob) (w : T12.CD.TV.EI X) (p : T12.CD.PT.Partial[X, w])
+    : Id (T12.CD0.PT.Partial[X, T2.M.tvN X (M1.tvN X w)])
+         (subst (T12.CD0.TV.EI X) (\ z -> T12.CD0.PT.Partial[X, z]) (T12.M.tvN X w) (T2.M.tvN X (M1.tvN X w)) (tvEq X w) (T12.M.mapP X w p))
+         (T2.M.mapP X (M1.tvN X w) (M1.mapP X w p)) =
+    T12.CD0.PT.partExtH X (T12.M.tvN X w) (T2.M.tvN X (M1.tvN X w)) (tvEq X w)
+      (T12.M.mapP X w p) (T2.M.mapP X (M1.tvN X w) (M1.mapP X w p)) (refl p.pr) (\ l -> refl (p.ps l).pQ)
+      (\ l W f i i' -> transH (apH (T12.M.tsN W) (T12.CD.PT.pv-irr X w (p.ps l) W f i i')) (tsEq W ((p.ps l).pv W f i'))) ;
+
+  -- the congruence
+  compC (X : Ob) (w : T12.CD.TV.EI X) (p : T12.CD.PT.Partial[X, w])
+    : Id (W1.Ix (B.tob X (s1 X (w.1.1 X (idH X) (ptH X e')))))
+         (ph1 X (w.1.1 X (idH X) (ptH X e')) (T12.cop X w p)) (T2.cop X (M1.tvN X w) (M1.mapP X w p)) =
+    transH (ph-ps1 X (w.1.1 X (idH X) (ptH X e')) (ps2 X (s1 X (w.1.1 X (idH X) (ptH X e'))) (c0.cop X (T12.M.tvN X w) (T12.M.mapP X w p))))
+      (apH (ps2 X (s1 X (w.1.1 X (idH X) (ptH X e'))))
+        (T12.TB0.pr-inj X (sg2 X (s1 X (w.1.1 X (idH X) (ptH X e')))) (c0.cop X (T12.M.tvN X w) (T12.M.mapP X w p))
+           (c0.cop X (T2.M.tvN X (M1.tvN X w)) (T2.M.mapP X (M1.tvN X w) (M1.mapP X w p)))
+           (apH (T12.KD0'.endE X)
+              (T12.CD0.cop-cong c0 X (T12.M.tvN X w) (T2.M.tvN X (M1.tvN X w)) (tvEq X w)
+                 (T12.M.mapP X w p) (T2.M.mapP X (M1.tvN X w) (M1.mapP X w p)) (mpEq X w p))))) ;
+
+  opaque tvEq ; opaque tsEq ; opaque mpEq ; opaque compC ;
+} ;

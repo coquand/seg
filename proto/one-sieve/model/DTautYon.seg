@@ -1,0 +1,162 @@
+-- DTautYon.seg: the tautological classifier of Delta (DTautCl) at the
+-- Yoneda code of F : U0 Z is F's own classifier:
+--
+--   tautCl-yon   (ElTy along g |-> uAct g F , tautCl) = F
+--
+-- Along GElC.Yon.elYon (DGlueCl.ClT.toSig): at g, tautCl fills with El at
+-- uAct g F, which is F.2 at g o id on the horn read at the identity
+-- (DElHorn.toA = zE) and moved along y g (DeltaClassifier.Sub); the same
+-- values, up to g o id = g, as the horn transported along elYon.
+--
+--   pairV     (y , b along P1) = (x , b along P2) over y = x (V is a set)
+--   fillAt    a classifier gives the same total filler at equal points on
+--             horn data with the same values
+--
+-- Constructive.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ;
+module DBm = DeltaBase[a] ;
+module DB = DBm.DB ;
+module DS = DBm.DS ;
+module PR = DB.GPre[a] ;
+module PS = PR.PS ;
+module DCl = DeltaClassifier[a] ;
+module DU = DCl.DU ;
+module DHm = DeltaHorn[a] ;
+module YO = DB.GYon ;
+
+------------------------------------------------------------------------
+-- at abstract data
+
+module Lm (D : PS.PCtx) (A : PS.PTy[D]) {
+  module TA = PR.TyL[D, A] ;
+
+  pairV (W : Nat) (y x : W0.Ix (D.ob W)) (q : Id (W0.Ix (D.ob W)) y x) (t : W0.V) (b : W0.Ix t)
+    (P1 : Id W0.V t (A.tob W y)) (P2 : Id W0.V t (A.tob W x))
+    : Id (TA.EI W) (y, subst W0.V (\ z -> W0.Ix z) t (A.tob W y) P1 b) (x, subst W0.V (\ z -> W0.Ix z) t (A.tob W x) P2 b) =
+    idJ (W0.Ix (D.ob W)) y
+      (\ x2 q2 -> (P3 : Id W0.V t (A.tob W x2))
+         -> Id (TA.EI W) (y, subst W0.V (\ z -> W0.Ix z) t (A.tob W y) P1 b) (x2, subst W0.V (\ z -> W0.Ix z) t (A.tob W x2) P3 b))
+      (\ P3 -> apH {Id W0.V t (A.tob W y)} {TA.EI W} (\ P -> (y, subst W0.V (\ z -> W0.Ix z) t (A.tob W y) P b))
+                 (W0.isSetV t (A.tob W y) P1 P3))
+      x q P2 ;
+
+  fillAt (cl : DCl.ClD D A) (m k : Nat) (hk : IsT (leb k (suc m))) (rho rho' : W0.Ix (D.ob (suc m))) (p : Id (W0.Ix (D.ob (suc m))) rho rho')
+    (h : DHornFib[a, a].DH[D, A].HornData m k rho) (h' : DHornFib[a, a].DH[D, A].HornData m k rho')
+    (P : Id (DB.GCofib[a].Partials[D, A].PvTy (suc m) (DHm.hornS m k)) h.1 h'.1)
+    : Id (TA.EI (suc m)) (rho, (cl m k hk rho h).1) (rho', (cl m k hk rho' h').1) =
+    idJ (W0.Ix (D.ob (suc m))) rho
+      (\ r2 p2 -> (h2 : DHornFib[a, a].DH[D, A].HornData m k r2)
+         -> Id (DB.GCofib[a].Partials[D, A].PvTy (suc m) (DHm.hornS m k)) h.1 h2.1
+         -> Id (TA.EI (suc m)) (rho, (cl m k hk rho h).1) (r2, (cl m k hk r2 h2).1))
+      (\ h2 P2 -> apH {DHornFib[a, a].DH[D, A].HornData m k rho} {TA.EI (suc m)} (\ hd -> (rho, (cl m k hk rho hd).1))
+                    (DCl.FExt[D, A].hd-eq m k rho h h2 P2))
+      rho' p h' P ;
+
+  opaque pairV ; opaque fillAt ;
+} ;
+
+------------------------------------------------------------------------
+-- tautCl at the Yoneda code
+
+module TY (cE : DB.GFibE[a+].FE[DU.UCtx, DU.EGen].Comp) (eE : DB.GFibE[a+].FE[DU.UCtx, DU.EGen].ESIC cE) {
+  module TC = DTautCl[a].TA[cE, eE] ;
+  module EC = TC.EC ;
+
+  module Y (Z : Nat) (F1 : DU.U0 Z) {
+    module YN = EC.Yon[Z, F1, \ Y' Y h g -> DU.uAct-o Y' Y Z g h F1] ;
+    module FY = EC.Fam[YO.yP Z, YN.cY, \ Y' Y h g -> DU.uAct-o Y' Y Z g h F1] ;
+    module T = TC.T[YO.yP Z, YN.cY, \ Y' Y h g -> DU.uAct-o Y' Y Z g h F1] ;
+    module L2 = Lm[YO.yP Z, F1.1] ;
+    module TR = DGlueCl[a].TrT[YO.yP Z, FY.ElTy] ;
+    module TF = PR.TyL[YO.yP Z, F1.1] ;
+
+    -- the point g o id
+    g0 (m : Nat) (g : Hom (lin (suc m)) (lin Z)) : Hom (lin (suc m)) (lin Z) = (YO.yH (suc m) Z g).nt (suc m) (idH (lin (suc m))) ;
+
+    module At (m k : Nat) (hk : IsT (leb k (suc m))) (g : Hom (lin (suc m)) (lin Z)) (h : T.H.HornData m k g) {
+      F' : DU.U0 (suc m) = DU.uAct (suc m) Z g F1 ;
+      module E = DElHorn[a].EH[suc m, F'] ;
+      module HE = DElHorn[a].HE[m, F'] ;
+      hE : TC.HEl.HornData m k F' = T.mv m k g h ;
+      -- the horn data F.2 fills at g o id
+      hX : DHornFib[a, a].DH[YO.yP Z, F1.1].HornData m k (g0 m g) =
+        DCl.Sub[YO.yP (suc m), YO.yP Z, YO.yH (suc m) Z g, F1.1, F1.2].mv m k (idH (lin (suc m))) (HE.hA k hE) ;
+      hT : DHornFib[a, a].DH[YO.yP Z, F1.1].HornData m k g = TR.trH F1.1 YN.elYon m k g h ;
+
+      -- the values agree
+      vEq (W : Nat) (f : Hom (lin W) (lin (suc m))) (i : DS.Lands W (suc m) (DHm.hornS m k) f)
+        : Id (TF.EI W) (hX.1 W f i) (hT.1 W f i) =
+        calc (TF.EI W) {
+            hX.1 W f i
+          =< apH ((PS.liftP (YO.yP (suc m)) (YO.yP Z) F1.1 (YO.yH (suc m) Z g)).nt W) (E.toA-E W f (hE.1 W f i) (hE.2.1 W f i)) >
+            ((YO.yH (suc m) Z g).nt W ((YO.yH W (suc m) f).nt W (idH (lin W))),
+             subst (DU.U0 W) (\ G -> W0.Ix (DU.fib0 W G)) (hE.1 W f i).1 (DU.uAct W (suc m) f F') (hE.2.1 W f i) (h.1 W f i).2)
+          =< apH {W0.Ix (DU.fib0 W (DU.uAct W (suc m) f F'))} {TF.EI W} (\ z -> ((YO.yH (suc m) Z g).nt W ((YO.yH W (suc m) f).nt W (idH (lin W))), z))
+               (DU.substF W (hE.1 W f i).1 (DU.uAct W (suc m) f F') (hE.2.1 W f i) (h.1 W f i).2) >
+            ((YO.yH (suc m) Z g).nt W ((YO.yH W (suc m) f).nt W (idH (lin W))),
+             subst W0.V (\ z -> W0.Ix z) (DU.fib0 W (hE.1 W f i).1) (DU.fib0 W (DU.uAct W (suc m) f F'))
+               (ap (DU.U0 W) W0.V (DU.fib0 W) (hE.1 W f i).1 (DU.uAct W (suc m) f F') (hE.2.1 W f i)) (h.1 W f i).2)
+          =< L2.pairV W ((YO.yH (suc m) Z g).nt W ((YO.yH W (suc m) f).nt W (idH (lin W)))) (h.1 W f i).1 qW
+               (DU.fib0 W (hE.1 W f i).1) (h.1 W f i).2
+               (ap (DU.U0 W) W0.V (DU.fib0 W) (hE.1 W f i).1 (DU.uAct W (suc m) f F') (hE.2.1 W f i))
+               (apH {PS.PTy[YO.yP Z]} {W0.V} (\ T' -> T'.tob W (h.1 W f i).1) YN.elYon) >
+            ((h.1 W f i).1, subst W0.V (\ z -> W0.Ix z) (FY.ElTy.tob W (h.1 W f i).1) (F1.1.tob W (h.1 W f i).1)
+                              (apH {PS.PTy[YO.yP Z]} {W0.V} (\ T' -> T'.tob W (h.1 W f i).1) YN.elYon) (h.1 W f i).2)
+          =< symH (TR.trE-v W F1.1 YN.elYon (h.1 W f i).1 (h.1 W f i).2) >
+            TR.trE W F1.1 YN.elYon (h.1 W f i)
+          =< symH (TR.trH-v F1.1 YN.elYon m k g h W f i) >
+            hT.1 W f i }
+       where {
+         qW : Id (Hom (lin W) (lin Z)) ((YO.yH (suc m) Z g).nt W ((YO.yH W (suc m) f).nt W (idH (lin W)))) (h.1 W f i).1 =
+           transH (apH (\ u -> compH (lin W) (lin (suc m)) (lin Z) g u) (comp-idr (lin W) (lin (suc m)) f)) (symH (h.2.1 W f i)) ; } ;
+
+      pv : Id (DB.GCofib[a].Partials[YO.yP Z, F1.1].PvTy (suc m) (DHm.hornS m k)) hX.1 hT.1 =
+        funext Nat (\ W -> (f : Hom (lin W) (lin (suc m))) -> DS.Lands W (suc m) (DHm.hornS m k) f -> TF.EI W) hX.1 hT.1 (\ W ->
+        funext (Hom (lin W) (lin (suc m))) (\ f -> DS.Lands W (suc m) (DHm.hornS m k) f -> TF.EI W) (hX.1 W) (hT.1 W) (\ f ->
+        funext (DS.Lands W (suc m) (DHm.hornS m k) f) (\ i -> TF.EI W) (hX.1 W f) (hT.1 W f) (\ i -> vEq W f i))) ;
+
+      b0 : W0.Ix (F1.1.tob (suc m) (g0 m g)) = (F1.2 m k hk (g0 m g) hX).1 ;
+
+      st : Id (TF.EI (suc m)) (TR.trE (suc m) F1.1 YN.elYon (g, (TC.tautCl (YO.yP Z) YN.cY (\ Y' Y h2 g2 -> DU.uAct-o Y' Y Z g2 h2 F1) m k hk g h).1))
+                              (g, (F1.2 m k hk g hT).1) =
+        calc (TF.EI (suc m)) {
+            TR.trE (suc m) F1.1 YN.elYon (g, (TC.tautCl (YO.yP Z) YN.cY (\ Y' Y h2 g2 -> DU.uAct-o Y' Y Z g2 h2 F1) m k hk g h).1)
+          =< apH (\ z -> TR.trE (suc m) F1.1 YN.elYon (g, z)) (TC.tautCl-fill (YO.yP Z) YN.cY (\ Y' Y h2 g2 -> DU.uAct-o Y' Y Z g2 h2 F1) m k hk g h) >
+            TR.trE (suc m) F1.1 YN.elYon (g, b0)
+          =< TR.trE-v (suc m) F1.1 YN.elYon g b0 >
+            (g, subst W0.V (\ z -> W0.Ix z) (F1.1.tob (suc m) (g0 m g)) (F1.1.tob (suc m) g)
+                  (apH {PS.PTy[YO.yP Z]} {W0.V} (\ T' -> T'.tob (suc m) g) YN.elYon) b0)
+          =< symH (L2.pairV (suc m) (g0 m g) g (comp-idr (lin (suc m)) (lin Z) g) (F1.1.tob (suc m) (g0 m g)) b0
+                    (refl (F1.1.tob (suc m) (g0 m g))) (apH {PS.PTy[YO.yP Z]} {W0.V} (\ T' -> T'.tob (suc m) g) YN.elYon)) >
+            (g0 m g, b0)
+          =< L2.fillAt F1.2 m k hk (g0 m g) g (comp-idr (lin (suc m)) (lin Z) g) hX hT pv >
+            (g, (F1.2 m k hk g hT).1) } ;
+    } ;
+
+    St : DGlueCl[a].ClT[YO.yP Z, FY.ElTy, TC.tautCl (YO.yP Z) YN.cY (\ Y' Y h g -> DU.uAct-o Y' Y Z g h F1)].St F1.1 F1.2 YN.elYon =
+      \ m k hk g h -> At[m, k, hk, g, h].st ;
+
+    res : Id ((A' : PS.PTy[YO.yP Z]) * DCl.ClD (YO.yP Z) A')
+             (FY.ElTy, TC.tautCl (YO.yP Z) YN.cY (\ Y' Y h g -> DU.uAct-o Y' Y Z g h F1)) F1 =
+      symH (DGlueCl[a].ClT[YO.yP Z, FY.ElTy, TC.tautCl (YO.yP Z) YN.cY (\ Y' Y h g -> DU.uAct-o Y' Y Z g h F1)].toSig F1.1 YN.elYon F1.2 St) ;
+  } ;
+
+  tautCl-yon (Z : Nat) (F1 : DU.U0 Z)
+    : Id ((A' : PS.PTy[YO.yP Z]) * DCl.ClD (YO.yP Z) A')
+         (EC.Fam[YO.yP Z, \ W g -> DU.uAct W Z g F1, \ Y' Y h g -> DU.uAct-o Y' Y Z g h F1].ElTy,
+          TC.tautCl (YO.yP Z) (\ W g -> DU.uAct W Z g F1) (\ Y' Y h g -> DU.uAct-o Y' Y Z g h F1))
+         F1 = Y[Z, F1].res ;
+
+  opaque tautCl-yon ;
+} ;

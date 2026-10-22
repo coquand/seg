@@ -1,0 +1,111 @@
+-- GYonEq2.seg (inside IvBase, any base): equivalence structures glue along
+-- Yoneda maps, part 2: the coherence read in the fibre of al over D.
+--
+-- For h : Y -> Z and a point x of D at Z, the data coherence coh (an Id)
+-- gives, by EqDat.ext-inv, the move PhiF from the local fibres at x h to
+-- the local fibres at x restricted along y h.  Read in the fibre of al over
+-- D (FibIso lifts sG), PhiF does nothing:
+--   liftTrA / liftTrB   Psi and PsiB, lifted to D, are the identity
+--   lamPhi              the lift at x h is the lift (through EqSub along
+--                       y h) of the PhiF-moved element
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon ;
+open GLine[a] ;
+module GCF = GCofib[a] ;
+module GQ = GEquiv[a] ;
+module GSB = GEquivSub[a] ;
+module GSB2 = GEquivSub2[a] ;
+module GX = GEqExt[a] ;
+module GL = GEqLaws[a] ;
+module GY1 = GYonEq1 ;
+
+module CohL (D : PCtx) (B A : PTy[D]) (al : PMap[D, B, A])
+  (L : (Z : Ob) (x : W0.Ix (D.ob Z)) -> GX.EqDat[yP Z].EqOn (GY1.triY D B A al Z x))
+  (coh : (Z Z' : Ob) (h : Hom Z' Z) (x : W0.Ix (D.ob Z))
+     -> Id ((u : GX.EqDat[yP Z'].Tri) * GX.EqDat[yP Z'].EqOn u)
+           (GL.eqDSub (yP Z') (yP Z) (yH Z' Z h) (GY1.triY D B A al Z x) (L Z x))
+           (GY1.triY D B A al Z' (D.act Z' Z h x), L Z' (D.act Z' Z h x)))
+  (Z Y : Ob) (h : Hom Y Z) (x : W0.Ix (D.ob Z)) {
+  module Y1 = GY1.YE[D, B, A, al, L, coh] ;
+  module HG = Y1.HG ;
+  module TA = GPR.TyL[D, A] ;
+  module TB = GPR.TyL[D, B] ;
+  module ED = GX.EqDat[yP Y] ;
+
+  xh : W0.Ix (D.ob Y) = D.act Y Z h x ;
+
+  module LZ = Y1.Lx[Z, x] ;
+  module LY = Y1.Lx[Y, xh] ;
+  module ES = GSB2.EqSub[yP Y, yP Z, yH Y Z h, LZ.FI.B', LZ.FI.A', LZ.FI.al', (L Z x).1] ;
+
+  t : ED.Tri = (GL.eqDSub (yP Y) (yP Z) (yH Y Z h) (GY1.triY D B A al Z x) (L Z x)).1 ;
+  e : ED.EqOn t = (GL.eqDSub (yP Y) (yP Z) (yH Y Z h) (GY1.triY D B A al Z x) (L Z x)).2 ;
+  t2 : ED.Tri = GY1.triY D B A al Y xh ;
+  e2 : ED.EqOn t2 = L Y xh ;
+
+  Pt : Id ED.Tri t t2 = ap ((u : ED.Tri) * ED.EqOn u) ED.Tri (\ z -> z.1) (t, e) (t2, e2) (coh Z Y h x) ;
+
+  HY : ED.Hyp t t2 Pt e e2 = ED.ext-inv t t2 e e2 (coh Z Y h x) ;
+
+  -- the two ways to a point of D: x h k and x (h k)
+  pp (V : Ob) (k : Hom V Y) : Id (W0.Ix (D.ob V)) (D.act V Y k xh) (D.act V Z (compH V Y Z h k) x) = symH (D.act-o V Y Z h k x) ;
+
+  psiA (V : Ob) (z : GPR.TyL[yP Y, t2.2.1].EI V)
+    : Id (GPR.TyL[yP Y, t.2.1].EI V) (ED.Psi t t2 Pt V z) (z.1, subst (TOb (yP Y)) (\ o -> W0.Ix (o V z.1)) t2.2.1.tob t.2.1.tob (apH (\ u -> u.2.1.tob) (symH Pt)) z.2) =
+    transH (ED.Psi-tob t t2 Pt V z) (GL.TriL[yP Y].substEIo V t2.2.1.tob t.2.1.tob (apH (\ u -> u.2.1.tob) (symH Pt)) z) ;
+
+  psiB (V : Ob) (z : GPR.TyL[yP Y, t2.1].EI V)
+    : Id (GPR.TyL[yP Y, t.1].EI V) (ED.PsiB t t2 Pt V z) (z.1, subst (TOb (yP Y)) (\ o -> W0.Ix (o V z.1)) t2.1.tob t.1.tob (apH (\ u -> u.1.tob) (symH Pt)) z.2) =
+    transH (ED.PsiB-tob t t2 Pt V z) (GL.TriL[yP Y].substEIo V t2.1.tob t.1.tob (apH (\ u -> u.1.tob) (symH Pt)) z) ;
+
+  liftTrA (V : Ob) (z : GPR.TyL[yP Y, t2.2.1].EI V)
+    : Id (TA.EI V) (LY.FI.SA.mV V z) (LZ.FI.SA.mV V (ES.SA.mV V (ED.Psi t t2 Pt V z))) =
+    calc (TA.EI V) {
+        (D.act V Y z.1 xh, z.2)
+      =< TA.pr-coe V (D.act V Y z.1 xh) (D.act V Z (compH V Y Z h z.1) x) (pp V z.1) z.2 >
+        (D.act V Z (compH V Y Z h z.1) x, TA.coeT V (D.act V Y z.1 xh) (D.act V Z (compH V Y Z h z.1) x) (pp V z.1) z.2)
+      =< apH {W0.Ix (A.tob V (D.act V Z (compH V Y Z h z.1) x))} {TA.EI V} (\ c -> (D.act V Z (compH V Y Z h z.1) x, c))
+           (transH (subst-ap (W0.Ix (D.ob V)) W0.V (A.tob V) (\ v' -> W0.Ix v') (D.act V Y z.1 xh) (D.act V Z (compH V Y Z h z.1) x) (pp V z.1) z.2)
+                   (symH (GL.TriL[yP Y].substPw V z.1 t2.2.1.tob t.2.1.tob (apH (\ u -> u.2.1.tob) (symH Pt))
+                            (ap (W0.Ix (D.ob V)) W0.V (A.tob V) (D.act V Y z.1 xh) (D.act V Z (compH V Y Z h z.1) x) (pp V z.1)) z.2))) >
+        (D.act V Z (compH V Y Z h z.1) x, subst (TOb (yP Y)) (\ o -> W0.Ix (o V z.1)) t2.2.1.tob t.2.1.tob (apH (\ u -> u.2.1.tob) (symH Pt)) z.2)
+      =< apH (\ w -> LZ.FI.SA.mV V (ES.SA.mV V w)) (symH (psiA V z)) >
+        LZ.FI.SA.mV V (ES.SA.mV V (ED.Psi t t2 Pt V z)) } ;
+
+  liftTrB (V : Ob) (z : GPR.TyL[yP Y, t2.1].EI V)
+    : Id (TB.EI V) (LY.FI.SB.mV V z) (LZ.FI.SB.mV V (ES.SB.mV V (ED.PsiB t t2 Pt V z))) =
+    calc (TB.EI V) {
+        (D.act V Y z.1 xh, z.2)
+      =< TB.pr-coe V (D.act V Y z.1 xh) (D.act V Z (compH V Y Z h z.1) x) (pp V z.1) z.2 >
+        (D.act V Z (compH V Y Z h z.1) x, TB.coeT V (D.act V Y z.1 xh) (D.act V Z (compH V Y Z h z.1) x) (pp V z.1) z.2)
+      =< apH {W0.Ix (B.tob V (D.act V Z (compH V Y Z h z.1) x))} {TB.EI V} (\ c -> (D.act V Z (compH V Y Z h z.1) x, c))
+           (transH (subst-ap (W0.Ix (D.ob V)) W0.V (B.tob V) (\ v' -> W0.Ix v') (D.act V Y z.1 xh) (D.act V Z (compH V Y Z h z.1) x) (pp V z.1) z.2)
+                   (symH (GL.TriL[yP Y].substPw V z.1 t2.1.tob t.1.tob (apH (\ u -> u.1.tob) (symH Pt))
+                            (ap (W0.Ix (D.ob V)) W0.V (B.tob V) (D.act V Y z.1 xh) (D.act V Z (compH V Y Z h z.1) x) (pp V z.1)) z.2))) >
+        (D.act V Z (compH V Y Z h z.1) x, subst (TOb (yP Y)) (\ o -> W0.Ix (o V z.1)) t2.1.tob t.1.tob (apH (\ u -> u.1.tob) (symH Pt)) z.2)
+      =< apH (\ w -> LZ.FI.SB.mV V (ES.SB.mV V w)) (symH (psiB V z)) >
+        LZ.FI.SB.mV V (ES.SB.mV V (ED.PsiB t t2 Pt V z)) } ;
+
+  psiFst (V : Ob) (z : GPR.TyL[yP Y, t2.2.1].EI V) : Id (Hom V Y) (ED.Psi t t2 Pt V z).1 z.1 = apH (\ w -> w.1) (psiA V z) ;
+
+  opaque psiA ; opaque psiB ; opaque liftTrA ; opaque liftTrB ; opaque psiFst ;
+
+  -- the lift of a fibre element at x h, through PhiF and EqSub along y h
+  lamPhi (V : Ob) (v : LY.FI.HD.TF.EI V)
+    : Id (HG.TF.EI V) (LY.FI.sG V v) (LZ.FI.sG V (ES.FI.sG V (ED.PhiF t t2 Pt V v))) =
+    HG.fibE-eq V (LY.FI.sG V v) (LZ.FI.sG V (ES.FI.sG V (ED.PhiF t t2 Pt V v)))
+      (transH (liftTrA V v.1) (apH (\ z -> LZ.FI.SA.mV V (ES.SA.mV V z)) (symH (ED.PhiF-pt t t2 Pt V v))))
+      (transH (liftTrB V (LY.FI.HD.fibB V v)) (apH (\ z -> LZ.FI.SB.mV V (ES.SB.mV V z)) (symH (ED.PhiF-B t t2 Pt V v))))
+      (\ W f i -> transH (liftTrA W (LY.FI.HD.fibL V v W f i))
+                    (apH (\ z -> LZ.FI.SA.mV W (ES.SA.mV W z)) (symH (ED.PhiF-L t t2 Pt V v W f i)))) ;
+
+  opaque lamPhi ;
+} ;

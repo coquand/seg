@@ -1,0 +1,104 @@
+-- DClFull.seg: the glue classifier of Delta (DGlueCl.GC.clExt) over a full
+-- cofibration is B's classifier substituted along the section, for ANY
+-- fibrancy structure (cE , eE) of Ext (by cases on full, the classifier
+-- reads only hB at full points):
+--
+--   clFull   (Ext(alpha) , clExt) = (B[sec] , clSub sec hB)
+--
+-- along GExtFull.tyFull (DGlueCl.ClT.toSig): at rho, clExt is fromB of hB's
+-- filler on the horn read in B (clExt-full); transported to B[sec] and
+-- moved to B along sec it is that filler (K: transport then lift is toB,
+-- by extOb-B-sub), and the horn read in B is the transported horn moved
+-- along sec (hdEq).  The univalence operation's clFullOp is this lemma at
+-- GUaOp4's data (DUaOp).
+--
+-- Constructive.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+module DBm = DeltaBase[a] ;
+module DB = DBm.DB ;
+module DS = DBm.DS ;
+module PR = DB.GPre[a] ;
+open PR.PS ;
+module GP = DB.GCofib[a] ;
+module DCl = DeltaClassifier[a] ;
+module DHm = DeltaHorn[a] ;
+open DB.GLine[a] ;
+open Constr[a] ;
+
+module CF (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (hB : DCl.ClD GP.CofL[G, psi].resCtx B)
+  (cE : DB.GFibE[a].FE[G, DB.GExt2.ExtB2[G, A, psi, B, al].ExtT].Comp)
+  (eE : DB.GFibE[a].FE[G, DB.GExt2.ExtB2[G, A, psi, B, al].ExtT].ESIC cE)
+  (fl : (X : Nat) (rho : W0.Ix (G.ob X)) -> IsT (GP.CofL[G, psi].full X rho)) {
+  module CL = GP.CofL[G, psi] ;
+  module C = DGlueCl[a].GC[G, A, psi, B, al, hB, cE, eE] ;
+  module EF = DB.GExtFull.ExtFull[G, A, psi, B, al, fl] ;
+  module X3 = C.X3 ;
+  module TR = DGlueCl[a].TrT[G, C.E2.ExtT] ;
+  module SB = DCl.Sub[G, CL.resCtx, EF.sec, B, hB] ;
+  module TBF = PR.TyL[G, EF.BF] ;
+
+  -- transport to B[sec], then lift along sec, is toB
+  K (W : Nat) (v : C.TX.EI W) : Id (C.TB.EI W) ((liftP G CL.resCtx B EF.sec).nt W (TR.trE W EF.BF EF.tyFull v)) (X3.toB W v (fl W v.1)) =
+    transH (apH ((liftP G CL.resCtx B EF.sec).nt W) (TR.trE-v W EF.BF EF.tyFull v.1 v.2))
+      (apH {W0.Ix (B.tob W (v.1, fl W v.1))} {C.TB.EI W} (\ u -> ((v.1, fl W v.1), u))
+         (transH (VCode[a].substV-irr (C.E2.ExtT.tob W v.1) (EF.BF.tob W v.1)
+                    (apH {PTy[G]} {W0.V} (\ T' -> T'.tob W v.1) EF.tyFull) (EF.PoB W v.1) v.2)
+                 (X3.extOb-B-sub W v.1 (fl W v.1) v.2))) ;
+
+  opaque K ;
+
+  module At (m k : Nat) (hk : IsT (leb k (suc m))) (rho : W0.Ix (G.ob (suc m))) (h : C.HX.HornData m k rho) {
+    p : IsT (CL.full (suc m) rho) = fl (suc m) rho ;
+    module FU = C.Full[m, k, hk, rho, p, h] ;
+    hS : C.HB.HornData m k (rho, p) = SB.mv m k rho (TR.trH EF.BF EF.tyFull m k rho h) ;
+
+    vE (W : Nat) (f : Hom (lin W) (lin (suc m))) (i : DS.Lands W (suc m) (DHm.hornS m k) f)
+      : Id (C.TB.EI W) (FU.bv W f i) (hS.1 W f i) =
+      transH (apH (X3.toB W (h.1 W f i)) (isProp-IsT' (CL.full W (h.1 W f i).1) (FU.pW W f i) (fl W (h.1 W f i).1)))
+        (transH (symH (K W (h.1 W f i)))
+                (apH ((liftP G CL.resCtx B EF.sec).nt W) (symH (TR.trH-v EF.BF EF.tyFull m k rho h W f i)))) ;
+
+    hdEq : Id (C.HB.HornData m k (rho, p)) FU.hd hS =
+      DCl.FExt[CL.resCtx, B].hd-eq m k (rho, p) FU.hd hS
+        (funext Nat (\ W -> (f : Hom (lin W) (lin (suc m))) -> DS.Lands W (suc m) (DHm.hornS m k) f -> C.TB.EI W) FU.hd.1 hS.1 (\ W ->
+         funext (Hom (lin W) (lin (suc m))) (\ f -> DS.Lands W (suc m) (DHm.hornS m k) f -> C.TB.EI W) (FU.hd.1 W) (hS.1 W) (\ f ->
+         funext (DS.Lands W (suc m) (DHm.hornS m k) f) (\ i -> C.TB.EI W) (FU.hd.1 W f) (hS.1 W f) (\ i -> vE W f i)))) ;
+
+    lhs : TBF.EI (suc m) = TR.trE (suc m) EF.BF EF.tyFull (rho, (C.clExt m k hk rho h).1) ;
+    rhs : TBF.EI (suc m) = (rho, (SB.cl m k hk rho (TR.trH EF.BF EF.tyFull m k rho h)).1) ;
+
+    q : Id (C.TB.EI (suc m)) ((liftP G CL.resCtx B EF.sec).nt (suc m) lhs) ((liftP G CL.resCtx B EF.sec).nt (suc m) rhs) =
+      calc (C.TB.EI (suc m)) {
+          (liftP G CL.resCtx B EF.sec).nt (suc m) lhs
+        =< K (suc m) (rho, (C.clExt m k hk rho h).1) >
+          X3.toB (suc m) (rho, (C.clExt m k hk rho h).1) p
+        =< X3.toB-cong (suc m) (rho, (C.clExt m k hk rho h).1) (X3.fromB (suc m) FU.w)
+             (transH (apH (\ z -> (rho, z.1)) (C.clExt-full m k hk rho p h)) FU.res-E) p p >
+          X3.toB (suc m) (X3.fromB (suc m) FU.w) p
+        =< X3.toB-fromB (suc m) FU.w >
+          ((rho, p), (hB m k hk (rho, p) FU.hd).1)
+        =< apH (\ hd -> ((rho, p), (hB m k hk (rho, p) hd).1)) hdEq >
+          (liftP G CL.resCtx B EF.sec).nt (suc m) rhs } ;
+
+    st : Id (TBF.EI (suc m)) lhs rhs =
+      SB.liftInj (suc m) lhs rhs (TR.trE-pt (suc m) EF.BF EF.tyFull (rho, (C.clExt m k hk rho h).1)) q ;
+  } ;
+
+  clFull : Id ((A' : PTy[G]) * DCl.ClD G A') (C.E2.ExtT, C.clExt) (EF.BF, DCl.clSubD G CL.resCtx EF.sec B hB) =
+    symH (DGlueCl[a].ClT[G, C.E2.ExtT, C.clExt].toSig EF.BF EF.tyFull (DCl.clSubD G CL.resCtx EF.sec B hB)
+            (\ m k hk rho h -> At[m, k, hk, rho, h].st)) ;
+
+  opaque clFull ;
+} ;

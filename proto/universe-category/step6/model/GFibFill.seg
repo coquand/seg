@@ -1,0 +1,26 @@
+-- GFibFill.seg (inside IvBase.Cn): a fibrant type in line form (GFibE:
+-- compositions both ways with line ESI) gives fillers at both ends (line
+-- MkFill, GFillFib) with their KESI.
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module FibFill (G : PCtx) (A : PTy[G]) (c : GFibE[lv].FE[G, A].Comp) (e : GFibE[lv].FE[G, A].ESIC c) {
+  module F0 = GFillFib[lv].FillLineFib[GFam[lv].famPath, GFam[lv].famConn, G, A, true, c.1] ;
+  module F1 = GFillFib[lv].FillLineFib[GFam[lv].famPath, GFam[lv].famConn, G, A, false, c.2] ;
+
+  k0 : LineFibP[GFam[lv].famPath, G, A].FibAt e0 = F0.fibAt ;
+  k1 : LineFibP[GFam[lv].famPath, G, A].FibAt e1 = F1.fibAt ;
+
+  k0e : GCofEsi[lv].PartialsEsi[EndKit[GFam[lv].famPath, G, A, e0].TV.E, EndKit[GFam[lv].famPath, G, A, e0].SFm.SF].KESI k0 =
+    F0.Kesi[e.1].kesi ;
+  k1e : GCofEsi[lv].PartialsEsi[EndKit[GFam[lv].famPath, G, A, e1].TV.E, EndKit[GFam[lv].famPath, G, A, e1].SFm.SF].KESI k1 =
+    F1.Kesi[e.2].kesi ;
+} ;

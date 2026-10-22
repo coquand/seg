@@ -1,0 +1,583 @@
+-- PropD.seg: MODEL/Poset/PropD.agda.  Proposition 4.1 of [S] (Proposition
+-- 4.3 of smodel-proofs): if A has a composition (from 0 to 1) and is a
+-- proposition, then a section of A over the points [0] gives an element of
+-- DA.
+--
+-- By induction on n we build a(n , tau) in A([n] , tau) with
+--   (*)   a(n+1 , tau) delta_i = a(n , tau delta_i)
+-- as the upper lid of an open box over [n+1] whose sides are the paths
+-- P(a0 | Y_i , u_i) on the facets Y_i (Lemma 4.2 of smodel-proofs), u_i
+-- being a(n , tau delta_i) read on Y_i.  The inhabitant a0 of
+-- A([n+1] , tau) is obtained by composition along the contraction
+-- [n+1] * [1] -> [n+1] from the point s at the vertex 0, with no sides.
+--
+-- Agda's where-blocks with several definitions are segments (Inh, TL,
+-- PtS); the record IsPropStr is a segment type.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module DD = D[a] ;
+
+------------------------------------------------------------------------
+-- Arithmetic: removing two vertices in either order
+
+neq-refl' (y : Nat) (ky : IsT (not (eqN y y))) : Empty = false-true (transH (symH (apH not (eqN-refl y))) ky) ;
+
+skip-inj : (y x z : Nat) -> Id Nat (skip y x) (skip y z) -> Id Nat x z = split {
+  zero -> \ x z e -> suc-inj x z e ;
+  suc y -> split {
+    zero -> split {
+      zero -> \ e -> refl zero ;
+      suc z -> \ e -> absurd _ (zero-suc (skip y z) e) } ;
+    suc x -> split {
+      zero -> \ e -> absurd _ (zero-suc (skip y x) (symH e)) ;
+      suc z -> \ e -> apH (\ k -> suc k) (skip-inj y x z (suc-inj (skip y x) (skip y z) e)) } } } ;
+
+module TwoFaces (n' i j' v : Nat) (hij : IsT (leb i j')) (hj : IsT (leb j' (suc n')))
+  (hv : IsT (leb v (suc (suc n')))) (kvi : IsT (not (eqN v i))) (kvj : IsT (not (eqN v (suc j')))) {
+
+  hi : IsT (leb i (suc n')) = leb-trans i j' (suc n') hij hj ;
+
+  x : Nat = dg (suc n') i v ;
+  y : Nat = dg (suc n') (suc j') v ;
+
+  hx : IsT (leb x (suc n')) = dg-range (suc n') i v hv ;
+  hy : IsT (leb y (suc n')) = dg-range (suc n') (suc j') v hv ;
+
+  sx : Id Nat (skip i x) v = skip-dg (suc n') i v (leb-step i (suc n') hi) hv kvi ;
+  sy : Id Nat (skip (suc j') y) v = skip-dg (suc n') (suc j') v hj hv kvj ;
+
+  -- x misses j' and y misses i
+  kxj : IsT (not (eqN x j')) =
+    eqN-dec (IsT (not (eqN x j'))) x j'
+      (\ e -> absurd _ (neq-refl' (suc j')
+                 (substH (\ w -> IsT (not (eqN w (suc j'))))
+                         (transH (symH sx) (transH (apH (skip i) e) (skip-ge i j' hij))) kvj)))
+      (\ k -> k) ;
+
+  kyi : IsT (not (eqN y i)) =
+    eqN-dec (IsT (not (eqN y i))) y i
+      (\ e -> absurd _ (neq-refl' i
+                 (substH (\ w -> IsT (not (eqN w i)))
+                         (transH (symH sy) (transH (apH (skip (suc j')) e) (skip-lt (suc j') i hij))) kvi)))
+      (\ k -> k) ;
+
+  -- the two orders agree
+  dg-dg : Id Nat (dg n' j' x) (dg n' i y) =
+    skip-inj j' _ _ (skip-inj i _ _
+      (transH (apH (skip i) (skip-dg n' j' x hj hx kxj))
+       (transH sx
+        (transH (symH sy)
+         (transH (apH (skip (suc j')) (symH (skip-dg n' i y hi hy kyi)))
+                 (skip-skip i j' (dg n' i y) hij)))))) ;
+} ;
+
+------------------------------------------------------------------------
+-- The contraction [N] * [1] -> [N],  (j , 0) |-> 0 ,  (j , 1) |-> j, and
+-- the vertex 0
+
+cf (j : Nat) : Nat -> Nat = split { zero -> zero ; suc e -> j } ;
+
+cf-range (j : Nat) : (e N : Nat) -> IsT (leb j N) -> IsT (leb (cf j e) N) = split {
+  zero -> \ N h -> refl true ;
+  suc e -> \ N h -> h } ;
+
+cf-mono (j j' : Nat) : (e e' : Nat) -> IsT (leb j j') -> IsT (leb e e') -> IsT (leb (cf j e) (cf j' e')) = split {
+  zero -> \ e' hj he -> refl true ;
+  suc e -> split {
+    zero -> \ hj he -> absurd _ (false-true he) ;
+    suc e' -> \ hj he -> hj } } ;
+
+module Con (N : Nat) {
+  Y : Ob = prodP (lin N) Iv ;
+
+  f2 (j : Nat) : (c : Tree) (h : IsT (car Y (node (leaf j) c))) -> El (lin N) = split {
+    leaf e -> \ h -> (leaf (cf j e), cf-range j e N (and-l (leb j N) (leb e (suc zero)) h)) ;
+    node c d -> \ h -> absurd _ (false-true (and-r (leb j N) false h)) } ;
+
+  f1 : (s c : Tree) (h : IsT (car Y (node s c))) -> El (lin N) = split {
+    leaf j -> f2 j ;
+    node s t -> \ c h -> absurd _ (false-true h) } ;
+
+  f0 : (t : Tree) (h : IsT (car Y t)) -> El (lin N) = split {
+    leaf k -> \ h -> absurd _ (false-true h) ;
+    node s c -> f1 s c } ;
+
+  fun (w : El Y) : El (lin N) = f0 w.1 w.2 ;
+
+  m5 (j e : Nat) (h : IsT (car Y (node (leaf j) (leaf e)))) (j' : Nat) : (c' : Tree) (h' : IsT (car Y (node (leaf j') c')))
+    -> IsT (le Y (node (leaf j) (leaf e)) (node (leaf j') c')) -> IsT (le (lin N) (f2 j (leaf e) h).1 (f2 j' c' h').1) = split {
+    leaf e' -> \ h' l -> cf-mono j j' e e' (and-l (leb j j') (leb e e') l) (and-r (leb j j') (leb e e') l) ;
+    node c d -> \ h' l -> absurd _ (false-true (and-r (leb j' N) false h')) } ;
+
+  m4 (j e : Nat) (h : IsT (car Y (node (leaf j) (leaf e)))) : (s' c' : Tree) (h' : IsT (car Y (node s' c')))
+    -> IsT (le Y (node (leaf j) (leaf e)) (node s' c')) -> IsT (le (lin N) (f2 j (leaf e) h).1 (f1 s' c' h').1) = split {
+    leaf j' -> m5 j e h j' ;
+    node s t -> \ c' h' l -> absurd _ (false-true h') } ;
+
+  m3 (j e : Nat) (h : IsT (car Y (node (leaf j) (leaf e)))) : (t' : Tree) (h' : IsT (car Y t'))
+    -> IsT (le Y (node (leaf j) (leaf e)) t') -> IsT (le (lin N) (f2 j (leaf e) h).1 (f0 t' h').1) = split {
+    leaf k -> \ h' l -> absurd _ (false-true h') ;
+    node s' c' -> m4 j e h s' c' } ;
+
+  m2 (j : Nat) : (c : Tree) (h : IsT (car Y (node (leaf j) c))) (t' : Tree) (h' : IsT (car Y t'))
+    -> IsT (le Y (node (leaf j) c) t') -> IsT (le (lin N) (f2 j c h).1 (f0 t' h').1) = split {
+    leaf e -> m3 j e ;
+    node c d -> \ h t' h' l -> absurd _ (false-true (and-r (leb j N) false h)) } ;
+
+  m1 : (s c : Tree) (h : IsT (car Y (node s c))) (t' : Tree) (h' : IsT (car Y t'))
+    -> IsT (le Y (node s c) t') -> IsT (le (lin N) (f1 s c h).1 (f0 t' h').1) = split {
+    leaf j -> m2 j ;
+    node s t -> \ c h t' h' l -> absurd _ (false-true h) } ;
+
+  m0 : (t : Tree) (h : IsT (car Y t)) (t' : Tree) (h' : IsT (car Y t'))
+    -> IsT (le Y t t') -> IsT (le (lin N) (f0 t h).1 (f0 t' h').1) = split {
+    leaf k -> \ h t' h' l -> absurd _ (false-true h) ;
+    node s c -> m1 s c } ;
+
+  mo : Mono Y (lin N) fun = \ s t l -> m0 s.1 s.2 t.1 t.2 l ;
+} ;
+
+conH (N : Nat) : Hom (prodP (lin N) Iv) (lin N) = mkHom (prodP (lin N) Iv) (lin N) Con[N].fun Con[N].mo ;
+
+v0H (N : Nat) : Hom (lin zero) (lin N) = linH zero N (\ x -> zero) (\ i h -> refl true) (\ i j h -> refl true) ;
+
+bangH (N : Nat) : Hom (lin N) (lin zero) = linH N zero (\ x -> zero) (\ i h -> refl true) (\ i j h -> refl true) ;
+
+pw-con0 (N : Nat) : PW (lin N) (lin N) (compH (lin N) (prodP (lin N) Iv) (lin N) (conH N) (lid (lin N) e0))
+                                       (compH (lin N) (lin zero) (lin N) (v0H N) (bangH N)) =
+  pwl N (lin N) (compH (lin N) (prodP (lin N) Iv) (lin N) (conH N) (lid (lin N) e0)) (compH (lin N) (lin zero) (lin N) (v0H N) (bangH N))
+    (\ i h -> refl (leaf zero)) ;
+
+pw-con1 (N : Nat) : PW (lin N) (lin N) (compH (lin N) (prodP (lin N) Iv) (lin N) (conH N) (lid (lin N) e1)) (idH (lin N)) =
+  pwl N (lin N) (compH (lin N) (prodP (lin N) Iv) (lin N) (conH N) (lid (lin N) e1)) (idH (lin N)) (\ i h -> refl (leaf i)) ;
+
+-- the projection after a lid
+pw-pX-lid (X : Ob) (e : El Iv) : PW X X (compH X (prodP X Iv) X (pX X) (lid X e)) (idH X) = \ s -> refl s.1 ;
+
+------------------------------------------------------------------------
+-- A is a proposition: a path between any two elements, natural
+
+module IsPropStr (G : PCtx) (A : PTy[G]) {
+  pth (X : Ob) (x : W0.Ix (G.ob X)) (u v : W0.Ix (A.tob X x)) : W0.Ix (A.tob (prodP X Iv) (G.act (prodP X Iv) X (pX X) x)) ;
+  pth0 (X : Ob) (x : W0.Ix (G.ob X)) (u v : W0.Ix (A.tob X x))
+    : Id (W0.Ix ((extP G A).ob X)) ((extP G A).act X (prodP X Iv) (lid X e0) (G.act (prodP X Iv) X (pX X) x, pth X x u v)) (x, u) ;
+  pth1 (X : Ob) (x : W0.Ix (G.ob X)) (u v : W0.Ix (A.tob X x))
+    : Id (W0.Ix ((extP G A).ob X)) ((extP G A).act X (prodP X Iv) (lid X e1) (G.act (prodP X Iv) X (pX X) x, pth X x u v)) (x, v) ;
+  pthnat (Y X : Ob) (h : Hom Y X) (x : W0.Ix (G.ob X)) (u v : W0.Ix (A.tob X x))
+    : Id (W0.Ix ((extP G A).ob (prodP Y Iv)))
+         ((extP G A).act (prodP Y Iv) (prodP X Iv) (cylH Y X h) (G.act (prodP X Iv) X (pX X) x, pth X x u v))
+         (G.act (prodP Y Iv) Y (pX Y) (G.act Y X h x),
+          pth Y (G.act Y X h x) (A.tact Y X h x (G.act Y X h x) (refl (G.act Y X h x)) u)
+                               (A.tact Y X h x (G.act Y X h x) (refl (G.act Y X h x)) v)) ;
+} ;
+
+------------------------------------------------------------------------
+-- Proposition 4.1
+
+module P41 (G : PCtx) (A : PTy[G]) (comp : Box[a, a].Boxes[G, A].CompOp[e0, e1]) (Pr : IsPropStr[G, A])
+  (s : (tau : W0.Ix (G.ob (lin zero))) -> W0.Ix (A.tob (lin zero) tau)) {
+
+  open PR.TyL[G, A] ;
+  module BA = Box[a, a].Boxes[G, A] ;
+  module GL = PR.PshL[G] ;
+
+  PrN (N : Nat) : Ob = prodP (lin N) Iv ;
+
+  pthE (X : Ob) (x : Pt X) (u v : T X x) : EI (prodP X Iv) = (G.act (prodP X Iv) X (pX X) x, Pr.pth X x u v) ;
+
+  pth-cong (W : Ob) (x x' : Pt W) (u v : T W x) (u' v' : T W x')
+    (p : Id (EI W) (x, u) (x', u')) (q : Id (EI W) (x, v) (x', v'))
+    : Id (EI (prodP W Iv)) (pthE W x u v) (pthE W x' u' v') =
+    idJ (EI W) (x, u)
+      (\ w1 p1 -> (v1 : T W w1.1) -> Id (EI W) (x, v) (w1.1, v1) -> Id (EI (prodP W Iv)) (pthE W x u v) (pthE W w1.1 w1.2 v1))
+      (\ v1 q1 -> apH (pthE W x u) (pr-inj W x v v1 q1)) (x', u') p v' q ;
+
+  ----------------------------------------------------------------------
+  -- An inhabitant of A([N] , tau): compose along the contraction
+
+  module Inh (N : Nat) (tau : Pt (lin N)) {
+    rho0 : Pt (PrN N) = G.act (PrN N) (lin N) (conH N) tau ;
+
+    eq0 : Id (Pt (lin N)) (G.act (lin N) (lin zero) (bangH N) (G.act (lin zero) (lin N) (v0H N) tau))
+                          (G.act (lin N) (PrN N) (lid (lin N) e0) rho0) =
+      GL.actSq (lin N) (lin zero) (PrN N) (lin N) (v0H N) (bangH N) (conH N) (lid (lin N) e0)
+               (pw-sym (lin N) (lin N) (compH (lin N) (PrN N) (lin N) (conH N) (lid (lin N) e0))
+                       (compH (lin N) (lin zero) (lin N) (v0H N) (bangH N)) (pw-con0 N)) tau ;
+
+    e1eq : Id (Pt (lin N)) (G.act (lin N) (PrN N) (lid (lin N) e1) rho0) tau =
+      transH (GL.actTri (lin N) (PrN N) (lin N) (conH N) (lid (lin N) e1) (idH (lin N)) (pw-con1 N) tau)
+             (G.act-id (lin N) tau) ;
+
+    box0 : BA.Box[e0, lin N] =
+      (BA.mkBox e0 (lin N) rho0 (A.tact (lin N) (lin zero) (bangH N) (G.act (lin zero) (lin N) (v0H N) tau) (G.act (lin N) (PrN N) (lid (lin N) e0) rho0)
+               eq0 (s (G.act (lin zero) (lin N) (v0H N) tau))) zero (\ j -> absurd _ (false-true j.2)) (\ j -> absurd _ (false-true j.2)) (\ j -> absurd _ (false-true j.2))) ;
+
+    inh : T (lin N) tau = coeT (lin N) _ _ e1eq (comp.cop (lin N) box0) ;
+  } ;
+
+  inh (N : Nat) (tau : Pt (lin N)) : T (lin N) tau = Inh[N, tau].inh ;
+
+  ----------------------------------------------------------------------
+  -- The levels
+
+  AF (n : Nat) : U a = (tau : Pt (lin n)) -> T (lin n) tau ;
+
+  aE (n : Nat) (an : AF n) (tau : Pt (lin n)) : EI (lin n) = (tau, an tau) ;
+
+  -- (*)
+  Star (n : Nat) (a' : AF (suc n)) (an : AF n) : U a =
+    (tau : Pt (lin (suc n))) (i : Nat) -> IsT (leb i (suc n))
+    -> Id (EI (lin n)) (E.act (lin n) (lin (suc n)) (dl n i) (aE (suc n) a' tau)) (aE n an (G.act (lin n) (lin (suc n)) (dl n i) tau)) ;
+
+  Below : (n : Nat) -> AF n -> U a = split {
+    zero -> \ an -> Top ;
+    suc n -> \ an -> (an' : AF n) * Star n an an' } ;
+
+  -- the facet i of [N]
+  Qf (N i : Nat) : Subset (lin N) = \ t -> not (eqT t (leaf i)) ;
+
+  mo-aux (n i : Nat) : (t : Tree) -> IsT (car (lin (suc n)) t) -> IsT (not (eqT t (leaf i))) -> IsT (not (eqN (vnum t) i)) = split {
+    leaf v -> \ h k -> k ;
+    node c d -> \ h k -> absurd _ (false-true h) } ;
+
+  missOf (W : Ob) (n i : Nat) (psi : Hom W (PrN (suc n))) (ins : InQ W (lin (suc n)) (Qf (suc n) i) psi)
+    : Miss W n i (compH W (PrN (suc n)) (lin (suc n)) (pX (lin (suc n))) psi) = \ x ->
+    mo-aux n i (app (PrN (suc n)) (lin (suc n)) (pX (lin (suc n))) (app W (PrN (suc n)) psi x)).1
+               (app (PrN (suc n)) (lin (suc n)) (pX (lin (suc n))) (app W (PrN (suc n)) psi x)).2
+               (transH (apH (\ t -> not (eqT t (leaf i))) (pr1-T (lin (suc n)) (app W (PrN (suc n)) psi x))) (ins x)) ;
+
+  ----------------------------------------------------------------------
+  -- Two facets agree on their intersection (uses (*) one level down)
+
+  -- the face i, read on a map into [n+1] which misses i
+  uF (n : Nat) (an : AF n) (tau : Pt (lin (suc n))) (i : Nat) (W : Ob) (psi1 : Hom W (lin (suc n))) : EI W =
+    E.act W (lin n) (compH W (lin (suc n)) (lin n) (dgH n i) psi1) (aE n an (G.act (lin n) (lin (suc n)) (dl n i) tau)) ;
+
+  two0sz (i : Nat) : (j : Nat) -> IsT (leb (suc zero) (suc zero)) -> IsT (ltb i (suc j)) -> IsT (leb (suc j) (suc zero))
+    -> IsT (not (eqN (suc zero) i)) -> IsT (not (eqN (suc zero) (suc j))) -> Empty = split {
+    zero -> \ hv hij hj ki kj -> false-true kj ;
+    suc j -> \ hv hij hj ki kj -> false-true hj } ;
+
+  two0s : (v i j : Nat) -> IsT (leb (suc v) (suc zero)) -> IsT (ltb i j) -> IsT (leb j (suc zero))
+    -> IsT (not (eqN (suc v) i)) -> IsT (not (eqN (suc v) j)) -> Empty = split {
+    zero -> \ i -> split {
+      zero -> \ hv hij hj ki kj -> false-true hij ;
+      suc j -> two0sz i j } ;
+    suc v -> \ i j hv hij hj ki kj -> false-true hv } ;
+
+  two0 : (v i j : Nat) -> IsT (leb v (suc zero)) -> IsT (ltb i j) -> IsT (leb j (suc zero))
+    -> IsT (not (eqN v i)) -> IsT (not (eqN v j)) -> Empty = split {
+    zero -> split {
+      zero -> \ j hv hij hj ki kj -> false-true ki ;
+      suc i -> \ j hv hij hj ki kj -> false-true (leb-trans (suc (suc i)) j (suc zero) hij hj) } ;
+    suc v -> two0s v } ;
+
+  module TT (n' i j' : Nat) (hij : IsT (leb i j')) (hj : IsT (leb j' (suc n'))) {
+    L : Nat = suc (suc n') ;
+
+    missT : (t : Tree) (h : IsT (car (lin L) t)) -> IsT (not (eqN (vnum t) i)) -> IsT (not (eqN (vnum t) (suc j')))
+      -> IsT (not (eqN (vnum (app (lin L) (lin (suc n')) (dgH (suc n') i) (t, h)).1) j')) = split {
+      leaf v -> \ h ki kj -> TwoFaces[n', i, j', v, hij, hj, h, ki, kj].kxj ;
+      node c d -> \ h ki kj -> absurd _ (false-true h) } ;
+
+    missT2 : (t : Tree) (h : IsT (car (lin L) t)) -> IsT (not (eqN (vnum t) i)) -> IsT (not (eqN (vnum t) (suc j')))
+      -> IsT (not (eqN (vnum (app (lin L) (lin (suc n')) (dgH (suc n') (suc j')) (t, h)).1) i)) = split {
+      leaf v -> \ h ki kj -> TwoFaces[n', i, j', v, hij, hj, h, ki, kj].kyi ;
+      node c d -> \ h ki kj -> absurd _ (false-true h) } ;
+
+    pwT : (t : Tree) (h : IsT (car (lin L) t)) -> IsT (not (eqN (vnum t) i)) -> IsT (not (eqN (vnum t) (suc j')))
+      -> Id Tree (app (lin (suc n')) (lin n') (dgH n' j') (app (lin L) (lin (suc n')) (dgH (suc n') i) (t, h))).1
+                 (app (lin (suc n')) (lin n') (dgH n' i) (app (lin L) (lin (suc n')) (dgH (suc n') (suc j')) (t, h))).1 = split {
+      leaf v -> \ h ki kj -> apH (\ k -> leaf k) (TwoFaces[n', i, j', v, hij, hj, h, ki, kj].dg-dg) ;
+      node c d -> \ h ki kj -> absurd _ (false-true h) } ;
+  } ;
+
+  -- the case  n = suc n' , j = suc j'  of twoLt
+  module TL (n' : Nat) (an : AF (suc n')) (below : Below (suc n') an) (tau : Pt (lin (suc (suc n'))))
+    (i j' : Nat) (hij : IsT (leb i j')) (hj : IsT (leb j' (suc n'))) (W : Ob) (psi1 : Hom W (lin (suc (suc n'))))
+    (mi : Miss W (suc n') i psi1) (mj : Miss W (suc n') (suc j') psi1) {
+
+    n : Nat = suc n' ;
+    an' : AF n' = below.1 ;
+    st : Star n' an an' = below.2 ;
+
+    hi : IsT (leb i (suc n')) = leb-trans i j' (suc n') hij hj ;
+
+    gi : Hom W (lin n) = compH W (lin (suc n)) (lin n) (dgH n i) psi1 ;
+    gj : Hom W (lin n) = compH W (lin (suc n)) (lin n) (dgH n (suc j')) psi1 ;
+
+    mJ : Miss W n' j' gi = \ x ->
+      TT[n', i, j', hij, hj].missT (app W (lin (suc n)) psi1 x).1 (app W (lin (suc n)) psi1 x).2 (mi x) (mj x) ;
+    mI : Miss W n' i gj = \ x ->
+      TT[n', i, j', hij, hj].missT2 (app W (lin (suc n)) psi1 x).1 (app W (lin (suc n)) psi1 x).2 (mi x) (mj x) ;
+
+    chi : Hom W (lin n') = compH W (lin n) (lin n') (dgH n' j') gi ;
+    chi' : Hom W (lin n') = compH W (lin n) (lin n') (dgH n' i) gj ;
+
+    pwchi : PW W (lin n') chi chi' = \ x ->
+      TT[n', i, j', hij, hj].pwT (app W (lin (suc n)) psi1 x).1 (app W (lin (suc n)) psi1 x).2 (mi x) (mj x) ;
+
+    c1 : Pt (lin n') = G.act (lin n') (lin n) (dl n' j') (G.act (lin n) (lin (suc n)) (dl n i) tau) ;
+    c2 : Pt (lin n') = G.act (lin n') (lin n) (dl n' i) (G.act (lin n) (lin (suc n)) (dl n (suc j')) tau) ;
+
+    eqc : Id (Pt (lin n')) c1 c2 =
+      GL.actSq (lin n') (lin n) (lin n) (lin (suc n)) (dl n i) (dl n' j') (dl n (suc j')) (dl n' i)
+        (pw-sym (lin n') (lin (suc n))
+           (compH (lin n') (lin n) (lin (suc n)) (dl n (suc j')) (dl n' i))
+           (compH (lin n') (lin n) (lin (suc n)) (dl n i) (dl n' j'))
+           (pw-dl-dl n' i j' hij)) tau ;
+
+    left : Id (EI W) (uF n an tau i W psi1) (E.act W (lin n') chi (aE n' an' c1)) =
+      transH (symH (PE.actPW W (lin n) (compH W (lin n') (lin n) (dl n' j') chi) gi (pw-factor W n' j' gi hj mJ)
+                             (aE n an (G.act (lin n) (lin (suc n)) (dl n i) tau))))
+       (transH (E.act-o W (lin n') (lin n) (dl n' j') chi (aE n an (G.act (lin n) (lin (suc n)) (dl n i) tau)))
+               (apH (E.act W (lin n') chi) (st (G.act (lin n) (lin (suc n)) (dl n i) tau) j' hj))) ;
+
+    right : Id (EI W) (uF n an tau (suc j') W psi1) (E.act W (lin n') chi' (aE n' an' c2)) =
+      transH (symH (PE.actPW W (lin n) (compH W (lin n') (lin n) (dl n' i) chi') gj (pw-factor W n' i gj hi mI)
+                             (aE n an (G.act (lin n) (lin (suc n)) (dl n (suc j')) tau))))
+       (transH (E.act-o W (lin n') (lin n) (dl n' i) chi' (aE n an (G.act (lin n) (lin (suc n)) (dl n (suc j')) tau)))
+               (apH (E.act W (lin n') chi') (st (G.act (lin n) (lin (suc n)) (dl n (suc j')) tau) i hi))) ;
+
+    res : Id (EI W) (uF n an tau i W psi1) (uF n an tau (suc j') W psi1) =
+      transH left (transH (PE.actPW W (lin n') chi chi' pwchi (aE n' an' c1))
+                          (transH (apH (\ c -> E.act W (lin n') chi' (aE n' an' c)) eqc) (symH right))) ;
+  } ;
+
+  twoLt : (n : Nat) (an : AF n) (below : Below n an) (tau : Pt (lin (suc n))) (i j : Nat)
+    (hij : IsT (ltb i j)) (hj : IsT (leb j (suc n))) (W : Ob) (psi1 : Hom W (lin (suc n)))
+    (mi : Miss W n i psi1) (mj : Miss W n j psi1) -> Id (EI W) (uF n an tau i W psi1) (uF n an tau j W psi1) = split {
+    zero -> \ an below tau i j hij hj W psi1 mi mj ->
+      absurd _ (two0 (vnum (app W (lin (suc zero)) psi1 (pt W, pt-car W)).1) i j
+                     (vnum-range (suc zero) (app W (lin (suc zero)) psi1 (pt W, pt-car W)).1 (app W (lin (suc zero)) psi1 (pt W, pt-car W)).2)
+                     hij hj (mi (pt W, pt-car W)) (mj (pt W, pt-car W))) ;
+    suc n' -> \ an below tau i -> split {
+      zero -> \ hij hj W psi1 mi mj -> absurd _ (false-true hij) ;
+      suc j' -> \ hij hj W psi1 mi mj -> TL[n', an, below, tau, i, j', hij, hj, W, psi1, mi, mj].res } } ;
+
+  twoAny (n : Nat) (an : AF n) (below : Below n an) (tau : Pt (lin (suc n))) (i j : Nat)
+    (hi : IsT (leb i (suc n))) (hj : IsT (leb j (suc n))) (W : Ob) (psi1 : Hom W (lin (suc n)))
+    (mi : Miss W n i psi1) (mj : Miss W n j psi1) : Id (EI W) (uF n an tau i W psi1) (uF n an tau j W psi1) =
+    ltb-dec (Id (EI W) (uF n an tau i W psi1) (uF n an tau j W psi1)) i j
+      (\ lt -> twoLt n an below tau i j lt hj W psi1 mi mj)
+      (\ ge -> eqN-dec (Id (EI W) (uF n an tau i W psi1) (uF n an tau j W psi1)) i j
+                 (\ e -> apH (\ k -> uF n an tau k W psi1) e)
+                 (\ ne -> symH (twoLt n an below tau j i (leb-neq j i ge (neq-sym i j ne)) hi W psi1 mj mi))) ;
+
+  ----------------------------------------------------------------------
+  -- Lemma 4.2: one level up
+
+  module Up (n : Nat) (an : AF n) (below : Below n an) (tau : Pt (lin (suc n))) {
+    N : Nat = suc n ;
+
+    a0 : T (lin N) tau = inh N tau ;
+
+    rho : Pt (PrN N) = G.act (PrN N) (lin N) (pX (lin N)) tau ;
+
+    -- the data of the side i at psi
+    module PtS (i : Nat) (hi : IsT (leb i N)) (W : Ob) (psi : Hom W (PrN N)) (ins : InQ W (lin N) (Qf N i) psi) {
+      psi1 : Hom W (lin N) = compH W (PrN N) (lin N) (pX (lin N)) psi ;
+      psi2 : Hom W Iv = compH W (PrN N) Iv (pr2 (lin N) Iv) psi ;
+      th : Hom W (prodP W Iv) = pairH W Iv W (idH W) psi2 ;
+
+      tau1 : Pt W = G.act W (lin N) psi1 tau ;
+      aW : T W tau1 = A.tact W (lin N) psi1 tau tau1 (refl tau1) a0 ;
+
+      g1 : Hom W (lin n) = compH W (lin N) (lin n) (dgH n i) psi1 ;
+      x0 : Pt (lin n) = G.act (lin n) (lin N) (dl n i) tau ;
+
+      eqU : Id (Pt W) (G.act W (lin n) g1 x0) tau1 =
+        GL.actTri W (lin n) (lin N) (dl n i) g1 psi1 (pw-factor W n i psi1 hi (missOf W n i psi ins)) tau ;
+
+      uW : T W tau1 = coeT W _ _ eqU (A.tact W (lin n) g1 x0 (G.act W (lin n) g1 x0) (refl (G.act W (lin n) g1 x0)) (an x0)) ;
+
+      uE : Id (EI W) (tau1, uW) (E.act W (lin n) g1 (aE n an x0)) =
+        symH (pr-coe W _ _ eqU (A.tact W (lin n) g1 x0 (G.act W (lin n) g1 x0) (refl (G.act W (lin n) g1 x0)) (an x0))) ;
+
+      eqV : Id (Pt W) (G.act W (prodP W Iv) th (G.act (prodP W Iv) W (pX W) tau1)) (G.act W (PrN N) psi rho) =
+        transH (transH (GL.actTri W (prodP W Iv) W (pX W) th (idH W) (\ x -> refl x.1) tau1) (G.act-id W tau1))
+               (symH (GL.actC W (PrN N) (lin N) (pX (lin N)) psi tau)) ;
+
+      pv : T W (G.act W (prodP W Iv) th (G.act (prodP W Iv) W (pX W) tau1)) =
+        A.tact W (prodP W Iv) th (G.act (prodP W Iv) W (pX W) tau1) (G.act W (prodP W Iv) th (G.act (prodP W Iv) W (pX W) tau1))
+               (refl (G.act W (prodP W Iv) th (G.act (prodP W Iv) W (pX W) tau1))) (Pr.pth W tau1 aW uW) ;
+
+      val : T W (G.act W (PrN N) psi rho) = coeT W _ _ eqV pv ;
+
+      valE : Id (EI W) (G.act W (PrN N) psi rho, val) (E.act W (prodP W Iv) th (pthE W tau1 aW uW)) =
+        symH (pr-coe W _ _ eqV pv) ;
+    } ;
+
+    sv (i : Nat) (hi : IsT (leb i N)) (W : Ob) (psi : Hom W (PrN N)) (ins : InQ W (lin N) (Qf N i) psi)
+      : T W (G.act W (PrN N) psi rho) = PtS[i, hi, W, psi, ins].val ;
+
+    -- theta commutes with restriction
+    pw-th (i : Nat) (hi : IsT (leb i N)) (W' W : Ob) (chi : Hom W' W) (psi : Hom W (PrN N))
+      (ins : InQ W (lin N) (Qf N i) psi) (ins' : InQ W' (lin N) (Qf N i) (compH W' W (PrN N) psi chi))
+      : PW W' (prodP W Iv) (compH W' W (prodP W Iv) PtS[i, hi, W, psi, ins].th chi)
+                           (compH W' (prodP W' Iv) (prodP W Iv) (cylH W' W chi) PtS[i, hi, W', compH W' W (PrN N) psi chi, ins'].th) =
+      \ x -> apH (\ q -> node (app W' W chi (x.1, q)).1 (app W' Iv (compH W' (PrN N) Iv (pr2 (lin N) Iv) (compH W' W (PrN N) psi chi)) x).1)
+                 (isProp-IsT (car W' x.1) x.2
+                    (and-l (car W' x.1) (car Iv (app W' Iv (compH W' (PrN N) Iv (pr2 (lin N) Iv) (compH W' W (PrN N) psi chi)) x).1)
+                       (and-i (car W' x.1) (car Iv (app W' Iv (compH W' (PrN N) Iv (pr2 (lin N) Iv) (compH W' W (PrN N) psi chi)) x).1)
+                          x.2 (app W' Iv (compH W' (PrN N) Iv (pr2 (lin N) Iv) (compH W' W (PrN N) psi chi)) x).2))) ;
+
+    module SnatAt (i : Nat) (hi : IsT (leb i N)) (W' W : Ob) (chi : Hom W' W) (psi : Hom W (PrN N))
+      (ins : InQ W (lin N) (Qf N i) psi) (ins' : InQ W' (lin N) (Qf N i) (compH W' W (PrN N) psi chi)) {
+      module P = PtS[i, hi, W, psi, ins] ;
+      module P' = PtS[i, hi, W', compH W' W (PrN N) psi chi, ins'] ;
+      res : Id (EI W') (E.act W' W chi (G.act W (PrN N) psi rho, sv i hi W psi ins))
+                       (G.act W' (PrN N) (compH W' W (PrN N) psi chi) rho, sv i hi W' (compH W' W (PrN N) psi chi) ins') =
+      transH (apH (E.act W' W chi) P.valE)
+       (transH (PE.actC W' W (prodP W Iv) P.th chi (pthE W P.tau1 P.aW P.uW))
+        (transH (PE.actPW W' (prodP W Iv) _ _ (pw-th i hi W' W chi psi ins ins') (pthE W P.tau1 P.aW P.uW))
+         (transH (E.act-o W' (prodP W' Iv) (prodP W Iv) (cylH W' W chi) P'.th (pthE W P.tau1 P.aW P.uW))
+          (transH (apH (E.act W' (prodP W' Iv) P'.th) (Pr.pthnat W' W chi P.tau1 P.aW P.uW))
+           (transH (apH (E.act W' (prodP W' Iv) P'.th)
+                       (pth-cong W' (G.act W' W chi P.tau1) P'.tau1
+                          (A.tact W' W chi P.tau1 (G.act W' W chi P.tau1) (refl (G.act W' W chi P.tau1)) P.aW)
+                          (A.tact W' W chi P.tau1 (G.act W' W chi P.tau1) (refl (G.act W' W chi P.tau1)) P.uW)
+                          P'.aW P'.uW
+                          (PE.actC W' W (lin N) P.psi1 chi (tau, a0))
+                          (transH (apH (E.act W' W chi) P.uE)
+                           (transH (PE.actC W' W (lin n) P.g1 chi (aE n an P.x0)) (symH P'.uE)))))
+                   (symH P'.valE)))))) ;
+    } ;
+
+    snat (i : Nat) (hi : IsT (leb i N)) : BA.SnTy (lin N) rho (Qf N i) (sv i hi) = \ W' W chi psi ins ins' ->
+      SnatAt[i, hi, W', W, chi, psi, ins, ins'].res ;
+
+    side (i : Nat) (hi : IsT (leb i N)) : BA.Side[lin N, rho] = (BA.mkSide (lin N) rho (Qf N i) (sv i hi) (snat i hi)) ;
+
+    sides (j : Fin (suc N)) : BA.Side[lin N, rho] = side j.1 j.2 ;
+
+    -- the lower lid
+    eqL0 : Id (Pt (lin N)) (G.act (lin N) (PrN N) (lid (lin N) e0) rho) tau =
+      transH (GL.actTri (lin N) (PrN N) (lin N) (pX (lin N)) (lid (lin N) e0) (idH (lin N)) (pw-pX-lid (lin N) e0) tau)
+             (G.act-id (lin N) tau) ;
+
+    bu0 : T (lin N) (G.act (lin N) (PrN N) (lid (lin N) e0) rho) = coeT (lin N) _ _ (symH eqL0) a0 ;
+
+    bu0E : Id (EI (lin N)) (BA.lidE e0 (lin N) rho bu0) (tau, a0) = symH (pr-coe (lin N) _ _ (symH eqL0) a0) ;
+
+    bcs : BA.CsTy (lin N) rho (suc N) sides = \ l j W psi ins ins' ->
+      pr-inj W (G.act W (PrN N) psi rho) (sv l.1 l.2 W psi ins) (sv j.1 j.2 W psi ins')
+        (transH PtS[l.1, l.2, W, psi, ins].valE
+         (transH (apH (E.act W (prodP W Iv) PtS[l.1, l.2, W, psi, ins].th)
+                      (pth-cong W PtS[l.1, l.2, W, psi, ins].tau1 PtS[l.1, l.2, W, psi, ins].tau1
+                         PtS[l.1, l.2, W, psi, ins].aW PtS[l.1, l.2, W, psi, ins].uW
+                         PtS[l.1, l.2, W, psi, ins].aW PtS[j.1, j.2, W, psi, ins'].uW
+                         (refl (PtS[l.1, l.2, W, psi, ins].tau1, PtS[l.1, l.2, W, psi, ins].aW))
+                         (transH PtS[l.1, l.2, W, psi, ins].uE
+                           (transH (twoAny n an below tau l.1 j.1 l.2 j.2 W PtS[l.1, l.2, W, psi, ins].psi1
+                                      (missOf W n l.1 psi ins) (missOf W n j.1 psi ins'))
+                                   (symH PtS[j.1, j.2, W, psi, ins'].uE)))))
+                 (symH PtS[j.1, j.2, W, psi, ins'].valE))) ;
+
+    module BcbAt (l : Fin (suc N)) (W : Ob) (phi : Hom W (lin N))
+      (ins : InQ W (lin N) (sides l).sQ (compH W (lin N) (PrN N) (lid (lin N) e0) phi)) {
+      module P = PtS[l.1, l.2, W, compH W (lin N) (PrN N) (lid (lin N) e0) phi, ins] ;
+      res : Id (EI W) (E.act W (lin N) phi (BA.lidE e0 (lin N) rho bu0))
+                      ((sides l).svE W (compH W (lin N) (PrN N) (lid (lin N) e0) phi) ins) =
+      transH (apH (E.act W (lin N) phi) bu0E)
+       (symH (transH P.valE
+              (transH (PE.actPW W (prodP W Iv) P.th (lid W e0) (\ x -> refl (node x.1 (leaf zero))) (pthE W P.tau1 P.aW P.uW))
+               (transH (Pr.pth0 W P.tau1 P.aW P.uW)
+                       (PE.actPW W (lin N) P.psi1 phi (\ x -> refl (app W (lin N) phi x).1) (tau, a0)))))) ;
+    } ;
+
+    bcb : BA.CbTy e0 (lin N) rho bu0 (suc N) sides = \ l W phi ins -> BcbAt[l, W, phi, ins].res ;
+
+    box : BA.Box[e0, lin N] = (BA.mkBox e0 (lin N) rho bu0 (suc N) sides bcs bcb) ;
+
+    eqL1 : Id (Pt (lin N)) (G.act (lin N) (PrN N) (lid (lin N) e1) rho) tau =
+      transH (GL.actTri (lin N) (PrN N) (lin N) (pX (lin N)) (lid (lin N) e1) (idH (lin N)) (pw-pX-lid (lin N) e1) tau)
+             (G.act-id (lin N) tau) ;
+
+    insd' (i : Nat) : (t : Tree) (h : IsT (car (lin n) t))
+      -> IsT (Qf N i (pr1T (app (lin n) (PrN N) (compH (lin n) (lin N) (PrN N) (lid (lin N) e1) (dl n i)) (t, h)).1)) = split {
+      leaf v -> \ h -> skip-miss i v ;
+      node c d -> \ h -> absurd _ (false-true h) } ;
+
+    insd (i : Nat) : InQ (lin n) (lin N) (Qf N i) (compH (lin n) (lin N) (PrN N) (lid (lin N) e1) (dl n i)) = \ x -> insd' i x.1 x.2 ;
+
+    pwg (i : Nat) (hi : IsT (leb i N))
+      : PW (lin n) (lin n) (compH (lin n) (lin N) (lin n) (dgH n i)
+                              (compH (lin n) (PrN N) (lin N) (pX (lin N)) (compH (lin n) (lin N) (PrN N) (lid (lin N) e1) (dl n i))))
+                           (idH (lin n)) =
+      pwl n (lin n) (compH (lin n) (lin N) (lin n) (dgH n i)
+                       (compH (lin n) (PrN N) (lin N) (pX (lin N)) (compH (lin n) (lin N) (PrN N) (lid (lin N) e1) (dl n i))))
+            (idH (lin n)) (\ v h -> apH (\ k -> leaf k) (dg-skip n i v hi h)) ;
+
+    -- the new level, and (*); opaque, so that the box is never unfolded
+    u : T (lin N) tau = coeT (lin N) _ _ eqL1 (comp.cop (lin N) box) ;
+
+    uE : Id (EI (lin N)) (tau, u) (BA.topE e1 (lin N) rho (comp.cop (lin N) box)) =
+      symH (pr-coe (lin N) _ _ eqL1 (comp.cop (lin N) box)) ;
+
+    -- (*)
+    module StarAt (i : Nat) (hi : IsT (leb i N)) {
+      module P = PtS[i, hi, lin n, compH (lin n) (lin N) (PrN N) (lid (lin N) e1) (dl n i), insd i] ;
+      res : Id (EI (lin n)) (E.act (lin n) (lin N) (dl n i) (tau, u)) (aE n an (G.act (lin n) (lin N) (dl n i) tau)) =
+      transH (apH (E.act (lin n) (lin N) (dl n i)) uE)
+       (transH (comp.cside (lin N) box (i, hi) (lin n) (dl n i) (insd i))
+        (transH P.valE
+         (transH (PE.actPW (lin n) (prodP (lin n) Iv) P.th (lid (lin n) e1) (\ x -> refl (node x.1 (leaf (suc zero))))
+                           (pthE (lin n) P.tau1 P.aW P.uW))
+          (transH (Pr.pth1 (lin n) P.tau1 P.aW P.uW)
+           (transH P.uE
+                   (PE.actId (lin n) P.g1 (pwg i hi) (aE n an (G.act (lin n) (lin N) (dl n i) tau)))))))) ;
+    } ;
+
+    star (i : Nat) (hi : IsT (leb i N))
+      : Id (EI (lin n)) (E.act (lin n) (lin N) (dl n i) (tau, u)) (aE n an (G.act (lin n) (lin N) (dl n i) tau)) =
+      StarAt[i, hi].res ;
+
+    opaque u ; opaque uE ; opaque star ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- All the levels
+
+  tower : (n : Nat) -> (an : AF n) * Below n an = split {
+    zero -> (s, tt) ;
+    suc n -> (\ tau -> Up[n, (tower n).1, (tower n).2, tau].u,
+              ((tower n).1, \ tau i hi -> Up[n, (tower n).1, (tower n).2, tau].star i hi)) } ;
+
+  aOf (n : Nat) : AF n = (tower n).1 ;
+
+  starOf (n : Nat) : Star n (aOf (suc n)) (aOf n) = (tower (suc n)).2.2 ;
+
+  ----------------------------------------------------------------------
+  -- The element of DA
+
+  open DD.DT[G, A] ;
+
+  fc (X : Ob) (x : Pt X) : FaceCompat X x (\ n f -> aOf n (G.act (lin n) X f x)) = \ n f y hy ->
+    transH (starOf n (G.act (lin (suc n)) X f x) y hy)
+           (apH (aE n (aOf n)) (GL.actC (lin n) (lin (suc n)) X f (dl n y) x)) ;
+
+  uob (X : Ob) (x : Pt X) : DEl X x =
+    (\ n f -> aOf n (G.act (lin n) X f x), FacesGen[X, x, \ n f -> aOf n (G.act (lin n) X f x), fc X x].facesGen) ;
+
+  unat (J I : Ob) (f : Hom J I) (x : Pt I) (y : Pt J) (e : Id (Pt J) (G.act J I f x) y)
+    : Id (DEl J y) (DA.tact J I f x y e (uob I x)) (uob J y) =
+    Dext J y _ _ (\ n k ->
+      transH (rd-dtact J I f x y e (uob I x) n k)
+             (apH (aE n (aOf n)) (transH (symH (GL.actC (lin n) J I f k x)) (apH (G.act (lin n) J k) e)))) ;
+
+  -- Proposition 4.1
+  prop41 : PEl[G, DA] = new PEl[G, DA, uob, unat] ;
+} ;

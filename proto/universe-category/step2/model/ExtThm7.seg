@@ -1,0 +1,131 @@
+-- ExtThm7.seg: MODEL/Poset/ExtThm7.agda.  sumcoll2 Theorem 7.  For a type
+-- A over G with fillers (both directions), a cofibration psi, a type B over
+-- G|psi with fillers, and an equivalence structure eal for alpha : B -> A|psi:
+--   extComp      : Comp G ExtT           (composition of Ext(alpha))
+--   extEquiv     : EquivOp G ExtT A extMap  (ext(alpha) is an equivalence)
+--   extComp-full : on a box whose line is full, the composite is the top of
+--                  the B-filler of the box read in B (beta), and, when B's
+--                  fillers come from an ESI composition cB, it is cB's
+--                  composite (extComp-fullC, segment MainC)
+--   esiExt       : ESI of extComp (segment MainE)
+-- Agda's records are mkCompOp; MainC / MainE refer to Main by name
+-- (no re-export).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module ES = Esi[a, a] ;
+module EF = EsiFill[a, a] ;
+open Conn[a] ;
+module CF = Cofib[a] ;
+open CF ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open BaseP.GCofEsi[a] ;
+
+module Thm7 (G : PCtx) (A : PTy[G]) (psi : CF.GP.Cof[G]) {
+  open CF.GP.CofL[G, psi] ;
+  open BaseP.GExt[a].ExtDef[G, A, psi] ;
+
+  module Main (B : PTy[resCtx]) (al : PMap[resCtx, B, subTy resCtx G A inclR])
+    (fA : FibM.FillB[G, A].Fill) (fB : FibM.FillB[resCtx, B].Fill) (eal : EquivOp resCtx B (subTy resCtx G A inclR) al) {
+    open ExtB[B, al] ;
+    open BaseP.GExt2[a].ExtB2[G, A, psi, B, al] ;
+    open BaseP.GExt3[a].ExtB3[G, A, psi, B, al] ;
+    open BaseP.GExt4[a].ExtB4[G, A, psi, B, al] ;
+
+    module BXt = BXm.Boxes[G, ExtT] ;
+    module C3t = ExtComp3[a].C3[G, A, psi, B, al, true, fA.1, fB.1, eal, fA.2] ;
+    module C3f = ExtComp3[a].C3[G, A, psi, B, al, false, fA.2, fB.2, eal, fA.2] ;
+    module C4t = ExtComp4[a].C4[G, A, psi, B, al, true, fA.1, fB.1, eal, fA.2] ;
+    module C4f = ExtComp4[a].C4[G, A, psi, B, al, false, fA.2, fB.2, eal, fA.2] ;
+    module C4Ut = ExtComp4U[a].C4U[G, A, psi, B, al, true, fA.1, fB.1, eal, fA.2] ;
+    module C4Uf = ExtComp4U[a].C4U[G, A, psi, B, al, false, fA.2, fB.2, eal, fA.2] ;
+
+    comp01 : BXt.CompOp[e0, e1] = BXt.mkCompOp e0 e1 C3t.cop3 C4t.cside3 C4Ut.cunif3 ;
+
+    comp10 : BXt.CompOp[e1, e0] = BXt.mkCompOp e1 e0 C3f.cop3 C4f.cside3 C4Uf.cunif3 ;
+
+    extComp : BXt.Comp = (comp01, comp10) ;
+
+    extEquiv : EquivOp G ExtT A extMap = ExtEquiv3[a].ExtEq3[G, A, psi, B, al, fA.2, eal].extEquiv ;
+
+    -- on a full line: the top of the B-filler of beta c
+    extComp-full01 (X : Ob) (c : BXt.Box[e0, X]) (p : IsT (full (prodP X Iv) c.brho))
+      : Id (TX.EI X) (BXt.topE e1 X c.brho (comp01.cop X c)) (fromB X (ExtComp1[a].C1[G, A, psi, B, al, true, fA.1, fB.1].topB X c p)) =
+      C4Ut.cop3-full X c p ;
+
+    extComp-full10 (X : Ob) (c : BXt.Box[e1, X]) (p : IsT (full (prodP X Iv) c.brho))
+      : Id (TX.EI X) (BXt.topE e0 X c.brho (comp10.cop X c)) (fromB X (ExtComp1[a].C1[G, A, psi, B, al, false, fA.2, fB.2].topB X c p)) =
+      C4Uf.cop3-full X c p ;
+  } ;
+
+  -- with compositions (and ESI for B): the composite on a full line is B's composite
+  module MainC (B : PTy[resCtx]) (al : PMap[resCtx, B, subTy resCtx G A inclR])
+    (cA : BXm.Boxes[G, A].Comp) (cB : BXm.Boxes[resCtx, B].Comp)
+    (esiB01 : ES.EsiDef[resCtx, B].ESI e0 e1 cB.1) (esiB10 : ES.EsiDef[resCtx, B].ESI e1 e0 cB.2)
+    (eal : EquivOp resCtx B (subTy resCtx G A inclR) al) {
+    open ExtB[B, al] ;
+    open BaseP.GExt2[a].ExtB2[G, A, psi, B, al] ;
+    open BaseP.GExt3[a].ExtB3[G, A, psi, B, al] ;
+
+    module M = Main[B, al, FibM.FillB[G, A].comp-to-fill cA, FibM.FillB[resCtx, B].comp-to-fill cB, eal] ;
+    module BXt = BXm.Boxes[G, ExtT] ;
+    module BBt = BXm.Boxes[resCtx, B] ;
+    module D1t = ExtComp1[a].C1[G, A, psi, B, al, true, (FibM.FillB[G, A].comp-to-fill cA).1, (FibM.FillB[resCtx, B].comp-to-fill cB).1] ;
+    module D1f = ExtComp1[a].C1[G, A, psi, B, al, false, (FibM.FillB[G, A].comp-to-fill cA).2, (FibM.FillB[resCtx, B].comp-to-fill cB).2] ;
+
+    extComp-fullC01 (X : Ob) (c : BXt.Box[e0, X]) (p : IsT (full (prodP X Iv) c.brho))
+      : Id (TX.EI X) (BXt.topE e1 X c.brho (M.comp01.cop X c))
+           (fromB X (BBt.topE e1 X (D1t.beta X c p).brho (cB.1.cop X (D1t.beta X c p)))) =
+      transH {TX.EI X} (M.extComp-full01 X c p)
+        (apH {TB.EI X} {TX.EI X} (fromB X) (ES.FillTop[resCtx, B, true, cB.1, esiB01].fillTop X (D1t.beta X c p))) ;
+
+    extComp-fullC10 (X : Ob) (c : BXt.Box[e1, X]) (p : IsT (full (prodP X Iv) c.brho))
+      : Id (TX.EI X) (BXt.topE e0 X c.brho (M.comp10.cop X c))
+           (fromB X (BBt.topE e0 X (D1f.beta X c p).brho (cB.2.cop X (D1f.beta X c p)))) =
+      transH {TX.EI X} (M.extComp-full10 X c p)
+        (apH {TB.EI X} {TX.EI X} (fromB X) (ES.FillTop[resCtx, B, false, cB.2, esiB10].fillTop X (D1f.beta X c p))) ;
+
+    opaque extComp-fullC01 ; opaque extComp-fullC10 ;
+  } ;
+
+  -- ESI of extComp: from ESI compositions of A and B and a KESI equivalence structure
+  module MainE (B : PTy[resCtx]) (al : PMap[resCtx, B, subTy resCtx G A inclR])
+    (cA : BXm.Boxes[G, A].Comp) (cB : BXm.Boxes[resCtx, B].Comp)
+    (esiA : ES.EsiDef[G, A].ESIC cA) (esiB : ES.EsiDef[resCtx, B].ESIC cB)
+    (eal : EquivOp resCtx B (subTy resCtx G A inclR) al)
+    (kesi : PartialsEsi[EA', FibTy[resCtx, B, subTy resCtx G A inclR, al].FibT].KESI eal) {
+    open BaseP.GExt2[a].ExtB2[G, A, psi, B, al] ;
+
+    module M = Main[B, al, FibM.FillB[G, A].comp-to-fill cA, FibM.FillB[resCtx, B].comp-to-fill cB, eal] ;
+
+    fesiA : EF.FesiDef[G, A].FESI e0 (FibM.FillB[G, A].comp-to-fill cA).1 * EF.FesiDef[G, A].FESI e1 (FibM.FillB[G, A].comp-to-fill cA).2 =
+      EF.fesiC G A cA esiA ;
+
+    fesiB : EF.FesiDef[resCtx, B].FESI e0 (FibM.FillB[resCtx, B].comp-to-fill cB).1
+            * EF.FesiDef[resCtx, B].FESI e1 (FibM.FillB[resCtx, B].comp-to-fill cB).2 =
+      EF.fesiC resCtx B cB esiB ;
+
+    esiExt : ES.EsiDef[G, ExtT].ESIC M.extComp =
+      (\ X k b b' ins ->
+         ExtEsi3[a].E3[G, A, psi, B, al, true, (FibM.FillB[G, A].comp-to-fill cA).1, (FibM.FillB[resCtx, B].comp-to-fill cB).1, eal,
+                       (FibM.FillB[G, A].comp-to-fill cA).2, fesiA.1, fesiB.1, fesiA.2, kesi].EI3[X, k, b, b', ins].esi3,
+       \ X k b b' ins ->
+         ExtEsi3[a].E3[G, A, psi, B, al, false, (FibM.FillB[G, A].comp-to-fill cA).2, (FibM.FillB[resCtx, B].comp-to-fill cB).2, eal,
+                       (FibM.FillB[G, A].comp-to-fill cA).2, fesiA.2, fesiB.2, fesiA.2, kesi].EI3[X, k, b, b', ins].esi3) ;
+  } ;
+} ;

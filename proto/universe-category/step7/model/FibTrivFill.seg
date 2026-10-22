@@ -1,0 +1,309 @@
+-- FibTrivFill.seg: fibrancy as a trivial fibration gives box filling
+-- (CYLINDER.md section 4, plan step 1).  For A over G fibrant at e
+-- (FibTriv.LineFib.FibAt e), a uniform filler of the open boxes with lid at
+-- e (Fib.FillDef.FillOp e):
+--
+--   * a box b over X is a partial line: its point is (b.brho , b.bu), and
+--     its side j gives, at f : W -> X landing in Q_j, the line read on the
+--     side along f * Iv (SL.line); its end at e is the lid along f (SL.endE,
+--     from the compatibility bcb of the side with the lid);
+--   * the filler is the extension of this partial line (kop);
+--   * the lid, the sides and uniformity are the fibre condition, kside along
+--     psi = (pX psi * Iv) (id , pr2 psi) (CylCat cyl-evm), and kunif.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module CF = Cofib[a] ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open FibTriv[a] ;
+
+module FTC (G : PCtx) (A : PTy[G]) (e : El Iv) {
+  module LF = LineFib[G, A] ;
+  module LP = LineFibP[posetPath, G, A] ;
+  module PO = LF.PO ;
+  module EV = PosetEv[G, A, e] ;
+  module TA = PR.TyL[G, A] ;
+  module TV = PR.TyL[posetPath.pth G, LP.Aev e] ;
+  module SFm = SFib[posetPath.pth G, posetPath.pthTy G A, LP.Aev e, posetPath.pevA G A e] ;
+  module PT = CF.GP.Partials[TV.E, SFm.SF] ;
+  module TS = PR.TyL[TV.E, SFm.SF] ;
+  module BX = BXm.Boxes[G, A] ;
+
+  -- an element of the fibres is determined by its point and its line
+  ts-eq (W : Ob) (u v : TS.EI W) (P : Id (TV.EI W) u.1 v.1)
+    (Q : Id (TA.EI (prodP W Iv)) (u.1.1, u.2.1) (v.1.1, v.2.1)) : Id (TS.EI W) u v =
+    idJ (TV.EI W) u.1
+      (\ w2 P2 -> (s2 : W0.Ix (SFm.sfOb W w2)) -> Id (TA.EI (prodP W Iv)) (u.1.1, u.2.1) (w2.1, s2.1) -> Id (TS.EI W) u (w2, s2))
+      (\ s2 Q2 -> apH {W0.Ix (SFm.sfOb W u.1)} {TS.EI W} (\ z -> (u.1, z))
+                    (SFm.sf-eq W u.1 u.2 s2 (TA.pr-inj (prodP W Iv) u.1.1 u.2.1 s2.1 Q2)))
+      v.1 P v.2 Q ;
+
+  -- the line of an element of the fibres, in the total presheaf of A
+  lineE (W : Ob) (u : TS.EI W) : TA.EI (prodP W Iv) = (u.1.1, u.2.1) ;
+
+  -- the end of a line, in the total presheaf of A
+  endPt (X : Ob) (z : TV.EI X) : TA.EI X = (G.act X (prodP X Iv) (lid X e) z.1, z.2) ;
+
+  -- the line of the restricted element is the restricted line
+  lineE-act (W' W : Ob) (chi : Hom W' W) (u : TS.EI W)
+    : Id (TA.EI (prodP W' Iv)) (lineE W' (TS.E.act W' W chi u)) (TA.E.act (prodP W' Iv) (prodP W Iv) (cylH W' W chi) (lineE W u)) =
+    symH (TA.pr-tact (prodP W' Iv) (prodP W Iv) (cylH W' W chi) u.1.1 (PO.PC.giAct W' W chi u.1.1)
+            (apH (\ z -> z.1) (refl (TV.E.act W' W chi u.1))) u.2.1) ;
+
+  -- the end of the line of an element of the fibres is its point
+  endLine (W : Ob) (u : TS.EI W) : Id (TA.EI W) (TA.E.act W (prodP W Iv) (lid W e) (lineE W u)) (endPt W u.1) =
+    transH (symH (EV.endT-E W u.1.1 u.2.1)) (apH (endPt W) u.2.2) ;
+
+  -- the end point commutes with restriction
+  endPt-act (W X : Ob) (g : Hom W X) (z : TV.EI X) : Id (TA.EI W) (endPt W (TV.E.act W X g z)) (TA.E.act W X g (endPt X z)) =
+    symH (TA.pr-tact W X g (G.act X (prodP X Iv) (lid X e) z.1) (G.act W (prodP W Iv) (lid W e) (PO.PC.giAct W X g z.1))
+            (ntEq PO.PC.GI G (PO.PC.ev e) W X g z.1 (PO.PC.giAct W X g z.1) (refl (PO.PC.giAct W X g z.1))) z.2) ;
+
+  -- a box is a partial line: its side j at f is read along f * Iv
+  module BP (X : Ob) (b : BX.Box[e, X]) {
+    x : TV.EI X = (b.brho, b.bu) ;
+
+    module SL (j : Arith[a].Fin b.br) {
+      s : BX.Side[X, b.brho] = b.bs j ;
+
+      -- f lands in Q_j, so f * Iv lies over Q_j
+      inC (W : Ob) (f : Hom W X) (i : Lands W X s.sQ f) : InQ (prodP W Iv) X s.sQ (cylH W X f) =
+        lands-eq (prodP W Iv) X s.sQ (compH (prodP W Iv) W X f (pX W))
+          (compH (prodP W Iv) (prodP X Iv) X (pX X) (cylH W X f)) (symH (pX-cyl W X f))
+          (lands-comp (prodP W Iv) W X s.sQ f (pX W) i) ;
+
+      line (W : Ob) (f : Hom W X) (i : Lands W X s.sQ f) : TA.T (prodP W Iv) (PO.PC.giAct W X f b.brho) =
+        s.sv (prodP W Iv) (cylH W X f) (inC W f i) ;
+
+      iL2 (W : Ob) (f : Hom W X) (i : Lands W X s.sQ f) : InQ W X s.sQ (compH W X (prodP X Iv) (lid X e) f) =
+        lands-inQ-lid W X s.sQ e f i ;
+
+      iL (W : Ob) (f : Hom W X) (i : Lands W X s.sQ f)
+        : InQ W X s.sQ (compH W (prodP W Iv) (prodP X Iv) (cylH W X f) (lid W e)) =
+        inQ-eq W X s.sQ (compH W X (prodP X Iv) (lid X e) f) (compH W (prodP W Iv) (prodP X Iv) (cylH W X f) (lid W e))
+          (symH (cyl-lid W X f e)) (iL2 W f i) ;
+
+      -- the end of the line at e is the lid along f
+      endE (W : Ob) (f : Hom W X) (i : Lands W X s.sQ f)
+        : Id (TA.EI W) (G.act W (prodP W Iv) (lid W e) (PO.PC.giAct W X f b.brho), EV.endT W (PO.PC.giAct W X f b.brho) (line W f i))
+                       (TA.E.act W X f (BX.lidE e X b.brho b.bu)) =
+        calc (TA.EI W) {
+            (G.act W (prodP W Iv) (lid W e) (PO.PC.giAct W X f b.brho), EV.endT W (PO.PC.giAct W X f b.brho) (line W f i))
+          =< EV.endT-E W (PO.PC.giAct W X f b.brho) (line W f i) >
+            TA.E.act W (prodP W Iv) (lid W e) (s.svE (prodP W Iv) (cylH W X f) (inC W f i))
+          =< s.snat W (prodP W Iv) (lid W e) (cylH W X f) (inC W f i) (iL W f i) >
+            s.svE W (compH W (prodP W Iv) (prodP X Iv) (cylH W X f) (lid W e)) (iL W f i)
+          =< BX.svE-eq X b.brho s W _ _ (cyl-lid W X f e) (iL W f i) (iL2 W f i) >
+            s.svE W (compH W X (prodP X Iv) (lid X e) f) (iL2 W f i)
+          =< symH (b.bcb j W f (iL2 W f i)) >
+            TA.E.act W X f (BX.lidE e X b.brho b.bu) } ;
+
+      endEq (W : Ob) (f : Hom W X) (i : Lands W X s.sQ f)
+        : Id (TV.EI W) (EV.mE W (PO.PC.giAct W X f b.brho, line W f i)) (TV.E.act W X f x) =
+        apH {TV.T W (PO.PC.giAct W X f b.brho)} {TV.EI W} (\ z -> (PO.PC.giAct W X f b.brho, z))
+          (TA.pr-inj W (G.act W (prodP W Iv) (lid W e) (PO.PC.giAct W X f b.brho)) _ _
+            (transH (endE W f i)
+              (TA.pr-tact W X f (G.act X (prodP X Iv) (lid X e) b.brho) (G.act W (prodP W Iv) (lid W e) (PO.PC.giAct W X f b.brho))
+                 (ntEq PO.PC.GI G (PO.PC.ev e) W X f b.brho (PO.PC.giAct W X f b.brho) (refl (PO.PC.giAct W X f b.brho))) b.bu))) ;
+
+      pv : PT.PvTy X s.sQ = \ W f i -> (TV.E.act W X f x, (line W f i, endEq W f i)) ;
+
+      ppt : PT.PptTy X x s.sQ pv = \ W f i -> refl (TV.E.act W X f x) ;
+
+      -- the line of the restricted element is the restricted line
+      lineAct (W' W : Ob) (chi : Hom W' W) (f : Hom W X) (i : Lands W X s.sQ f)
+        : Id (TA.EI (prodP W' Iv)) (lineE W' (TS.E.act W' W chi (pv W f i)))
+             (TA.E.act (prodP W' Iv) (prodP W Iv) (cylH W' W chi) (s.svE (prodP W Iv) (cylH W X f) (inC W f i))) =
+        symH (TA.pr-tact (prodP W' Iv) (prodP W Iv) (cylH W' W chi) (PO.PC.giAct W X f b.brho)
+                (PO.PC.giAct W' W chi (PO.PC.giAct W X f b.brho))
+                (apH (\ z -> z.1) (refl (TV.E.act W' W chi (TV.E.act W X f x)))) (line W f i)) ;
+
+      iCC (W' W : Ob) (chi : Hom W' W) (f : Hom W X) (i' : Lands W' X s.sQ (compH W' W X f chi))
+        : InQ (prodP W' Iv) X s.sQ (compH (prodP W' Iv) (prodP W Iv) (prodP X Iv) (cylH W X f) (cylH W' W chi)) =
+        inQ-eq (prodP W' Iv) X s.sQ (cylH W' X (compH W' W X f chi))
+          (compH (prodP W' Iv) (prodP W Iv) (prodP X Iv) (cylH W X f) (cylH W' W chi))
+          (cyl-comp W' W X f chi) (inC W' (compH W' W X f chi) i') ;
+
+      stB (W' W : Ob) (chi : Hom W' W) (f : Hom W X) (i : Lands W X s.sQ f) (i' : Lands W' X s.sQ (compH W' W X f chi))
+        : Id (TA.EI (prodP W' Iv)) (TA.E.act (prodP W' Iv) (prodP W Iv) (cylH W' W chi) (s.svE (prodP W Iv) (cylH W X f) (inC W f i)))
+             (s.svE (prodP W' Iv) (compH (prodP W' Iv) (prodP W Iv) (prodP X Iv) (cylH W X f) (cylH W' W chi)) (iCC W' W chi f i')) =
+        s.snat (prodP W' Iv) (prodP W Iv) (cylH W' W chi) (cylH W X f) (inC W f i) (iCC W' W chi f i') ;
+
+      stC (W' W : Ob) (chi : Hom W' W) (f : Hom W X) (i' : Lands W' X s.sQ (compH W' W X f chi))
+        : Id (TA.EI (prodP W' Iv)) (s.svE (prodP W' Iv) (compH (prodP W' Iv) (prodP W Iv) (prodP X Iv) (cylH W X f) (cylH W' W chi)) (iCC W' W chi f i'))
+             (s.svE (prodP W' Iv) (cylH W' X (compH W' W X f chi)) (inC W' (compH W' W X f chi) i')) =
+        BX.svE-eq X b.brho s (prodP W' Iv) _ _ (symH (cyl-comp W' W X f chi)) (iCC W' W chi f i') (inC W' (compH W' W X f chi) i') ;
+
+      stQ (W' W : Ob) (chi : Hom W' W) (f : Hom W X) (i : Lands W X s.sQ f) (i' : Lands W' X s.sQ (compH W' W X f chi))
+        : Id (TA.EI (prodP W' Iv)) (lineE W' (TS.E.act W' W chi (pv W f i))) (lineE W' (pv W' (compH W' W X f chi) i')) =
+        transH (lineAct W' W chi f i) (transH (stB W' W chi f i i') (stC W' W chi f i')) ;
+
+      stP (W' W : Ob) (chi : Hom W' W) (f : Hom W X) (i : Lands W X s.sQ f) (i' : Lands W' X s.sQ (compH W' W X f chi))
+        : Id (TV.EI W') (TS.E.act W' W chi (pv W f i)).1 (pv W' (compH W' W X f chi) i').1 =
+        TV.PE.actC W' W X f chi x ;
+
+      -- the side, restricted along chi, then along (f * Iv): (f chi) * Iv = (f * Iv) (chi * Iv)
+      pnat : PT.PnTy X s.sQ pv = \ W' W chi f i i' ->
+        ts-eq W' (TS.E.act W' W chi (pv W f i)) (pv W' (compH W' W X f chi) i') (stP W' W chi f i i') (stQ W' W chi f i i') ;
+
+      side : PT.PSide[X, x] = new PT.PSide[X, x, s.sQ, pv, ppt, pnat] ;
+
+      -- the characterisation of pv: its point and its line
+      pv-pt (W : Ob) (f : Hom W X) (i : Lands W X s.sQ f) : Id (TV.EI W) (pv W f i).1 (TV.E.act W X f x) =
+        refl (TV.E.act W X f x) ;
+
+      pv-line (W : Ob) (f : Hom W X) (i : Lands W X s.sQ f)
+        : Id (TA.EI (prodP W Iv)) (lineE W (pv W f i)) (s.svE (prodP W Iv) (cylH W X f) (inC W f i)) =
+        refl (s.svE (prodP W Iv) (cylH W X f) (inC W f i)) ;
+    } ;
+
+    pcs : PT.PCsTy X x b.br (\ j -> SL[j].side) = \ l j W f i i' ->
+      ts-eq W (SL[l].pv W f i) (SL[j].pv W f i') (refl (TV.E.act W X f x))
+        (apH {TA.T (prodP W Iv) (PO.PC.giAct W X f b.brho)} {TA.EI (prodP W Iv)} (\ z -> (PO.PC.giAct W X f b.brho, z))
+          (b.bcs l j (prodP W Iv) (cylH W X f) (SL[l].inC W f i) (SL[j].inC W f i'))) ;
+
+    p : PT.Partial[X, x] = new PT.Partial[X, x, b.br, \ j -> SL[j].side, pcs] ;
+
+    opaque SL.pv ;
+  } ;
+
+  -- the partial line of the restricted box is the restricted partial line
+  module BPR (Y X : Ob) (h : Hom Y X) (b : BX.Box[e, X]) {
+    b' : BX.Box[e, Y] = BX.restrict e Y X h b ;
+    module R = BX.Restrict[e, Y, X, h] ;
+
+    x1 : TV.EI Y = TV.E.act Y X h BP[X, b].x ;
+
+    -- the two points agree: their ends are the restricted lid
+    aEq : Id (TA.EI Y) (G.act Y (prodP Y Iv) (lid Y e) (PO.PC.giAct Y X h b.brho), x1.2)
+                       (G.act Y (prodP Y Iv) (lid Y e) (PO.PC.giAct Y X h b.brho), b'.bu) =
+      transH (symH (TA.pr-tact Y X h (G.act X (prodP X Iv) (lid X e) b.brho) (G.act Y (prodP Y Iv) (lid Y e) (PO.PC.giAct Y X h b.brho))
+                      (ntEq PO.PC.GI G (PO.PC.ev e) Y X h b.brho (PO.PC.giAct Y X h b.brho) (refl (PO.PC.giAct Y X h b.brho))) b.bu))
+             (symH (R.ruE b.brho b.bu)) ;
+
+    P : Id (TV.EI Y) x1 BP[Y, b'].x =
+      apH {TV.T Y (PO.PC.giAct Y X h b.brho)} {TV.EI Y} (\ z -> (PO.PC.giAct Y X h b.brho, z))
+        (TA.pr-inj Y (G.act Y (prodP Y Iv) (lid Y e) (PO.PC.giAct Y X h b.brho)) x1.2 b'.bu aEq) ;
+
+    -- side l: the line at h g is the restricted side at g (cyl-comp and rsvE)
+    module SV (l : Arith[a].Fin b.br) (W : Ob) (g : Hom W Y) (i : Lands W Y (pre Y X h (b.bs l).sQ) g) (i' : Lands W Y (b'.bs l).sQ g) {
+      s : BX.Side[X, b.brho] = b.bs l ;
+      ih : Lands W X s.sQ (compH W Y X h g) = lands-pre W Y X h s.sQ g i ;
+      i2 : InQ (prodP W Iv) X s.sQ (compH (prodP W Iv) (prodP Y Iv) (prodP X Iv) (cylH Y X h) (cylH W Y g)) =
+        inQ-cyl (prodP W Iv) Y X h s.sQ (cylH W Y g) (BP[Y, b'].SL[l].inC W g i') ;
+
+      Pp : Id (TV.EI W) (BP[X, b].SL[l].pv W (compH W Y X h g) ih).1 (BP[Y, b'].SL[l].pv W g i').1 =
+        transH (BP[X, b].SL[l].pv-pt W (compH W Y X h g) ih)
+          (transH (symH (TV.PE.actC W Y X h g BP[X, b].x))
+            (transH (apH (TV.E.act W Y g) P) (symH (BP[Y, b'].SL[l].pv-pt W g i')))) ;
+
+      Qq : Id (TA.EI (prodP W Iv)) (lineE W (BP[X, b].SL[l].pv W (compH W Y X h g) ih)) (lineE W (BP[Y, b'].SL[l].pv W g i')) =
+        transH (BP[X, b].SL[l].pv-line W (compH W Y X h g) ih)
+         (transH (BX.svE-eq X b.brho s (prodP W Iv) (cylH W X (compH W Y X h g))
+                  (compH (prodP W Iv) (prodP Y Iv) (prodP X Iv) (cylH Y X h) (cylH W Y g)) (cyl-comp W Y X h g)
+                  (BP[X, b].SL[l].inC W (compH W Y X h g) ih) i2)
+          (transH (symH (R.rsvE b.brho s (prodP W Iv) (cylH W Y g) (BP[Y, b'].SL[l].inC W g i')))
+                  (symH (BP[Y, b'].SL[l].pv-line W g i')))) ;
+
+      res : Id (TS.EI W) (BP[X, b].SL[l].pv W (compH W Y X h g) ih) (BP[Y, b'].SL[l].pv W g i') =
+        ts-eq W (BP[X, b].SL[l].pv W (compH W Y X h g) ih) (BP[Y, b'].SL[l].pv W g i') Pp Qq ;
+    } ;
+
+    eQt : PT.EQT Y x1 BP[Y, b'].x (PT.restrictP Y X h BP[X, b].x BP[X, b].p) b'.br BP[Y, b'].p.ps (refl b.br) = \ l -> refl (pre Y X h (b.bs l).sQ) ;
+
+    eVt : PT.EVT Y x1 BP[Y, b'].x (PT.restrictP Y X h BP[X, b].x BP[X, b].p) b'.br BP[Y, b'].p.ps (refl b.br) = \ l W g i i' -> SV[l, W, g, i, i'].res ;
+
+    Rp : Id (PT.Partial[Y, BP[Y, b'].x]) (subst (TV.EI Y) (\ z -> PT.Partial[Y, z]) x1 BP[Y, b'].x P (PT.restrictP Y X h BP[X, b].x BP[X, b].p)) BP[Y, b'].p =
+      PT.partExtH Y x1 BP[Y, b'].x P (PT.restrictP Y X h BP[X, b].x BP[X, b].p) BP[Y, b'].p (refl b.br) eQt eVt ;
+
+  } ;
+} ;
+
+module ToFill (G : PCtx) (A : PTy[G]) (e : El Iv) (k : LineFib[G, A].FibAt e) {
+  open FTC[G, A, e] ;
+
+  module FromBox (X : Ob) (b : BX.Box[e, X]) {
+    open BP[X, b] ;
+
+    -- the extension, and its line: the filler
+    kx : TS.T X x = k.kop X x p ;
+
+    fill : TA.T (prodP X Iv) b.brho = kx.1 ;
+
+    -- its end at e is the lid (the fibre condition)
+    flid : Id (TA.EI X) (TA.E.act X (prodP X Iv) (lid X e) (b.brho, fill)) (BX.lidE e X b.brho b.bu) =
+      transH (symH (EV.endT-E X b.brho fill)) (apH (endPt X) kx.2) ;
+
+    -- along f * Iv, the filler is the line of side j at f (kside)
+    lineK (j : Arith[a].Fin b.br) (W : Ob) (f : Hom W X) (i : Lands W X (b.bs j).sQ f)
+      : Id (TA.EI (prodP W Iv)) (TA.E.act (prodP W Iv) (prodP X Iv) (cylH W X f) (b.brho, fill))
+           ((b.bs j).svE (prodP W Iv) (cylH W X f) (SL[j].inC W f i)) =
+      transH (TA.pr-tact (prodP W Iv) (prodP X Iv) (cylH W X f) b.brho (PO.PC.giAct W X f b.brho)
+                (apH (\ z -> z.1) (refl (TV.E.act W X f x))) fill)
+             (transH (apH (lineE W) (k.kside X x p j W f i)) (SL[j].pv-line W f i)) ;
+
+    -- psi = (pX psi * Iv) (id , pr2 psi): the side at psi is read off its line at pX psi
+    module FS (j : Arith[a].Fin b.br) (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X (b.bs j).sQ psi) {
+      s : BX.Side[X, b.brho] = b.bs j ;
+      f : Hom W X = compH W (prodP X Iv) X (pX X) psi ;
+      C : Hom W (prodP X Iv) = compH W (prodP W Iv) (prodP X Iv) (cylH W X f) (cylEv W X psi) ;
+
+      iE : InQ W X s.sQ C = inQ-eq W X s.sQ psi C (cyl-evm W X psi) i ;
+
+      res : Id (TA.EI W) (TA.E.act W (prodP X Iv) psi (b.brho, fill)) (s.svE W psi i) =
+        calc (TA.EI W) {
+            TA.E.act W (prodP X Iv) psi (b.brho, fill)
+          =< TA.PE.actEq W (prodP X Iv) psi C (cyl-evm W X psi) (b.brho, fill) >
+            TA.E.act W (prodP X Iv) C (b.brho, fill)
+          =< symH (TA.PE.actC W (prodP W Iv) (prodP X Iv) (cylH W X f) (cylEv W X psi) (b.brho, fill)) >
+            TA.E.act W (prodP W Iv) (cylEv W X psi) (TA.E.act (prodP W Iv) (prodP X Iv) (cylH W X f) (b.brho, fill))
+          =< apH (TA.E.act W (prodP W Iv) (cylEv W X psi)) (lineK j W f i) >
+            TA.E.act W (prodP W Iv) (cylEv W X psi) (s.svE (prodP W Iv) (cylH W X f) (SL[j].inC W f i))
+          =< s.snat W (prodP W Iv) (cylEv W X psi) (cylH W X f) (SL[j].inC W f i) iE >
+            s.svE W C iE
+          =< BX.svE-eq X b.brho s W C psi (symH (cyl-evm W X psi)) iE i >
+            s.svE W psi i } ;
+    } ;
+
+    fside (j : Arith[a].Fin b.br) (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X (b.bs j).sQ psi)
+      : Id (TA.EI W) (TA.E.act W (prodP X Iv) psi (b.brho, fill)) ((b.bs j).svE W psi i) = FS[j, W, psi, i].res ;
+
+  } ;
+
+  ----------------------------------------------------------------------
+  -- uniformity: the partial line of the restricted box is the restricted
+  -- partial line (at equal points), and kop is uniform (kunif)
+
+  module Unif (Y X : Ob) (h : Hom Y X) (b : BX.Box[e, X]) {
+    module F = FromBox[X, b] ;
+    module BR = BPR[Y, X, h, b] ;
+    module F' = FromBox[Y, BX.restrict e Y X h b] ;
+
+    -- in the fibres: the restricted extension is the extension of the restricted box
+    kEq : Id (TS.EI Y) (TS.E.act Y X h (BP[X, b].x, F.kx)) (BP[Y, (BX.restrict e Y X h b)].x, F'.kx) =
+      transH (k.kunif Y X h BP[X, b].x BP[X, b].p) (PT.kop-cong k Y BR.x1 BP[Y, (BX.restrict e Y X h b)].x BR.P (PT.restrictP Y X h BP[X, b].x BP[X, b].p) BP[Y, (BX.restrict e Y X h b)].p BR.Rp) ;
+
+    res : Id (TA.EI (prodP Y Iv)) (TA.E.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) (b.brho, F.fill)) ((BX.restrict e Y X h b).brho, F'.fill) =
+      transH (TA.pr-tact (prodP Y Iv) (prodP X Iv) (cylH Y X h) b.brho (PO.PC.giAct Y X h b.brho)
+                (apH (\ z -> z.1) (refl (TV.E.act Y X h BP[X, b].x))) F.fill)
+             (apH (lineE Y) kEq) ;
+  } ;
+
+  -- the filler
+  fillOp : FibM.FillDef[G, A].FillOp[e] =
+    new FibM.FillDef[G, A].FillOp[e, \ X b -> FromBox[X, b].fill, \ X b -> FromBox[X, b].flid,
+                                  \ X b j W psi i -> FromBox[X, b].fside j W psi i, \ Y X h b -> Unif[Y, X, h, b].res] ;
+} ;

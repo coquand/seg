@@ -1,0 +1,18 @@
+-- VAbs.seg: MODEL/Lv/VAbs.agda (MODEL/VAbs.agda is its instance at lzero).
+-- mkVa c: the iterative set c re-presented with an OPAQUE embedding, opaque
+-- in the code c ALONE.  Ix (mkVa c) = Ix c on the nose, and two uses
+-- mkVa c, mkVa c' are definitionally equal as soon as the codes are.
+-- Comparing mkVa c with mkVa c' never unfolds the nested codes of c.
+
+level l ;
+open Base ;
+open Prelude[l+] ;
+module W = V[l] ;
+
+evA (c : W.V) (z : W.Ix c) : W.V = W.ev c z ;
+
+injA (c : W.V) : W.Inj (W.Ix c) (evA c) = \ z z' P -> W.emb-inj (W.Ix c) (W.elt c.1) (W.embV c) z z' P ;
+
+opaque evA ; opaque injA ;
+
+mkVa (c : W.V) : W.V = W.mkV (W.Ix c) (evA c) (injA c) ;

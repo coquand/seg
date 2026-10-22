@@ -1,0 +1,120 @@
+-- BCP.seg: MODEL/Univ/BCP.agda.  Base change of the transport
+-- construction, part 3: the path square.  For related partial elements
+-- (RelGen, maps of BCB):
+--   UU-bc     the sides j = e0 (transport filler of bnew), j = e1 (FEb)
+--   FEp-bc    the path-square filler,   pnew-bc  its end (the new path)
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module CN = Conn[a] ;
+open CN ;
+open Cofib[a] ;
+open Transp[a] ;
+open TranspP[a] ;
+
+module BCP (D' D : PCtx) (sR : PSub[D', D]) (L' L : PCtx) (sg : PSub[L', L]) (S : PTy[L])
+  (ln' : (W : Ob) -> W0.Ix (D'.ob W) -> W0.Ix (L'.ob (prodP W Iv)))
+  (lnat' : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D'.ob W))
+          -> Id (W0.Ix (L'.ob (prodP W' Iv))) (L'.act (prodP W' Iv) (prodP W Iv) (cylH W' W g) (ln' W x)) (ln' W' (D'.act W' W g x)))
+  (ln : (W : Ob) -> W0.Ix (D.ob W) -> W0.Ix (L.ob (prodP W Iv)))
+  (lnat : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D.ob W))
+          -> Id (W0.Ix (L.ob (prodP W' Iv))) (L.act (prodP W' Iv) (prodP W Iv) (cylH W' W g) (ln W x)) (ln W' (D.act W' W g x)))
+  (lnEq : (W : Ob) (x : W0.Ix (D'.ob W)) -> Id (W0.Ix (L.ob (prodP W Iv))) (sg.nt (prodP W Iv) (ln' W x)) (ln W (sR.nt W x)))
+  (d : Bool) (fS : FibM.FillDef[L, S].FillOp[src d]) (f0 : FibM.FillDef[L, S].FillOp[e0]) (fT : FibM.FillDef[L, S].FillOp[tgt d])
+  (fS' : FibM.FillDef[L', subTy L' L S sg].FillOp[src d]) (f0' : FibM.FillDef[L', subTy L' L S sg].FillOp[e0])
+  (fT' : FibM.FillDef[L', subTy L' L S sg].FillOp[tgt d])
+  (okS : LBSub[a].LBS[L', L, sg, S, src d].LBF[fS, fS'].FillSubOK)
+  (ok0 : LBSub[a].LBS[L', L, sg, S, e0].LBF[f0, f0'].FillSubOK)
+  (okT : LBSub[a].LBS[L', L, sg, S, tgt d].LBF[fT, fT'].FillSubOK) {
+  module BB = BCB[a].BCB[D', D, sR, L', L, sg, S, ln', lnat', ln, lnat, lnEq, d, fS, f0, fT, fS', f0', fT', okS, ok0, okT] ;
+  module B0 = BB.B0 ;
+  module TS = PR.TyL[L, S] ;
+  module SG = Transp[a].SubE[L', L, S, sg] ;
+
+  module PTp = BB.PTp ;
+  module PSq = BB.PSq ;
+  module PTB = BB.PTB ;
+  module PTP = TranspP[a].TP[D', L', subTy L' L S sg, ln', lnat', d, fS', f0', fT'] ;
+  module UTp = BB.UTp ;
+  module USq = BB.USq ;
+  module UTB = BB.UTB ;
+  module UTP = TranspP[a].TP[D, L, S, ln, lnat, d, fS, f0, fT] ;
+  module LSs = LBSub[a].LBS[L', L, sg, S, src d].LBF[fS, fS'] ;
+  module LRs = BCB[a].LBR[L, S, src d, fS] ;
+
+  s : El Iv = src d ;
+  t : El Iv = tgt d ;
+
+  module MP (PoB : BB.PoBTy) (PoA : BB.PoATy) (X : Ob) (w' : PTp.SEt.TD.EI X) (p' : PTB.PX.Partial[X, w'])
+    (p : UTB.PX.Partial[X, BB.MB[PoB, PoA].mAE X w']) (r : BB.MB[PoB, PoA].R.PRel X w' p' p) {
+    module M = BB.MB[PoB, PoA] ;
+    module PPP = PTP.PP[X, w', p'] ;
+    module UPP = UTP.PP[X, M.mAE X w', p] ;
+
+    w : UTp.SEt.TD.EI X = M.mAE X w' ;
+
+    UU-bc : (n : Nat) -> Id (TS.EI (prodP X Iv)) (B0.Ls (prodP X Iv) (PPP.UU n)) (UPP.UU n) = split {
+      zero ->
+        transH (B0.uF-bc X w'.1 (PTB.bnewS X w' p') (refl (PTp.en s X w'.1)) (B0.enEq s X w'.1))
+               (UTp.uF-cong X (sR.nt X w'.1) (sR.nt X w'.1) (refl (sR.nt X w'.1))
+                  (B0.Ls X (PTB.bnewS X w' p')) (UTB.bnewS X w p) (B0.enEq s X w'.1) (refl (UTp.en s X (sR.nt X w'.1)))
+                  (M.bnew-bc X w' p' p r)) ;
+      suc n -> M.FEb-bc X w' p' p r } ;
+
+    Pl : Id (W0.Ix (L.ob (prodP (prodP X Iv) Iv))) (sg.nt (prodP (prodP X Iv) Iv) PPP.rhoP) UPP.rhoP =
+      transH (lnEq (prodP X Iv) (D'.act (prodP X Iv) X (pX X) w'.1))
+             (apH (ln (prodP X Iv)) (sR.nt-nat (prodP X Iv) X (pX X) w'.1)) ;
+
+    lwE : Id (TS.EI (prodP X Iv)) (B0.Ls (prodP X Iv) PPP.lwP) UPP.lwP =
+      transH (SG.Ls-act (prodP X Iv) X (pX X) (PTB.bnewS X w' p'))
+             (apH (UTp.ES.act (prodP X Iv) X (pX X)) (M.bnew-bc X w' p' p r)) ;
+
+    eQ1 (l : Fin p'.pr) (u : Tree) : Id Bool (PPP.QP l u) (UPP.QP (subst Nat (\ n -> Fin n) p'.pr p.pr r.1 l) u) =
+      apH (\ Q -> pre (prodP X Iv) X (pX X) Q u)
+          (funext Tree (\ z -> Bool) (p'.ps l).pQ (p.ps (subst Nat (\ n -> Fin n) p'.pr p.pr r.1 l)).pQ (r.2.1 l)) ;
+
+    ev1 (l : Fin p'.pr) (W : Ob) (f : Hom W (prodP X Iv)) (i : Lands W (prodP X Iv) (PPP.QP l) f)
+      (i' : Lands W (prodP X Iv) (UPP.QP (subst Nat (\ n -> Fin n) p'.pr p.pr r.1 l)) f)
+      : Id (TS.EI (prodP W Iv)) (B0.Ls (prodP W Iv) (PPP.V2 l W f i)) (UPP.V2 (subst Nat (\ n -> Fin n) p'.pr p.pr r.1 l) W f i') =
+      transH (SG.Ls-act (prodP W Iv) (prodP (prodP W Iv) Iv) (mF X W f) (PSq.omF W (PPP.nuP l W f i)))
+       (apH (UTp.ES.act (prodP W Iv) (prodP (prodP W Iv) Iv) (mF X W f))
+            (transH (B0.omF-bc W (PPP.nuP l W f i))
+                    (apH (USq.omF W)
+                       (M.nuOf-bc W ((p'.ps l).pv W (PSq.pXf W X f) (PPP.gOf l W f i))
+                                    ((p.ps (subst Nat (\ n -> Fin n) p'.pr p.pr r.1 l)).pv W (PSq.pXf W X f)
+                                       (UPP.gOf (subst Nat (\ n -> Fin n) p'.pr p.pr r.1 l) W f i'))
+                          (r.2.2 l W (PSq.pXf W X f) (PPP.gOf l W f i) (UPP.gOf (subst Nat (\ n -> Fin n) p'.pr p.pr r.1 l) W f i')))))) ;
+
+    ev2 (k : Fin (suc (suc zero))) (W : Ob) (f : Hom W (prodP X Iv)) (i : Lands W (prodP X Iv) (EndQ[a].endQ (jE k.1) X) f)
+      (i' : Lands W (prodP X Iv) (EndQ[a].endQ (jE k.1) X) f)
+      : Id (TS.EI (prodP W Iv)) (B0.Ls (prodP W Iv) (PPP.V1 k.1 W f)) (UPP.V1 k.1 W f) =
+      transH (SG.Ls-act (prodP W Iv) (prodP X Iv) (cylH W X (PSq.pXf W X f)) (PPP.UU k.1))
+             (apH (UTp.ES.act (prodP W Iv) (prodP X Iv) (cylH W X (PSq.pXf W X f))) (UU-bc k.1)) ;
+
+    FEp-bc : Id (TS.EI (prodP (prodP X Iv) Iv)) (B0.Ls (prodP (prodP X Iv) Iv) (PTP.FEp X w' p')) (UTP.FEp X w p) =
+      transH (LSs.FS[okS].FE-sub (prodP X Iv) PPP.rhoP p'.pr (suc (suc zero)) PPP.LDp)
+        (LRs.FE-congR (prodP X Iv) (sg.nt (prodP (prodP X Iv) Iv) PPP.rhoP) UPP.rhoP p'.pr p.pr (suc (suc zero)) r.1 Pl
+           (LSs.mapLD (prodP X Iv) PPP.rhoP p'.pr (suc (suc zero)) PPP.LDp) UPP.LDp
+           lwE eQ1 (\ k u -> refl (EndQ[a].endQ (jE k.1) X u)) ev1 ev2) ;
+
+    pnew-bc : Id (TS.EI (prodP X Iv)) (B0.Ls (prodP X Iv) (PTP.pnewS X w' p')) (UTP.pnewS X w p) =
+      transH (SG.Ls-act (prodP X Iv) (prodP (prodP X Iv) Iv) (lid (prodP X Iv) t) (PTP.FEp X w' p'))
+             (apH (UTp.ES.act (prodP X Iv) (prodP (prodP X Iv) Iv) (lid (prodP X Iv) t)) FEp-bc) ;
+
+    opaque UU-bc ; opaque FEp-bc ; opaque pnew-bc ;
+  } ;
+} ;

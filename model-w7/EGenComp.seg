@@ -1,0 +1,184 @@
+-- EGenComp.seg: MODEL/Univ/EGenComp.agda.  Composition for the generic
+-- family EGen over the universe UCtx.
+--
+-- A box b for EGen over X lies over a fibrant type F = b.brho over
+-- y (X * [1]); its lid and sides are the lid and sides of a box b0 for F
+-- over X at the point idH (X * [1]) (the fibre of EGen at (W , uAct psi F)
+-- is the fibre of F at psi, on the nose).  The composite of b is the
+-- composite of b0 in F.
+--
+-- Equations are transferred through
+--     phi W : E_F (W) -> E_EGen (W),   (g , t) |-> (uAct g F , t)
+-- which commutes with the actions up to uAct-o (phiAct) and is injective
+-- over a fixed point (phiInj).
+--
+-- Agda's anonymous modules are the segments GCX and CU; its abstract
+-- blocks are opaque declarations after the definitions.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module L1 = PreL[a, a+].PS ;
+module BXm = Box[a, a] ;
+module FS = FibSub[a, a] ;
+module CN = Conn[a] ;
+open Yon[a] ;
+open UAct[a] ;
+open UnivCtx[a] ;
+
+module BU = Box[a, a+].Boxes[UCtx, EGen] ;
+module TU = PreL[a, a+].TyL[UCtx, EGen] ;
+
+------------------------------------------------------------------------
+-- Points of E_EGen
+
+EU (W : Ob) : U a+ = TU.EI W ;
+
+-- two points over equal fibrant types with the same fibre
+mkE (W : Ob) (G1 G2 : U0 W) (e : Id (U0 W) G1 G2) (q : Id W0.V (fib0 W G1) (fib0 W G2))
+  (t1 : W0.Ix (fib0 W G1)) (t2 : W0.Ix (fib0 W G2))
+  (R : Id (W0.Ix (fib0 W G2)) (subst W0.V (\ w -> W0.Ix w) (fib0 W G1) (fib0 W G2) q t1) t2) : Id (EU W) (G1, t1) (G2, t2) =
+  idJ (U0 W) G1
+    (\ G3 e3 -> (q3 : Id W0.V (fib0 W G1) (fib0 W G3)) (t3 : W0.Ix (fib0 W G3))
+       -> Id (W0.Ix (fib0 W G3)) (subst W0.V (\ w -> W0.Ix w) (fib0 W G1) (fib0 W G3) q3 t1) t3 -> Id (EU W) (G1, t1) (G3, t3))
+    (\ q3 t3 R3 -> apH {W0.Ix (fib0 W G1)} {EU W} (\ v -> (G1, v)) (transH (symH (loopV (fib0 W G1) q3 t1)) R3))
+    G2 e q t2 R ;
+
+-- the second components of equal points
+sndE (W : Ob) (G1 G2 : U0 W) (t1 : W0.Ix (fib0 W G1)) (t2 : W0.Ix (fib0 W G2)) (Q : Id (EU W) (G1, t1) (G2, t2))
+  : Id (W0.Ix (fib0 W G2))
+       (subst W0.V (\ w -> W0.Ix w) (fib0 W G1) (fib0 W G2)
+          (ap (U0 W) W0.V (fib0 W) G1 G2 (ap (EU W) (U0 W) (\ z -> z.1) (G1, t1) (G2, t2) Q)) t1) t2 =
+  idJ (EU W) (G1, t1)
+    (\ w Q' -> Id (W0.Ix (fib0 W w.1))
+                  (subst W0.V (\ v -> W0.Ix v) (fib0 W G1) (fib0 W w.1)
+                     (ap (U0 W) W0.V (fib0 W) G1 w.1 (ap (EU W) (U0 W) (\ z -> z.1) (G1, t1) w Q')) t1) w.2)
+    (refl t1) (G2, t2) Q ;
+
+module Phi (Z : Ob) (F : U0 Z) {
+  A : PTy[yP Z] = F.1 ;
+
+  module T0 = PR.TyL[yP Z, A] ;
+
+  E0 (W : Ob) : U a = T0.EI W ;
+
+  phi (W : Ob) (w : E0 W) : EU W = (uAct W Z w.1 F, w.2) ;
+
+  phiAct (W' W : Ob) (chi : Hom W' W) (w : E0 W) : Id (EU W') (TU.E.act W' W chi (phi W w)) (phi W' (T0.E.act W' W chi w)) =
+    mkE W' (uAct W' W chi (uAct W Z w.1 F)) (uAct W' Z (compH W' W Z w.1 chi) F)
+      (symH (uAct-o W' W Z w.1 chi F)) (refl (fib0 W' (uAct W' Z (compH W' W Z w.1 chi) F)))
+      (TU.E.act W' W chi (phi W w)).2 (T0.E.act W' W chi w).2
+      (tact-irr (yP Z) A W' W chi w.1 (compH W' W Z w.1 chi)
+         (ntEq (yP W) (yP Z) (yH W Z w.1) W' W chi (idH W) chi (refl chi)) (refl (compH W' W Z w.1 chi)) w.2) ;
+
+  phiInj (W : Ob) (g : Hom W Z) (t t' : W0.Ix (A.tob W g)) (Q : Id (EU W) (phi W (g, t)) (phi W (g, t'))) : Id (W0.Ix (A.tob W g)) t t' =
+    transH (symH (loopV (A.tob W g) (ap (U0 W) W0.V (fib0 W) (uAct W Z g F) (uAct W Z g F)
+                                        (ap (EU W) (U0 W) (\ z -> z.1) (phi W (g, t)) (phi W (g, t')) Q)) t))
+           (sndE W (uAct W Z g F) (uAct W Z g F) t t' Q) ;
+
+  -- equal points of E_F over the same map
+  phiEq (W : Ob) (g : Hom W Z) (t t' : W0.Ix (A.tob W g)) (Q : Id (EU W) (phi W (g, t)) (phi W (g, t'))) : Id (E0 W) (g, t) (g, t') =
+    apH {W0.Ix (A.tob W g)} {E0 W} (\ v -> (g, v)) (phiInj W g t t' Q) ;
+
+  -- the same over two equal maps
+  phiEq' (W : Ob) (g g' : Hom W Z) (G : Id (Hom W Z) g g') (t : W0.Ix (A.tob W g)) (t' : W0.Ix (A.tob W g'))
+    (Q : Id (EU W) (phi W (g, t)) (phi W (g', t'))) : Id (E0 W) (g, t) (g', t') =
+    idJ (Hom W Z) g
+      (\ g2 G2 -> (t2 : W0.Ix (A.tob W g2)) -> Id (EU W) (phi W (g, t)) (phi W (g2, t2)) -> Id (E0 W) (g, t) (g2, t2))
+      (\ t2 Q2 -> phiEq W g t t2 Q2)
+      g' G t' Q ;
+} ;
+
+------------------------------------------------------------------------
+-- The box of F of a box of EGen
+
+module Box0 (eS : El Iv) (X : Ob) (b : BU.Box[eS, X]) {
+  Z : Ob = prodP X Iv ;
+
+  F : U0 Z = b.brho ;
+
+  module PH = Phi[Z, F] ;
+  A : PTy[yP Z] = F.1 ;
+  module T0 = PR.TyL[yP Z, A] ;
+  module B0 = BXm.Boxes[yP Z, A] ;
+
+  sv0 (j : Fin b.br) (W : Ob) (psi : Hom W Z) (i : InQ W X (b.bs j).sQ psi) : T0.T W ((yP Z).act W Z psi (idH Z)) =
+    (b.bs j).sv W psi i ;
+
+  snat0 (j : Fin b.br) : B0.SnTy X (idH Z) (b.bs j).sQ (sv0 j) = \ W' W chi psi i i' ->
+    PH.phiEq W' (compH W' W Z psi chi)
+      (T0.E.act W' W chi ((yP Z).act W Z psi (idH Z), sv0 j W psi i)).2
+      (sv0 j W' (compH W' W Z psi chi) i')
+      (transH (symH (PH.phiAct W' W chi (psi, sv0 j W psi i))) ((b.bs j).snat W' W chi psi i i')) ;
+
+  opaque snat0 ;
+
+  side0 (j : Fin b.br) : B0.Side[X, idH Z] = (B0.mkSide X (idH Z) ((b.bs j).sQ) (sv0 j) (snat0 j)) ;
+
+  cs0 : B0.CsTy X (idH Z) b.br side0 = \ j k W psi i i' -> b.bcs j k W psi i i' ;
+
+  cb0 : B0.CbTy eS X (idH Z) b.bu b.br side0 = \ j W phi' i ->
+    PH.phiEq W (compH W X Z (lid X eS) phi')
+      (T0.E.act W X phi' (B0.lidE eS X (idH Z) b.bu)).2
+      (sv0 j W (compH W X Z (lid X eS) phi') i)
+      (transH (symH (PH.phiAct W X phi' (B0.lidE eS X (idH Z) b.bu))) (b.bcb j W phi' i)) ;
+
+  opaque cs0 ; opaque cb0 ;
+
+  b0 : B0.Box[eS, X] = (B0.mkBox eS X (idH Z) b.bu b.br side0 cs0 cb0) ;
+} ;
+
+------------------------------------------------------------------------
+-- Selecting the composition in a direction
+
+selC (Z : Ob) (A : PTy[yP Z]) (c : BXm.Boxes[yP Z, A].Comp) : (d : Bool) -> BXm.Boxes[yP Z, A].CompOp[CN.src d, CN.tgt d] = split {
+  true -> c.1 ;
+  false -> c.2 } ;
+
+selSub (Y Z : Ob) (A : PTy[yP Z]) (s : PSub[yP Y, yP Z]) (c : BXm.Boxes[yP Z, A].Comp)
+  : (d : Bool) -> Id (BXm.Boxes[yP Y, subTy (yP Y) (yP Z) A s].CompOp[CN.src d, CN.tgt d])
+                     (selC Y (subTy (yP Y) (yP Z) A s) (FS.subCompC (yP Y) (yP Z) A s c) d)
+                     (FS.SubComp[yP Y, yP Z, A, s, CN.src d, CN.tgt d, selC Z A c d].subComp) = split {
+  true -> refl (FS.SubComp[yP Y, yP Z, A, s, CN.src true, CN.tgt true, c.1].subComp) ;
+  false -> refl (FS.SubComp[yP Y, yP Z, A, s, CN.src false, CN.tgt false, c.2].subComp) } ;
+
+------------------------------------------------------------------------
+-- The composition of EGen
+
+module GC (d : Bool) {
+  eS : El Iv = CN.src d ;
+  eT : El Iv = CN.tgt d ;
+
+  module GCX (X : Ob) (b : BU.Box[eS, X]) {
+    module B = Box0[eS, X, b] ;
+
+    co : B.B0.CompOp[eS, eT] = selC B.Z B.A b.brho.2.1 d ;
+
+    cop0 : B.T0.T X ((yP B.Z).act X B.Z (lid X eT) (idH B.Z)) = co.cop X B.b0 ;
+  } ;
+
+  copG (X : Ob) (b : BU.Box[eS, X]) : TU.T X (UCtx.act X (prodP X Iv) (lid X eT) b.brho) = GCX[X, b].cop0 ;
+
+  copG-E (X : Ob) (b : BU.Box[eS, X])
+    : Id (TU.EI X) (BU.topE eT X b.brho (copG X b))
+                   (Box0[eS, X, b].PH.phi X (Box0[eS, X, b].B0.topE eT X (idH (prodP X Iv)) GCX[X, b].cop0)) =
+    refl (BU.topE eT X b.brho (copG X b)) ;
+
+  opaque copG ; opaque copG-E ;
+
+  csideG (X : Ob) (b : BU.Box[eS, X]) (j : Fin b.br) (W : Ob) (phi' : Hom W X)
+    (i : InQ W X (b.bs j).sQ (compH W X (prodP X Iv) (lid X eT) phi'))
+    : Id (TU.EI W) (TU.E.act W X phi' (BU.topE eT X b.brho (copG X b))) ((b.bs j).svE W (compH W X (prodP X Iv) (lid X eT) phi') i) =
+    transH (apH (TU.E.act W X phi') (copG-E X b))
+     (transH (Box0[eS, X, b].PH.phiAct W X phi' (Box0[eS, X, b].B0.topE eT X (idH (prodP X Iv)) GCX[X, b].cop0))
+             (apH (Box0[eS, X, b].PH.phi W) (GCX[X, b].co.cside X Box0[eS, X, b].b0 j W phi' i))) ;
+
+} ;

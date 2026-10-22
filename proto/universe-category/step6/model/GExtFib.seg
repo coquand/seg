@@ -1,0 +1,39 @@
+-- GExtFib.seg (inside IvBase.FaU, any base): Ext(alpha) as a fibrant type
+-- in line form (GFibE.FibEL): Theorem 7 in both directions (GExtComp4 /
+-- GExtComp6) from the fillers of A and B at both ends with their KESI.
+-- An instance gets the fillers from its compositions by line MkFill (its
+-- IvBase.Cn instance's GFillFib): PosetExt (posets).
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+module PR = GPre[lv] ;
+open PR.PS ;
+module GP = GCofib[lv] ;
+open GLine[lv] ;
+
+module ExtFib (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (kA0 : LineFibP[GFam[lv].famPath, G, A].FibAt e0) (kA1 : LineFibP[GFam[lv].famPath, G, A].FibAt e1)
+  (kB0 : LineFibP[GFam[lv].famPath, GP.CofL[G, psi].resCtx, B].FibAt e0)
+  (kB1 : LineFibP[GFam[lv].famPath, GP.CofL[G, psi].resCtx, B].FibAt e1)
+  (kA0e : GCofEsi[lv].PartialsEsi[EndKit[GFam[lv].famPath, G, A, e0].TV.E, EndKit[GFam[lv].famPath, G, A, e0].SFm.SF].KESI kA0)
+  (kA1e : GCofEsi[lv].PartialsEsi[EndKit[GFam[lv].famPath, G, A, e1].TV.E, EndKit[GFam[lv].famPath, G, A, e1].SFm.SF].KESI kA1)
+  (kB0e : GCofEsi[lv].PartialsEsi[EndKit[GFam[lv].famPath, GP.CofL[G, psi].resCtx, B, e0].TV.E,
+            EndKit[GFam[lv].famPath, GP.CofL[G, psi].resCtx, B, e0].SFm.SF].KESI kB0)
+  (kB1e : GCofEsi[lv].PartialsEsi[EndKit[GFam[lv].famPath, GP.CofL[G, psi].resCtx, B, e1].TV.E,
+            EndKit[GFam[lv].famPath, GP.CofL[G, psi].resCtx, B, e1].SFm.SF].KESI kB1)
+  (eal : GEquiv[lv].EquivOp GP.CofL[G, psi].resCtx B (subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR) al)
+  (keal : GCofEsi[lv].PartialsEsi[GExt[lv].ExtDef[G, A, psi].EA', GEquiv[lv].HFib[GP.CofL[G, psi].resCtx, B,
+            subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR, al].FibT].KESI eal) {
+  module T01 = GExtComp4[lv].C4[G, A, psi, B, al, e0, e1, kA0, kB0, kA1, eal] ;
+  module T10 = GExtComp4[lv].C4[G, A, psi, B, al, e1, e0, kA1, kB1, kA1, eal] ;
+  module E01 = GExtComp6[lv].C6[G, A, psi, B, al, e0, e1, kA0, kB0, kA1, eal, kA0e, kB0e, kA1e, keal] ;
+  module E10 = GExtComp6[lv].C6[G, A, psi, B, al, e1, e0, kA1, kB1, kA1, eal, kA1e, kB1e, kA1e, keal] ;
+
+  extFib : GFibE[lv].FibEL G =
+    (GExt2[lv].ExtB2[G, A, psi, B, al].ExtT, ((T01.extCompAt, T10.extCompAt), (E01.extCesi, E10.extCesi))) ;
+} ;

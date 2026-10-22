@@ -1,0 +1,182 @@
+-- GExtFullC.seg (inside IvBase.FaU, any base): over a cofibration that is
+-- full everywhere, the fibration of Ext(alpha) (GExtFib) is B's,
+-- substituted along sec (GExtFull), when the ends of B's fillers are B's
+-- compositions (HB0 / HB1; GFillFib.EndC, GElC.ElF.Fam.End):
+--   ph, ps   the fibres of Ext and of B[sec] (transport along extOb-B)
+--   Dir      in each direction, Ext's composite (extComp-full: the top of
+--            the B-filler) is B's composite moved along (sec , ph)
+--            (GTransfer.Tr): the B-filler's problem is Tr's moved one
+--   extFull  Id of fibrant types, by TrSub.trSub along tyFull
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+
+-- transport back and forth along a path of codes
+subst-sym-l (v w : W0.V) (P : Id W0.V v w) (b : W0.Ix v)
+  : Id (W0.Ix v) (subst W0.V (\ z -> W0.Ix z) w v (symH P) (subst W0.V (\ z -> W0.Ix z) v w P b)) b =
+  idJ W0.V v (\ w2 P2 -> (b2 : W0.Ix v) -> Id (W0.Ix v) (subst W0.V (\ z -> W0.Ix z) w2 v (symH P2) (subst W0.V (\ z -> W0.Ix z) v w2 P2 b2)) b2)
+    (\ b2 -> refl b2) w P b ;
+
+opaque subst-sym-l ;
+
+module ExtFullC (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (fl : (X : Ob) (rho : W0.Ix (G.ob X)) -> IsT (GP.CofL[G, psi].full X rho)) {
+  module CL = GP.CofL[G, psi] ;
+  module EFu = GExtFull.ExtFull[G, A, psi, B, al, fl] ;
+  module E2 = GExt2.ExtB2[G, A, psi, B, al] ;
+  module E3 = GExt3.ExtB3[G, A, psi, B, al] ;
+  module TX = PR.TyL[G, E2.ExtT] ;
+  module TB = PR.TyL[CL.resCtx, B] ;
+  sec : PSub[G, CL.resCtx] = EFu.sec ;
+
+  ph (W : Ob) (rho : W0.Ix (G.ob W)) (a0 : W0.Ix (E2.ExtT.tob W rho)) : W0.Ix (B.tob W (sec.nt W rho)) =
+    subst W0.V (\ z -> W0.Ix z) (E2.ExtT.tob W rho) (EFu.BF.tob W rho) (EFu.PoB W rho) a0 ;
+  ps (W : Ob) (rho : W0.Ix (G.ob W)) (b : W0.Ix (B.tob W (sec.nt W rho))) : W0.Ix (E2.ExtT.tob W rho) =
+    subst W0.V (\ z -> W0.Ix z) (EFu.BF.tob W rho) (E2.ExtT.tob W rho) (symH (EFu.PoB W rho)) b ;
+  ph-ps (W : Ob) (rho : W0.Ix (G.ob W)) (b : W0.Ix (B.tob W (sec.nt W rho))) : Id (W0.Ix (B.tob W (sec.nt W rho))) (ph W rho (ps W rho b)) b =
+    GExtFull.subst-sym-r (E2.ExtT.tob W rho) (EFu.BF.tob W rho) (EFu.PoB W rho) b ;
+  ps-ph (W : Ob) (rho : W0.Ix (G.ob W)) (a0 : W0.Ix (E2.ExtT.tob W rho)) : Id (W0.Ix (E2.ExtT.tob W rho)) (ps W rho (ph W rho a0)) a0 =
+    subst-sym-l (E2.ExtT.tob W rho) (EFu.BF.tob W rho) (EFu.PoB W rho) a0 ;
+
+  -- read in B, an element of Ext is (sec , ph)
+  toBPh (W : Ob) (v : TX.EI W) (p : IsT (CL.full W v.1)) : Id (TB.EI W) (E3.toB W v p) (sec.nt W v.1, ph W v.1 v.2) =
+    transH (E3.toB-cong W v v (refl v) p (fl W v.1))
+      (symH (apH {W0.Ix (B.tob W (sec.nt W v.1))} {TB.EI W} (\ b -> (sec.nt W v.1, b)) (E3.extOb-B-sub W v.1 (fl W v.1) v.2))) ;
+
+  PhN (V W : Ob) (g : Hom V W) (w : TX.EI W)
+    : Id (TB.EI V) (sec.nt V (TX.E.act V W g w).1, ph V (TX.E.act V W g w).1 (TX.E.act V W g w).2) (TB.E.act V W g (sec.nt W w.1, ph W w.1 w.2)) =
+    transH (symH (toBPh V (TX.E.act V W g w) (fl V (TX.E.act V W g w).1)))
+      (transH (E3.toB-act V W g w (fl W w.1) (fl V (TX.E.act V W g w).1)) (apH (TB.E.act V W g) (toBPh W w (fl W w.1)))) ;
+
+  opaque toBPh ; opaque PhN ;
+
+  ----------------------------------------------------------------------
+  -- one direction
+
+  module Dir (eS eT : IPt) (kAS : LineFibP[GFam[a].famPath, G, A].FibAt eS)
+    (kBS : LineFibP[GFam[a].famPath, CL.resCtx, B].FibAt eS)
+    (kA1 : LineFibP[GFam[a].famPath, G, A].FibAt e1)
+    (eal : GEquiv[a].EquivOp CL.resCtx B (subTy CL.resCtx G A CL.inclR) al)
+    (cB : CompAtP[GFam[a].famPath, CL.resCtx, B, eS, eT].CompAt)
+    (HB : Id (CompAtP[GFam[a].famPath, CL.resCtx, B, eS, eT].CompAt) CompAtP[GFam[a].famPath, CL.resCtx, B, eS, eT].FromFib[kBS].ca cB) {
+    module C1 = GExtComp1.C1[G, A, psi, B, al, eS, kBS] ;
+    module C4 = GExtComp4.C4[G, A, psi, B, al, eS, eT, kAS, kBS, kA1, eal] ;
+    module C5 = GExtComp5.C5[G, A, psi, B, al, eS, eT, kAS, kBS, kA1, eal] ;
+    module TR = GTransfer[a, a, a].Tr[G, E2.ExtT, CL.resCtx, B, sec.nt, sec.nt-nat, ph, ps, ph-ps, ps-ph, PhN, eS, eT, cB] ;
+    module M = TR.M ;
+    module CB = CompAtP[GFam[a].famPath, CL.resCtx, B, eS, eT] ;
+    module FF = CB.FromFib[kBS] ;
+    module KB = C1.KB ;
+    module KX = C1.KX ;
+    module KB' = EndKit[GFam[a].famPath, CL.resCtx, B, eT] ;
+    module LB' = LevKit[GFam[a].famPath, GFam[a].famConn, CL.resCtx, B, eT] ;
+
+    module P (X : Ob) (x : KX.TV.EI X) (p : KX.PT.Partial[X, x]) {
+      flx (W : Ob) (f : Hom W X) (j : Hom W Iv) : IsT (CL.full W (x.1.1 W f j)) = fl W (x.1.1 W f j) ;
+      module BT = C1.Beta[X, x, p, flx] ;
+
+      -- the B-filler's problem is Tr's moved problem
+      lineEq : Id (W0.Ix (C1.FG'.ob X)) BT.gB (M.mapL X x.1) =
+        C1.FG'.fam-eq X BT.gB (M.mapL X x.1) (\ W f j -> CL.res-eq W (BT.gB.1 W f j) (sec.nt W (x.1.1 W f j)) (refl (x.1.1 W f j))) ;
+
+      tvEq : Id (KB.TV.EI X) BT.xB (M.tvN X x) =
+        KB.tv-eq X BT.xB (M.tvN X x) lineEq (toBPh X (KX.endE X x) (flx X (idH X) (ptH X eS))) ;
+
+      -- a side read in B is the side moved
+      svEq (W : Ob) (f : Hom W X) (u : KX.TS.EI W) (up : Id (KX.TV.EI W) u.1 (KX.TV.E.act W X f x))
+        : Id (KB.TS.EI W) BT.SV[W, f, u, up].sv (M.tsN W u) =
+        C1.LB.ts-ext W BT.SV[W, f, u, up].sv (M.tsN W u)
+          (transH BT.SV[W, f, u, up].sv-pt
+            (transH (apH (KB.TV.E.act W X f) tvEq)
+              (transH (symH (M.tvN-act W X f x)) (transH (apH (M.tvN W) (symH up)) (symH M.TSN[W, u].res-pt)))))
+          (\ V g j -> transH (BT.SV[W, f, u, up].sv-lev V g j)
+             (transH (toBPh V (C1.lvX W u V g j) (BT.SV[W, f, u, up].qv V g j)) (symH (M.TSN[W, u].res-lev V g j)))) ;
+
+      mpEq : Id (KB.PT.Partial[X, M.tvN X x]) (subst (KB.TV.EI X) (\ z -> KB.PT.Partial[X, z]) BT.xB (M.tvN X x) tvEq BT.pB) (M.mapP X x p) =
+        KB.PT.partExtH X BT.xB (M.tvN X x) tvEq BT.pB (M.mapP X x p) (refl p.pr) (\ l -> refl (p.ps l).pQ)
+          (\ l W f i i' -> transH (svEq W f ((p.ps l).pv W f i) ((p.ps l).ppt W f i))
+                                  (apH (M.tsN W) (KX.PT.pv-irr X x (p.ps l) W f i i'))) ;
+
+      -- the top of the B-filler is B's composite of the moved problem
+      endFB : Id (TB.EI X) (BT.FBv X (idH X) (ptH X eT)) (KB'.endE X ((M.tvN X x).1, cB.cop X (M.tvN X x) (M.mapP X x p))) =
+        transH (symH (LB'.endL-lev X (KB.lineL X (BT.xB, BT.fillB))))
+         (transH (apH (KB'.endE X) (symH (FF.cop-E X BT.xB BT.pB)))
+          (transH (apH (\ c -> KB'.endE X (BT.xB.1, c.cop X BT.xB BT.pB)) HB)
+                  (apH (KB'.endE X) (CB.cop-cong cB X BT.xB (M.tvN X x) tvEq BT.pB (M.mapP X x p) mpEq)))) ;
+
+      copEq : Id (TX.T X (x.1.1 X (idH X) (ptH X eT))) (C4.extCompAt.cop X x p) (TR.cop X x p) =
+        TX.pr-inj X (x.1.1 X (idH X) (ptH X eT)) (C4.extCompAt.cop X x p) (TR.cop X x p)
+          (transH C5.Full[X, x, p, flx].full
+            (transH (apH (E3.fromB X) endFB)
+                    (symH (EFu.fromBs X (x.1.1 X (idH X) (ptH X eT)) (cB.cop X (M.tvN X x) (M.mapP X x p)))))) ;
+    } ;
+
+    ceq : Id (CompAtP[GFam[a].famPath, G, E2.ExtT, eS, eT].CompAt) C4.extCompAt TR.compAt =
+      TR.CD.CompAt-ext C4.extCompAt TR.compAt (\ X x p -> P[X, x, p].copEq) ;
+
+    opaque ceq ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- transport along tyFull is ph
+
+  module TP = GEqLaws[a].TyEqPw[G, E2.ExtT, EFu.BF, EFu.PoB, EFu.H1B] ;
+  module TL = GEqLaws[a].TriL[G] ;
+
+  substSig (W : Ob) (o1 o2 : TOb G) (Q : Id (TOb G) o1 o2) (d : W0.Ix (G.ob W)) (b : W0.Ix (o1 W d))
+    : Id (TL.ED.EIo W o2) (subst (TOb G) (TL.ED.EIo W) o1 o2 Q (d, b)) (d, subst (TOb G) (\ o -> W0.Ix (o W d)) o1 o2 Q b) =
+    idJ (TOb G) o1 (\ o3 Q3 -> Id (TL.ED.EIo W o3) (subst (TOb G) (TL.ED.EIo W) o1 o3 Q3 (d, b)) (d, subst (TOb G) (\ o -> W0.Ix (o W d)) o1 o3 Q3 b))
+      (refl (d, b)) o2 Q ;
+
+  Hph (W : Ob) (d : W0.Ix (G.ob W)) (b : W0.Ix (E2.ExtT.tob W d))
+    : Id (PR.TyL[CL.resCtx, B].EI W) ((liftP G CL.resCtx B sec).nt W (TL.trE W E2.ExtT EFu.BF EFu.tyFull (d, b))) (sec.nt W d, ph W d b) =
+    apH ((liftP G CL.resCtx B sec).nt W)
+      (transH (TL.trE-tob W E2.ExtT EFu.BF EFu.tyFull TP.P (d, b))
+        (transH (substSig W E2.ExtT.tob EFu.BF.tob TP.P d b)
+                (apH {W0.Ix (EFu.BF.tob W d)} {TL.ED.EIo W EFu.BF.tob} (\ z -> (d, z)) (TP.substP W d b)))) ;
+
+  opaque substSig ; opaque Hph ;
+
+  ----------------------------------------------------------------------
+  -- the result
+
+  module Full (kA0 : LineFibP[GFam[a].famPath, G, A].FibAt e0) (kA1 : LineFibP[GFam[a].famPath, G, A].FibAt e1)
+    (kB0 : LineFibP[GFam[a].famPath, CL.resCtx, B].FibAt e0)
+    (kB1 : LineFibP[GFam[a].famPath, CL.resCtx, B].FibAt e1)
+    (kA0e : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, e0].TV.E, EndKit[GFam[a].famPath, G, A, e0].SFm.SF].KESI kA0)
+    (kA1e : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, e1].TV.E, EndKit[GFam[a].famPath, G, A, e1].SFm.SF].KESI kA1)
+    (kB0e : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, CL.resCtx, B, e0].TV.E, EndKit[GFam[a].famPath, CL.resCtx, B, e0].SFm.SF].KESI kB0)
+    (kB1e : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, CL.resCtx, B, e1].TV.E, EndKit[GFam[a].famPath, CL.resCtx, B, e1].SFm.SF].KESI kB1)
+    (eal : GEquiv[a].EquivOp CL.resCtx B (subTy CL.resCtx G A CL.inclR) al)
+    (keal : GCofEsi[a].PartialsEsi[GExt.ExtDef[G, A, psi].EA', GEquiv[a].HFib[CL.resCtx, B, subTy CL.resCtx G A CL.inclR, al].FibT].KESI eal)
+    (cB : GFibE[a].FE[CL.resCtx, B].Comp) (eB : GFibE[a].FE[CL.resCtx, B].ESIC cB)
+    (HB0 : Id (CompAtP[GFam[a].famPath, CL.resCtx, B, e0, e1].CompAt) CompAtP[GFam[a].famPath, CL.resCtx, B, e0, e1].FromFib[kB0].ca cB.1)
+    (HB1 : Id (CompAtP[GFam[a].famPath, CL.resCtx, B, e1, e0].CompAt) CompAtP[GFam[a].famPath, CL.resCtx, B, e1, e0].FromFib[kB1].ca cB.2) {
+    module EF = GExtFib.ExtFib[G, A, psi, B, al, kA0, kA1, kB0, kB1, kA0e, kA1e, kB0e, kB1e, eal, keal] ;
+    module D01 = Dir[e0, e1, kA0, kB0, kA1, eal, cB.1, HB0] ;
+    module D10 = Dir[e1, e0, kA1, kB1, kA1, eal, cB.2, HB1] ;
+    module TS = GTransferSub.TrSub[G, CL.resCtx, sec, B, cB] ;
+
+    P1 : Id ((T : PTy[G]) * TS.ClTy T) (E2.ExtT, (D01.TR.compAt, D10.TR.compAt)) (EFu.BF, TS.scomp) =
+      TS.trSub E2.ExtT EFu.tyFull ph ps ph-ps ps-ph PhN Hph ;
+
+    P2 : Id ((T : PTy[G]) * TS.ClTy T) (E2.ExtT, EF.extFib.2.1) (E2.ExtT, (D01.TR.compAt, D10.TR.compAt)) =
+      apH {TS.ClTy E2.ExtT} {(T : PTy[G]) * TS.ClTy T} (\ z -> (E2.ExtT, z))
+        (transH (apH {CompAtP[GFam[a].famPath, G, E2.ExtT, e0, e1].CompAt} {TS.ClTy E2.ExtT} (\ z -> (z, EF.extFib.2.1.2)) D01.ceq)
+                (apH {CompAtP[GFam[a].famPath, G, E2.ExtT, e1, e0].CompAt} {TS.ClTy E2.ExtT} (\ z -> (D01.TR.compAt, z)) D10.ceq)) ;
+
+    extFull : Id (GFibE[a].FibEL G) EF.extFib (GSubst[a].subFibEL G CL.resCtx sec (B, (cB, eB))) =
+      TS.fibEq eB E2.ExtT EF.extFib.2.1 EF.extFib.2.2 (transH P2 P1) ;
+
+    opaque P1 ; opaque P2 ; opaque extFull ;
+  } ;
+} ;

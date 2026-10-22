@@ -1,0 +1,16 @@
+-- DeltaElFib.seg (inside Classical.Cl): El of the universe of Delta
+-- (DeltaClassifier.DU, GUniv at the horn classifier) is fibrant: its horn
+-- filling operation (DElHorn.elFib, constructive, read off the classifier)
+-- gives the fibrancy structure FibEL (line composition with line ESI,
+-- both directions) by DeltaFibIff at level a+.  This is where the
+-- classical step enters the universe: through DeltaHornBox.decDeg only.
+
+level a ;
+open Base ;
+module DBm = DeltaBase[a] ;
+module DB = DBm.DB ;
+module DU = DeltaClassifier[a].DU ;
+
+elFibEL : DB.GFibE[a+].FibEL DU.UCtx = DeltaFibIff[a, a+].FI[DU.UCtx, DU.EGen].hornToFib DElHorn[a].elFib ;
+
+elFibEL-ty : Id (DB.GPre[a+].PS.PTy[DU.UCtx]) elFibEL.1 DU.EGen = refl DU.EGen ;

@@ -1,0 +1,109 @@
+-- GCompU1.seg (inside IvBase.Cn): the fibrancy of the universe from
+-- univalence (G7, cours6), part 1: the side data.  A line of codes l at W
+-- (a point of PU = pth UCtx) gives El along its ends over y W (FB at
+-- src d, FA at tgt d: GElC.ElC.Fam along the codes of l), and the
+-- transport along l from src d to tgt d, as level-a equivalence data:
+-- GTE16.TrU's universal data on EGen over PU (level a+), moved down along
+-- the codes of l (GTransferEq: TrMap, TrEq; the fibres are the same, so
+-- the fibre maps are the identity, as in GElC.ElF.Fam).
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+module L1 = GPre[a+].PS ;
+open GYon ;
+open Encode[a, a+] ;
+open Trees[a] ;
+open Arith[a] ;
+open GLine[a] ;
+
+module SD (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GFibE[a+].FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GFibE[a+].FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE)
+  (d : Bool) {
+  module UU = GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module EC = GElC.ElC[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE] ;
+  module TE = EC.TE ;
+  PU : L1.PCtx = GFam[a+].famPath.pth UU.UCtx ;
+  module TU = GTE16[a+].TrU[UU.UCtx, UU.EGen, cE, eE, d] ;
+  SBU : L1.PTy[PU] = TU.triU.1 ;
+  SAU : L1.PTy[PU] = TU.triU.2.1 ;
+  module TB0 = GPre[a+].TyL[PU, SBU] ;
+  module TA0 = GPre[a+].TyL[PU, SAU] ;
+
+  -- an element over PU is determined by its line and its value in E_EGen
+  tbEq (e : IPt) (V : Ob) (w w' : GPre[a+].TyL[PU, L1.subTy PU UU.UCtx UU.EGen (GFam[a+].famPath.pev UU.UCtx e)].EI V)
+    (Pz : Id (V1.Ix (PU.ob V)) w.1 w'.1)
+    (Q : Id (TE.EI V) ((GFam[a+].famPath.pev UU.UCtx e).nt V w.1, w.2) ((GFam[a+].famPath.pev UU.UCtx e).nt V w'.1, w'.2))
+    : Id (GPre[a+].TyL[PU, L1.subTy PU UU.UCtx UU.EGen (GFam[a+].famPath.pev UU.UCtx e)].EI V) w w' =
+    idJ (V1.Ix (PU.ob V)) w.1
+      (\ z2 P2 -> (b2 : V1.Ix (UU.EGen.tob V ((GFam[a+].famPath.pev UU.UCtx e).nt V z2)))
+         -> Id (TE.EI V) ((GFam[a+].famPath.pev UU.UCtx e).nt V w.1, w.2) ((GFam[a+].famPath.pev UU.UCtx e).nt V z2, b2)
+         -> Id (GPre[a+].TyL[PU, L1.subTy PU UU.UCtx UU.EGen (GFam[a+].famPath.pev UU.UCtx e)].EI V) w (z2, b2))
+      (\ b2 Q2 -> apH {V1.Ix (UU.EGen.tob V ((GFam[a+].famPath.pev UU.UCtx e).nt V w.1))} {GPre[a+].TyL[PU, L1.subTy PU UU.UCtx UU.EGen (GFam[a+].famPath.pev UU.UCtx e)].EI V}
+                    (\ z -> (w.1, z)) (TE.pr-inj V ((GFam[a+].famPath.pev UU.UCtx e).nt V w.1) w.2 b2 Q2))
+      w'.1 Pz w'.2 Q ;
+
+  opaque tbEq ;
+
+  ----------------------------------------------------------------------
+  -- a line of codes l at W
+
+  module Ln (W : Ob) (l : V1.Ix (PU.ob W)) {
+    sg (V : Ob) (g : Hom V W) : V1.Ix (PU.ob V) = PU.act V W g l ;
+
+    sg-nat (V' V : Ob) (h : Hom V' V) (g : Hom V W) : Id (V1.Ix (PU.ob V')) (sg V' (compH V' V W g h)) (PU.act V' V h (sg V g)) =
+      symH (GPre[a+].PshL[PU].actC V' V W g h l) ;
+
+    -- the codes of l at e, along y W
+    cod (e : IPt) (V : Ob) (g : Hom V W) : UU.U0 V = (GFam[a+].famPath.pev UU.UCtx e).nt V (sg V g) ;
+
+    codN (e : IPt) (V' V : Ob) (h : Hom V' V) (g : Hom V W) : Id (UU.U0 V') (cod e V' (compH V' V W g h)) (UU.uAct V' V h (cod e V g)) =
+      transH (apH ((GFam[a+].famPath.pev UU.UCtx e).nt V') (sg-nat V' V h g)) ((GFam[a+].famPath.pev UU.UCtx e).nt-nat V' V h (sg V g)) ;
+
+    module FB = EC.Fam[yP W, cod (src d), codN (src d)] ;
+    module FA = EC.Fam[yP W, cod (tgt d), codN (tgt d)] ;
+
+    PhNB (V V' : Ob) (g : Hom V V') (w : FB.TB.EI V')
+      : Id (TB0.EI V) (sg V (FB.TB.E.act V V' g w).1, (FB.TB.E.act V V' g w).2) (TB0.E.act V V' g (sg V' w.1, w.2)) =
+      tbEq (src d) V (sg V (FB.TB.E.act V V' g w).1, (FB.TB.E.act V V' g w).2) (TB0.E.act V V' g (sg V' w.1, w.2))
+        (sg-nat V V' g w.1)
+        (transH (FB.PhN V V' g w)
+                (symH ((L1.liftP PU UU.UCtx UU.EGen (GFam[a+].famPath.pev UU.UCtx (src d))).nt-nat V V' g (sg V' w.1, w.2)))) ;
+
+    PhNA (V V' : Ob) (g : Hom V V') (w : FA.TB.EI V')
+      : Id (TA0.EI V) (sg V (FA.TB.E.act V V' g w).1, (FA.TB.E.act V V' g w).2) (TA0.E.act V V' g (sg V' w.1, w.2)) =
+      tbEq (tgt d) V (sg V (FA.TB.E.act V V' g w).1, (FA.TB.E.act V V' g w).2) (TA0.E.act V V' g (sg V' w.1, w.2))
+        (sg-nat V V' g w.1)
+        (transH (FA.PhN V V' g w)
+                (symH ((L1.liftP PU UU.UCtx UU.EGen (GFam[a+].famPath.pev UU.UCtx (tgt d))).nt-nat V V' g (sg V' w.1, w.2)))) ;
+
+    opaque PhNB ; opaque PhNA ;
+
+    -- the transport along l, moved down
+    module TM = GTransferEq[a+, a, a+].TrMap[yP W, FB.ElTy, FA.ElTy, PU, SBU, SAU, TU.triU.2.2, sg,
+      \ V g b -> b, \ V g b -> b, \ V g b -> b, \ V g b -> refl b, \ V g b -> refl b, PhNA, PhNB] ;
+
+    al : PMap[yP W, FB.ElTy, FA.ElTy] = TM.trMap ;
+
+    module TQ = GTransferEq[a+, a, a+].TrEq[yP W, FB.ElTy, FA.ElTy, al, PU, SBU, SAU, TU.triU.2.2, sg, sg-nat,
+      \ V g b -> b, \ V g b -> b, \ V g b -> refl b, \ V g b -> refl b,
+      \ V g b -> b, \ V g b -> b, \ V g b -> refl b, \ V g b -> refl b,
+      PhNA, PhNB, TU.eqU.1, TM.alSq] ;
+
+    -- the side data: El at src d, El at tgt d, transport, an equivalence
+    dat : (u : GEqExt[a].EqDat[yP W].Tri) * GEqExt[a].EqDat[yP W].EqOn u =
+      ((FB.ElTy, (FA.ElTy, al)), (TQ.trEq, TQ.trKesi TU.eqU.2)) ;
+  } ;
+} ;

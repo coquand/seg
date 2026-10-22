@@ -1,0 +1,280 @@
+-- GExtNat2.seg (inside IvBase.FaU, any base): Theorem 7 along a substitution,
+-- steps B2-B3 (delta and the A-filling, GExtComp2), as GExtComp4.Un with
+-- the restriction h replaced by the transfer along (s , Phi).
+--
+-- Hypotheses HB (GExtNat1) and HA: the fillers of B[sR] and A[s] are the
+-- moved fillers of B and A (for El families: GElC.ElF.FSub).
+--   dlEq     delta of alpha[s] is delta of the moved problem (congruence of
+--            forallU in the generator lines: psi[s] is psi along s)
+--   fbS      on delta, the lifted B-filler is the B-filler of the moved
+--            problem (B1)
+--   xAeq / tsEqA   the unglued point / sides move (extPhi)
+--   FAv-S    the A-filler of alpha[s], read in A, is the A-filler of the
+--            moved problem (ONE congruence: kop-cong of kAS)
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+
+module N2 (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D'])
+  (fullS : (X : Ob) (d : W0.Ix (D'.ob X)) -> Id Bool (GP.CofL[D', psi'].full X d) (GP.CofL[G, psi].full X (s.nt X d)))
+  (eS : IPt)
+  (kAS : LineFibP[GFam[a].famPath, G, A].FibAt eS)
+  (kBS : LineFibP[GFam[a].famPath, GP.CofL[G, psi].resCtx, B].FibAt eS)
+  (kAS' : LineFibP[GFam[a].famPath, D', subTy D' G A s].FibAt eS)
+  (kBS' : LineFibP[GFam[a].famPath, GP.CofL[D', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].psi'].resCtx,
+                   GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].B'].FibAt eS)
+  (kAe : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, eS].TV.E, EndKit[GFam[a].famPath, G, A, eS].SFm.SF].KESI kAS) {
+  module N1 = GExtNat1.B1[G, A, psi, B, al, D', s, psi', fullS, eS, kBS, kBS'] ;
+  module EM = N1.EM ;
+  module ES = N1.ES ;
+  module TXM = N1.TXM ;
+  module C1 = N1.C1 ;
+  module C1' = N1.C1' ;
+  module C2 = GExtComp2[a].C2[G, A, psi, B, al, eS, kAS, kBS] ;
+  module C2' = GExtComp2[a].C2[D', ES.A', ES.psi', ES.B', ES.al', eS, kAS', kBS'] ;
+  module MA = GTransfer[a, a, a].TrM[D', ES.A', G, A, s.nt, s.nt-nat,
+      \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, (liftP D' G A s).nt-nat, eS] ;
+  module FM = GFam[a] ;
+
+  -- the hypothesis on A
+  HATy : U a = (X : Ob) (x : MA.CD.TV.EI X) (p : MA.CD.PT.Partial[X, x])
+    -> Id (MA.CD0.TS.EI X) (MA.tsN X (x, kAS'.kop X x p)) (MA.tvN X x, kAS.kop X (MA.tvN X x) (MA.mapP X x p)) ;
+
+  -- the hypothesis on delta: the generators of psi' along x' are those of
+  -- psi along the moved line, up to an inserted empty one (GensIns)
+  HdTy : U a+ = (X : Ob) (x' : C1'.KX.TV.EI X) (p' : C1'.KX.PT.Partial[X, x'])
+    -> GensIns X (forallUn ES.CL.r) (C2.Pb[X, TXM.tvN X x', TXM.mapP X x' p'].dl) (forallUn ES.CL'.r) (C2'.Pb[X, x', p'].dl) ;
+
+  ----------------------------------------------------------------------
+  -- the unglued points and sides move
+
+  xAeq (X : Ob) (x' : C1'.KX.TV.EI X) : Id (C2.KA.TV.EI X) (MA.tvN X (C2'.ML.tvM X x')) (C2.ML.tvM X (TXM.tvN X x')) =
+    C2.KA.tv-eq X (MA.tvN X (C2'.ML.tvM X x')) (C2.ML.tvM X (TXM.tvN X x'))
+      (C1.FG.fam-eq X (MA.tvN X (C2'.ML.tvM X x')).1 (C2.ML.tvM X (TXM.tvN X x')).1 (\ W f j -> refl (s.nt W (x'.1.1 W f j))))
+      (transH (apH (MA.PhE X) (C2'.ML.tvM-E X x'))
+        (transH (symH (EM.extPhi X (C1'.KX.endE X x'))) (symH (C2.ML.tvM-E X (TXM.tvN X x'))))) ;
+
+  tsEqA (W : Ob) (u' : C1'.KX.TS.EI W) : Id (C2.KA.TS.EI W) (MA.tsN W (C2'.ML.tsM W u')) (C2.ML.tsM W (TXM.tsN W u')) =
+    C2.LA.ts-ext W (MA.tsN W (C2'.ML.tsM W u')) (C2.ML.tsM W (TXM.tsN W u'))
+      (transH MA.TSN[W, C2'.ML.tsM W u'].res-pt
+        (transH (apH (MA.tvN W) (C2'.ML.tsM-pt W u'))
+          (transH (xAeq W u'.1)
+            (symH (transH (C2.ML.tsM-pt W (TXM.tsN W u')) (apH (C2.ML.tvM W) TXM.TSN[W, u'].res-pt))))))
+      (\ V g j -> transH (MA.TSN[W, C2'.ML.tsM W u'].res-lev V g j)
+         (transH (apH (MA.PhE V) (C2'.ML.tsM-lev W u' V g j))
+           (transH (symH (EM.extPhi V (C1'.lvX W u' V g j)))
+             (transH (apH (EM.E4.extE V) (symH (TXM.TSN[W, u'].res-lev V g j)))
+                     (symH (C2.ML.tsM-lev W (TXM.tsN W u') V g j)))))) ;
+
+  opaque xAeq ; opaque tsEqA ;
+
+  module Sx (HB : N1.HBTy) (HA : HATy) (Hd : HdTy) (X : Ob) (x' : C1'.KX.TV.EI X) (p' : C1'.KX.PT.Partial[X, x']) {
+    xM : C1.KX.TV.EI X = TXM.tvN X x' ;
+    pM : C1.KX.PT.Partial[X, xM] = TXM.mapP X x' p' ;
+
+    module PX' = C2'.Pb[X, x', p'] ;
+    module PX = C2.Pb[X, xM, pM] ;
+
+    -- fullness along the move
+    flM (V : Ob) (y' : C1'.KX.TV.EI V) (fl' : C1'.FlTy V y') : C1.FlTy V (TXM.tvN V y') =
+      \ W f j -> subst Bool (\ c -> IsT c) (ES.CL'.full W (y'.1.1 W f j)) (ES.CL.full W (s.nt W (y'.1.1 W f j))) (ES.fullS W (y'.1.1 W f j)) (fl' W f j) ;
+
+    -- on delta, the lifted B-filler is the B-filler of the moved problem
+    fbS (d' : Fin (forallUn ES.CL'.r)) (d : Fin (forallUn ES.CL.r)) (W : Ob) (f : Hom W X) (i : Lands W X (PX'.dl d') f) (i' : Lands W X (PX.dl d) f)
+      (V : Ob) (g : Hom V W) (j : Hom V Iv)
+      : Id (EM.PS.TB.EI V) (EM.PS.LB.mV V (PX'.BW[d', W, f, i].BB.FBv V g j)) (PX.BW[d, W, f, i'].BB.FBv V g j) =
+      transH (N1.Sx[HB, W, C1'.KX.TV.E.act W X f x', C1'.KX.PT.restrictP W X f x' p', PX'.flAt W f (PX'.hOf d' W f i),
+                    flM W (C1'.KX.TV.E.act W X f x') (PX'.flAt W f (PX'.hOf d' W f i))].FBv-S V g j)
+        (symH (C1.FBv-cong W (C1.KX.TV.E.act W X f xM) (TXM.tvN W (C1'.KX.TV.E.act W X f x')) (symH (TXM.tvN-act W X f x'))
+                 (C1.KX.PT.restrictP W X f xM pM) (TXM.mapP W (C1'.KX.TV.E.act W X f x') (C1'.KX.PT.restrictP W X f x' p'))
+                 (TXM.mapP-restr W X f x' p')
+                 (PX.flAt W f (PX.hOf d W f i')) (flM W (C1'.KX.TV.E.act W X f x') (PX'.flAt W f (PX'.hOf d' W f i))) V g j)) ;
+
+    ------------------------------------------------------------------
+    -- the joined partial line moves
+
+    svD (d' : Fin (forallUn ES.CL'.r)) (d : Fin (forallUn ES.CL.r)) (W : Ob) (f : Hom W X) (i : Lands W X (PX'.dl d') f) (i' : Lands W X (PX.dl d) f)
+      : Id (C2.KA.TS.EI W) (MA.tsN W (PX'.SD[d'].LS.sv W f i)) (PX.SD[d].LS.sv W f i') =
+      C2.LA.ts-ext W (MA.tsN W (PX'.SD[d'].LS.sv W f i)) (PX.SD[d].LS.sv W f i')
+        (transH MA.TSN[W, PX'.SD[d'].LS.sv W f i].res-pt
+          (transH (apH (MA.tvN W) (PX'.SD[d'].LS.sv-pt W f i))
+            (transH (MA.tvN-act W X f PX'.xA)
+              (transH (apH (C2.KA.TV.E.act W X f) (xAeq X x')) (symH (PX.SD[d].LS.sv-pt W f i'))))))
+        (\ V g j -> transH (MA.TSN[W, PX'.SD[d'].LS.sv W f i].res-lev V g j)
+           (transH (apH (MA.PhE V) (PX'.SD[d'].LS.sv-lev W f i V g j))
+             (transH (symH (EM.alPhi V (PX'.BW[d', W, f, i].BB.FBv V g j)))
+               (transH (apH (\ z -> ES.ED.toEA V (al.mE V z)) (fbS d' d W f i i' V g j))
+                       (symH (PX.SD[d].LS.sv-lev W f i' V g j)))))) ;
+
+    ------------------------------------------------------------------
+    -- the joined partial line, moved: a Join over G of the moved sides
+
+    S1m (l : Fin p'.pr) : C2.KA.PT.PSide[X, MA.tvN X PX'.xA] = MA.mside X PX'.xA (PX'.pA.ps l) ;
+    S2m (d' : Fin (forallUn ES.CL'.r)) : C2.KA.PT.PSide[X, MA.tvN X PX'.xA] = MA.mside X PX'.xA PX'.SD[d'].LS.side ;
+
+    c11m : C2.KA.PT.PCsTy X (MA.tvN X PX'.xA) p'.pr S1m = \ l l2 W f i i' -> apH (MA.tsN W) (PX'.pA.pcs l l2 W f i i') ;
+
+    c12m (l : Fin p'.pr) (d' : Fin (forallUn ES.CL'.r)) (W : Ob) (f : Hom W X) (i : Lands W X (S1m l).pQ f) (i' : Lands W X (S2m d').pQ f)
+      : Id (C2.KA.TS.EI W) ((S1m l).pv W f i) ((S2m d').pv W f i') = apH (MA.tsN W) (PX'.c12 l d' W f i i') ;
+
+    c22m : C2.KA.PT.PCsTy X (MA.tvN X PX'.xA) (forallUn ES.CL'.r) S2m = \ d' d2 W f i i' -> apH (MA.tsN W) (PX'.c22 d' d2 W f i i') ;
+
+    module Jm = C2.KA.PT.Join[X, MA.tvN X PX'.xA, p'.pr, forallUn ES.CL'.r, S1m, S2m, c11m, c12m, c22m] ;
+
+    mAt : (sd : Plus (Fin p'.pr) (Fin (forallUn ES.CL'.r)))
+      -> Id (C2.KA.PT.PSide[X, MA.tvN X PX'.xA]) (MA.mside X PX'.xA (PX'.J.sideAt sd)) (Jm.sideAt sd) = split {
+      inl l -> refl (S1m l) ;
+      inr d' -> refl (S2m d') } ;
+
+    pvSide (s1 s2 : C2.KA.PT.PSide[X, MA.tvN X PX'.xA]) (E : Id (C2.KA.PT.PSide[X, MA.tvN X PX'.xA]) s1 s2)
+      : C2.KA.PT.PvEq X s1.pQ s2.pQ s1.pv s2.pv =
+      idJ (C2.KA.PT.PSide[X, MA.tvN X PX'.xA]) s1 (\ s3 E3 -> C2.KA.PT.PvEq X s1.pQ s3.pQ s1.pv s3.pv)
+        (\ W f i i' -> C2.KA.PT.pv-irr X (MA.tvN X PX'.xA) s1 W f i i') s2 E ;
+
+    mpJ : Id (C2.KA.PT.Partial[X, MA.tvN X PX'.xA]) (MA.mapP X PX'.xA PX'.J.part) Jm.part =
+      C2.KA.PT.partExtH X (MA.tvN X PX'.xA) (MA.tvN X PX'.xA) (refl (MA.tvN X PX'.xA)) (MA.mapP X PX'.xA PX'.J.part) Jm.part (refl (plus p'.pr (forallUn ES.CL'.r)))
+        (\ l -> apH (\ z -> z.pQ) (mAt (splitF p'.pr (forallUn ES.CL'.r) l)))
+        (\ l -> pvSide (MA.mside X PX'.xA (PX'.J.part.ps l)) (Jm.part.ps l) (mAt (splitF p'.pr (forallUn ES.CL'.r) l))) ;
+
+    -- the first family moves (the sides of p')
+    eVL (l : Fin p'.pr) (W : Ob) (f : Hom W X) (i : Lands W X (S1m l).pQ f) (i' : Lands W X (PX.pA.ps l).pQ f)
+      : Id (C2.KA.TS.EI W) ((S1m l).pv W f i) ((PX.pA.ps l).pv W f i') =
+      transH (apH (\ u -> MA.tsN W (C2'.ML.tsM W u)) (C1'.KX.PT.pv-irr X x' (p'.ps l) W f i i')) (tsEqA W ((p'.ps l).pv W f i')) ;
+
+    -- index paths in Fin
+    finAt (r' : Nat) (m' : Fin r') (n : Nat) (P : Id Nat m'.1 n) : Fin r' = (n, subst Nat (\ z -> IsT (ltb z r')) m'.1 n P m'.2) ;
+
+    -- the A-filler of the moved problem, by cases on delta
+    module JE = GCofEsi2[a].PartialsEsi2[C2.KA.TV.E, C2.KA.SFm.SF] ;
+
+    eQRm (m : Fin (forallUn ES.CL.r)) (m' : Fin (forallUn ES.CL'.r)) (n : Nat) (Pm : Id Nat m'.1 n)
+      (E : (h' : IsT (ltb n (forallUn ES.CL'.r))) -> Id (Phi X) (PX'.dl (n, h')) (PX.dl m))
+      : Id (Phi X) (S2m m').pQ (PX.SD[m].LS.side).pQ =
+      transH (apH PX'.dl (fin-eq (forallUn ES.CL'.r) m' (finAt (forallUn ES.CL'.r) m' n Pm) Pm)) (E (finAt (forallUn ES.CL'.r) m' n Pm).2) ;
+
+    fillCase : GensIns X (forallUn ES.CL.r) PX.dl (forallUn ES.CL'.r) PX'.dl
+      -> Id (C2.KA.TS.EI X) (MA.tvN X PX'.xA, kAS.kop X (MA.tvN X PX'.xA) Jm.part) (PX.xA, kAS.kop X PX.xA PX.J.part) = split {
+      inl w -> C2.KA.PT.kop-cong kAS X (MA.tvN X PX'.xA) PX.xA (xAeq X x') Jm.part PX.J.part
+        (JE.JE[X, PX.xA, MA.tvN X PX'.xA, xAeq X x', p'.pr, forallUn ES.CL.r, \ l -> PX.pA.ps l, \ d -> PX.SD[d].LS.side,
+               PX.pA.pcs, PX.c12, PX.c22, S1m, c11m, \ l -> refl (p'.ps l).pQ, eVL].joinEq2 (forallUn ES.CL'.r) (symH w.1)
+           S2m c12m c22m
+           (\ m m' Pm -> eQRm m m' m.1 Pm (\ h' -> w.2 m.1 m.2 h'))
+           (\ m m' Pm W f i i' -> svD m' m W f i i')) ;
+      inr w -> JE.PE.kesiH kAS kAe X PX.xA (MA.tvN X PX'.xA) (xAeq X x') (plus p'.pr w.1) PX.J.part Jm.part
+        (JE.joinIns2 X PX.xA (MA.tvN X PX'.xA) w.1 p'.pr (forallUn ES.CL.r) w.2.1 (\ l -> PX.pA.ps l) (\ d -> PX.SD[d].LS.side)
+           PX.pA.pcs PX.c12 PX.c22 S1m c11m (\ l -> refl (p'.ps l).pQ) eVL (forallUn ES.CL'.r) (symH w.2.2.1)
+           S2m c12m c22m
+           (\ m' Pm -> transH (apH PX'.dl (fin-eq (forallUn ES.CL'.r) m' (finAt (forallUn ES.CL'.r) m' w.1 Pm) Pm))
+                               (w.2.2.2.1 (finAt (forallUn ES.CL'.r) m' w.1 Pm).2))
+           (\ m m' Pm -> eQRm m m' (skipN w.1 m.1) Pm (\ h' -> w.2.2.2.2 m.1 m.2 h'))
+           (\ m m' Pm W f i i' -> svD m' m W f i i')) } ;
+
+    fillA : Id (C2.KA.TS.EI X) (MA.tsN X (PX'.xA, PX'.fill)) (PX.xA, PX.fill) =
+      transH (HA X PX'.xA PX'.J.part)
+        (transH (apH {C2.KA.PT.Partial[X, MA.tvN X PX'.xA]} {C2.KA.TS.EI X} (\ q -> (MA.tvN X PX'.xA, kAS.kop X (MA.tvN X PX'.xA) q)) mpJ)
+                (fillCase (Hd X x' p'))) ;
+
+    -- the congruence of B2-B3
+    FAv-S (V : Ob) (g : Hom V X) (j : Hom V Iv) : Id (EM.TA.EI V) (MA.PhE V (PX'.FAv V g j)) (PX.FAv V g j) =
+      transH (symH (MA.TSN[X, (PX'.xA, PX'.fill)].res-lev V g j))
+             (apH (\ u -> FM.famConn.levA G A X (C2.KA.lineL X u) V g j) fillA) ;
+
+    opaque fbS ; opaque svD ; opaque mpJ ; opaque eVL ; opaque fillA ; opaque FAv-S ;
+  } ;
+} ;
+
+------------------------------------------------------------------------
+-- the hypothesis on delta when psi' is psi along s generator-wise (GQ):
+-- the same generators, so the same delta (inl)
+
+module NQ (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (cQ2 : (X : Ob) (d : W0.Ix (D'.ob X)) (l : Fin psi.cr) -> Phi X)
+  (cnat2 : (Y X : Ob) (h : Hom Y X) (d : W0.Ix (D'.ob X)) (l : Fin psi.cr) -> Id (Phi Y) (cQ2 Y (D'.act Y X h d) l) (pre Y X h (cQ2 X d l)))
+  (GQ : (X : Ob) (d : W0.Ix (D'.ob X)) (l : Fin psi.cr) -> Id (Phi X) (cQ2 X d l) (psi.cQ X (s.nt X d) l))
+  (eS : IPt)
+  (kAS : LineFibP[GFam[a].famPath, G, A].FibAt eS)
+  (kBS : LineFibP[GFam[a].famPath, GP.CofL[G, psi].resCtx, B].FibAt eS)
+  (kAS' : LineFibP[GFam[a].famPath, D', subTy D' G A s].FibAt eS)
+  (kBS' : LineFibP[GFam[a].famPath, GP.CofL[D', GExtSub2.ExtSub[G, A, psi, B, al, D', s, GExtSub2.PQ[G, psi, D', s, cQ2, cnat2, GQ].psi', GExtSub2.PQ[G, psi, D', s, cQ2, cnat2, GQ].fullS].psi'].resCtx,
+                   GExtSub2.ExtSub[G, A, psi, B, al, D', s, GExtSub2.PQ[G, psi, D', s, cQ2, cnat2, GQ].psi', GExtSub2.PQ[G, psi, D', s, cQ2, cnat2, GQ].fullS].B'].FibAt eS)
+  (kAe : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, eS].TV.E, EndKit[GFam[a].famPath, G, A, eS].SFm.SF].KESI kAS) {
+  module N = N2[G, A, psi, B, al, D', s, GExtSub2.PQ[G, psi, D', s, cQ2, cnat2, GQ].psi', GExtSub2.PQ[G, psi, D', s, cQ2, cnat2, GQ].fullS,
+    eS, kAS, kBS, kAS', kBS', kAe] ;
+
+  module At (X : Ob) (x' : N.C1'.KX.TV.EI X) (p' : N.C1'.KX.PT.Partial[X, x']) {
+    module PX' = N.C2'.Pb[X, x', p'] ;
+    module PX = N.C2.Pb[X, N.TXM.tvN X x', N.TXM.mapP X x' p'] ;
+
+    LkEq (k : Fin N.ES.CL.r) : Id (PhiL X) (PX'.Lk k) (PX.Lk k) =
+      phiL-ext X (PX'.Lk k) (PX.Lk k) (\ W f j -> GQ W (x'.1.1 W f j) k) ;
+
+    dlEq (d : Fin (forallUn N.ES.CL.r)) : Id (Phi X) (PX'.dl d) (PX.dl d) =
+      apH (\ Ls -> forallU X N.ES.CL.r Ls d) (Axioms[a+].FunExtLemmas[fe @(a+)].funext (Fin N.ES.CL.r) (\ k -> PhiL X) PX'.Lk PX.Lk LkEq) ;
+
+    hd : GensIns X (forallUn N.ES.CL.r) PX.dl (forallUn N.ES.CL'.r) PX'.dl =
+      inl (refl (forallUn N.ES.CL.r), \ n h h' -> transH (apH PX'.dl (fin-eq (forallUn N.ES.CL.r) (n, h') (n, h) (refl n))) (dlEq (n, h))) ;
+  } ;
+
+  hd : N.HdTy = \ X x' p' -> At[X, x', p'].hd ;
+} ;
+
+------------------------------------------------------------------------
+-- the hypothesis on delta when psi' is psi along s with ONE EMPTY
+-- generator inserted at k (GCofIns.InsC): forallU-ins (inr, or inl on a
+-- base whose delta is one sieve), along the length path insc-r
+
+GensJTy (X : Ob) (r j : Nat) (Ls : Fin r -> PhiL X) (r' : Nat) : U a+ =
+  (L' : Fin r' -> PhiL X)
+  (eE : (m' : Fin r') -> Id Nat m'.1 j -> (W : Ob) (f : Hom W X) (i : Hom W Iv) -> Id (Phi W) ((L' m').1 W f i) (emptyS W))
+  (eQ : (n : Nat) (h : IsT (ltb n r)) (m' : Fin r') -> Id Nat m'.1 (skipN j n) -> Id (PhiL X) (L' m') (Ls (n, h)))
+  -> GensIns X (forallUn r) (forallU X r Ls) (forallUn r') (forallU X r' L') ;
+
+gensJ (X : Ob) (r j : Nat) (hj : IsT (leb j r)) (Ls : Fin r -> PhiL X) (r' : Nat) (e : Id Nat (suc r) r') : GensJTy X r j Ls r' =
+  idJ Nat (suc r) (\ n E -> GensJTy X r j Ls n)
+    (\ L' eE eQ -> forallU-ins X r j hj Ls L' (\ h W f i -> eE (j, h) (refl j) W f i) (\ n h h' -> eQ n h (skipN j n, h') (refl (skipN j n))))
+    r' e ;
+
+module NI (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D']) (k : Nat) (ins : GCofIns.InsC[G, psi, D', s, psi', k])
+  (eS : IPt)
+  (kAS : LineFibP[GFam[a].famPath, G, A].FibAt eS)
+  (kBS : LineFibP[GFam[a].famPath, GP.CofL[G, psi].resCtx, B].FibAt eS)
+  (kAS' : LineFibP[GFam[a].famPath, D', subTy D' G A s].FibAt eS)
+  (kBS' : LineFibP[GFam[a].famPath, GP.CofL[D', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', GCofIns.fullS-ins G psi D' s psi' k ins].psi'].resCtx,
+                   GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', GCofIns.fullS-ins G psi D' s psi' k ins].B'].FibAt eS)
+  (kAe : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, eS].TV.E, EndKit[GFam[a].famPath, G, A, eS].SFm.SF].KESI kAS) {
+  module N = N2[G, A, psi, B, al, D', s, psi', GCofIns.fullS-ins G psi D' s psi' k ins, eS, kAS, kBS, kAS', kBS', kAe] ;
+
+  module At (X : Ob) (x' : N.C1'.KX.TV.EI X) (p' : N.C1'.KX.PT.Partial[X, x']) {
+    module PX' = N.C2'.Pb[X, x', p'] ;
+    module PX = N.C2.Pb[X, N.TXM.tvN X x', N.TXM.mapP X x' p'] ;
+
+    bnd (m' : Fin psi'.cr) (n : Nat) (P : Id Nat m'.1 n) : Fin psi'.cr = (n, substH (\ z -> IsT (ltb z psi'.cr)) P m'.2) ;
+
+    eE (m' : Fin psi'.cr) (P : Id Nat m'.1 k) (W : Ob) (f : Hom W X) (i : Hom W Iv) : Id (Phi W) ((PX'.Lk m').1 W f i) (emptyS W) =
+      transH (apH (\ z -> psi'.cQ W (x'.1.1 W f i) z) (fin-eq psi'.cr m' (bnd m' k P) P))
+             (ins.insc-e W (x'.1.1 W f i) (bnd m' k P).2) ;
+
+    eQ (n : Nat) (h : IsT (ltb n psi.cr)) (m' : Fin psi'.cr) (P : Id Nat m'.1 (skipN k n)) : Id (PhiL X) (PX'.Lk m') (PX.Lk (n, h)) =
+      phiL-ext X (PX'.Lk m') (PX.Lk (n, h)) (\ W f j ->
+        transH (apH (\ z -> psi'.cQ W (x'.1.1 W f j) z) (fin-eq psi'.cr m' (bnd m' (skipN k n) P) P))
+               (ins.insc-Q W (x'.1.1 W f j) n h (bnd m' (skipN k n) P).2)) ;
+
+    hd : GensIns X (forallUn N.ES.CL.r) PX.dl (forallUn N.ES.CL'.r) PX'.dl =
+      gensJ X psi.cr k ins.insc-k PX.Lk psi'.cr (symH ins.insc-r) PX'.Lk eE eQ ;
+  } ;
+
+  hd : N.HdTy = \ X x' p' -> At[X, x', p'].hd ;
+} ;

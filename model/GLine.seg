@@ -1,0 +1,393 @@
+-- GLine.seg: fibrancy in line form over any base (IvBase): the generic
+-- home of FibTriv's SFib / TrivFib / PathStr / LineFibP / CompAtP and of
+-- Equiv's PMap (CYLINDER.md section 4).  A path structure P gives lines
+-- (pth, pthTy) with evaluation at the end points (pev, pevA); A is fibrant
+-- at e when pevA e is a trivial fibration (uniform extension, GCofib).
+
+level l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+open Axioms[l+].FunExtLemmas[fe @(l+)] ;
+module W0 = V[l] ;
+open Trees[a] ;
+open Arith[a] ;
+
+  module GPR = GPre[l] ;
+  open GPR.PS ;
+  module GCF = GCofib[l] ;
+
+  module PMap (D : PCtx) (B A : PTy[D]) {
+    mE (X : Ob) (w : W0.Ix ((extP D B).ob X)) : W0.Ix ((extP D A).ob X) ;
+    mpt (X : Ob) (w : W0.Ix ((extP D B).ob X)) : Id (W0.Ix (D.ob X)) (mE X w).1 w.1 ;
+    mnat (Y X : Ob) (h : Hom Y X) (w : W0.Ix ((extP D B).ob X))
+      : Id (W0.Ix ((extP D A).ob Y)) (mE Y ((extP D B).act Y X h w)) ((extP D A).act Y X h (mE X w)) ;
+  } ;
+
+  module SFib (D : PCtx) (B A : PTy[D]) (al : PMap[D, B, A]) {
+    module TA = GPR.TyL[D, A] ;
+    module TB = GPR.TyL[D, B] ;
+
+    EA : PCtx = TA.E ;
+    EB : PCtx = TB.E ;
+
+    sfOb (X : Ob) (w : TA.EI X) : W0.V = W0.SigV (B.tob X w.1) (\ b -> W0.IdV (EA.ob X) (al.mE X (w.1, b)) w) ;
+
+    -- al commutes with the action, read through the point of the fibre
+    sfEq (J I : Ob) (f : Hom J I) (w : TA.EI I) (w' : TA.EI J) (e : Id (TA.EI J) (EA.act J I f w) w')
+      (u : W0.Ix (sfOb I w))
+      : Id (TA.EI J) (al.mE J (w'.1, B.tact J I f w.1 w'.1 (apH (\ z -> z.1) e) u.1)) w' =
+      calc (TA.EI J) {
+          al.mE J (w'.1, B.tact J I f w.1 w'.1 (apH (\ z -> z.1) e) u.1)
+        =< apH (al.mE J) (symH (TB.pr-tact J I f w.1 w'.1 (apH (\ z -> z.1) e) u.1)) >
+          al.mE J (EB.act J I f (w.1, u.1))
+        =< al.mnat J I f (w.1, u.1) >
+          EA.act J I f (al.mE I (w.1, u.1))
+        =< apH (EA.act J I f) u.2 >
+          EA.act J I f w
+        =< e >
+          w' } ;
+
+    sfAct : TactTy EA sfOb = \ J I f w w' e u ->
+      (B.tact J I f w.1 w'.1 (apH (\ z -> z.1) e) u.1, sfEq J I f w w' e u) ;
+
+    -- elements of a fibre are determined by their B component
+    sf-eq (X : Ob) (w : TA.EI X) (u u' : W0.Ix (sfOb X w)) (P : Id (TB.T X w.1) u.1 u'.1) : Id (W0.Ix (sfOb X w)) u u' =
+      idJ (TB.T X w.1) u.1
+        (\ b2 E2 -> (q2 : Id (TA.EI X) (al.mE X (w.1, b2)) w) -> Id (W0.Ix (sfOb X w)) u (b2, q2))
+        (\ q2 -> apH {Id (TA.EI X) (al.mE X (w.1, u.1)) w} {W0.Ix (sfOb X w)} (\ z -> (u.1, z))
+                   (W0.isSetIx (EA.ob X) (al.mE X (w.1, u.1)) w u.2 q2))
+        u'.1 P u'.2 ;
+
+    sfId : IdLaw EA sfOb sfAct = \ I w e u ->
+      sf-eq I w (sfAct I I (idH I) w w e u) u (B.tact-id I w.1 (apH (\ z -> z.1) e) u.1) ;
+
+    sfO : OLaw EA sfOb sfAct = \ K J I f g w w' w'' e1 e2 e3 u ->
+      sf-eq K w'' (sfAct K I (compH K J I f g) w w'' e3 u) (sfAct K J g w' w'' e2 (sfAct J I f w w' e1 u))
+        (B.tact-o K J I f g w.1 w'.1 w''.1 (apH (\ z -> z.1) e1) (apH (\ z -> z.1) e2) (apH (\ z -> z.1) e3) u.1) ;
+
+    SF : PTy[EA] = (mkTy EA sfOb sfAct sfId sfO) ;
+  } ;
+
+  -- a trivial fibration structure on al: uniform extension in its strict fibres
+  TrivFib (D : PCtx) (B A : PTy[D]) (al : PMap[D, B, A]) : U l+ = GCF.Partials[extP D A, SFib[D, B, A, al].SF].ContrOp ;
+
+  ------------------------------------------------------------------------
+  -- Evaluation of lines at an end point, and fibrancy
+
+  ------------------------------------------------------------------------
+  -- The path structure as an interface (plan step 2): what fibrancy uses of
+  -- the path object.  Posets: GI(X) = G(X * Iv) (PathObj, FibTriv.posetPath).
+  -- Simplicial sets: GI(X) = the natural families on y X * Delta[1].
+
+  module PathStr {
+    pth (G : PCtx) : PCtx ;
+    pev (G : PCtx) (e : IPt) : PSub[pth G, G] ;
+    pthTy (G : PCtx) (A : PTy[G]) : PTy[pth G] ;
+    -- evaluation of lines at an end point
+    pevA (G : PCtx) (A : PTy[G]) (e : IPt) : PMap[pth G, pthTy G A, subTy (pth G) G A (pev G e)] ;
+  } ;
+
+  -- fibrancy for any path structure: evaluation of lines is a trivial fibration
+  module LineFibP (P : PathStr) (G : PCtx) (A : PTy[G]) {
+    Aev (e : IPt) : PTy[P.pth G] = subTy (P.pth G) G A (P.pev G e) ;
+
+    FibAt (e : IPt) : U l+ = TrivFib (P.pth G) (P.pthTy G A) (Aev e) (P.pevA G A e) ;
+  } ;
+
+  ------------------------------------------------------------------------
+  -- elements over an end point and elements of the fibres of evaluation,
+  -- for any path structure: read in E (endE, tv-eq), lines (lineL),
+  -- built from a line ending at the point (mkTS)
+
+  module EndKit (P : PathStr) (G : PCtx) (A : PTy[G]) (e : IPt) {
+    module LP = LineFibP[P, G, A] ;
+    module TA = GPR.TyL[G, A] ;
+    module TL = GPR.TyL[P.pth G, P.pthTy G A] ;
+    module TV = GPR.TyL[P.pth G, LP.Aev e] ;
+    module SFm = SFib[P.pth G, P.pthTy G A, LP.Aev e, P.pevA G A e] ;
+    module PT = GCF.Partials[TV.E, SFm.SF] ;
+    module TS = GPR.TyL[TV.E, SFm.SF] ;
+
+    -- the line of an element of the fibres
+    lineL (W : Ob) (u : TS.EI W) : TL.EI W = (u.1.1, u.2.1) ;
+
+    -- the line of a restricted element is the restricted line
+    lineL-act (W' W : Ob) (chi : Hom W' W) (u : TS.EI W) : Id (TL.EI W') (lineL W' (TS.E.act W' W chi u)) (TL.E.act W' W chi (lineL W u)) =
+      symH (TL.pr-tact W' W chi u.1.1 ((P.pth G).act W' W chi u.1.1) (apH (\ z -> z.1) (refl (TV.E.act W' W chi u.1))) u.2.1) ;
+
+    endE (W : Ob) (z : TV.EI W) : TA.EI W = ((P.pev G e).nt W z.1, z.2) ;
+
+    endE-act (Y X : Ob) (h : Hom Y X) (z : TV.EI X) : Id (TA.EI Y) (endE Y (TV.E.act Y X h z)) (TA.E.act Y X h (endE X z)) =
+      symH (TA.pr-tact Y X h ((P.pev G e).nt X z.1) ((P.pev G e).nt Y ((P.pth G).act Y X h z.1))
+              (ntEq (P.pth G) G (P.pev G e) Y X h z.1 ((P.pth G).act Y X h z.1) (refl ((P.pth G).act Y X h z.1))) z.2) ;
+
+    -- an element over the end is determined by its line and its reading in E
+    tv-eq (W : Ob) (z z' : TV.EI W) (p : Id (W0.Ix ((P.pth G).ob W)) z.1 z'.1)
+      (q : Id (TA.EI W) (endE W z) (endE W z')) : Id (TV.EI W) z z' =
+      idJ (W0.Ix ((P.pth G).ob W)) z.1
+        (\ w2 P2 -> (a2 : TV.T W w2) -> Id (TA.EI W) (endE W z) (endE W (w2, a2)) -> Id (TV.EI W) z (w2, a2))
+        (\ a2 Q2 -> apH {TV.T W z.1} {TV.EI W} (\ v -> (z.1, v))
+                      (TA.pr-inj W ((P.pev G e).nt W z.1) z.2 a2 Q2))
+        z'.1 p z'.2 q ;
+
+    mkTS (V : Ob) (w : TV.EI V) (L : TL.EI V) (p : Id (W0.Ix ((P.pth G).ob V)) L.1 w.1)
+      (q : Id (TA.EI V) (endE V ((P.pevA G A e).mE V L)) (endE V w)) : TS.EI V =
+      (w, (TL.coeT V L.1 w.1 p L.2,
+           tv-eq V ((P.pevA G A e).mE V (w.1, TL.coeT V L.1 w.1 p L.2)) w
+             ((P.pevA G A e).mpt V (w.1, TL.coeT V L.1 w.1 p L.2))
+             (transH (apH (\ L' -> endE V ((P.pevA G A e).mE V L')) (symH (TL.pr-coe V L.1 w.1 p L.2))) q))) ;
+    mkTS-pt (V : Ob) (w : TV.EI V) (L : TL.EI V) (p : Id (W0.Ix ((P.pth G).ob V)) L.1 w.1)
+      (q : Id (TA.EI V) (endE V ((P.pevA G A e).mE V L)) (endE V w)) : Id (TV.EI V) (mkTS V w L p q).1 w = refl w ;
+    mkTS-line (V : Ob) (w : TV.EI V) (L : TL.EI V) (p : Id (W0.Ix ((P.pth G).ob V)) L.1 w.1)
+      (q : Id (TA.EI V) (endE V ((P.pevA G A e).mE V L)) (endE V w)) : Id (TL.EI V) (lineL V (mkTS V w L p q)) L =
+      symH (TL.pr-coe V L.1 w.1 p L.2) ;
+    opaque mkTS ;
+  } ;
+
+  ------------------------------------------------------------------------
+  -- Composition in line form, for any path structure (plan step 2): on the
+  -- partial lines of FibAt e (a total end at e), an element at the end e',
+  -- agreeing with the ends at e' of the partial lines, uniformly.  The
+  -- extension of FibAt e, evaluated at e', is one (fromFib).
+
+  module CompAtP (P : PathStr) (G : PCtx) (A : PTy[G]) (e e' : IPt) {
+    module LP = LineFibP[P, G, A] ;
+    module EK = EndKit[P, G, A, e] ;
+    module TL = EK.TL ;
+    module TV = EK.TV ;
+    module TV' = GPR.TyL[P.pth G, LP.Aev e'] ;
+    module SFm = EK.SFm ;
+    module PT = EK.PT ;
+    module TS = EK.TS ;
+
+    -- the end at e' of the line of an element of the fibres
+    endL (W : Ob) (u : TS.EI W) : TV'.EI W = (P.pevA G A e').mE W (EK.lineL W u) ;
+
+    endL-act (W' W : Ob) (chi : Hom W' W) (u : TS.EI W) : Id (TV'.EI W') (endL W' (TS.E.act W' W chi u)) (TV'.E.act W' W chi (endL W u)) =
+      transH (apH ((P.pevA G A e').mE W') (EK.lineL-act W' W chi u)) ((P.pevA G A e').mnat W' W chi (EK.lineL W u)) ;
+
+    module CompAt {
+      cop (X : Ob) (x : TV.EI X) (p : PT.Partial[X, x]) : TV'.T X x.1 ;
+      -- the composite agrees with the ends at e' of the partial lines
+      cside (X : Ob) (x : TV.EI X) (p : PT.Partial[X, x]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+        : Id (TV'.EI W) (TV'.E.act W X f (x.1, cop X x p)) (endL W ((p.ps l).pv W f i)) ;
+      -- and is uniform
+      cunif (Y X : Ob) (h : Hom Y X) (x : TV.EI X) (p : PT.Partial[X, x])
+        : Id (TV'.EI Y) (TV'.E.act Y X h (x.1, cop X x p)) ((TV.E.act Y X h x).1, cop Y (TV.E.act Y X h x) (PT.restrictP Y X h x p)) ;
+    } ;
+
+    -- the line composite at equal points and equal partial lines
+    -- a composition is determined by its composites
+    CopT : U l = (X : Ob) (x : TV.EI X) (p : PT.Partial[X, x]) -> TV'.T X x.1 ;
+
+    CsT (k : CopT) : U l = (X : Ob) (x : TV.EI X) (p : PT.Partial[X, x]) (j : Fin p.pr) (W : Ob) (f : Hom W X)
+      (i : Lands W X (p.ps j).pQ f) -> Id (TV'.EI W) (TV'.E.act W X f (x.1, k X x p)) (endL W ((p.ps j).pv W f i)) ;
+
+    CuT (k : CopT) : U l = (Y X : Ob) (h : Hom Y X) (x : TV.EI X) (p : PT.Partial[X, x])
+      -> Id (TV'.EI Y) (TV'.E.act Y X h (x.1, k X x p)) ((TV.E.act Y X h x).1, k Y (TV.E.act Y X h x) (PT.restrictP Y X h x p)) ;
+
+    isProp-Cs (k : CopT) : isProp (CsT k) = \ u v ->
+      funext Ob (\ X -> (x : TV.EI X) (p : PT.Partial[X, x]) (j : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps j).pQ f)
+                         -> Id (TV'.EI W) (TV'.E.act W X f (x.1, k X x p)) (endL W ((p.ps j).pv W f i))) u v (\ X ->
+      funext (TV.EI X) (\ x -> (p : PT.Partial[X, x]) (j : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps j).pQ f)
+                         -> Id (TV'.EI W) (TV'.E.act W X f (x.1, k X x p)) (endL W ((p.ps j).pv W f i))) (u X) (v X) (\ x ->
+      funext (PT.Partial[X, x]) (\ p -> (j : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps j).pQ f)
+                         -> Id (TV'.EI W) (TV'.E.act W X f (x.1, k X x p)) (endL W ((p.ps j).pv W f i))) (u X x) (v X x) (\ p ->
+      funext (Fin p.pr) (\ j -> (W : Ob) (f : Hom W X) (i : Lands W X (p.ps j).pQ f)
+                         -> Id (TV'.EI W) (TV'.E.act W X f (x.1, k X x p)) (endL W ((p.ps j).pv W f i))) (u X x p) (v X x p) (\ j ->
+      funext Ob (\ W -> (f : Hom W X) (i : Lands W X (p.ps j).pQ f)
+                         -> Id (TV'.EI W) (TV'.E.act W X f (x.1, k X x p)) (endL W ((p.ps j).pv W f i))) (u X x p j) (v X x p j) (\ W ->
+      funext (Hom W X) (\ f -> (i : Lands W X (p.ps j).pQ f)
+                         -> Id (TV'.EI W) (TV'.E.act W X f (x.1, k X x p)) (endL W ((p.ps j).pv W f i))) (u X x p j W) (v X x p j W) (\ f ->
+      funext (Lands W X (p.ps j).pQ f) (\ i -> Id (TV'.EI W) (TV'.E.act W X f (x.1, k X x p)) (endL W ((p.ps j).pv W f i)))
+        (u X x p j W f) (v X x p j W f) (\ i ->
+        W0.isSetIx (TV'.E.ob W) (TV'.E.act W X f (x.1, k X x p)) (endL W ((p.ps j).pv W f i)) (u X x p j W f i) (v X x p j W f i)))))))) ;
+
+    isProp-Cu (k : CopT) : isProp (CuT k) = \ u v ->
+      funext Ob (\ Y -> (X : Ob) (h : Hom Y X) (x : TV.EI X) (p : PT.Partial[X, x])
+                   -> Id (TV'.EI Y) (TV'.E.act Y X h (x.1, k X x p)) ((TV.E.act Y X h x).1, k Y (TV.E.act Y X h x) (PT.restrictP Y X h x p))) u v (\ Y ->
+      funext Ob (\ X -> (h : Hom Y X) (x : TV.EI X) (p : PT.Partial[X, x])
+                   -> Id (TV'.EI Y) (TV'.E.act Y X h (x.1, k X x p)) ((TV.E.act Y X h x).1, k Y (TV.E.act Y X h x) (PT.restrictP Y X h x p))) (u Y) (v Y) (\ X ->
+      funext (Hom Y X) (\ h -> (x : TV.EI X) (p : PT.Partial[X, x])
+                   -> Id (TV'.EI Y) (TV'.E.act Y X h (x.1, k X x p)) ((TV.E.act Y X h x).1, k Y (TV.E.act Y X h x) (PT.restrictP Y X h x p))) (u Y X) (v Y X) (\ h ->
+      funext (TV.EI X) (\ x -> (p : PT.Partial[X, x])
+                   -> Id (TV'.EI Y) (TV'.E.act Y X h (x.1, k X x p)) ((TV.E.act Y X h x).1, k Y (TV.E.act Y X h x) (PT.restrictP Y X h x p))) (u Y X h) (v Y X h) (\ x ->
+      funext (PT.Partial[X, x]) (\ p -> Id (TV'.EI Y) (TV'.E.act Y X h (x.1, k X x p)) ((TV.E.act Y X h x).1, k Y (TV.E.act Y X h x) (PT.restrictP Y X h x p)))
+        (u Y X h x) (v Y X h x) (\ p ->
+        W0.isSetIx (TV'.E.ob Y) (TV'.E.act Y X h (x.1, k X x p)) ((TV.E.act Y X h x).1, k Y (TV.E.act Y X h x) (PT.restrictP Y X h x p))
+          (u Y X h x p) (v Y X h x p)))))) ;
+
+    CompAt-ext (c c' : CompAt) (H : (X : Ob) (x : TV.EI X) (p : PT.Partial[X, x]) -> Id (TV'.T X x.1) (c.cop X x p) (c'.cop X x p))
+      : Id CompAt c c' =
+      idJ CopT c.cop
+        (\ k2 E2 -> (cs : CsT k2) (cu : CuT k2) -> Id CompAt c (new CompAt[k2, cs, cu]))
+        (\ cs cu -> transH (apH (\ z -> new CompAt[c.cop, z, c.cunif]) (isProp-Cs c.cop c.cside cs))
+                            (apH (\ z -> new CompAt[c.cop, cs, z]) (isProp-Cu c.cop c.cunif cu)))
+        c'.cop
+        (funext Ob (\ X -> (x : TV.EI X) (p : PT.Partial[X, x]) -> TV'.T X x.1) c.cop c'.cop (\ X ->
+           funext (TV.EI X) (\ x -> (p : PT.Partial[X, x]) -> TV'.T X x.1) (c.cop X) (c'.cop X) (\ x ->
+             funext (PT.Partial[X, x]) (\ p -> TV'.T X x.1) (c.cop X x) (c'.cop X x) (\ p -> H X x p))))
+        c'.cside c'.cunif ;
+
+    cop-cong (ca : CompAt) (Y : Ob) (y y' : TV.EI Y) (P : Id (TV.EI Y) y y') (p : PT.Partial[Y, y]) (p' : PT.Partial[Y, y'])
+      (R : Id (PT.Partial[Y, y']) (subst (TV.EI Y) (\ z -> PT.Partial[Y, z]) y y' P p) p')
+      : Id (TV'.EI Y) (y.1, ca.cop Y y p) (y'.1, ca.cop Y y' p') =
+      idJ (TV.EI Y) y
+        (\ y2 P2 -> (p2 : PT.Partial[Y, y2]) -> Id (PT.Partial[Y, y2]) (subst (TV.EI Y) (\ z -> PT.Partial[Y, z]) y y2 P2 p) p2
+           -> Id (TV'.EI Y) (y.1, ca.cop Y y p) (y2.1, ca.cop Y y2 p2))
+        (\ p2 R2 -> apH {PT.Partial[Y, y]} {TV'.EI Y} (\ z -> (y.1, ca.cop Y y z)) R2)
+        y' P p' R ;
+
+    -- ESI in line form: the composite does not see an inserted empty side
+    module PEs = GCofEsi[l].PartialsEsi[TV.E, SFm.SF] ;
+
+    CESI (ca : CompAt) : U l = (X : Ob) (x : TV.EI X) (k : Nat) (p p' : PT.Partial[X, x]) -> PEs.InsP[X, x, k, p, p']
+      -> Id (TV'.T X x.1) (ca.cop X x p') (ca.cop X x p) ;
+
+    isProp-CESI (ca : CompAt) : isProp (CESI ca) = \ u v ->
+      funext Ob (\ X -> (x : TV.EI X) (k : Nat) (p p' : PT.Partial[X, x]) -> PEs.InsP[X, x, k, p, p'] -> Id (TV'.T X x.1) (ca.cop X x p') (ca.cop X x p)) u v (\ X ->
+      funext (TV.EI X) (\ x -> (k : Nat) (p p' : PT.Partial[X, x]) -> PEs.InsP[X, x, k, p, p'] -> Id (TV'.T X x.1) (ca.cop X x p') (ca.cop X x p)) (u X) (v X) (\ x ->
+      funext Nat (\ k -> (p p' : PT.Partial[X, x]) -> PEs.InsP[X, x, k, p, p'] -> Id (TV'.T X x.1) (ca.cop X x p') (ca.cop X x p)) (u X x) (v X x) (\ k ->
+      funext (PT.Partial[X, x]) (\ p -> (p' : PT.Partial[X, x]) -> PEs.InsP[X, x, k, p, p'] -> Id (TV'.T X x.1) (ca.cop X x p') (ca.cop X x p)) (u X x k) (v X x k) (\ p ->
+      funext (PT.Partial[X, x]) (\ p' -> PEs.InsP[X, x, k, p, p'] -> Id (TV'.T X x.1) (ca.cop X x p') (ca.cop X x p)) (u X x k p) (v X x k p) (\ p' ->
+      funext (PEs.InsP[X, x, k, p, p']) (\ ins -> Id (TV'.T X x.1) (ca.cop X x p') (ca.cop X x p)) (u X x k p p') (v X x k p p') (\ ins ->
+        W0.isSetIx ((LP.Aev e').tob X x.1) (ca.cop X x p') (ca.cop X x p) (u X x k p p' ins) (v X x k p p' ins))))))) ;
+
+    -- the heterogeneous version (the two points propositionally equal)
+    cesiH (ca : CompAt) (ce : CESI ca) (X : Ob) (x x' : TV.EI X) (P : Id (TV.EI X) x' x) (k : Nat)
+      (p : PT.Partial[X, x]) (p' : PT.Partial[X, x']) (h : PEs.InsPH[X, x, x', k, p, p'])
+      : Id (TV'.EI X) (x'.1, ca.cop X x' p') (x.1, ca.cop X x p) =
+      idJ (TV.EI X) x'
+        (\ y Q -> (p1 : PT.Partial[X, y]) -> PEs.InsPH[X, y, x', k, p1, p'] -> Id (TV'.EI X) (x'.1, ca.cop X x' p') (y.1, ca.cop X y p1))
+        (\ p1 h1 -> apH (\ z -> (x'.1, z)) (ce X x' k p1 p' (PEs.toInsP X x' x' (refl x') k p1 p' h1)))
+        x P p h ;
+
+    -- fibrancy at e gives composition from e to e': the end of the extension
+    module FromFib (k : LP.FibAt e) {
+      -- the end at e' of the extension, read in E
+      endK (X : Ob) (x : TV.EI X) (p : PT.Partial[X, x]) : TV'.EI X = endL X (x, k.kop X x p) ;
+
+      cop (X : Ob) (x : TV.EI X) (p : PT.Partial[X, x]) : TV'.T X x.1 =
+        TV'.coeT X (endK X x p).1 x.1 ((P.pevA G A e').mpt X (x.1, (k.kop X x p).1)) (endK X x p).2 ;
+
+      cop-E (X : Ob) (x : TV.EI X) (p : PT.Partial[X, x]) : Id (TV'.EI X) (x.1, cop X x p) (endK X x p) =
+        symH (TV'.pr-coe X (endK X x p).1 x.1 ((P.pevA G A e').mpt X (x.1, (k.kop X x p).1)) (endK X x p).2) ;
+
+      cside (X : Ob) (x : TV.EI X) (p : PT.Partial[X, x]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+        : Id (TV'.EI W) (TV'.E.act W X f (x.1, cop X x p)) (endL W ((p.ps l).pv W f i)) =
+        transH (apH (TV'.E.act W X f) (cop-E X x p))
+          (transH (symH (endL-act W X f (x, k.kop X x p))) (apH (endL W) (k.kside X x p l W f i))) ;
+
+      cunif (Y X : Ob) (h : Hom Y X) (x : TV.EI X) (p : PT.Partial[X, x])
+        : Id (TV'.EI Y) (TV'.E.act Y X h (x.1, cop X x p)) ((TV.E.act Y X h x).1, cop Y (TV.E.act Y X h x) (PT.restrictP Y X h x p)) =
+        transH (apH (TV'.E.act Y X h) (cop-E X x p))
+          (transH (symH (endL-act Y X h (x, k.kop X x p)))
+            (transH (apH (endL Y) (k.kunif Y X h x p))
+                    (symH (cop-E Y (TV.E.act Y X h x) (PT.restrictP Y X h x p))))) ;
+
+      ca : CompAt = new CompAt[cop, cside, cunif] ;
+
+      -- the composite of the end of an extension with KESI has ESI
+      copOf (X : Ob) (x : TV.EI X) (u : TS.T X x) : TV'.T X x.1 =
+        TV'.coeT X (endL X (x, u)).1 x.1 ((P.pevA G A e').mpt X (x.1, u.1)) (endL X (x, u)).2 ;
+
+      cesi (ke : PEs.KESI k) : CESI ca = \ X x kk p p' ins -> apH (copOf X x) (ke X x kk p p' ins) ;
+    } ;
+  } ;
+
+  ------------------------------------------------------------------------
+  -- the exponential law of a path structure (lines as natural families)
+
+  module PathConn (P : PathStr) {
+    ----------------------------------------------------------------------
+    -- lines in a context, as natural families over the generalised points
+
+    FamTy (G : PCtx) (X : Ob) : U l = (W : Ob) -> Hom W X -> Hom W Iv -> W0.Ix (G.ob W) ;
+
+    FamNat (G : PCtx) (X : Ob) (t : FamTy G X) : U l =
+      (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+      -> Id (W0.Ix (G.ob V)) (G.act V W g (t W f i)) (t V (compH V W X f g) (compH V W Iv i g)) ;
+
+    lev (G : PCtx) (X : Ob) (x : W0.Ix ((P.pth G).ob X)) : FamTy G X ;
+    lev-nat (G : PCtx) (X : Ob) (x : W0.Ix ((P.pth G).ob X)) : FamNat G X (lev G X x) ;
+    -- the restricted line, evaluated
+    lev-act (G : PCtx) (Y X : Ob) (h : Hom Y X) (x : W0.Ix ((P.pth G).ob X)) (W : Ob) (f : Hom W Y) (i : Hom W Iv)
+      : Id (W0.Ix (G.ob W)) (lev G Y ((P.pth G).act Y X h x) W f i) (lev G X x W (compH W Y X h f) i) ;
+    -- the end at e is the evaluation at (id , e)
+    lev-ev (G : PCtx) (e : IPt) (X : Ob) (x : W0.Ix ((P.pth G).ob X))
+      : Id (W0.Ix (G.ob X)) ((P.pev G e).nt X x) (lev G X x X (idH X) (ptH X e)) ;
+    lam (G : PCtx) (X : Ob) (t : FamTy G X) (tn : FamNat G X t) : W0.Ix ((P.pth G).ob X) ;
+    lev-lam (G : PCtx) (X : Ob) (t : FamTy G X) (tn : FamNat G X t) (W : Ob) (f : Hom W X) (i : Hom W Iv)
+      : Id (W0.Ix (G.ob W)) (lev G X (lam G X t tn) W f i) (t W f i) ;
+    lev-ext (G : PCtx) (X : Ob) (x x' : W0.Ix ((P.pth G).ob X))
+      (q : (W : Ob) (f : Hom W X) (i : Hom W Iv) -> Id (W0.Ix (G.ob W)) (lev G X x W f i) (lev G X x' W f i))
+      : Id (W0.Ix ((P.pth G).ob X)) x x' ;
+
+    ----------------------------------------------------------------------
+    -- lines in a type, read in the total presheaf
+
+    FamA (G : PCtx) (A : PTy[G]) (X : Ob) : U l = (W : Ob) -> Hom W X -> Hom W Iv -> GPR.TyL[G, A].EI W ;
+
+    FamAPt (G : PCtx) (A : PTy[G]) (X : Ob) (x : W0.Ix ((P.pth G).ob X)) (t : FamA G A X) : U l =
+      (W : Ob) (f : Hom W X) (i : Hom W Iv) -> Id (W0.Ix (G.ob W)) (t W f i).1 (lev G X x W f i) ;
+
+    FamANat (G : PCtx) (A : PTy[G]) (X : Ob) (t : FamA G A X) : U l =
+      (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+      -> Id (GPR.TyL[G, A].EI V) (GPR.TyL[G, A].E.act V W g (t W f i)) (t V (compH V W X f g) (compH V W Iv i g)) ;
+
+    levA (G : PCtx) (A : PTy[G]) (X : Ob) (w : GPR.TyL[P.pth G, P.pthTy G A].EI X) : FamA G A X ;
+    levA-pt (G : PCtx) (A : PTy[G]) (X : Ob) (w : GPR.TyL[P.pth G, P.pthTy G A].EI X) : FamAPt G A X w.1 (levA G A X w) ;
+    levA-nat (G : PCtx) (A : PTy[G]) (X : Ob) (w : GPR.TyL[P.pth G, P.pthTy G A].EI X) : FamANat G A X (levA G A X w) ;
+    levA-act (G : PCtx) (A : PTy[G]) (Y X : Ob) (h : Hom Y X) (w : GPR.TyL[P.pth G, P.pthTy G A].EI X)
+      (W : Ob) (f : Hom W Y) (i : Hom W Iv)
+      : Id (GPR.TyL[G, A].EI W) (levA G A Y (GPR.TyL[P.pth G, P.pthTy G A].E.act Y X h w) W f i) (levA G A X w W (compH W Y X h f) i) ;
+    -- the end at e, read in the total presheaf, is the evaluation at (id , e)
+    levA-ev (G : PCtx) (A : PTy[G]) (e : IPt) (X : Ob) (w : GPR.TyL[P.pth G, P.pthTy G A].EI X)
+      : Id (GPR.TyL[G, A].EI X) ((P.pev G e).nt X ((P.pevA G A e).mE X w).1, ((P.pevA G A e).mE X w).2)
+                               (levA G A X w X (idH X) (ptH X e)) ;
+    lamA (G : PCtx) (A : PTy[G]) (X : Ob) (x : W0.Ix ((P.pth G).ob X)) (t : FamA G A X) (tp : FamAPt G A X x t) (tn : FamANat G A X t)
+      : W0.Ix ((P.pthTy G A).tob X x) ;
+    levA-lam (G : PCtx) (A : PTy[G]) (X : Ob) (x : W0.Ix ((P.pth G).ob X)) (t : FamA G A X) (tp : FamAPt G A X x t) (tn : FamANat G A X t)
+      (W : Ob) (f : Hom W X) (i : Hom W Iv)
+      : Id (GPR.TyL[G, A].EI W) (levA G A X (x, lamA G A X x t tp tn) W f i) (t W f i) ;
+    levA-ext (G : PCtx) (A : PTy[G]) (X : Ob) (w w' : GPR.TyL[P.pth G, P.pthTy G A].EI X)
+      (q : (W : Ob) (f : Hom W X) (i : Hom W Iv) -> Id (GPR.TyL[G, A].EI W) (levA G A X w W f i) (levA G A X w' W f i))
+      : Id (GPR.TyL[P.pth G, P.pthTy G A].EI X) w w' ;
+  } ;
+
+  ------------------------------------------------------------------------
+  -- with the exponential law: the end of a line is its value at (id , e),
+  -- and an element of the fibres is determined by its point and the values
+  -- of its line
+
+  module LevKit (P : PathStr) (C : PathConn[P]) (G : PCtx) (A : PTy[G]) (e : IPt) {
+    module EK = EndKit[P, G, A, e] ;
+    module TA = EK.TA ;
+    module TL = EK.TL ;
+
+    endL-lev (W : Ob) (L : TL.EI W) : Id (TA.EI W) (EK.endE W ((P.pevA G A e).mE W L)) (C.levA G A W L W (idH W) (ptH W e)) =
+      C.levA-ev G A e W L ;
+
+    ts-ext (W : Ob) (u v : EK.TS.EI W) (p : Id (EK.TV.EI W) u.1 v.1)
+      (q : (V : Ob) (g : Hom V W) (j : Hom V Iv) -> Id (TA.EI V) (C.levA G A W (EK.lineL W u) V g j) (C.levA G A W (EK.lineL W v) V g j))
+      : Id (EK.TS.EI W) u v =
+      idJ (EK.TV.EI W) u.1
+        (\ w2 P2 -> (s2 : W0.Ix (EK.SFm.sfOb W w2)) -> Id (TL.EI W) (EK.lineL W u) (w2.1, s2.1) -> Id (EK.TS.EI W) u (w2, s2))
+        (\ s2 Q2 -> apH {W0.Ix (EK.SFm.sfOb W u.1)} {EK.TS.EI W} (\ z -> (u.1, z))
+                      (EK.SFm.sf-eq W u.1 u.2 s2 (TL.pr-inj W u.1.1 u.2.1 s2.1 Q2)))
+        v.1 p v.2 (C.levA-ext G A W (EK.lineL W u) (EK.lineL W v) q) ;
+    mkTS-lev (V : Ob) (w : EK.TV.EI V) (L : TL.EI V) (p : Id (W0.Ix ((P.pth G).ob V)) L.1 w.1)
+      (q : Id (TA.EI V) (EK.endE V ((P.pevA G A e).mE V L)) (EK.endE V w)) (V' : Ob) (g : Hom V' V) (j : Hom V' Iv)
+      : Id (TA.EI V') (C.levA G A V (EK.lineL V (EK.mkTS V w L p q)) V' g j) (C.levA G A V L V' g j) =
+      apH (\ L' -> C.levA G A V L' V' g j) (EK.mkTS-line V w L p q) ;
+    line-act (V' V : Ob) (g : Hom V' V) (u : EK.TS.EI V) (V'' : Ob) (g' : Hom V'' V') (j : Hom V'' Iv)
+      : Id (TA.EI V'') (C.levA G A V' (EK.lineL V' (EK.TS.E.act V' V g u)) V'' g' j) (C.levA G A V (EK.lineL V u) V'' (compH V'' V' V g g') j) =
+      transH (apH (\ L -> C.levA G A V' L V'' g' j) (EK.lineL-act V' V g u)) (C.levA-act G A V' V g (EK.lineL V u) V'' g' j) ;
+    levA-ptAct (V : Ob) (L : TL.EI V) (V' : Ob) (g : Hom V' V)
+      : Id (TA.EI V') (TA.E.act V' V g (C.levA G A V L V (idH V) (ptH V e))) (C.levA G A V L V' g (ptH V' e)) =
+      transH (C.levA-nat G A V L V' V g (idH V) (ptH V e))
+        (transH (apH (\ k -> C.levA G A V L V' k (compH V' V Iv (ptH V e) g)) (comp-idl V' V g))
+                (apH (\ k -> C.levA G A V L V' g k) (ptH-nat V' V g e))) ;
+  } ;

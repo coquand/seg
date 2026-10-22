@@ -1,0 +1,119 @@
+-- PElYon.seg: El of the poset universe at a Yoneda code is the code
+-- (step (C) of the univalence plan, ElYonCl).  For F : U_L Z, El along
+-- the Yoneda code map y Z -> U_L (cY g = F along g) is F.1 (GElC.Yon.elYon)
+-- and its fibration structure (EGen's, moved down by GTransfer) is F.2:
+-- El's composite of a problem over y Z is, by construction (GLocal3: pull
+-- to the diagonal; PElL: along the pairing, F along the line's generic
+-- point x^, whose composition is F's along x^ by selEq), F's composite of
+-- the problem moved along x^ o pair o diagonal, which is the problem
+-- itself pointwise (GProbEq).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosS[a] ; open PSB ; open PSCyl ;
+module W0 = V[a] ;
+open Arith[a] ;
+module V1 = V[a+] ;
+module BaseP = PosS[a].PSB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module L1 = BaseP.GPre[a+] ;
+open BaseP.GYon[a] ;
+module UL = BaseP.GUnivL.UL ;
+module PE0 = PElL[a] ;
+module PE2 = PElL2[a] ;
+
+-- transport of fibres along paths of codes (PElL.cV)
+cV-trans (u v w : W0.V) (p : Id W0.V u v) (q : Id W0.V v w) (b : W0.Ix u)
+  : Id (W0.Ix w) (PE0.cV v w q (PE0.cV u v p b)) (PE0.cV u w (transH p q) b) =
+  idJ W0.V v (\ w2 q2 -> Id (W0.Ix w2) (PE0.cV v w2 q2 (PE0.cV u v p b)) (PE0.cV u w2 (transH p q2) b))
+    (transH (UL.loopV v (refl v) (PE0.cV u v p b))
+            (apH (\ r -> PE0.cV u v r b) (W0.isSetV u v p (transH p (refl v))))) w q ;
+
+-- two transports of one element, into the fibres of F.1 at equal points
+module CVP (Z : Ob) (A : PTy[yP Z]) (X : Ob) {
+  module TA = PR.TyL[yP Z, A] ;
+
+  cVpair (k1 k2 : Hom X Z) (r : Id (Hom X Z) k1 k2) (T : W0.V) (P1 : Id W0.V T (A.tob X k1)) (P2 : Id W0.V T (A.tob X k2)) (b : W0.Ix T)
+    : Id (TA.EI X) (k1, PE0.cV T (A.tob X k1) P1 b) (k2, PE0.cV T (A.tob X k2) P2 b) =
+    idJ (Hom X Z) k1
+      (\ k3 r3 -> (P3 : Id W0.V T (A.tob X k3)) -> Id (TA.EI X) (k1, PE0.cV T (A.tob X k1) P1 b) (k3, PE0.cV T (A.tob X k3) P3 b))
+      (\ P3 -> apH {W0.Ix (A.tob X k1)} {TA.EI X} (\ z -> (k1, z))
+                 (apH (\ r4 -> PE0.cV T (A.tob X k1) r4 b) (W0.isSetV T (A.tob X k1) P1 P3)))
+      k2 r P2 ;
+
+  -- the converse: equal total elements, read back into one fibre
+  cVback (k1 k2 : Hom X Z) (v1 : W0.Ix (A.tob X k1)) (v2 : W0.Ix (A.tob X k2)) (E : Id (TA.EI X) (k1, v1) (k2, v2))
+    (T : W0.V) (P1 : Id W0.V (A.tob X k1) T) (P2 : Id W0.V (A.tob X k2) T)
+    : Id (W0.Ix T) (PE0.cV (A.tob X k1) T P1 v1) (PE0.cV (A.tob X k2) T P2 v2) =
+    idJ (TA.EI X) (k1, v1)
+      (\ z E2 -> (P3 : Id W0.V (A.tob X z.1) T) -> Id (W0.Ix T) (PE0.cV (A.tob X k1) T P1 v1) (PE0.cV (A.tob X z.1) T P3 z.2))
+      (\ P3 -> apH (\ r4 -> PE0.cV (A.tob X k1) T r4 v1) (W0.isSetV (A.tob X k1) T P1 P3))
+      (k2, v2) E P2 ;
+
+  opaque cVpair ; opaque cVback ;
+} ;
+
+opaque cV-trans ;
+
+module EC = BaseP.GElC.ElC[BaseP.GUnivL.ClL, BaseP.GUnivL.clSubL, BaseP.GUnivL.clSub-idL, BaseP.GUnivL.clSub-oL,
+  \ X A -> BaseP.GUnivL.encClL (yP X) A, PE2.fibEGen.2.1, PE2.fibEGen.2.2] ;
+
+module EY (Z : Ob) (F : UL.U0 Z) {
+  cYnat (Y' Y : Ob) (h : Hom Y' Y) (g : Hom Y Z) : Id (UL.U0 Y') (UL.uAct Y' Z (compH Y' Y Z g h) F) (UL.uAct Y' Y h (UL.uAct Y Z g F)) =
+    UL.uAct-o Y' Y Z g h F ;
+
+  module YN = EC.Yon[Z, F, cYnat] ;
+  module FC = EC.Fam[yP Z, YN.cY, cYnat] ;
+  module TF = PR.TyL[yP Z, F.1] ;
+  module TL = PR.TyL[yP Z, FC.ElTy] ;
+
+  -- El's fibres read in F (along Po)
+  idN (V W : Ob) (g : Hom V W) (d : Hom W Z) : Id (Hom V Z) ((yP Z).act V W g d) ((yP Z).act V W g d) = refl ((yP Z).act V W g d) ;
+
+  phPo (W : Ob) (d : Hom W Z) (b : W0.Ix (UL.fib0 W (YN.cY W d))) : W0.Ix (F.1.tob W d) =
+    PE0.cV (UL.fib0 W (YN.cY W d)) (F.1.tob W d) (YN.Po W d) b ;
+  psPo (W : Ob) (d : Hom W Z) (b : W0.Ix (F.1.tob W d)) : W0.Ix (UL.fib0 W (YN.cY W d)) =
+    PE0.cV (F.1.tob W d) (UL.fib0 W (YN.cY W d)) (symH (YN.Po W d)) b ;
+  ph-psPo (W : Ob) (d : Hom W Z) (b : W0.Ix (F.1.tob W d)) : Id (W0.Ix (F.1.tob W d)) (phPo W d (psPo W d b)) b =
+    PE0.cV-sym-r (UL.fib0 W (YN.cY W d)) (F.1.tob W d) (YN.Po W d) b ;
+  ps-phPo (W : Ob) (d : Hom W Z) (b : W0.Ix (UL.fib0 W (YN.cY W d))) : Id (W0.Ix (UL.fib0 W (YN.cY W d))) (psPo W d (phPo W d b)) b =
+    PE0.cV-sym-l (UL.fib0 W (YN.cY W d)) (F.1.tob W d) (YN.Po W d) b ;
+  PhNPo (V W : Ob) (g : Hom V W) (w : TL.EI W)
+    : Id (TF.EI V) ((TL.E.act V W g w).1, phPo V (TL.E.act V W g w).1 (TL.E.act V W g w).2) (TF.E.act V W g (w.1, phPo W w.1 w.2)) =
+    apH {W0.Ix (F.1.tob V ((yP Z).act V W g w.1))} {TF.EI V} (\ v -> ((yP Z).act V W g w.1, v))
+      (YN.H1 V W g w.1 ((yP Z).act V W g w.1) (refl ((yP Z).act V W g w.1)) w.2) ;
+
+  module TE = L1.TyL[UL.UCtx, UL.EGen] ;
+
+  -- a value read in El at the code of a generalised point, moved to F
+  sideVal (V : Ob) (kp k0 : Hom V Z) (r : Id (Hom V Z) kp k0) (cl : UL.U0 V) (Pl : Id W0.V (UL.fib0 V cl) (F.1.tob V kp))
+    (c1 : UL.U0 V) (b1 : W0.Ix (UL.fib0 V c1)) (qq : Id (UL.U0 V) c1 cl) (b0 : W0.Ix (UL.fib0 V (YN.cY V k0)))
+    (E : Id (TE.EI V) (c1, b1) (YN.cY V k0, b0))
+    : Id (TF.EI V) (kp, PE0.cV (UL.fib0 V cl) (F.1.tob V kp) Pl (TE.coeT V c1 cl qq b1)) (k0, phPo V k0 b0) =
+    transH (apH {W0.Ix (F.1.tob V kp)} {TF.EI V} (\ v -> (kp, v))
+              (transH (apH (PE0.cV (UL.fib0 V cl) (F.1.tob V kp) Pl) (PE0.coeEG V c1 cl qq b1))
+                      (cV-trans (UL.fib0 V c1) (UL.fib0 V cl) (F.1.tob V kp) (apH (UL.fib0 V) qq) Pl b1)))
+      (idJ (TE.EI V) (YN.cY V k0, b0)
+         (\ z E2 -> (qq2 : Id (UL.U0 V) z.1 cl)
+            -> Id (TF.EI V) (kp, PE0.cV (UL.fib0 V z.1) (F.1.tob V kp) (transH (apH (UL.fib0 V) qq2) Pl) z.2) (k0, phPo V k0 b0))
+         (\ qq2 -> CVP[Z, F.1, V].cVpair kp k0 r (UL.fib0 V (YN.cY V k0)) (transH (apH (UL.fib0 V) qq2) Pl) (YN.Po V k0) b0)
+         (c1, b1) (symH E) qq) ;
+
+  opaque sideVal ;
+
+  module Dir (e e' : BaseP.IPt)
+    (sel : (Z1 : Ob) (F1 : UL.U0 Z1) -> BaseP.GLine[a].CompAtP[BaseP.GFam[a].famPath, yP Z1, F1.1, e, e'].CompAt)
+    (selEq : (Z' Z1 : Ob) (g : Hom Z' Z1) (F1 : UL.U0 Z1)
+       -> Id (BaseP.GLine[a].CompAtP[BaseP.GFam[a].famPath, yP Z', (UL.uAct Z' Z1 g F1).1, e, e'].CompAt)
+             (sel Z' (UL.uAct Z' Z1 g F1)) (BaseP.GSubst[a].SubC[yP Z', yP Z1, yH Z' Z1 g, F1.1, e, e', sel Z1 F1].compAt)) {
+    module EF = PE2.ElFib[e, e', sel, selEq] ;
+    module TrEl = FC.T[e, e', EF.compAt].TR ;
+    module CD = TrEl.CD ;
+    module TrF = BaseP.GTransfer[a, a, a].Tr[yP Z, FC.ElTy, yP Z, F.1, \ W d -> d, BaseP.GTransferSub.TrId[yP Z, F.1, F.2.1].idNat, phPo, psPo, ph-psPo, ps-phPo, PhNPo, e, e', sel Z F] ;
+  } ;
+} ;

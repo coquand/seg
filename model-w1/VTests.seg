@@ -1,0 +1,19 @@
+-- VTests.seg: non-vacuity.  V is instantiated at a level a (the
+-- counterpart of Agda's lzero) and things compute through the segments.
+
+level a ;
+open Base ;
+module V0 = V[a] ;
+
+-- index types are given on the nose
+#conv V0.Ix (V0.SigV V0.boolV (\ x -> V0.natV)) = (b : Bool) * Nat ;
+#conv V0.Ix (V0.PiV V0.natV (\ n -> V0.boolV)) = Nat -> Bool ;
+#conv V0.Ix V0.emptyV = Empty ;
+
+-- one object, one name: two instance paths to the same member
+#conv V[a].isSetV = V0.isSetV ;
+-- V at the next level is a different instance (l occurs in V's type)
+#fails { bad : Id (U a++) V[a].V V[a+].V = refl V0.V ; } ;
+
+-- numerals: the index of num 2 is Top
+#conv V0.Idx (V0.num (suc (suc zero))).1 = Top ;

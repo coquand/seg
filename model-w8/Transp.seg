@@ -1,0 +1,195 @@
+-- Transp.seg: MODEL/Univ/Transp.agda.  Transport along a line of types.
+--
+-- Data: contexts D, L; a type S over L with a filler in direction d (lid
+-- at s = src d); a line  ln W x : L(W * [1])  for x in D(W), natural:
+-- lnat : (ln x) (g * [1]) = ln (x g).  The two ends en e W x =
+-- (ln W x) (lid e) are substitutions D -> L (enS e), and SB = S [enS s],
+-- SA = S [enS t] (t = tgt d).
+--
+--   uF W x bS      the filler of the box over W with line ln W x, lid bS
+--                  at s and no side (LBox), in E_S(W * [1])
+--   trS            its end at t (in E_S); tr : PMap D SB SA
+--   uF-lid, uF-unif, uF-cong
+--
+-- Everything is read in E_S (the total presheaf of S); Ls e maps the
+-- total presheaf of S [enS e] into it (liftP), Ls-inj reflects equations
+-- over equal points.  Agda's fin0 is `absurd _ (fz l)`.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module CN = Conn[a] ;
+open CN ;
+open Cofib[a] ;
+open Equiv[a] ;
+
+fz (l : Fin zero) : Empty = false-true l.2 ;
+
+------------------------------------------------------------------------
+-- Total presheaves of substituted types, read in the original one
+
+module SubE (D G : PCtx) (A : PTy[G]) (s : PSub[D, G]) {
+  module TA = PR.TyL[G, A] ;
+  module TD = PR.TyL[D, subTy D G A s] ;
+  module KA = FibM.Kit[G, A] ;
+
+  Ls (I : Ob) (w : TD.EI I) : TA.EI I = (liftP D G A s).nt I w ;
+
+  Ls-act (J I : Ob) (f : Hom J I) (w : TD.EI I) : Id (TA.EI J) (Ls J (TD.E.act J I f w)) (TA.E.act J I f (Ls I w)) =
+    (liftP D G A s).nt-nat J I f w ;
+
+  Ls-inj (I : Ob) (w w' : TD.EI I) (p : Id (W0.Ix (D.ob I)) w.1 w'.1) (q : Id (TA.EI I) (Ls I w) (Ls I w')) : Id (TD.EI I) w w' =
+    idJ (W0.Ix (D.ob I)) w.1
+      (\ x2 P2 -> (a2 : TD.T I x2) -> Id (TA.EI I) (Ls I w) (Ls I (x2, a2)) -> Id (TD.EI I) w (x2, a2))
+      (\ a2 q2 -> apH {TD.T I w.1} {TD.EI I} (\ z -> (w.1, z)) (TA.pr-inj I (s.nt I w.1) w.2 a2 q2))
+      w'.1 p w'.2 q ;
+
+  -- an element of E_A over a point of the image, as an element of E_{A [s]}
+  Lfrom (I : Ob) (x : W0.Ix (D.ob I)) (w : TA.EI I) (p : Id (W0.Ix (G.ob I)) w.1 (s.nt I x)) : TD.EI I =
+    (x, KA.fromE I (s.nt I x) w p) ;
+
+  Lfrom-E (I : Ob) (x : W0.Ix (D.ob I)) (w : TA.EI I) (p : Id (W0.Ix (G.ob I)) w.1 (s.nt I x))
+    : Id (TA.EI I) (Ls I (Lfrom I x w p)) w = KA.fromE-eq I (s.nt I x) w p ;
+} ;
+
+------------------------------------------------------------------------
+-- Transport
+
+module Tp (D L : PCtx) (S : PTy[L])
+  (ln : (W : Ob) -> W0.Ix (D.ob W) -> W0.Ix (L.ob (prodP W Iv)))
+  (lnat : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D.ob W))
+          -> Id (W0.Ix (L.ob (prodP W' Iv))) (L.act (prodP W' Iv) (prodP W Iv) (cylH W' W g) (ln W x)) (ln W' (D.act W' W g x)))
+  (d : Bool) (fS : FibM.FillDef[L, S].FillOp[src d]) {
+
+  s : El Iv = src d ;
+  t : El Iv = tgt d ;
+
+  module TS = PR.TyL[L, S] ;
+  module LL = PR.PshL[L] ;
+
+  ES : PCtx = TS.E ;
+
+  module LBs = LBox[a].LBox[L, S, s, fS] ;
+
+  ----------------------------------------------------------------------
+  -- The ends of the line
+
+  en (e : El Iv) (W : Ob) (x : W0.Ix (D.ob W)) : W0.Ix (L.ob W) = L.act W (prodP W Iv) (lid W e) (ln W x) ;
+
+  enNat (e : El Iv) : NatLaw D L (en e) = \ J I f x ->
+    transH (apH (L.act J (prodP J Iv) (lid J e)) (symH (lnat J I f x)))
+           (symH (LL.actSq J I (prodP J Iv) (prodP I Iv) (lid I e) f (cylH J I f) (lid J e) (pw-lid J I f e) (ln I x))) ;
+
+  opaque enNat ;
+
+  enS (e : El Iv) : PSub[D, L] = new PSub[D, L, en e, enNat e] ;
+
+  SB : PTy[D] = subTy D L S (enS s) ;
+  SA : PTy[D] = subTy D L S (enS t) ;
+
+  module SEs = SubE[D, L, S, enS s] ;
+  module SEt = SubE[D, L, S, enS t] ;
+
+  EB : PCtx = SEs.TD.E ;
+  EA : PCtx = SEt.TD.E ;
+
+  ----------------------------------------------------------------------
+  -- The transport filler
+
+  noFam (X : Ob) (rhoL : W0.Ix (L.ob (prodP X Iv))) (lw : TS.EI X) : LBs.LFam[X, rhoL, lw, zero] =
+    new LBs.LFam[X, rhoL, lw, zero,
+      \ l -> absurd _ (fz l), \ l W f i -> absurd _ (fz l), \ l W f i -> absurd _ (fz l),
+      \ l W' W chi f i i' -> absurd _ (fz l), \ l W f i -> absurd _ (fz l)] ;
+
+  uD (W : Ob) (x : W0.Ix (D.ob W)) (bS : TS.EI W) (bpt : Id (W0.Ix (L.ob W)) bS.1 (en s W x)) : LBs.LData[W, ln W x, zero, zero] =
+    new LBs.LData[W, ln W x, zero, zero, bS, bpt, noFam W (ln W x) bS, noFam W (ln W x) bS,
+      \ l l' V f i i' -> absurd _ (fz l), \ l l' V f i i' -> absurd _ (fz l), \ l l' V f i i' -> absurd _ (fz l)] ;
+
+  uF (W : Ob) (x : W0.Ix (D.ob W)) (bS : TS.EI W) (bpt : Id (W0.Ix (L.ob W)) bS.1 (en s W x)) : TS.EI (prodP W Iv) =
+    LBs.FE W (ln W x) zero zero (uD W x bS bpt) ;
+
+  uF-pt (W : Ob) (x : W0.Ix (D.ob W)) (bS : TS.EI W) (bpt : Id (W0.Ix (L.ob W)) bS.1 (en s W x))
+    : Id (W0.Ix (L.ob (prodP W Iv))) (uF W x bS bpt).1 (ln W x) = refl (ln W x) ;
+
+  uF-lid (W : Ob) (x : W0.Ix (D.ob W)) (bS : TS.EI W) (bpt : Id (W0.Ix (L.ob W)) bS.1 (en s W x))
+    : Id (TS.EI W) (ES.act W (prodP W Iv) (lid W s) (uF W x bS bpt)) bS = LBs.FE-lid W (ln W x) zero zero (uD W x bS bpt) ;
+
+  uF-cong (W : Ob) (x x' : W0.Ix (D.ob W)) (P : Id (W0.Ix (D.ob W)) x x') (bS bS' : TS.EI W)
+    (bpt : Id (W0.Ix (L.ob W)) bS.1 (en s W x)) (bpt' : Id (W0.Ix (L.ob W)) bS'.1 (en s W x')) (Q : Id (TS.EI W) bS bS')
+    : Id (TS.EI (prodP W Iv)) (uF W x bS bpt) (uF W x' bS' bpt') =
+    idJ (W0.Ix (D.ob W)) x
+      (\ x2 P2 -> (bpt2 : Id (W0.Ix (L.ob W)) bS'.1 (en s W x2)) -> Id (TS.EI (prodP W Iv)) (uF W x bS bpt) (uF W x2 bS' bpt2))
+      (\ bpt2 -> LBs.FE-cong W (ln W x) zero zero (uD W x bS bpt) (uD W x bS' bpt2) Q
+                   (\ l u -> absurd _ (fz l)) (\ l u -> absurd _ (fz l))
+                   (\ l V f i i' -> absurd _ (fz l)) (\ l V f i i' -> absurd _ (fz l)))
+      x' P bpt' ;
+
+  uF-unif (Y X : Ob) (h : Hom Y X) (x : W0.Ix (D.ob X)) (bS : TS.EI X) (bpt : Id (W0.Ix (L.ob X)) bS.1 (en s X x))
+    (bpt' : Id (W0.Ix (L.ob Y)) (ES.act Y X h bS).1 (en s Y (D.act Y X h x)))
+    : Id (TS.EI (prodP Y Iv)) (ES.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) (uF X x bS bpt)) (uF Y (D.act Y X h x) (ES.act Y X h bS) bpt') =
+    trans (TS.EI (prodP Y Iv)) (ES.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) (uF X x bS bpt))
+      (LBs.FE Y (L.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) (ln X x)) zero zero (LBs.rLD Y X h (ln X x) zero zero (uD X x bS bpt)))
+      (uF Y (D.act Y X h x) (ES.act Y X h bS) bpt')
+      (LBs.FE-unif Y X h (ln X x) zero zero (uD X x bS bpt))
+      (LBs.FE-congH Y (L.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) (ln X x)) (ln Y (D.act Y X h x)) zero zero (lnat Y X h x)
+         (LBs.rLD Y X h (ln X x) zero zero (uD X x bS bpt)) (uD Y (D.act Y X h x) (ES.act Y X h bS) bpt')
+         (refl (ES.act Y X h bS)) (\ l u -> absurd _ (fz l)) (\ l u -> absurd _ (fz l))
+         (\ l V f i i' -> absurd _ (fz l)) (\ l V f i i' -> absurd _ (fz l))) ;
+
+  opaque uF-cong ; opaque uF-unif ;
+
+  ----------------------------------------------------------------------
+  -- The transport map
+
+  trS (W : Ob) (x : W0.Ix (D.ob W)) (bS : TS.EI W) (bpt : Id (W0.Ix (L.ob W)) bS.1 (en s W x)) : TS.EI W =
+    ES.act W (prodP W Iv) (lid W t) (uF W x bS bpt) ;
+
+  trS-pt (W : Ob) (x : W0.Ix (D.ob W)) (bS : TS.EI W) (bpt : Id (W0.Ix (L.ob W)) bS.1 (en s W x))
+    : Id (W0.Ix (L.ob W)) (trS W x bS bpt).1 (en t W x) = refl (en t W x) ;
+
+  trE (W : Ob) (w : SEs.TD.EI W) : SEt.TD.EI W = (w.1, (trS W w.1 (SEs.Ls W w) (refl (en s W w.1))).2) ;
+
+  trE-E (W : Ob) (w : SEs.TD.EI W) : Id (TS.EI W) (SEt.Ls W (trE W w)) (trS W w.1 (SEs.Ls W w) (refl (en s W w.1))) =
+    refl (SEt.Ls W (trE W w)) ;
+
+  trS-unif (Y X : Ob) (h : Hom Y X) (x : W0.Ix (D.ob X)) (bS : TS.EI X) (bpt : Id (W0.Ix (L.ob X)) bS.1 (en s X x))
+    (bpt' : Id (W0.Ix (L.ob Y)) (ES.act Y X h bS).1 (en s Y (D.act Y X h x)))
+    : Id (TS.EI Y) (ES.act Y X h (trS X x bS bpt)) (trS Y (D.act Y X h x) (ES.act Y X h bS) bpt') =
+    transH (TS.PE.actSq Y X (prodP Y Iv) (prodP X Iv) (lid X t) h (cylH Y X h) (lid Y t) (pw-lid Y X h t) (uF X x bS bpt))
+           (apH (ES.act Y (prodP Y Iv) (lid Y t)) (uF-unif Y X h x bS bpt bpt')) ;
+
+  -- trS does not depend on the proof of the point
+  ap2' (Y : Ob) (x' : W0.Ix (D.ob Y)) (bS bS' : TS.EI Y) (Q : Id (TS.EI Y) bS bS')
+    (bpt : Id (W0.Ix (L.ob Y)) bS.1 (en s Y x')) (bpt' : Id (W0.Ix (L.ob Y)) bS'.1 (en s Y x'))
+    : Id (TS.EI Y) (trS Y x' bS bpt) (trS Y x' bS' bpt') =
+    idJ (TS.EI Y) bS (\ b2 Q2 -> (bpt2 : Id (W0.Ix (L.ob Y)) b2.1 (en s Y x')) -> Id (TS.EI Y) (trS Y x' bS bpt) (trS Y x' b2 bpt2))
+      (\ bpt2 -> apH (trS Y x' bS) (W0.isSetIx (L.ob Y) bS.1 (en s Y x') bpt bpt2)) bS' Q bpt' ;
+
+  trE-nat (Y X : Ob) (h : Hom Y X) (w : SEs.TD.EI X) : Id (SEt.TD.EI Y) (trE Y (EB.act Y X h w)) (EA.act Y X h (trE X w)) =
+    SEt.Ls-inj Y (trE Y (EB.act Y X h w)) (EA.act Y X h (trE X w)) (refl (D.act Y X h w.1))
+      (trans (TS.EI Y) (SEt.Ls Y (trE Y (EB.act Y X h w)))
+         (trS Y (D.act Y X h w.1) (ES.act Y X h (SEs.Ls X w)) (symH (enNat s Y X h w.1)))
+         (SEt.Ls Y (EA.act Y X h (trE X w)))
+         (ap2' Y (D.act Y X h w.1) (SEs.Ls Y (EB.act Y X h w)) (ES.act Y X h (SEs.Ls X w)) (SEs.Ls-act Y X h w)
+            (refl (en s Y (D.act Y X h w.1))) (symH (enNat s Y X h w.1)))
+         (trans (TS.EI Y) (trS Y (D.act Y X h w.1) (ES.act Y X h (SEs.Ls X w)) (symH (enNat s Y X h w.1)))
+            (ES.act Y X h (SEt.Ls X (trE X w))) (SEt.Ls Y (EA.act Y X h (trE X w)))
+            (symH (trS-unif Y X h w.1 (SEs.Ls X w) (refl (en s X w.1)) (symH (enNat s Y X h w.1))))
+            (symH (SEt.Ls-act Y X h (trE X w))))) ;
+
+  opaque trS-unif ; opaque trE-nat ;
+
+  tr : PMap[D, SB, SA] = new PMap[D, SB, SA, trE, \ W w -> refl w.1, trE-nat] ;
+} ;

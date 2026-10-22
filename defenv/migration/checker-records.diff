@@ -1,0 +1,1024 @@
+--- pre-records/src/Seg.hs
++++ src/Seg.hs
+@@ -79,12 +79,19 @@
+ data Directive = DNormal Exp | DType Exp | DFails [Unit] | DConv Exp Exp
+   deriving (Eq, Show)
+ 
++-- A module is a list of units with parameters (its body-less units, head
++-- and body), used through instances; never a type.  A record has head
++-- parameters (given at formation) and fields (its body-less body units);
++-- it is a type, with the constructor  new  and an eliminator.
++data SegKind = SModule | SRecord [Name]     -- a record: its head parameters
++  deriving (Eq, Show)
++
+ data Unit
+   = UDef  Id Name Exp Exp            -- id, name, type, body
+   | UPar  Id Name Exp                -- a parameter / primitive notion
+   | ULvl  Name                       -- a level variable
+   | UCstr [Cs]                       -- constraints
+-  | UMod  Id Name [Unit]             -- a segment
++  | UMod  Id Name SegKind [Unit]     -- a module or a record
+   | UInst Id Name MExp               -- module N = M[args]
+   | ULock [Id]                       -- the lock strategy from here on
+   | UDir  Directive
+@@ -93,7 +100,7 @@
+ unitIdOf :: Unit -> Id
+ unitIdOf u = case u of
+   UDef i _ _ _ -> i
+-  UMod i _ _   -> i
++  UMod i _ _ _ -> i
+   UInst i _ _    -> i
+   UPar i _ _     -> i
+   _              -> ""
+@@ -103,7 +110,7 @@
+   UDef _ x _ _ -> x
+   UPar _ x _     -> x
+   ULvl x         -> x
+-  UMod _ x _   -> x
++  UMod _ x _ _ -> x
+   UInst _ x _    -> x
+   _              -> ""
+ 
+@@ -145,6 +152,8 @@
+   | ProjU Exp Name                           -- e.l with e not a variable: the
+                                              -- filling pass resolves a member
+                                              -- of a segment by eta (below)
++  | Mem MExp [Arg] Name Exp                  -- R[ps].d at the element e: the
++                                             -- derived member d (filling pass)
+   | Named Id Exp                             -- a sig, struct or new occurrence
+                                              -- with its internal name
+   | Hole                                     -- a hidden argument, filled
+@@ -171,7 +180,7 @@
+ -- identity (id and the values of what it depends on), and, once all its
+ -- parameters are given, the instance environment
+ data Mod = Mod { modId :: Id, modDyn :: [Val], modUnits :: [Unit], modEnv :: Env
+-               , modInst :: Maybe Env }
++               , modInst :: Maybe Env, modKind :: SegKind }
+ 
+ data Clos  = Clos Name Exp Env
+ data LClos = LClos Name Exp Env
+@@ -193,7 +202,12 @@
+                                             -- of its group.  Nothing else: its
+                                             -- body is evaluated when the head
+                                             -- is needed, under the lock
+-  | VVar Name [(Name, Val)]                 -- a declared variable of segment type:
++  | VVar Name Mod [(Name, Val)]             -- a variable of record type: itself, with
++                                            -- its record and the head parameters its
++                                            -- type gives (for its derived members);
++                                            -- a fixed field is NOT a value here (§4:
++                                            -- it is elaborated where t.x is checked)
++                                            -- (was: a declared variable of record type:
+                                             -- itself, with the fields its type
+                                             -- fixes ( c : M[x := e]  gives
+                                             -- c.x = e )
+@@ -281,6 +295,8 @@
+   SegT m fs    -> VSegT (evalMod r m) [ (x, evalArg r a) | (x, a) <- fs ]
+   New m        -> let md = evalMod r m in VInst md (instOf md)
+   ProjU a l    -> vproj (eval r a) l
++  Mem m as l a -> let md = evalMod r m
++                  in memberAt md (zip (paramNames (headUnits md)) (map (evalArg r) as)) (eval r a) l
+   Hole         -> VConst "_unfilled" []   -- reported by the filling pass
+ 
+ capp :: Clos -> Val -> Val
+@@ -314,8 +330,12 @@
+ 
+ vproj :: Val -> Name -> Val
+ vproj (VStruct fs) l     = fromMaybe (error ("no field " ++ l)) (lookup l fs)
+-vproj w@(VVar _ fs) l    = fromMaybe (VProj w l) (lookup l fs)
+-vproj (VInst _ r) l      = lookupMember r l
++vproj w@(VVar _ md fs) l
++  | isDerived md l       = memberAt md fs w l
++  | otherwise            = VProj w l
++vproj w@(VInst m r) l
++  | isDerived m l        = memberAt m [ (h, lookupDyn r h) | h <- recordHeads m ] w l
++  | otherwise            = lookupMember r l
+ vproj (VNamedE _ _ v) l  = vproj v l
+ vproj w l                = VProj w l
+ 
+@@ -327,11 +347,11 @@
+ vidj _ _ _ d _ (VRefl _) = d
+ vidj a x c d y p         = VIdJ a x c d y p
+ 
+--- the fields of a constructed record: the declared fields (parameters) of
+--- a segment element, or the fields of a struct
++-- the fields of a constructed record (not its head parameters, which its
++-- type gives), or the fields of a struct
+ recordFields :: Val -> Maybe [Val]
+ recordFields v = case v of
+-  VInst m r   -> Just [ lookupDyn r p | p <- termParams (modUnits m) ]
++  VInst m r   -> Just [ lookupDyn r p | p <- recordFieldNames m ]
+   VStruct fs  -> Just (map snd fs)
+   VNamedE _ _ w -> recordFields w
+   _           -> Nothing
+@@ -351,9 +371,9 @@
+   rho = EDef r us ents (fragOf rho us ents)
+   entry u = case u of
+     UDef _ x _ _  -> [(x, EVal (mkRef u rho))]
+-    UMod i x mus -> [(x, EMod (Mod i (dynVals rho) mus rho
++    UMod i x k mus -> [(x, EMod (Mod i (dynVals rho) mus rho
+                                    (if hasParams mus then Nothing
+-                                    else Just (instUnits rho mus []))))]
++                                    else Just (instUnits rho mus [])) k))]
+     UInst _ x m     -> [(x, EMod (evalMod rho m))]
+     _               -> []
+ 
+@@ -490,7 +510,65 @@
+   go (EDecl r y v) = if x == y then v else go r
+   go (ELvl r y l) = if x == y then VLvl l else go r
+   go (EDef r _ _ _) = go r
++
++-- the fields of a record: its body-less units that are not head parameters
++recordFieldNames :: Mod -> [Name]
++recordFieldNames md = case modKind md of
++  SRecord hs -> [ x | x <- termParams (modUnits md), x `notElem` hs ]
++  SModule    -> []
++
++-- the units of a record's head (its parameters and their constraints)
++headUnits :: Mod -> [Unit]
++headUnits md = [ u | u <- modUnits md, isHead u ]
++ where hs = recordHeads md
++       isHead u = case u of
++         UPar _ p _ -> p `elem` hs
++         ULvl p     -> p `elem` hs
++         _          -> False
+ 
++-- the head parameters of a record
++recordHeads :: Mod -> [Name]
++recordHeads md = case modKind md of
++  SRecord hs -> hs
++  SModule    -> []
++
++-- a derived member of a record: a definition of its body
++isDerived :: Mod -> Name -> Bool
++isDerived md l = case (modKind md, memberUnit (modUnits md) l) of
++  (SRecord _, Just (UDef{})) -> True
++  _                          -> False
++
++-- The environment of the derived members of a record at the element t:
++-- the head parameters (dynamic), then the element itself (dynamic, as
++-- %self), then the fields as t.x (static: determined by t).  A derived
++-- member  t.d  is the access to d there, so it is  R.d[ps] t : compared by
++-- d, ps and t (never by t's fields), and unfolded under the lock strategy.
++selfEnv :: Mod -> [(Name, Val)] -> Val -> Env
++selfEnv md heads t = selfEnvFixed md heads [] t
++
++-- the same, with the fields a type fixes bound to their values: only for
++-- computing TYPES (of derived members at  t : R[ps][x := e] ), never values,
++-- so that fixed fields never enter equality (RECORDS.md §4)
++selfEnvFixed :: Mod -> [(Name, Val)] -> [(Name, Val)] -> Val -> Env
++selfEnvFixed md heads fixed t = go (modEnv md) False (modUnits md)
++ where
++  hs = recordHeads md
++  go r _ [] = r
++  go r self (u : us) = case u of
++    UPar _ p _ | p `elem` hs -> go (EVar r p (headVal p)) self us
++    ULvl p | VLvl l <- headVal p -> go (ELvl r p l) self us
++    UCstr _ -> go r self us
++    _ | not self -> go (EVar r "%self" t) True (u : us)
++    UPar _ p _ -> go (EDecl r p (fromMaybe (vproj t p) (lookup p fixed))) self us
++    UDef{} -> let (g, rest) = span isGroupUnit (u : us) in go (mkGroup r g) self rest
++    -- an open of a module instance: its arguments see the fields as t.x
++    UInst{} -> go (mkGroup r [u]) self us
++    _ -> go r self us
++  headVal p = fromMaybe (VConst p []) (lookup p heads)
++
++memberAt :: Mod -> [(Name, Val)] -> Val -> Name -> Val
++memberAt md heads t l = lookupMember (selfEnv md heads t) l
++
+ -- the parameters of a segment, in order
+ paramNames :: [Unit] -> [Name]
+ paramNames us = [ x | u <- us, x <- case u of { UPar _ y _ -> [y]; ULvl y -> [y]; _ -> [] } ]
+@@ -560,8 +638,9 @@
+     VStruct fs -> whnfP u (fromMaybe (error ("no field " ++ l)) (lookup l fs))
+     i@(VInst _ _) -> whnfP u (vproj i l)
+     VNamedE _ _ v -> whnfP u (vproj v l)
+-    w@(VVar _ fs) | Just a <- lookup l fs -> whnfP u a
+-                  | otherwise -> VProj w l
++    w@(VVar{}) -> case vproj w l of
++                    VProj{} -> VProj w l
++                    a       -> whnfP u a
+     p'         -> vproj p' l
+   VLApp t l -> case whnfP u t of
+     VLLam cl -> whnfP u (lcapp cl l)
+@@ -633,7 +712,7 @@
+   (VGen i, VGen j)                 -> i == j
+   (VLvl l, VLvl m)                 -> l == m
+   (VConst i d, VConst j e)         -> i == j && eqVals d e
+-  (VVar x _, VVar y _)             -> x == y
++  (VVar x _ _, VVar y _ _)         -> x == y
+   (VRef u r, VRef u' r')           -> defId u == defId u' && eqEnvs r r'
+   (VApp a b, VApp a' b')           -> eqVal a a' && eqVal b b'
+   (VLam f, VLam g)                 -> eqClos f g
+@@ -707,7 +786,7 @@
+   (VLvl l, VLvl m)             -> eqLvl th l m
+   (VGen i, VGen j)             -> i == j
+   (VConst i d1, VConst j d2)   -> i == j && convs c d1 d2
+-  (VVar x _, VVar y _)         -> x == y
++  (VVar x _ _, VVar y _ _)     -> x == y
+   (VLam _, _)                  -> etaEq
+   (_, VLam _)                  -> etaEq
+   (VLLam _, _)                 -> letaEq
+@@ -809,7 +888,7 @@
+   VLvl l        -> Var (showLvl l)
+   VGen i        -> Var ("#" ++ show i)
+   VConst i d    -> Var (shortId i ++ dynS d)
+-  VVar x _      -> Var (if take 2 x == "%v" then '#' : drop 2 x else x)
++  VVar x _ _    -> Var (if take 2 x == "%v" then '#' : drop 2 x else x)
+   -- a definition with its dynamic part: the values of the variables of its
+   -- environment, outermost first (for a member of a segment: its parameters)
+   VRef u r      -> Var (qualName (defId u) ++ dynB [ v | (x, v) <- reverse (dynOf r), not (ambient x v) ])
+@@ -946,6 +1025,7 @@
+   go _ _ Hole         = "_"
+   go d n (Named _ a) = pr d n a
+   go d n (ProjU a l)  = paren (d > 11) (pr 11 (n-1) a ++ "." ++ l)
++  go d n (Mem _ _ l a) = paren (d > 11) (pr 11 (n-1) a ++ "." ++ l)
+   paren True  t = "(" ++ t ++ ")"
+   paren False t = t
+   pm (MVar x)     = let y = reverse (takeWhile (`notElem` "./") (reverse x)) in if take 5 y == "open#" then "" else shortName x
+@@ -1010,7 +1090,7 @@
+ etaV t v = case (whnf Set.empty t, v) of
+   -- a fresh variable of segment type: itself, with the fields its type
+   -- fixes (no eta for records)
+-  (VSegT _ fs, VGen k) -> VVar (freshVarName k) fs
++  (VSegT md fs, VGen k) -> VVar (freshVarName k) md fs
+   _ -> v
+ 
+ -- the name of the fresh variable k when it has a segment type
+@@ -1122,6 +1202,10 @@
+       -- a record: one branch binding its fields, checked at the canonical
+       -- element built from them
+       [(_, (xs, b))] | Just (cx', el) <- recordBranch cx d xs -> check cx' b (capp f el)
++      [(_, (xs, _))] | VSegT md _ <- d, SRecord _ <- modKind md ->
++        failWith ("the pattern binds " ++ show (length xs) ++ " variables; the fields of "
++                  ++ showV cx d ++ " are " ++ unwords (recordFieldNames md)
++                  ++ " (its parameters are given by the type)")
+       _ -> failWith ("split on a non-sum type " ++ showV cx d)
+   (Named _ e', _) -> check cx e' t0
+   (Let us b, _) -> do cx' <- checkLocal cx us
+@@ -1219,6 +1303,8 @@
+     t <- inferD cx a
+     case force cx t of
+       VRec _ tel r -> fieldType cx (ev cx a) tel r l
++      VSegT md fs | isDerived md l, Just (UDef _ _ ty _) <- memberUnit (modUnits md) l ->
++        Right (eval (selfEnvFixed md fs fs (ev cx a)) ty)
+       VSegT md fs -> do
+         let v = ev cx a
+             r = case v of
+@@ -1232,6 +1318,7 @@
+           _ -> failWith ("no member " ++ l ++ " in " ++ showV cx t)
+       t' -> failWith ("not a record: " ++ pretty a ++ " : " ++ showV cx t')
+   Named _ e' -> infer cx e'
++  Mem _ _ l a -> infer cx (Proj a l)
+   Let us b -> do
+     cx' <- checkLocal cx us
+     infer cx' b
+@@ -1245,11 +1332,14 @@
+         Left _   -> failWith ("the segment " ++ showM m ++ " has a large free parameter: it is not in a universe")
+   New m -> do
+     md <- checkMod cx m
+-    -- the type fixes the levels only: a fixed field is read off the
+-    -- element's value where needed (subSeg), and a type that does not
+-    -- mention the fields can be a codomain (apH (\ c -> new M[.., c]))
++    case modKind md of
++      SModule -> failWith ("new " ++ showM m ++ ": a module; declare it with `record`")
++      SRecord _ -> ok
++    -- the type is  R[ps] , the head parameters only: a fixed field is read
++    -- off the element's value where needed (subSeg), and a type that does
++    -- not mention the fields can be a codomain (apH (\ c -> new M[.., c]))
+     let r = instOf md
+-    Right (VSegT md [ (p, VLvl l) | ULvl p <- modUnits md, VLvl l <- [lookupDyn r p] ])
++    Right (VSegT md [ (p, lookupDyn r p) | p <- paramNames (headUnits md) ])
+   Acc m x -> do
+     md <- checkMod cx m
+     case memberUnit (modUnits md) x of
+@@ -1268,6 +1358,11 @@
+   case [ x | (x, _) <- fs, x `notElem` ps ] of
+     (x : _) -> failWith ("the segment " ++ showM m ++ " has no parameter " ++ x)
+     [] -> ok
++  case modKind md of
++    SModule -> failWith (showM m ++ " is a module; declare it with `record` to use it as a type")
++    SRecord hs -> case [ h | h <- hs, h `notElem` map fst fs ] of
++      [] -> ok
++      missing -> failWith ("the record " ++ showM m ++ " needs its parameters " ++ unwords missing)
+   vs <- go (modEnv md) (modUnits md)
+   Right (md, vs)
+  where
+@@ -1275,6 +1370,12 @@
+   go r (u : us) = case u of
+     UPar i x a -> case lookup x fs of
+       Just (ATm e) -> do
++        -- the type of a fixed field may mention only fixed fields (and
++        -- the head parameters, which are always given)
++        case [ y | y <- freeNamesE a, VConst ('?' : _) [] <- [lookupDyn r y] ] of
++          (y : _) -> failWith ("the field " ++ x ++ " of " ++ showM m ++ " can be fixed only if "
++                               ++ y ++ " is fixed too: its type mentions " ++ y)
++          [] -> ok
+         inCtx ("in the field " ++ x) (check cx e (eval r a))
+         let v = ev cx e
+         vs <- go (EVar r x v) us
+@@ -1367,15 +1468,21 @@
+ checkArgs _ _ _ _ = failWith "constructor applied to the wrong number of arguments"
+ 
+ -- The branch of the eliminator of a record type: its binders are the
+--- declared fields of the segment (the parameters, those fixed by the type
+--- bound to their values) or the fields of the sig.  The context with the
+--- binders, and the canonical element built from them.
++-- fields of the record (not its head parameters, which the type gives) or
++-- the fields of the sig.  A field the type fixes (provisional, §4 of
++-- RECORDS.md) is bound to its value.  The context with the binders, and
++-- the canonical element built from them.
+ recordBranch :: Cx -> Val -> [Name] -> Maybe (Cx, Val)
+ recordBranch cx d xs = case d of
+-  VSegT md fs | length xs == length (termParams (modUnits md)) -> go cx (modEnv md) (modUnits md) xs
++  VSegT md fs | SRecord _ <- modKind md
++              , length xs == length (recordFieldNames md) -> go cx (modEnv md) (modUnits md) xs
+    where
++    hs = case modKind md of { SRecord h -> h; SModule -> [] }
+     go c r [] [] = Just (c, VInst md r)
+     go c r (u : us) ys = case (u, ys) of
++      (UPar _ p _, _) | p `elem` hs -> case lookup p fs of
++        Just v  -> go c (EVar r p v) us ys
++        Nothing -> Nothing
+       (UPar _ p a, y : ys') -> case lookup p fs of
+         Just v  -> go (c { cxEnv = EVar (cxEnv c) y v, cxTys = (y, eval r a) : cxTys c }) (EVar r p v) us ys'
+         Nothing -> let (c', g) = extVar c y (eval r a) in go c' (EVar r p g) us ys'
+@@ -1548,7 +1655,7 @@
+         -- (a variable of segment type is bound to itself with the fields
+         -- its type fixes,  c : M[x := e]  gives  c.x = e ; not dynamic)
+         cx' = cx { cxEnv = case whnf Set.empty va of
+-                             VSegT _ fs -> EDecl (cxEnv cx) x (VVar x fs)
++                             VSegT md fs -> EDecl (cxEnv cx) x (VVar x md fs)
+                              _          -> cxEnv cx
+                  , cxTys = (x, va) : cxTys cx
+                  , cxPSorts = (x, inferSort cx a) : cxPSorts cx }
+@@ -1559,14 +1666,14 @@
+   UDir d ->
+     let (cx', evs, us') = checkUnitsF cx us
+     in (cx', Event "#" (fillDir cx d >>= runDirective cx) : evs, u : us')
+-  UMod i x mus0 ->
++  UMod i x k mus0 ->
+     let -- the body is checked in the context where it is declared; its
+         -- parameters are rigid there.  Locks set inside persist.  The
+         -- universe of the segment as a type is computed from the sorts of
+         -- its parameters; the sorts of nested segments are kept (stated
+         -- with this segment's level parameters, found in an instance).
+         (cxIn, evsIn, mus) = checkUnitsF cx { cxPSorts = [] } mus0
+-        u' = UMod i x mus
++        u' = UMod i x k mus
+         cx1 = cx { cxEnv = mkGroup (cxEnv cx) [u'] }
+         cx2 = cx1 { cxLocks = cxLocks cxIn, cxSegSort = (i, cxPSorts cxIn) : cxSegSort cxIn }
+         (cx3, evs, us') = checkUnitsF cx2 us
+@@ -1649,6 +1756,7 @@
+ hasHole e = case e of
+   Hole         -> True
+   ProjU _ _    -> True
++  Mem _ _ _ a  -> hasHole a
+   Named _ a  -> hasHole a
+   App a b      -> hasHole a || hasHole b
+   Lam _ b      -> hasHole b
+@@ -1800,28 +1908,33 @@
+       Fst a  -> do (a', _) <- fillI cx a; retype (Right (Fst a'))
+       Snd a  -> do (a', _) <- fillI cx a; retype (Right (Snd a'))
+       Proj a l -> do (a', _) <- fillI cx a; retype (Right (Proj a' l))
+-      -- a defined member of a NEUTRAL element  (S k).g : evaluation is
+-      -- untyped, so the member is taken in the eta-expanded element
+-      --   (new M[(S k).f1, .., (S k).fn]).g
+-      -- which unfolds; a field stays a projection
++      -- a derived member of a record element  t.d : evaluation is untyped,
++      -- so it is written with its record and head parameters,  R[ps].d at t
++      -- (RECORDS.md §3); on a variable of record type, which carries its
++      -- record, the projection itself computes the same value
+       ProjU a l -> do
+         (a', ta) <- fillI cx a
+         case force cx ta of
+-          VSegT md fs
+-            | Just (UDef{}) <- memberUnit (modUnits md) l
+-            , Nothing <- quote cx (VSegT md [])
+-            , not (isVar a') ->
+-                failWith ("the member " ++ l ++ " of " ++ pretty a' ++ " would not unfold: its segment "
+-                          ++ shortId (modId md) ++ " cannot be named here (bring it into scope)")
+-          VSegT md fs
+-            | Just (UDef{}) <- memberUnit (modUnits md) l
+-            , Just (SegT me _) <- quote cx (VSegT md []) ->
+-                do args <- mapM (\p -> case lookup p fs of
+-                                   Just (VLvl lv) -> maybe (Left ("cannot write the level of " ++ p)) (Right . ALv)
+-                                                           (quote cx (VU lv) >>= \u -> case u of { U lv' -> Just lv'; _ -> Nothing })
+-                                   Just v -> maybe (Left ("cannot write the field " ++ p)) (Right . ATm) (quote cx v)
+-                                   Nothing -> Right (ATm (Proj a' p))) (paramNames (modUnits md))
+-                   retype (Right (Proj (New (MApp me args)) l))
++          -- a field (or head parameter) the type fixes: its value (§4)
++          -- (its type is the field's type, from the projection: the value
++          -- itself may not be inferable, e.g. a constructor)
++          VSegT _ fs | Just v <- lookup l fs, notLvl v, Just e' <- quote cx v -> do
++            t <- inferD cx (Proj a' l)
++            Right (e', t)
++          VSegT md fs | isDerived md l ->
++            case quote cx (VSegT md []) of
++              Just (SegT me _) -> do
++                args <- mapM (\p -> case lookup p fs of
++                                 Just (VLvl lv) -> maybe (Left ("cannot write the level of " ++ p)) (Right . ALv)
++                                                         (quote cx (VU lv) >>= \u -> case u of { U lv' -> Just lv'; _ -> Nothing })
++                                 Just v -> maybe (Left ("cannot write the parameter " ++ p)) (Right . ATm) (quote cx v)
++                                 Nothing -> Left ("the parameter " ++ p ++ " of the record is not known"))
++                             (paramNames (headUnits md))
++                retype (Right (Mem me args l a'))
++              _ | VVar{} <- ev cx a' -> retype (Right (Proj a' l))
++                | otherwise ->
++                    failWith ("the member " ++ l ++ " of " ++ pretty a' ++ ": its record "
++                              ++ shortId (modId md) ++ " cannot be named here (bring it into scope)")
+           _ -> retype (Right (Proj a' l))
+       Let us b -> do (us', cx') <- fillLocal cx us
+                      (b', _) <- fillI cx' b
+@@ -1852,6 +1965,7 @@
+                      ++ "\n  (give a type, or the arguments as {e})")
+  where
+   retype r = do e' <- r; t <- inferD cx e'; Right (e', t)
++  notLvl v = case v of { VLvl _ -> False; _ -> True }
+ 
+ fillArg :: Cx -> Arg -> Res Arg
+ fillArg cx (ATm a)
+@@ -2194,7 +2308,7 @@
+   sameHead k hp ht sols = case (hp, ht) of
+     (VGen i, VGen j) | i == j -> Just sols
+     (VConst a [], VConst b []) | a == b && not (isHoleV hp) -> Just sols
+-    (VVar a _, VVar b _) | a == b -> Just sols
++    (VVar a _ _, VVar b _ _) | a == b -> Just sols
+     (VRef u _, VRef u' _) | defId u == defId u' -> Just (go k hp ht sols)
+     (VProj a l, VProj b l') | l == l' && not (isHoleV a) -> Just (go k a b sols)
+     (VFst a, VFst b) | not (isHoleV a) -> Just (go k a b sols)
+@@ -2247,7 +2361,7 @@
+     EDef r' _ _ _ -> go r' sc
+   addVar' x v sc = case v of
+     VGen i     -> sc { scGens = scGens sc ++ [(i, x)] }
+-    VVar n _ | take 2 n == "%v" -> sc { scGens = scGens sc ++ [(read (drop 2 n), x)] }
++    VVar n _ _ | take 2 n == "%v" -> sc { scGens = scGens sc ++ [(read (drop 2 n), x)] }
+     -- an eta-expanded variable: its base names the variable (for its
+     -- projections x.f), and the whole instance is the variable itself
+     VInst m r  -> let sc1 = sc { scEtas = scEtas sc ++ [(v, x)] }
+@@ -2284,7 +2398,7 @@
+ modUnitName :: Unit -> Maybe (Id, Name)
+ modUnitName u = case u of
+   UInst i x _ -> Just (i, x)
+-  UMod i x _  -> Just (i, x)
++  UMod i x _ _ -> Just (i, x)
+   _           -> Nothing
+ 
+ -- a segment by its id, if it is in scope
+@@ -2335,6 +2449,7 @@
+     Struct fs    -> concatMap (go bs . snd) fs
+     Proj a _     -> go bs a
+     ProjU a _    -> go bs a
++    Mem m as _ a -> me bs m ++ concatMap (arg bs) as ++ go bs a
+     Id a x y     -> go bs a ++ go bs x ++ go bs y
+     Refl a       -> go bs a
+     IdJ a x c d y p -> concatMap (go bs) [a, x, c, d, y, p]
+@@ -2389,13 +2504,21 @@
+ quoteWith :: QScope -> Val -> Maybe Exp
+ quoteWith sc v0 = case v0 of
+   VGen i -> fmap Var (lookup i (scGens sc))
+-  VVar x _ | take 2 x == "%v" -> fmap Var (lookup (read (drop 2 x)) (scGens sc))
++  VVar x _ _ | take 2 x == "%v" -> fmap Var (lookup (read (drop 2 x)) (scGens sc))
+            | otherwise -> Just (Var x)
+   VConst i [] | Set.member i (scDecls sc) -> Just (Var i)   -- a declared variable in scope
+   VU l -> fmap U (qLvl l)
+   VLvl _ -> Nothing
+   -- a definition: by its id if it means the same here, else as a member
+   -- M[args].f of its segments; with no name, its body
++  -- a derived member of a record:  R[ps].d at its element
++  VRef u r | Just t <- lookup "%self" (allBound r)
++           , (rid : _) <- reverse (segChain (defId u))
++           , Just md <- lookupModM r rid -> do
++    me <- segPath rid (modEnv md)
++    as <- mapM (qArg . paramVal r) (paramNames (headUnits md))
++    t' <- q t
++    Just (Mem me as (unitName u) t')
+   VRef u r -> let i = defId u in
+     case lookupVal (scEnv sc) i of
+       VRef u' r' | defId u' == i && convs (scCC sc) (dynVals r) (dynVals r') -> Just (Var i)
+--- pre-records/src/SegParse.hs
++++ src/SegParse.hs
+@@ -31,7 +31,7 @@
+ -- and computes the dependencies (the dynamic part) of every definition,
+ -- labelled sum and split.  It needs no types: the core is untouched.
+ 
+-module SegParse (parseUnits, resolveProgram, RUnit(..)) where
++module SegParse (parseUnits, resolveProgram, surveyRecords, RUnit(..)) where
+ 
+ import Seg
+ import Data.Char (isAlpha, isDigit, isSpace)
+@@ -116,7 +116,7 @@
+   | RData Int Name [TItem] (Maybe R) [(Name, [TItem])]
+   | RLevel [Name]
+   | RCstr [RCs]
+-  | RModule Name [TItem] [RUnit]
++  | RModule Bool Name [TItem] [RUnit]       -- True: a record
+   | RModInst Name R
+   | ROpen Int R
+   | RImport Name
+@@ -157,7 +157,7 @@
+ 
+ keywords :: [Name]
+ keywords = ["data", "split", "where", "let", "in", "U", "Id", "refl", "idJ",
+-            "opaque", "transparent", "transparent_all", "module", "open", "import",
++            "opaque", "transparent", "transparent_all", "module", "record", "open", "import",
+             "level", "constraint", "sig", "struct", "normal", "type", "fails", "conv", "new", "calc"]
+ 
+ ident :: P Name
+@@ -512,6 +512,14 @@
+   | isKw "import" ts = do ((), r1) <- kw "import" ts
+                           (x, r2) <- ident r1
+                           Right (RImport x, r2)
++  | isKw "record" ts = do
++      ((), r1) <- kw "record" ts
++      (x, r2) <- ident r1
++      (tel, r3) <- telescope r2
++      ((), r4) <- sym "{" r3
++      (us, r5) <- units r4
++      ((), r6) <- sym "}" r5
++      Right (RModule True x tel us, r6)
+   | isKw "module" ts = do
+       ((), r1) <- kw "module" ts
+       (x, r2) <- ident r1
+@@ -523,7 +531,7 @@
+                 ((), r4) <- sym "{" r3
+                 (us, r5) <- units r4
+                 ((), r6) <- sym "}" r5
+-                Right (RModule x tel us, r6)
++                Right (RModule False x tel us, r6)
+   | isKw "data" ts = do
+       ((), r1)  <- kw "data" ts
+       (x, r2)   <- ident r1
+@@ -592,7 +600,8 @@
+   { miParams  :: [(Name, PKind)]
+   , miMembers :: [(Name, Maybe ModInfo)]    -- a term member, or a submodule
+   , miPath    :: String
+-  , miMasks   :: [(Name, [Pos])] }
++  , miMasks   :: [(Name, [Pos])]
++  , miKind    :: SegKind }
+   deriving (Show)
+ 
+ data SInfo
+@@ -611,7 +620,10 @@
+              , rsLocks :: [Id], rsMasks :: [(Name, [Pos])]
+              -- Map mirrors of rsScope / rsMasks for lookups (the lists keep
+              -- the order, which open and the label positions need)
+-             , rsScopeM :: M.Map Name SInfo, rsMasksM :: M.Map Name [Pos] }
++             , rsScopeM :: M.Map Name SInfo, rsMasksM :: M.Map Name [Pos]
++             -- the survey (--survey-records): a module used as a type is
++             -- not an error, and every segment keeps its head parameters
++             , rsSurvey :: Bool }
+ 
+ look :: RS -> Name -> Maybe SInfo
+ look rs x = M.lookup x (rsScopeM rs)
+@@ -705,7 +717,7 @@
+     let ps = miParams mi
+     case [ x | (x, _) <- ps, x `notElem` map fst fs ] of
+       [] -> Right (MApp m [ a' | (x, _) <- ps, Just a' <- [lookup x fs] ], mi { miParams = [] })
+-      missing -> Left ("module " ++ miPath mi ++ ": no argument for " ++ unwords missing)
++      missing -> Left (kindWord mi ++ " " ++ miPath mi ++ ": no argument for " ++ unwords missing)
+   _ -> Left ("not a module expression: " ++ show r)
+ 
+ -- arguments, positional then named: positional ones fill the parameters in
+@@ -714,7 +726,7 @@
+ resArgs rs mi as = do
+   let ps = miParams mi
+       (pos, named) = span ((== Nothing) . fst) as
+-  if length pos > length ps then Left ("module " ++ miPath mi ++ ": too many arguments") else do
++  if length pos > length ps then Left (kindWord mi ++ " " ++ miPath mi ++ ": too many arguments") else do
+     let posNamed = zip (map fst ps) (map snd pos)
+     named' <- mapM (\(n, e) -> case n of
+                       Just x  -> Right (x, e)
+@@ -724,7 +736,7 @@
+     mapM (\(x, e) -> case lookup x ps of
+              Just PTm -> fmap (\e' -> (x, ATm e')) (resE rs e)
+              Just PLv -> fmap (\l -> (x, ALv l)) (resLv rs e)
+-             Nothing  -> Left ("module " ++ miPath mi ++ " has no parameter " ++ x)) all'
++             Nothing  -> Left (kindWord mi ++ " " ++ miPath mi ++ " has no parameter " ++ x)) all'
+ 
+ -- a segment head (no arguments): for a type  M[x := e]
+ resHead :: RS -> R -> Rz (MExp, ModInfo)
+@@ -806,14 +818,11 @@
+       Just (SDef i) -> Right (Var i)        -- a definition: its unique id
+       Just SLvl -> Left ("level variable used as a term: " ++ x)
+       Just (SVarS _) -> Right (Var x)
+-      -- a member of an opened variable: a field is a projection; a defined
+-      -- member is resolved by eta in the filling pass, like  c.x
+-      Just (SField c) -> Right (case look rs c of
+-        Just (SVarS mi) | x `notElem` map fst (miParams mi) -> ProjU (Var c) x
+-        _ -> Proj (Var c) x)
+-      Just (SMod i _) -> Right (SegT (MVar i) [])          -- the segment as a type
++      -- a member of an opened variable: c.x, decided by the filling pass
++      Just (SField c) -> Right (ProjU (Var c) x)
++      Just (SMod i mi) -> asType mi (SegT (MVar i) [])    -- a record as a type
+       Just (SOpen m _ Nothing) -> Right (Acc m x)
+-      Just (SOpen m _ (Just _)) -> Right (SegT (MSub m x) [])
++      Just (SOpen m _ (Just mi)) -> asType mi (SegT (MSub m x) [])
+       Nothing
+         | (x, 0) `elem` rsLabels rs -> Right (Con x [])
+         | any ((== x) . fst) (rsLabels rs) -> Left ("constructor " ++ x ++ " applied to the wrong number of arguments")
+@@ -852,32 +861,31 @@
+     RDot a l
+       | isModExp rs a -> do
+           (m, mi) <- resM rs a
+-          if not (null (miParams mi)) then Left ("module " ++ miPath mi ++ " needs arguments") else
++          if isRecordMI mi then Left ("the member " ++ l ++ " of the record " ++ miPath mi
++                                      ++ " is reached through an element, not through the record") else
++           if not (null (miParams mi)) then Left ("module " ++ miPath mi ++ " needs arguments") else
+             case lookup l (miMembers mi) of
+               Just Nothing -> Right (Acc m l)
+-              Just (Just _) -> Right (SegT (MSub m l) [])
++              Just (Just mi') -> asType mi' (SegT (MSub m l) [])
+               Nothing -> Left ("no member " ++ l ++ " in module " ++ miPath mi)
++      | Just mi <- recordHead a ->
++          Left ("the member " ++ l ++ " of the record " ++ miPath mi
++                ++ " is reached through an element, not through the record")
+       | otherwise -> do
+           a' <- resE rs a
+-          -- on a variable a member already unfolds (the variable is bound
+-          -- to its eta-expansion); otherwise the filling pass decides
+-          -- a FIELD of a variable is a projection; a defined MEMBER of a
+-          -- variable of segment type is resolved by eta in the filling
+-          -- pass, since the variable may be instantiated by a neutral
+-          Right (case (a, a') of
+-            (RVar c, Var _) -> case look rs c of
+-              Just (SVarS mi) | l `notElem` map fst (miParams mi) -> ProjU a' l
+-              Just (SDef _) -> ProjU a' l      -- a defined element: s = b.bs l
+-              _ -> Proj a' l
+-            (_, Var _) -> Proj a' l
+-            _ -> ProjU a' l)
++          -- every projection is decided by the filling pass, which knows
++          -- the type of a': a field the type fixes is its value, a derived
++          -- member is  R[ps].d  at a' (RECORDS.md §3, §4)
++          Right (ProjU a' l)
+     RInst a as -> do
+       (m, mi) <- resHead rs a
+-      fs <- resArgs rs mi as
+-      Right (SegT m fs)
++      if not (isRecordMI mi || rsSurvey rs) then either Left (const (Left (notRecord mi))) (resM rs r) else do
++        fs <- resArgs rs mi as
++        Right (SegT m fs)
+     RNew a -> do
+       (m, mi) <- resM rs a
+-      if not (null (miParams mi)) then Left ("new " ++ miPath mi ++ ": arguments missing")
++      if not (isRecordMI mi || rsSurvey rs) then Left ("new " ++ miPath mi ++ ": " ++ notRecord mi) else
++       if not (null (miParams mi)) then Left ("new " ++ miPath mi ++ ": arguments missing")
+         else Right (New m)            -- the canonical element: a constructor
+     RSplit o bs -> do
+       bs' <- mapM (\(c, xs, b) -> do b' <- resBody (bindS rs [ (x, SVar) | x <- xs ]) b
+@@ -897,6 +905,13 @@
+     RSuc _ -> Left "a level used as a term"
+     RMax _ _ -> Left "a level used as a term"
+  where
++  asType mi e = if isRecordMI mi || rsSurvey rs then Right e else Left (notRecord mi)
++  -- the record named by  R  or  R[..]  (not a variable of record type)
++  recordHead a = case a of
++    RInst h _ | Right (_, mi) <- resHead rs h, isRecordMI mi -> Just mi
++    RVar _ | Right (_, mi) <- resM rs a, isRecordMI mi -> Just mi
++    RDot _ _ | Right (_, mi) <- resM rs a, isRecordMI mi -> Just mi
++    _ -> Nothing
+   spine (RApp a b) as = spine a (b : as)
+   spine h as          = (h, as)
+ 
+@@ -985,7 +1000,7 @@
+   go u = case u of
+     RData{} -> labelsOf [u]
+     RDef _ _ _ _ (Just (RBody e ws)) -> allLabels ws ++ inR e
+-    RModule _ _ us -> allLabels us
++    RModule _ _ _ us -> allLabels us
+     RFails us -> allLabels us
+     _ -> []
+   inR e = case e of
+@@ -1015,8 +1030,12 @@
+     (us', rs') <- resUnits (withMasks (bindS rs [(x, if null tel then varInfo rs a else SVar)])
+                                       [(x, telMask tel)]) us n
+     Right (UPar (rsPath rs ++ x) x (piB bs a') : us', rs')
+-  RModule x tel body -> do
++  RModule isRec x tel body -> do
+     fresh rs x
++    -- a record's body: fields and definitions only
++    case [ () | isRec, b <- body, notInRecord b ] of
++      [] -> Right ()
++      _  -> Left ("the record " ++ x ++ " may contain only fields, definitions and opens (no module, record, level or constraint)")
+     let rsIn = rs { rsPath = rsPath rs ++ x ++ "." }
+     (bs, rsTel) <- resTel rsIn tel
+     let varOf y = maybe SVar id (M.lookup y (rsScopeM rsTel))
+@@ -1037,27 +1056,44 @@
+                      (rsPath rs ++ x)
+                      [ (y, ps) | (y, _) <- membersOf rsBody rsHead
+                                , Just ps <- [M.lookup y (rsMasksM rsBody)], PH `elem` ps ]
++                     kind
++        heads = SRecord [ unitName v | v <- headUnits, Just _ <- [paramKind v] ]
++        kind = if isRec then heads else SModule
++        ukind = if rsSurvey rs then heads else kind
+     -- the lock strategy is global and positional: what the body set persists
+     let rsAfter = (bindS rs [(x, SMod (rsPath rs ++ x) mi)]) { rsLocks = rsLocks rsBody }
+         us2 = case recordCon x tel body of
+           Just c@(RDef _ mk _ _ _)
+-            | mk `notElem` concatMap definedNames us
++            | isRec
++            , mk `notElem` concatMap definedNames us
+             , Right _ <- resUnits rsAfter [c] n -> c : us
+           _ -> us
+     (us', rs') <- resUnits rsAfter us2 n
+-    Right (UMod (rsPath rs ++ x) x all' : us', rs')
++    Right (UMod (rsPath rs ++ x) x ukind all' : us', rs')
+   RModInst x e -> do
+     fresh rs x
++    case e of
++      RInst h _ | Right (_, mi) <- resHead rs h, isRecordMI mi ->
++        Left ("module " ++ x ++ " = " ++ miPath mi ++ "[..]: a record is not a module")
++      _ -> Right ()
+     (m, mi) <- resM rs e
+-    if not (null (miParams mi)) then Left ("module " ++ miPath mi ++ " needs arguments") else do
++    -- a record can be renamed, not instantiated as a module
++    let recArgs = case m of { MApp _ _ -> isRecordMI mi; _ -> False }
++    if recArgs then Left ("module " ++ x ++ " = " ++ miPath mi ++ "[..]: a record is not a module") else
++     if not (null (miParams mi)) && not (isRecordMI mi) then Left ("module " ++ miPath mi ++ " needs arguments") else do
+       (us', rs') <- resUnits (bindS rs [(x, SMod (rsPath rs ++ x) mi)]) us n
+       Right (UInst (rsPath rs ++ x) x m : us', rs')
+   ROpen _ (RVar c) | Just (SVarS mi) <- look rs c -> do
+     let opened = [ (y, SField c) | (y, Nothing) <- miMembers mi, not (M.member y (rsScopeM rs)) ]
+     resUnits (withMasks (bindS rs opened) (miMasks mi)) us n
+   ROpen o e -> do
++    case e of
++      RInst h _ | Right (_, mi) <- resHead rs h, isRecordMI mi ->
++        Left ("open " ++ miPath mi ++ "[..]: a record is not a module (open an element)")
++      _ -> Right ()
+     (m, mi) <- resM rs e
+-    if not (null (miParams mi)) then Left ("module " ++ miPath mi ++ " needs arguments") else do
++    if isRecordMI mi then Left ("open " ++ miPath mi ++ ": a record is not a module (open an element)") else
++     if not (null (miParams mi)) then Left ("module " ++ miPath mi ++ " needs arguments") else do
+       let (pre, m') = case m of
+             -- unique in the whole program: o (the tokens left) is unique only
+             -- within one file, and a nested open with the same name would
+@@ -1107,6 +1143,29 @@
+     (us', rs') <- resUnits rs { rsLocks = s } us n
+     Right (ULock s : us', rs')
+ 
++isRecordMI :: ModInfo -> Bool
++isRecordMI mi = case miKind mi of
++  SRecord _ -> True
++  SModule   -> False
++
++kindWord :: ModInfo -> String
++kindWord mi = if isRecordMI mi then "record" else "module"
++
++notRecord :: ModInfo -> String
++notRecord mi = miPath mi ++ " is a module; declare it with `record` to use it as a type"
++
++-- the units a record body may not contain (an open of a module instance
++-- is allowed: it only brings the module's members into scope, with their
++-- identities)
++notInRecord :: RUnit -> Bool
++notInRecord u = case u of
++  RModule{}  -> True
++  RModInst{} -> True
++  RLevel _   -> True
++  RCstr _    -> True
++  RImport _  -> True
++  _          -> False
++
+ -- The constructor of a record.  A segment whose body has fields (body-less
+ -- units) gets  mkM (params) (fields) : M[params] = new M[params, fields] ,
+ -- one occurrence of `new`, so the elements it builds are compared by name.
+@@ -1142,7 +1201,7 @@
+ definedNames u = case u of
+   RDef _ y _ _ _  -> [y]
+   RData _ y _ _ _ -> [y]
+-  RModule y _ _   -> [y]
++  RModule _ y _ _ -> [y]
+   RModInst y _    -> [y]
+   _               -> []
+ 
+@@ -1198,7 +1257,7 @@
+ 
+ resolveProgram :: [RUnit] -> Either String [Unit]
+ resolveProgram rus = do
+-  let rs0 = RS [] (allLabels rus) "" [] [] M.empty M.empty
++  let rs0 = RS [] (allLabels rus) "" [] [] M.empty M.empty False
+   (us, _) <- resUnits rs0 rus 0
+   let us1 = numberUnits "" us
+       us' = binderUnits (pathUnits us1)
+@@ -1225,7 +1284,7 @@
+ numberUnit here u = case u of
+   UDef i x a b -> UDef i x (numE0 (i ++ ":") a) (numE0 (i ++ "=") b)
+   UPar i x a      -> UPar i x (numE0 (i ++ ":") a)
+-  UMod i x us  -> UMod i x (numberUnits i us)
++  UMod i x k us -> UMod i x k (numberUnits i us)
+   UInst i x m     -> UInst i x (snd (numM (i ++ "=") 0 m))
+   UDir d          -> UDir (case d of
+                        DNormal e -> DNormal (numE0 here e)
+@@ -1263,6 +1322,7 @@
+                   in (n', Struct fs')
+   Proj a l     -> one (\a' -> Proj a' l) a
+   ProjU a l    -> one (\a' -> ProjU a' l) a
++  Mem m as l a -> one (\a' -> Mem m as l a') a      -- never in source
+   Id a x y     -> let (n', [a', x', y']) = numL n [a, x, y] in (n', Id a' x' y')
+   Refl a       -> one Refl a
+   IdJ a x c d y p -> let (n', [a', x', c', d', y', p']) = numL n [a, x, c, d, y, p]
+@@ -1317,7 +1377,7 @@
+   unit u = case u of
+     UDef i x a b -> UDef i x (inner a) (pathE i [] b)
+     UPar i x a      -> UPar i x (inner a)
+-    UMod i x us  -> UMod i x (pathUnits us)
++    UMod i x k us -> UMod i x k (pathUnits us)
+     UDir (DFails vs) -> UDir (DFails (pathUnits vs))
+     _               -> u
+   -- local definitions inside other expressions
+@@ -1358,7 +1418,7 @@
+   unit u = case u of
+     UDef i _ a b -> other i a ++ canon i b
+     UPar i _ a     -> other i a
+-    UMod _ _ us  -> concatMap unit us
++    UMod _ _ _ us -> concatMap unit us
+     UDir (DFails vs) -> concatMap unit vs
+     _              -> []
+   canon i e = case e of
+@@ -1398,7 +1458,7 @@
+     UPar i x a      -> new i sc x ++ expr i sc a ++ units w (S.insert x sc) us
+     ULvl x          -> new w sc x ++ units w (S.insert ('%' : x) (S.insert x sc)) us
+     UDef i _ a b  -> expr i sc a ++ expr i sc b ++ units w sc us
+-    UMod i _ vs   -> units i sc vs ++ units w sc us
++    UMod i _ _ vs -> units i sc vs ++ units w sc us
+     UInst i _ m     -> mexp i sc m ++ units w sc us
+     UDir (DFails _) -> units w sc us
+     UDir d          -> concat [ expr w sc e | e <- dirExps d ] ++ units w sc us
+@@ -1447,7 +1507,7 @@
+   unit u = case u of
+     UDef i x a b   -> UDef i x (binderE (i ++ ":") a) (binderE (i ++ "=") b)
+     UPar i x a     -> UPar i x (binderE (i ++ ":") a)
+-    UMod i x us    -> UMod i x (binderUnits us)
++    UMod i x k us  -> UMod i x k (binderUnits us)
+     UInst i x m    -> UInst i x (binderM (i ++ "=") m)
+     UDir d         -> UDir (case d of
+                         DNormal e -> DNormal (binderE "dir" e)
+@@ -1494,6 +1554,7 @@
+     Struct fs    -> let (n1, fs') = mapL (\k (l, a) -> let (k', a') = go ren k a in (k', (l, a'))) n fs in (n1, Struct fs')
+     Proj a l     -> one (\a' -> Proj a' l) a
+     ProjU a l    -> one (\a' -> ProjU a' l) a
++    Mem m as l a -> one (\a' -> Mem m as l a') a      -- never in source
+     Id a x y     -> let (n1, [a', x', y']) = mapL (go ren) n [a, x, y] in (n1, Id a' x' y')
+     Refl a       -> one Refl a
+     IdJ a x c d y p -> let (n1, [a', x', c', d', y', p']) = mapL (go ren) n [a, x, c, d, y, p] in (n1, IdJ a' x' c' d' y' p')
+@@ -1528,3 +1589,107 @@
+   MVar _    -> m
+   MSub a x  -> MSub (binderM pre a) x
+   MApp a as -> MApp (binderM pre a) [ case a' of { ATm e -> ATm (binderE (pre ++ show k ++ ".") e); ALv _ -> a' } | (k, a') <- zip [0 :: Int ..] as ]
++
++------------------------------------------------------------------------
++-- The survey of the segments used as records (--survey-records): the
++-- program is resolved with modules allowed as types, then every segment
++-- used as a type or with  new  is listed with its head parameters, its
++-- body fields, its derived members, its uses as a module, and the body
++-- units a record may not contain.
++
++surveyRecords :: [RUnit] -> Either String String
++surveyRecords rus = do
++  let rs0 = RS [] (allLabels rus) "" [] [] M.empty M.empty True
++  (us, _) <- resUnits rs0 rus 0
++  let segs  = M.fromList [ (i, (k, vs)) | (i, k, vs) <- allSegs us ]
++      insts = M.fromList [ (i, m) | (i, m) <- allInsts us ]
++      segOf m = case m of
++        MVar i -> chase i
++        MApp n _ -> segOf n
++        MSub n x -> segOf n >>= \t -> chase (t ++ "." ++ x)
++      chase i | M.member i segs = Just i
++              | Just m <- M.lookup i insts = segOf m
++              | otherwise = Nothing
++      uses = [ (t, k) | (k, m) <- concatMap unitUses us, Just t <- [segOf m] ]
++      count t k = length [ () | (t', k') <- uses, t' == t, k' == k ]
++      asRecord = S.toList (S.fromList [ t | (t, k) <- uses, k /= "module" ])
++      line t = case M.lookup t segs of
++        Nothing -> t ++ "  (not found)"
++        Just (SRecord hs, vs) ->
++          let body = dropHeads hs vs
++              fields = [ x | UPar _ x _ <- body ]
++              derived = [ x | UDef _ x _ _ <- body ]
++              bad = [ what | v <- body, Just what <- [badUnit v] ]
++          in t ++ "\n    head:    " ++ unwords hs
++               ++ "\n    fields:  " ++ unwords fields
++               ++ "\n    derived: " ++ show (length derived)
++               ++ "\n    uses:    type " ++ show (count t "type") ++ ", new " ++ show (count t "new")
++               ++ ", module " ++ show (count t "module")
++               ++ (if null bad then "" else "\n    NOT ALLOWED IN A RECORD: " ++ unwords (S.toList (S.fromList bad)))
++        Just _ -> t
++  Right (unlines (map line asRecord) ++ show (length asRecord) ++ " segments used as records")
++ where
++  allSegs = concatMap seg
++  seg u = case u of
++    UMod i _ k vs -> (i, k, vs) : allSegs vs
++    _ -> []
++  allInsts = concatMap inst
++  inst u = case u of
++    UInst i _ m -> [(i, m)]
++    UMod _ _ _ vs -> allInsts vs
++    _ -> []
++  -- the units after the head parameters (and their constraints)
++  dropHeads hs vs = case vs of
++    UPar _ x _ : rest | x `elem` hs -> dropHeads hs rest
++    ULvl x : rest | x `elem` hs -> dropHeads hs rest
++    UCstr _ : rest -> dropHeads hs rest
++    _ -> vs
++  badUnit v = case v of
++    UMod _ x _ _ -> Just ("module/" ++ x)
++    UInst _ x _  -> if "open#" `isPrefixOfS` x then Nothing else Just ("instance/" ++ x)
++    ULvl _       -> Just "level"
++    UCstr _      -> Just "constraint"
++    _            -> Nothing
++  isPrefixOfS a b = take (length a) b == a
++  unitUses u = case u of
++    UDef _ _ a b -> expUses a ++ expUses b
++    UPar _ _ a -> expUses a
++    UMod _ _ _ vs -> concatMap unitUses vs
++    UInst _ _ m -> modUses m
++    UDir d -> case d of
++      DNormal e -> expUses e
++      DType e -> expUses e
++      DConv a b -> expUses a ++ expUses b
++      DFails vs -> concatMap unitUses vs
++    _ -> []
++  -- a module expression used as a module: its head, and the segments it
++  -- goes through
++  modUses m = ("module", m) : inner m
++  inner m = case m of
++    MVar _ -> []
++    MSub n _ -> modUses n
++    MApp n as -> inner n ++ concat [ expUses e | ATm e <- as ]
++  -- in a type or new, only the segments it goes through are used as modules
++  through m = case m of
++    MVar _ -> []
++    MSub n _ -> modUses n
++    MApp n as -> through n ++ concat [ expUses e | ATm e <- as ]
++  expUses e = case e of
++    SegT m fs -> ("type", m) : through m ++ concat [ expUses a | (_, ATm a) <- fs ]
++    New m -> ("new", m) : through m
++    Acc m _ -> modUses m
++    Let vs b -> concatMap unitUses vs ++ expUses b
++    Split _ bs -> concat [ expUses b | (_, (_, b)) <- bs ]
++    Sum _ cs -> concat [ expUses a | (_, t) <- cs, (_, a) <- t ]
++    Lam _ b -> expUses b
++    Pi _ a b -> expUses a ++ expUses b
++    Sig _ a b -> expUses a ++ expUses b
++    LPi _ a -> expUses a
++    LLam _ a -> expUses a
++    _ -> concatMap expUses (subE e)
++  subE e = case e of
++    App a b -> [a, b]; Pair a b -> [a, b]; Fst a -> [a]; Snd a -> [a]; Con _ as -> as
++    Rec t -> map snd t; Struct fs -> map snd fs; Proj a _ -> [a]; ProjU a _ -> [a]
++    Id a x y -> [a, x, y]; Refl a -> [a]; IdJ a x c d y p -> [a, x, c, d, y, p]
++    LApp a _ -> [a]; CPi _ a -> [a]; Named _ a -> [a]
++    _ -> []
+--- pre-records/app/Main.hs
++++ app/Main.hs
+@@ -80,8 +80,20 @@
+ main = do
+   args <- getArgs
+   case args of
++    [f, "--survey-records"] -> surveyFile f
+     (f : rest) -> runFile f (opts rest)
+     [] -> putStrLn "usage: seg file.seg [+id] [-id] [--none] [-v]"
++
++-- the segments the program uses as records (SegParse.surveyRecords)
++surveyFile :: FilePath -> IO ()
++surveyFile f = do
++  src <- readFile f
++  seen <- newIORef [baseName f]
++  case parseUnits src of
++    Left msg -> putStrLn ("PARSE ERROR\n" ++ msg)
++    Right us0 -> do
++      rus <- expand seen (dirOf f) us0
++      putStr (either ("SCOPE ERROR\n" ++) id (surveyRecords rus))
+ 
+ dirOf :: FilePath -> FilePath
+ dirOf p = reverse (dropWhile (/= '/') (reverse p))
+@@ -100,9 +112,9 @@
+           Left msg -> error ("in " ++ x ++ ".seg: " ++ msg)
+           Right us -> do
+             us' <- expand seen dir us
+-            return [RModule x [] us']
+-    RModule x tel us -> do us' <- expand seen dir us
+-                           return [RModule x tel us']
++            return [RModule False x [] us']
++    RModule k x tel us -> do us' <- expand seen dir us
++                             return [RModule k x tel us']
+     _ -> return [u]
+ 
+ adjust :: Opt -> [Unit] -> [Unit]
+@@ -111,7 +123,7 @@
+   fix s = nub (oOn o ++ filter (`notElem` oOff o) (if oNone o then [] else s))
+   go u = case u of
+     ULock s -> ULock (fix s)
+-    UMod i x mus -> UMod i x (map go mus)
++    UMod i x k mus -> UMod i x k (map go mus)
+     _ -> u
+ 
+ -- parse, expand imports, resolve: the program's units, and the modules
+@@ -137,7 +149,7 @@
+   importsOf us = concatMap imp us
+   imp u = case u of
+     RImport x -> [x]
+-    RModule _ _ vs -> importsOf vs
++    RModule _ _ _ vs -> importsOf vs
+     _ -> []
+ 
+ -- check the given events (each with the ten-second budget); prints the

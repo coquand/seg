@@ -1,0 +1,107 @@
+-- GHornRetrSub.seg (inside IvBase, after GSubst): the extension along a
+-- retraction line (GHornRetr.RF) commutes with substitution.  For s : D ->
+-- G, a composition ca of A over G, and a partial element hs of A[s] at rho
+-- over D: the extension computed over D with the substituted composition
+-- (GSubst.SubC) is the extension computed over G at s rho, for any partial
+-- element hs2 of A at s rho over G with the same sieves whose values are
+-- those of hs moved along liftP.
+--
+--   RFS.fill-sub    the equation (in A over s rho)
+--
+-- The proof: MorC composes the problem moved along s (tvN, MN.mapP); the
+-- moved problem IS RF's problem over G (P, R: the lines rho r and the
+-- sides agree pointwise), so cop-cong; the ends are read in A through
+-- liftP.
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+module FM = GFam[lv] ;
+
+module RFS (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (e e' : IPt)
+  (ca : CompAtP[FM.famPath, G, A, e, e'].CompAt)
+  (X : Ob) (rho : W0.Ix (D.ob X))
+  (hs : GCofib[lv].Partials[D, subTy D G A s].Partial[X, rho]) (l0 : Fin hs.pr)
+  (hs2 : GCofib[lv].Partials[G, A].Partial[X, s.nt X rho]) (l02 : Fin hs2.pr)
+  (pe : Id Nat hs.pr hs2.pr)
+  (eQ : (l : Fin hs.pr) -> Id (Phi X) (hs.ps l).pQ (hs2.ps (subst Nat (\ n -> Fin n) hs.pr hs2.pr pe l)).pQ)
+  (vq : (l : Fin hs.pr) (W : Ob) (f : Hom W X) (i : Lands W X (hs.ps l).pQ f)
+        (i2 : Lands W X (hs2.ps (subst Nat (\ n -> Fin n) hs.pr hs2.pr pe l)).pQ f)
+        -> Id (GPR.TyL[G, A].EI W) ((liftP D G A s).nt W ((hs.ps l).pv W f i)) ((hs2.ps (subst Nat (\ n -> Fin n) hs.pr hs2.pr pe l)).pv W f i2))
+  (r : (W : Ob) -> Hom W X -> Hom W Iv -> Hom W X)
+  (rn : (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+        -> Id (Hom V X) (compH V W X (r W f i) g) (r V (compH V W X f g) (compH V W Iv i g)))
+  (R1 : (W : Ob) (f : Hom W X) -> Id (Hom W X) (r W f (ptH W e')) f)
+  (R2 : (W : Ob) (f : Hom W X) -> Lands W X (hs.ps l0).pQ (r W f (ptH W e)))
+  (R3 : (l : Fin hs.pr) (W : Ob) (f : Hom W X) (i : Hom W Iv) -> Lands W X (hs.ps l).pQ f -> Lands W X (hs.ps l).pQ (r W f i))
+  (R22 : (W : Ob) (f : Hom W X) -> Lands W X (hs2.ps l02).pQ (r W f (ptH W e)))
+  (R32 : (l : Fin hs2.pr) (W : Ob) (f : Hom W X) (i : Hom W Iv) -> Lands W X (hs2.ps l).pQ f -> Lands W X (hs2.ps l).pQ (r W f i)) {
+  module SC = GSubst[lv].SubC[D, G, s, A, e, e', ca] ;
+  module M = SC.M ;
+  module MP = M.MP ;
+  module RD = GHornRetr[lv].RF[D, subTy D G A s, e, e', SC.compAt, X, rho, hs, l0, r, rn, R1, R2, R3] ;
+  module RG = GHornRetr[lv].RF[G, A, e, e', ca, X, s.nt X rho, hs2, l02, r, rn, R1, R22, R32] ;
+  module TA = GPR.TyL[G, A] ;
+  module TD = GPR.TyL[D, subTy D G A s] ;
+  module L = MP.LG ;
+
+  -- the start, moved along s, is the start over G
+  P : Id (MP.CG.TV.EI X) (MP.tvN X RD.x0) RG.x0 =
+    MP.CG.EK.tv-eq X (MP.tvN X RD.x0) RG.x0
+      (FM.FC[G].fam-eq X (MP.MC.mapF X RD.gam) RG.gam (\ W f i -> s.nt-nat W X (r W f i) rho))
+      (transH (apH ((liftP D G A s).nt X) RD.x0-E)
+        (transH (vq l0 X r0 (R2 X (idH X)) (vi X r0 (R2 X (idH X)) l0))
+          (transH (hs2.pcs (subst Nat (\ n -> Fin n) hs.pr hs2.pr pe l0) l02 X r0 (vi X r0 (R2 X (idH X)) l0) (R22 X (idH X)))
+                  (symH RG.x0-E))))
+   where {
+     r0 : Hom X X = r X (idH X) (ptH X e) ;
+     vi (W : Ob) (f : Hom W X) (i : Lands W X (hs.ps l0).pQ f) (l : Fin hs.pr)
+       : Lands W X (hs2.ps (subst Nat (\ n -> Fin n) hs.pr hs2.pr pe l0)).pQ f =
+       lands-sub W X (hs.ps l0).pQ (hs2.ps (subst Nat (\ n -> Fin n) hs.pr hs2.pr pe l0)).pQ (eQ l0) f i ; } ;
+
+  -- the moved index of a side
+  ix (l : Fin hs.pr) : Fin hs2.pr = subst Nat (\ n -> Fin n) hs.pr hs2.pr pe l ;
+
+  -- a side of the moved problem is the side of the problem over G
+  sideEq (l : Fin hs.pr) (W : Ob) (f : Hom W X) (i : Lands W X (hs.ps l).pQ f) (i' : Lands W X (hs2.ps (ix l)).pQ f)
+    : Id (MP.CG.TS.EI W) (MP.tsN W (RD.SideL[l].LS.sv W f i)) (RG.SideL[ix l].LS.sv W f i') =
+    L.ts-ext W (MP.tsN W (RD.SideL[l].LS.sv W f i)) (RG.SideL[ix l].LS.sv W f i')
+      (transH (MP.CG.EK.mkTS-pt W (MP.tvN W (RD.SideL[l].LS.sv W f i).1) MP.TSN[W, RD.SideL[l].LS.sv W f i].lineG
+                 (refl (MP.MC.mapF W (RD.SideL[l].LS.sv W f i).1.1)) MP.TSN[W, RD.SideL[l].LS.sv W f i].qN)
+        (transH (apH (MP.tvN W) (RD.SideL[l].LS.sv-pt W f i))
+          (transH (MP.tvN-act W X f RD.x0)
+            (transH (apH (MP.CG.TV.E.act W X f) P)
+                    (symH (RG.SideL[ix l].LS.sv-pt W f i'))))))
+      (\ V g j -> transH (MP.TSN[W, RD.SideL[l].LS.sv W f i].res-lev V g j)
+         (transH (apH ((liftP D G A s).nt V) (RD.SideL[l].LS.sv-lev W f i V g j))
+           (transH (vq l V (r V (compH V W X f g) j) (RD.SideL[l].iS W f i V g j) (RG.SideL[ix l].iS W f i' V g j))
+                   (symH (RG.SideL[ix l].LS.sv-lev W f i' V g j))))) ;
+
+  R : Id (MP.CG.PT.Partial[X, RG.x0])
+         (subst (MP.CG.TV.EI X) (\ z -> MP.CG.PT.Partial[X, z]) (MP.tvN X RD.x0) RG.x0 P (MP.MN.mapP X RD.x0 RD.part)) RG.part =
+    MP.CG.PT.partExtH X (MP.tvN X RD.x0) RG.x0 P (MP.MN.mapP X RD.x0 RD.part) RG.part pe
+      (\ l -> eQ l) (\ l W f i i' -> sideEq l W f i i') ;
+
+  -- the composites agree
+  copEq : Id (MP.CG.TV'.EI X) ((MP.tvN X RD.x0).1, RD.c) (RG.x0.1, RG.c) =
+    MP.CG.cop-cong ca X (MP.tvN X RD.x0) RG.x0 P (MP.MN.mapP X RD.x0 RD.part) RG.part R ;
+
+  -- hence the extensions
+  fill-sub : Id (W0.Ix (A.tob X (s.nt X rho))) RD.fill RG.fill =
+    TA.pr-inj X (s.nt X rho) RD.fill RG.fill
+      (calc (TA.EI X) {
+          (s.nt X rho, RD.fill)
+        =< apH ((liftP D G A s).nt X) RD.fill-E >
+          (liftP D G A s).nt X (RD.KB.endE X (RD.gam, RD.c))
+        =< apH (RG.KB.endE X) copEq >
+          RG.KB.endE X (RG.gam, RG.c)
+        =< symH RG.fill-E >
+          (s.nt X rho, RG.fill) }) ;
+} ;

@@ -1,0 +1,91 @@
+-- DStageA.seg: problems of filling (FibAt at e, family path object) on
+-- Delta, their restriction, and the values of the lines of fillers (the
+-- set-up of FillStage, in line form).
+--
+--   Prob M        a point x over the end e and a partial line p at x
+--   resP h b      the problem restricted along h
+--   resP-o        restriction is functorial (GCofib.restrictP-o)
+--   resP-eq       restriction along equal maps
+--   lv u W g j    the value of the line of a fibre element u at (g , j)
+--   lv-act        lines of restricted elements are restricted lines
+--
+-- Constructive.
+
+level a lz ;
+constraint a <= lz ;
+open Base ;
+open Prelude[lz+] ;
+open Paths[lz+] ;
+module W0 = V[lz] ;
+open Trees[a] ;
+open Arith[a] ;
+open DLvl[a, lz] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ;
+module DBm = DeltaBase[a] ;
+module DB = DBm.DB ;
+
+module SA (G : DB.GPre[lz].PS.PCtx) (A : DB.GPre[lz].PS.PTy[G]) (e : El Iv) {
+  module FM = DB.GFam[lz] ;
+  module KA = DB.GLine[lz].EndKit[FM.famPath, G, A, e] ;
+  module LA = DB.GLine[lz].LevKit[FM.famPath, FM.famConn, G, A, e] ;
+  module TA = DB.GPre[lz].TyL[G, A] ;
+
+  Prob (M : Nat) : U lz = (x : KA.TV.EI M) * KA.PT.Partial[M, x] ;
+
+  resP (M' M : Nat) (h : Hom (lin M') (lin M)) (b : Prob M) : Prob M' =
+    (KA.TV.E.act M' M h b.1, KA.PT.restrictP M' M h b.1 b.2) ;
+
+  resP-o (M'' M' M : Nat) (g : Hom (lin M'') (lin M')) (h : Hom (lin M') (lin M)) (b : Prob M)
+    : Id (Prob M'') (resP M'' M (compH (lin M'') (lin M') (lin M) h g) b) (resP M'' M' g (resP M' M h b)) =
+    Sigma-path (KA.TV.EI M'') (\ z -> KA.PT.Partial[M'', z])
+      (KA.TV.E.act M'' M (compH (lin M'') (lin M') (lin M) h g) b.1) (KA.TV.E.act M'' M' g (KA.TV.E.act M' M h b.1))
+      (KA.PT.restrictP M'' M (compH (lin M'') (lin M') (lin M) h g) b.1 b.2)
+      (KA.PT.restrictP M'' M' g (KA.TV.E.act M' M h b.1) (KA.PT.restrictP M' M h b.1 b.2))
+      (KA.TV.E.act-o M'' M' M h g b.1)
+      (KA.PT.restrictP-o M'' M' M g h b.1 b.2) ;
+
+  resP-eq (M' M : Nat) (h h' : Hom (lin M') (lin M)) (E : Id (Hom (lin M') (lin M)) h h') (b : Prob M)
+    : Id (Prob M') (resP M' M h b) (resP M' M h' b) = apH (\ k -> resP M' M k b) E ;
+
+  -- two composites that agree give the same twice-restricted problem
+  resP-sq (M'' M1 M2 M : Nat) (h1 : Hom (lin M1) (lin M)) (g1 : Hom (lin M'') (lin M1))
+    (h2 : Hom (lin M2) (lin M)) (g2 : Hom (lin M'') (lin M2))
+    (E : Id (Hom (lin M'') (lin M)) (compH (lin M'') (lin M1) (lin M) h1 g1) (compH (lin M'') (lin M2) (lin M) h2 g2)) (b : Prob M)
+    : Id (Prob M'') (resP M'' M1 g1 (resP M1 M h1 b)) (resP M'' M2 g2 (resP M2 M h2 b)) =
+    transH (symH (resP-o M'' M1 M g1 h1 b)) (transH (resP-eq M'' M _ _ E b) (resP-o M'' M2 M g2 h2 b)) ;
+
+  -- fillings at a stage, and their values in E at equal problems
+  FillTy (M : Nat) : U lz = (b : Prob M) -> KA.TS.T M b.1 ;
+
+  fillE (M : Nat) (F : FillTy M) (b : Prob M) : KA.TS.EI M = (b.1, F b) ;
+
+  fill-cong (M : Nat) (F : FillTy M) (b b' : Prob M) (P : Id (Prob M) b b') : Id (KA.TS.EI M) (fillE M F b) (fillE M F b') =
+    apH (fillE M F) P ;
+
+  -- the value of the line of a fibre element
+  lv (M : Nat) (u : KA.TS.EI M) (W : Nat) (g : Hom (lin W) (lin M)) (j : Hom (lin W) Iv) : TA.EI W =
+    FM.famConn.levA G A M (KA.lineL M u) W g j ;
+
+  lv-act (M' M : Nat) (h : Hom (lin M') (lin M)) (u : KA.TS.EI M) (W : Nat) (g : Hom (lin W) (lin M')) (j : Hom (lin W) Iv)
+    : Id (TA.EI W) (lv M' (KA.TS.E.act M' M h u) W g j) (lv M u W (compH (lin W) (lin M') (lin M) h g) j) =
+    LA.line-act M' M h u W g j ;
+
+  lv-nat (M : Nat) (u : KA.TS.EI M) (V W : Nat) (g' : Hom (lin V) (lin W)) (g : Hom (lin W) (lin M)) (j : Hom (lin W) Iv)
+    : Id (TA.EI V) (TA.E.act V W g' (lv M u W g j)) (lv M u V (compH (lin V) (lin W) (lin M) g g') (compH (lin V) (lin W) Iv j g')) =
+    FM.famConn.levA-nat G A M (KA.lineL M u) V W g' g j ;
+
+  lv-pt (M : Nat) (u : KA.TS.EI M) (W : Nat) (g : Hom (lin W) (lin M)) (j : Hom (lin W) Iv)
+    : Id (W0.Ix (G.ob W)) (lv M u W g j).1 (u.1.1.1 W g j) =
+    FM.famConn.levA-pt G A M (KA.lineL M u) W g j ;
+
+  -- at (id , e) the line is the point
+  lv-end (M : Nat) (u : KA.TS.EI M) : Id (TA.EI M) (lv M u M (idH (lin M)) (constH (lin M) Iv e)) (KA.endE M u.1) =
+    transH (symH (LA.endL-lev M (KA.lineL M u))) (apH (KA.endE M) u.2.2) ;
+
+  -- two fibre elements with the same point and the same line values are equal
+  ts-ext (M : Nat) (u v : KA.TS.EI M) (p : Id (KA.TV.EI M) u.1 v.1)
+    (q : (W : Nat) (g : Hom (lin W) (lin M)) (j : Hom (lin W) Iv) -> Id (TA.EI W) (lv M u W g j) (lv M v W g j)) : Id (KA.TS.EI M) u v =
+    LA.ts-ext M u v p q ;
+} ;

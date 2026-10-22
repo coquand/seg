@@ -1,0 +1,433 @@
+-- Conn.seg: MODEL/Poset/Conn.agda.  Directions and connections of the
+-- interval.
+--
+-- A direction d : Bool is "from 0 to 1" (true) or "from 1 to 0" (false);
+-- src d and tgt d are its end points, with src true = e0 and src false =
+-- e1 on the nose.  The connection
+--
+--   conn d X : (X * [1]) * [1] -> X * [1] ,  (x , i , j) |-> (x , c i j)
+--
+-- with c = min for d = true and c = max for d = false, is monotone.  At
+-- j = src d it is constant (x , src d), at j = tgt d it is the identity,
+-- and on i = src d it is constant (x , src d): a box over X gives a box
+-- over X * [1] (Fib) whose upper lid is a filler.
+--
+-- Agda's deep patterns  (node (node x (leaf a)) (leaf b) , h)  are chains
+-- of split helpers; Agda's anonymous modules over (d X) and (d Z X h) are
+-- the segments ConnS, Laws, Nat.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Trees[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+open BoxBase[a] ;
+
+------------------------------------------------------------------------
+-- End points of a direction
+
+sN : Bool -> Nat = split { true -> zero ; false -> suc zero } ;
+tN : Bool -> Nat = split { true -> suc zero ; false -> zero } ;
+
+sN-iv : (d : Bool) -> IsT (leb (sN d) (suc zero)) = split { true -> refl true ; false -> refl true } ;
+tN-iv : (d : Bool) -> IsT (leb (tN d) (suc zero)) = split { true -> refl true ; false -> refl true } ;
+
+src (d : Bool) : El Iv = (leaf (sN d), sN-iv d) ;
+tgt (d : Bool) : El Iv = (leaf (tN d), tN-iv d) ;
+
+------------------------------------------------------------------------
+-- min and max on {0 , 1}
+
+cN : Bool -> Nat -> Nat -> Nat = split {
+  true -> split { zero -> \ b -> zero ; suc x -> \ b -> b } ;
+  false -> split { zero -> \ b -> b ; suc x -> \ b -> suc x } } ;
+
+le1-zero : (x : Nat) -> IsT (leb (suc x) (suc zero)) -> Id Nat x zero = split {
+  zero -> \ h -> refl zero ;
+  suc x -> \ h -> absurd _ (false-true h) } ;
+
+cN-iv : (d : Bool) (x y : Nat) -> IsT (leb x (suc zero)) -> IsT (leb y (suc zero)) -> IsT (leb (cN d x y) (suc zero)) = split {
+  true -> split { zero -> \ y hx hy -> refl true ; suc x -> \ y hx hy -> hy } ;
+  false -> split { zero -> \ y hx hy -> hy ; suc x -> \ y hx hy -> hx } } ;
+
+-- the case  false , zero , suc b , suc a'  of cN-mono (b <= 1 forces b = 0)
+cnm-f0 (x' : Nat) : (y : Nat) -> IsT (leb (suc y) (suc zero)) -> IsT (leb (suc y) (suc x')) = split {
+  zero -> \ hb -> refl true ;
+  suc y -> \ hb -> absurd _ (false-true hb) } ;
+
+cN-mono : (d : Bool) (x y x' y' : Nat) -> IsT (leb y (suc zero))
+  -> IsT (leb x x') -> IsT (leb y y') -> IsT (leb (cN d x y) (cN d x' y')) = split {
+  true -> split {
+    zero -> \ y x' y' hb ha hbb -> refl true ;
+    suc x -> \ y -> split {
+      zero -> \ y' hb ha hbb -> absurd _ (false-true ha) ;
+      suc x' -> \ y' hb ha hbb -> hbb } } ;
+  false -> split {
+    zero -> \ y -> split {
+      zero -> \ y' hb ha hbb -> hbb ;
+      suc x' -> \ y' hb ha hbb -> cnm-f1 x' y hb } ;
+    suc x -> \ y -> split {
+      zero -> \ y' hb ha hbb -> absurd _ (false-true ha) ;
+      suc x' -> \ y' hb ha hbb -> ha } } } ;
+
+cnm-f1 (x' : Nat) : (y : Nat) -> IsT (leb y (suc zero)) -> IsT (leb y (suc x')) = split {
+  zero -> \ hb -> refl true ;
+  suc y -> \ hb -> cnm-f0 x' y hb } ;
+
+-- at j = src d : constant
+cN-src : (d : Bool) (x : Nat) -> IsT (leb x (suc zero)) -> Id Nat (cN d x (sN d)) (sN d) = split {
+  true -> split { zero -> \ h -> refl zero ; suc x -> \ h -> refl zero } ;
+  false -> split { zero -> \ h -> refl (suc zero) ; suc x -> \ h -> apH (\ n -> suc n) (le1-zero x h) } } ;
+
+-- at j = tgt d : the identity
+cN-tgt : (d : Bool) (x : Nat) -> IsT (leb x (suc zero)) -> Id Nat (cN d x (tN d)) x = split {
+  true -> split { zero -> \ h -> refl zero ; suc x -> \ h -> apH (\ n -> suc n) (symH (le1-zero x h)) } ;
+  false -> split { zero -> \ h -> refl zero ; suc x -> \ h -> refl (suc x) } } ;
+
+-- on i = src d : constant
+cN-on : (d : Bool) (y : Nat) -> Id Nat (cN d (sN d) y) (sN d) = split {
+  true -> \ y -> refl zero ;
+  false -> \ y -> refl (suc zero) } ;
+
+------------------------------------------------------------------------
+-- The connection, as a monotone map
+
+-- the number of an element of the interval
+ivN : Tree -> Nat = split { leaf n -> n ; node s t -> zero } ;
+
+pr2T : Tree -> Tree = split { leaf n -> leaf n ; node s t -> t } ;
+
+module ConnS (d : Bool) (X : Ob) {
+  Y : Ob = prodP X Iv ;
+  YI : Ob = prodP Y Iv ;
+
+  -- the value at (node (node x (leaf a)) (leaf b))
+  val (x : Tree) (x0 y0 : Nat) (h : IsT (car YI (node (node x (leaf x0)) (leaf y0)))) : El Y =
+    (node x (leaf (cN d x0 y0)),
+     and-i (car X x) (leb (cN d x0 y0) (suc zero))
+       (and-l (car X x) (leb x0 (suc zero)) (and-l (car Y (node x (leaf x0))) (leb y0 (suc zero)) h))
+       (cN-iv d x0 y0 (and-r (car X x) (leb x0 (suc zero)) (and-l (car Y (node x (leaf x0))) (leb y0 (suc zero)) h))
+                      (and-r (car Y (node x (leaf x0))) (leb y0 (suc zero)) h))) ;
+
+  cE3 (x : Tree) (x0 : Nat) : (j : Tree) -> IsT (car YI (node (node x (leaf x0)) j)) -> El Y = split {
+    leaf y0 -> \ h -> val x x0 y0 h ;
+    node j k -> \ h -> absurd _ (false-true (and-r (car Y (node x (leaf x0))) false h)) } ;
+
+  cE2 (x : Tree) : (i j : Tree) -> IsT (car YI (node (node x i) j)) -> El Y = split {
+    leaf x0 -> cE3 x x0 ;
+    node i k -> \ j h -> absurd _ (false-true (and-r (car X x) false (and-l (car Y (node x (node i k))) (car Iv j) h))) } ;
+
+  cE1 : (s j : Tree) -> IsT (car YI (node s j)) -> El Y = split {
+    leaf m -> \ j h -> absurd _ (false-true h) ;
+    node x i -> cE2 x i } ;
+
+  cE' : (t : Tree) -> IsT (car YI t) -> El Y = split {
+    leaf n -> \ h -> absurd _ (false-true h) ;
+    node s j -> cE1 s j } ;
+
+  cE (w : El YI) : El Y = cE' w.1 w.2 ;
+
+  -- monotonicity: the second argument, once the first is a good point
+  cM3 (x : Tree) (x0 y0 : Nat) (h : IsT (car YI (node (node x (leaf x0)) (leaf y0))))
+    : (t' : Tree) (h' : IsT (car YI t')) -> IsT (le YI (node (node x (leaf x0)) (leaf y0)) t')
+      -> IsT (le Y (val x x0 y0 h).1 (cE' t' h').1) = split {
+    leaf n -> \ h' l -> absurd _ (false-true h') ;
+    node s' j' -> cM3a x x0 y0 h s' j' } ;
+
+  cM3a (x : Tree) (x0 y0 : Nat) (h : IsT (car YI (node (node x (leaf x0)) (leaf y0))))
+    : (s' j' : Tree) (h' : IsT (car YI (node s' j'))) -> IsT (le YI (node (node x (leaf x0)) (leaf y0)) (node s' j'))
+      -> IsT (le Y (val x x0 y0 h).1 (cE' (node s' j') h').1) = split {
+    leaf m -> \ j' h' l -> absurd _ (false-true h') ;
+    node x' i' -> cM3b x x0 y0 h x' i' } ;
+
+  cM3b (x : Tree) (x0 y0 : Nat) (h : IsT (car YI (node (node x (leaf x0)) (leaf y0)))) (x' : Tree)
+    : (i' j' : Tree) (h' : IsT (car YI (node (node x' i') j'))) -> IsT (le YI (node (node x (leaf x0)) (leaf y0)) (node (node x' i') j'))
+      -> IsT (le Y (val x x0 y0 h).1 (cE' (node (node x' i') j') h').1) = split {
+    node i k -> \ j' h' l ->
+      absurd _ (false-true (and-r (car X x') false (and-l (car Y (node x' (node i k))) (car Iv j') h'))) ;
+    leaf x0' -> \ j' -> cM3c x x0 y0 h x' x0' j' } ;
+
+  cM3c (x : Tree) (x0 y0 : Nat) (h : IsT (car YI (node (node x (leaf x0)) (leaf y0)))) (x' : Tree) (x0' : Nat)
+    : (j' : Tree) (h' : IsT (car YI (node (node x' (leaf x0')) j'))) -> IsT (le YI (node (node x (leaf x0)) (leaf y0)) (node (node x' (leaf x0')) j'))
+      -> IsT (le Y (val x x0 y0 h).1 (cE' (node (node x' (leaf x0')) j') h').1) = split {
+    node j k -> \ h' l -> absurd _ (false-true (and-r (car Y (node x' (leaf x0'))) false h')) ;
+    leaf y0' -> \ h' l ->
+      and-i (le X x x') (leb (cN d x0 y0) (cN d x0' y0'))
+        (and-l (le X x x') (leb x0 x0') (and-l (le Y (node x (leaf x0)) (node x' (leaf x0'))) (leb y0 y0') l))
+        (cN-mono d x0 y0 x0' y0' (and-r (car Y (node x (leaf x0))) (leb y0 (suc zero)) h)
+                 (and-r (le X x x') (leb x0 x0') (and-l (le Y (node x (leaf x0)) (node x' (leaf x0'))) (leb y0 y0') l))
+                 (and-r (le Y (node x (leaf x0)) (node x' (leaf x0'))) (leb y0 y0') l)) } ;
+
+  -- monotonicity: the first argument
+  cM' : (t : Tree) (h : IsT (car YI t)) (t' : Tree) (h' : IsT (car YI t'))
+    -> IsT (le YI t t') -> IsT (le Y (cE' t h).1 (cE' t' h').1) = split {
+    leaf n -> \ h t' h' l -> absurd _ (false-true h) ;
+    node s j -> cMa s j } ;
+
+  cMa : (s j : Tree) (h : IsT (car YI (node s j))) (t' : Tree) (h' : IsT (car YI t'))
+    -> IsT (le YI (node s j) t') -> IsT (le Y (cE' (node s j) h).1 (cE' t' h').1) = split {
+    leaf m -> \ j h t' h' l -> absurd _ (false-true h) ;
+    node x i -> cMb x i } ;
+
+  cMb (x : Tree) : (i j : Tree) (h : IsT (car YI (node (node x i) j))) (t' : Tree) (h' : IsT (car YI t'))
+    -> IsT (le YI (node (node x i) j) t') -> IsT (le Y (cE' (node (node x i) j) h).1 (cE' t' h').1) = split {
+    node i k -> \ j h t' h' l ->
+      absurd _ (false-true (and-r (car X x) false (and-l (car Y (node x (node i k))) (car Iv j) h))) ;
+    leaf x0 -> split {
+      node j k -> \ h t' h' l -> absurd _ (false-true (and-r (car Y (node x (leaf x0))) false h)) ;
+      leaf y0 -> \ h -> cM3 x x0 y0 h } } ;
+
+  cM : Mono YI Y cE = \ s t l -> cM' s.1 s.2 t.1 t.2 l ;
+
+  conn : Hom YI Y = mkHom YI Y cE cM ;
+} ;
+
+conn (d : Bool) (X : Ob) : Hom (prodP (prodP X Iv) Iv) (prodP X Iv) = ConnS[d, X].conn ;
+
+------------------------------------------------------------------------
+-- The laws of the connection, pointwise
+
+-- the projection (X * [1]) * [1] -> X
+kq (X : Ob) : Hom (prodP (prodP X Iv) Iv) X = compH (prodP (prodP X Iv) Iv) (prodP X Iv) X (pX X) (pX (prodP X Iv)) ;
+
+-- kq (x , i , j) = x
+app-kq1 (X : Ob) (x i j : Tree) (h : IsT (car (prodP (prodP X Iv) Iv) (node (node x i) j)))
+  : Id Tree (app (prodP (prodP X Iv) Iv) X (kq X) (node (node x i) j, h)).1 x =
+  app-compH1 (prodP (prodP X Iv) Iv) (prodP X Iv) X (pX X) (pX (prodP X Iv)) (node (node x i) j, h) ;
+
+-- a map reads its argument only through its tree
+app-at (X Y : Ob) (f : Hom X Y) (w : El X) (t : Tree) (e : Id Tree w.1 t)
+  : Id Tree (app X Y f w).1 (app X Y f (t, substH (\ u -> IsT (car X u)) e w.2)).1 =
+  apH (\ u -> (app X Y f u).1) (el-eq X w (t, substH (\ u -> IsT (car X u)) e w.2) e) ;
+
+-- the subset  i = src d  of X * [1]
+zQ (d : Bool) (X : Ob) : Subset (prodP X Iv) = \ t -> and (car (prodP X Iv) t) (eqN (ivN (pr2T t)) (sN d)) ;
+
+zQ-lid (d : Bool) (X : Ob) (s : El X) : IsT (zQ d X (node s.1 (leaf (sN d)))) =
+  and-i (and (car X s.1) (leb (sN d) (suc zero))) (eqN (sN d) (sN d))
+        (and-i (car X s.1) (leb (sN d) (suc zero)) s.2 (sN-iv d)) (eqN-refl (sN d)) ;
+
+module Laws (d : Bool) (X : Ob) {
+  Y : Ob = prodP X Iv ;
+  YI : Ob = prodP Y Iv ;
+
+  -- pointwise equality of maps out of Y, by the tree
+  pwY (Z : Ob) (f g : Hom Y Z)
+    (p : (x : Tree) (x0 : Nat) (h : IsT (car Y (node x (leaf x0)))) -> Id Tree (app Y Z f (node x (leaf x0), h)).1 (app Y Z g (node x (leaf x0), h)).1)
+    : PW Y Z f g = \ w -> aux w.1 w.2
+   where { aux : (t : Tree) (h : IsT (car Y t)) -> Id Tree (app Y Z f (t, h)).1 (app Y Z g (t, h)).1 = split {
+             leaf n -> \ h -> absurd _ (false-true h) ;
+             node x i -> aux2 x i } ;
+           aux2 (x : Tree) : (i : Tree) (h : IsT (car Y (node x i))) -> Id Tree (app Y Z f (node x i, h)).1 (app Y Z g (node x i, h)).1 = split {
+             leaf x0 -> \ h -> p x x0 h ;
+             node i k -> \ h -> absurd _ (false-true (and-r (car X x) false h)) } ; } ;
+
+  -- the connection after the lid at y0:  (x , x0) |-> (x , x0 , y0) |-> (x , c x0 y0)
+  conn-lid (y0 : Nat) (hy : IsT (leb y0 (suc zero))) (x : Tree) (x0 : Nat) (h : IsT (car Y (node x (leaf x0))))
+    : Id Tree (app Y Y (compH Y YI Y (conn d X) (lid Y (leaf y0, hy))) (node x (leaf x0), h)).1 (node x (leaf (cN d x0 y0))) =
+    transH (app-compH1 Y YI Y (conn d X) (lid Y (leaf y0, hy)) (node x (leaf x0), h))
+           (app-at YI Y (conn d X) (app Y YI (lid Y (leaf y0, hy)) (node x (leaf x0), h)) (node (node x (leaf x0)) (leaf y0))
+                   (app-lid1 Y (leaf y0, hy) (node x (leaf x0), h))) ;
+
+  -- at j = src d the connection is constant
+  conn-src : PW Y Y (compH Y YI Y (conn d X) (lid Y (src d))) (compH Y X Y (lid X (src d)) (pX X)) =
+    pwY Y (compH Y YI Y (conn d X) (lid Y (src d))) (compH Y X Y (lid X (src d)) (pX X))
+      (\ x x0 h -> calc Tree {
+          (app Y Y (compH Y YI Y (conn d X) (lid Y (src d))) (node x (leaf x0), h)).1
+        =< conn-lid (sN d) (sN-iv d) x x0 h >
+          node x (leaf (cN d x0 (sN d)))
+        =< apH (\ n -> node x (leaf n)) (cN-src d x0 (and-r (car X x) (leb x0 (suc zero)) h)) >
+          node x (leaf (sN d))
+        =< symH (app-lid1 X (src d) (app Y X (pX X) (node x (leaf x0), h))) >
+          (app X Y (lid X (src d)) (app Y X (pX X) (node x (leaf x0), h))).1
+        =< symH (app-compH1 Y X Y (lid X (src d)) (pX X) (node x (leaf x0), h)) >
+          (app Y Y (compH Y X Y (lid X (src d)) (pX X)) (node x (leaf x0), h)).1 }) ;
+
+  -- at j = tgt d it is the identity
+  conn-tgt : PW Y Y (compH Y YI Y (conn d X) (lid Y (tgt d))) (idH Y) =
+    pwY Y (compH Y YI Y (conn d X) (lid Y (tgt d))) (idH Y)
+      (\ x x0 h -> calc Tree {
+          (app Y Y (compH Y YI Y (conn d X) (lid Y (tgt d))) (node x (leaf x0), h)).1
+        =< conn-lid (tN d) (tN-iv d) x x0 h >
+          node x (leaf (cN d x0 (tN d)))
+        =< apH (\ n -> node x (leaf n)) (cN-tgt d x0 (and-r (car X x) (leb x0 (suc zero)) h)) >
+          node x (leaf x0)
+        =< symH (app-idH1 Y (node x (leaf x0), h)) >
+          (app Y Y (idH Y) (node x (leaf x0), h)).1 }) ;
+
+  -- on i = src d it is constant
+  OnTy (t : Tree) (h : IsT (car YI t)) : U a =
+    IsT (eqN (ivN (pr2T (pr1T t))) (sN d))
+    -> Id Tree (app YI Y (conn d X) (t, h)).1 (app X Y (lid X (src d)) (app YI X (kq X) (t, h))).1 ;
+
+  on3 (x : Tree) (x0 : Nat) : (j : Tree) (h : IsT (car YI (node (node x (leaf x0)) j))) -> OnTy (node (node x (leaf x0)) j) h = split {
+    -- (x , c x0 y0) = (x , src d) = lid (kq (x , x0 , y0))
+    leaf y0 -> \ h e ->
+      transH (apH (\ n -> node x (leaf n)) (transH (apH (\ a' -> cN d a' y0) (eqN-sound x0 (sN d) e)) (cN-on d y0)))
+       (transH (node-eq x (leaf (sN d)) (app YI X (kq X) (node (node x (leaf x0)) (leaf y0), h)).1 (leaf (sN d))
+                        (symH (app-kq1 X x (leaf x0) (leaf y0) h)) (refl (leaf (sN d))))
+               (symH (app-lid1 X (src d) (app YI X (kq X) (node (node x (leaf x0)) (leaf y0), h))))) ;
+    node j k -> \ h e -> absurd _ (false-true (and-r (car Y (node x (leaf x0))) false h)) } ;
+
+  on2 (x : Tree) : (i j : Tree) (h : IsT (car YI (node (node x i) j))) -> OnTy (node (node x i) j) h = split {
+    leaf x0 -> on3 x x0 ;
+    node i k -> \ j h e -> absurd _ (false-true (and-r (car X x) false (and-l (car Y (node x (node i k))) (car Iv j) h))) } ;
+
+  on1 : (s j : Tree) (h : IsT (car YI (node s j))) -> OnTy (node s j) h = split {
+    leaf m -> \ j h e -> absurd _ (false-true h) ;
+    node x i -> on2 x i } ;
+
+  on0 : (t : Tree) (h : IsT (car YI t)) -> OnTy t h = split {
+    leaf n -> \ h e -> absurd _ (false-true h) ;
+    node s j -> on1 s j } ;
+
+  conn-on (w : El YI) : OnTy w.1 w.2 = on0 w.1 w.2 ;
+
+  -- the first component is kept
+  Pr1Ty (t : Tree) (h : IsT (car YI t)) : U a =
+    Id Tree (pr1T (app YI Y (conn d X) (t, h)).1) (app YI X (kq X) (t, h)).1 ;
+
+  p13 (x : Tree) (x0 : Nat) : (j : Tree) (h : IsT (car YI (node (node x (leaf x0)) j))) -> Pr1Ty (node (node x (leaf x0)) j) h = split {
+    leaf y0 -> \ h -> symH (app-kq1 X x (leaf x0) (leaf y0) h) ;
+    node j k -> \ h -> absurd _ (false-true (and-r (car Y (node x (leaf x0))) false h)) } ;
+
+  p12 (x : Tree) : (i j : Tree) (h : IsT (car YI (node (node x i) j))) -> Pr1Ty (node (node x i) j) h = split {
+    leaf x0 -> p13 x x0 ;
+    node i k -> \ j h -> absurd _ (false-true (and-r (car X x) false (and-l (car Y (node x (node i k))) (car Iv j) h))) } ;
+
+  p11 : (s j : Tree) (h : IsT (car YI (node s j))) -> Pr1Ty (node s j) h = split {
+    leaf m -> \ j h -> absurd _ (false-true h) ;
+    node x i -> p12 x i } ;
+
+  p10 : (t : Tree) (h : IsT (car YI t)) -> Pr1Ty t h = split {
+    leaf n -> \ h -> absurd _ (false-true h) ;
+    node s j -> p11 s j } ;
+
+  conn-pr1 (w : El YI) : Pr1Ty w.1 w.2 = p10 w.1 w.2 ;
+
+  -- the projection after a lid:  kq lid = pX pX lid = pX id = pX
+  kq-lid-eq (e : El Iv) : Id (Hom Y X) (compH Y YI X (kq X) (lid Y e)) (pX X) =
+    calc (Hom Y X) {
+        compH Y YI X (kq X) (lid Y e)
+      =< comp-assoc Y YI Y X (pX X) (pX Y) (lid Y e) >
+        compH Y Y X (pX X) (compH Y YI Y (pX Y) (lid Y e))
+      =< apH (compH Y Y X (pX X)) (pX-lid Y e) >
+        compH Y Y X (pX X) (idH Y)
+      =< comp-idr Y X (pX X) >
+        pX X } ;
+
+  kq-lid (e : El Iv) : PW Y X (compH Y YI X (kq X) (lid Y e)) (pX X) = \ w ->
+    apH (\ k -> (app Y X k w).1) (kq-lid-eq e) ;
+
+  -- (kq lid) lid = pX lid = id
+  kq-lid-lid (e e' : El Iv) : PW X X (compH X Y X (compH Y YI X (kq X) (lid Y e')) (lid X e)) (idH X) = \ s ->
+    apH (\ k -> (app X X k s).1)
+        (transH (apH (\ k -> compH X Y X k (lid X e)) (kq-lid-eq e')) (pX-lid X e)) ;
+} ;
+
+------------------------------------------------------------------------
+-- naturality in X
+
+module Nat (d : Bool) (Z X : Ob) (h : Hom Z X) {
+  ZI : Ob = prodP Z Iv ;
+  XI : Ob = prodP X Iv ;
+
+  -- the value of h does not depend on the proof
+  hval (z : Tree) (p p' : IsT (car Z z)) : Id Tree (app Z X h (z, p)).1 (app Z X h (z, p')).1 =
+    apH (\ q -> (app Z X h (z, q)).1) (isProp-IsT (car Z z) p p') ;
+
+  hnode (z c : Tree) (p p' : IsT (car Z z)) : Id Tree (node (app Z X h (z, p)).1 c) (node (app Z X h (z, p')).1 c) =
+    apH (\ q -> node (app Z X h (z, q)).1 c) (isProp-IsT (car Z z) p p') ;
+
+  CylTy (t : Tree) (hw : IsT (car (prodP ZI Iv) t)) : U a =
+    Id Tree (app (prodP ZI Iv) XI (compH (prodP ZI Iv) (prodP XI Iv) XI (conn d X) (cylH ZI XI (cylH Z X h))) (t, hw)).1
+            (app (prodP ZI Iv) XI (compH (prodP ZI Iv) ZI XI (cylH Z X h) (conn d Z)) (t, hw)).1 ;
+
+  -- (h * 1) * 1 on trees:  (z , i , j) |-> (h z , i , j)
+  cyl2-node (z i j : Tree) (hw : IsT (car (prodP ZI Iv) (node (node z i) j)))
+    : Id Tree (app (prodP ZI Iv) (prodP XI Iv) (cylH ZI XI (cylH Z X h)) (node (node z i) j, hw)).1
+              (node (node (app Z X h (z, and-l (car Z z) (car Iv i) (and-l (car ZI (node z i)) (car Iv j) hw))).1 i) j) =
+    transH (app-cylH1 ZI XI (cylH Z X h) (node (node z i) j, hw))
+           (node-eq (app ZI XI (cylH Z X h) (p1 ZI Iv (node (node z i) j, hw))).1 j
+                    (node (app Z X h (z, and-l (car Z z) (car Iv i) (and-l (car ZI (node z i)) (car Iv j) hw))).1 i) j
+                    (app-cylH1 Z X h (p1 ZI Iv (node (node z i) j, hw))) (refl j)) ;
+
+  -- both sides send (z , x0 , y0) to (h z , c x0 y0)
+  cc3 (z : Tree) (x0 : Nat) : (j : Tree) (hw : IsT (car (prodP ZI Iv) (node (node z (leaf x0)) j))) -> CylTy (node (node z (leaf x0)) j) hw = split {
+    leaf y0 -> \ hw ->
+      transH (app-compH1 (prodP ZI Iv) (prodP XI Iv) XI (conn d X) (cylH ZI XI (cylH Z X h)) (node (node z (leaf x0)) (leaf y0), hw))
+       (transH (app-at (prodP XI Iv) XI (conn d X)
+                  (app (prodP ZI Iv) (prodP XI Iv) (cylH ZI XI (cylH Z X h)) (node (node z (leaf x0)) (leaf y0), hw))
+                  (node (node (app Z X h (z, and-l (car Z z) (car Iv (leaf x0)) (and-l (car ZI (node z (leaf x0))) (car Iv (leaf y0)) hw))).1 (leaf x0)) (leaf y0))
+                  (cyl2-node z (leaf x0) (leaf y0) hw))
+        (transH (hnode z (leaf (cN d x0 y0))
+                   (and-l (car Z z) (car Iv (leaf x0)) (and-l (car ZI (node z (leaf x0))) (car Iv (leaf y0)) hw))
+                   (and-l (car Z z) (leb (cN d x0 y0) (suc zero)) (ConnS[d, Z].val z x0 y0 hw).2))
+         (transH (symH (app-cylH1 Z X h (app (prodP ZI Iv) ZI (conn d Z) (node (node z (leaf x0)) (leaf y0), hw))))
+                 (symH (app-compH1 (prodP ZI Iv) ZI XI (cylH Z X h) (conn d Z) (node (node z (leaf x0)) (leaf y0), hw)))))) ;
+    node j k -> \ hw -> absurd _ (false-true (and-r (car ZI (node z (leaf x0))) false hw)) } ;
+
+  cc2 (z : Tree) : (i j : Tree) (hw : IsT (car (prodP ZI Iv) (node (node z i) j))) -> CylTy (node (node z i) j) hw = split {
+    leaf x0 -> cc3 z x0 ;
+    node i k -> \ j hw -> absurd _ (false-true (and-r (car Z z) false (and-l (car ZI (node z (node i k))) (car Iv j) hw))) } ;
+
+  cc1 : (s j : Tree) (hw : IsT (car (prodP ZI Iv) (node s j))) -> CylTy (node s j) hw = split {
+    leaf m -> \ j hw -> absurd _ (false-true hw) ;
+    node z i -> cc2 z i } ;
+
+  cc0 : (t : Tree) (hw : IsT (car (prodP ZI Iv) t)) -> CylTy t hw = split {
+    leaf n -> \ hw -> absurd _ (false-true hw) ;
+    node s j -> cc1 s j } ;
+
+  conn-cyl : PW (prodP ZI Iv) XI
+    (compH (prodP ZI Iv) (prodP XI Iv) XI (conn d X) (cylH ZI XI (cylH Z X h)))
+    (compH (prodP ZI Iv) ZI XI (cylH Z X h) (conn d Z)) = \ w -> cc0 w.1 w.2 ;
+
+  -- kq (h * 1 * 1) = pX pX (h * 1 * 1) = pX (h * 1) pX = h pX pX = h kq
+  kq-cyl : PW (prodP ZI Iv) X
+    (compH (prodP ZI Iv) (prodP XI Iv) X (kq X) (cylH ZI XI (cylH Z X h)))
+    (compH (prodP ZI Iv) Z X h (kq Z)) = \ w -> apH (\ k -> (app (prodP ZI Iv) X k w).1)
+    (calc (Hom (prodP ZI Iv) X) {
+        compH (prodP ZI Iv) (prodP XI Iv) X (kq X) (cylH ZI XI (cylH Z X h))
+      =< comp-assoc (prodP ZI Iv) (prodP XI Iv) XI X (pX X) (pX XI) (cylH ZI XI (cylH Z X h)) >
+        compH (prodP ZI Iv) XI X (pX X) (compH (prodP ZI Iv) (prodP XI Iv) XI (pX XI) (cylH ZI XI (cylH Z X h)))
+      =< apH (compH (prodP ZI Iv) XI X (pX X)) (pX-cyl ZI XI (cylH Z X h)) >
+        compH (prodP ZI Iv) XI X (pX X) (compH (prodP ZI Iv) ZI XI (cylH Z X h) (pX ZI))
+      =< symH (comp-assoc (prodP ZI Iv) ZI XI X (pX X) (cylH Z X h) (pX ZI)) >
+        compH (prodP ZI Iv) ZI X (compH ZI XI X (pX X) (cylH Z X h)) (pX ZI)
+      =< apH (\ k -> compH (prodP ZI Iv) ZI X k (pX ZI)) (pX-cyl Z X h) >
+        compH (prodP ZI Iv) ZI X (compH ZI Z X h (pX Z)) (pX ZI)
+      =< comp-assoc (prodP ZI Iv) ZI Z X h (pX Z) (pX ZI) >
+        compH (prodP ZI Iv) Z X h (kq Z) }) ;
+
+  -- pX along h * [1]
+  pX-cylPW : PW ZI X (compH ZI XI X (pX X) (cylH Z X h)) (compH ZI Z X h (pX Z)) = \ w ->
+    apH (\ k -> (app ZI X k w).1) (pX-cyl Z X h) ;
+
+  -- the subset  i = src d  is stable under restriction
+  zq2 : (t : Tree) (e : Id Bool (car ZI t) true)
+    -> Id Bool (zQ d X (app ZI XI (cylH Z X h) (t, e)).1) (zQ d Z t) = split {
+    leaf n -> \ e -> absurd _ (false-true e) ;
+    node z i -> zq3 z i } ;
+
+  zq3 (z : Tree) : (i : Tree) (e : Id Bool (car ZI (node z i)) true)
+    -> Id Bool (zQ d X (app ZI XI (cylH Z X h) (node z i, e)).1) (zQ d Z (node z i)) = split {
+    node i k -> \ e -> absurd _ (false-true (and-r (car Z z) false e)) ;
+    leaf x0 -> \ e ->
+      -- (h * 1) (z , x0) = (h z , x0)
+      transH (apH (zQ d X) (app-cylH1 Z X h (node z (leaf x0), e)))
+      (transH (apH (\ c -> and c (eqN x0 (sN d)))
+                  (and-i (car X (app Z X h (z, and-l (car Z z) (leb x0 (suc zero)) e)).1) (leb x0 (suc zero))
+                         (app Z X h (z, and-l (car Z z) (leb x0 (suc zero)) e)).2 (and-r (car Z z) (leb x0 (suc zero)) e)))
+             (symH (apH (\ c -> and c (eqN x0 (sN d))) e))) } ;
+
+  zq-aux (t : Tree) : (b : Bool) (e : Id Bool (car ZI t) b)
+    -> Id Bool (Pre[ZI, XI, cylH Z X h, zQ d X].preB t b e) (zQ d Z t) = split {
+    false -> \ e -> symH (apH (\ c -> and c (eqN (ivN (pr2T t)) (sN d))) e) ;
+    true -> \ e -> zq2 t e } ;
+
+  zQ-pre (t : Tree) : Id Bool (pre ZI XI (cylH Z X h) (zQ d X) t) (zQ d Z t) = zq-aux t (car ZI t) (refl (car ZI t)) ;
+} ;

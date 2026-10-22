@@ -1,0 +1,177 @@
+-- PElL2a.seg: El of the poset universe U_L is fibrant, part 2a (split
+-- from PElL2 for time): the coherence of the local compositions (Coh.coh,
+-- GLocal3's coh), with its transport lemmas cVsig / sigV.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosS[a] ; open PSB ; open PSCyl ;
+module W0 = V[a] ;
+open Arith[a] ;
+module V1 = V[a+] ;
+module BaseP = PosS[a].PSB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module L1 = BaseP.GPre[a+] ;
+open BaseP.GYon[a] ;
+module UL = BaseP.GUnivL.UL ;
+module PE0 = PElL[a] ;
+
+-- an element of E_F read through two identifications with the same fibre
+cVsig (Z Y : Ob) (Fo : PTy[yP Z]) (k1 k2 : Hom Y Z) (b1 : W0.Ix (Fo.tob Y k1)) (b2 : W0.Ix (Fo.tob Y k2))
+  (Q : Id (PR.TyL[yP Z, Fo].EI Y) (k1, b1) (k2, b2)) (T : W0.V) (p1 : Id W0.V (Fo.tob Y k1) T) (p2 : Id W0.V (Fo.tob Y k2) T)
+  : Id (W0.Ix T) (PE0.cV (Fo.tob Y k1) T p1 b1) (PE0.cV (Fo.tob Y k2) T p2 b2) =
+  idJ (PR.TyL[yP Z, Fo].EI Y) (k1, b1)
+    (\ w Q' -> (p3 : Id W0.V (Fo.tob Y w.1) T) -> Id (W0.Ix T) (PE0.cV (Fo.tob Y k1) T p1 b1) (PE0.cV (Fo.tob Y w.1) T p3 w.2))
+    (\ p3 -> apH (\ q -> PE0.cV (Fo.tob Y k1) T q b1) (W0.isSetV (Fo.tob Y k1) T p1 p3))
+    (k2, b2) Q p2 ;
+
+-- the same El element, read in E_F at two equal points
+sigV (Z V : Ob) (Fo : PTy[yP Z]) (k1 k2 : Hom V Z) (HP : Id (Hom V Z) k1 k2) (T : W0.V)
+  (P1 : Id W0.V (Fo.tob V k1) T) (P2 : Id W0.V (Fo.tob V k2) T) (b : W0.Ix T)
+  : Id (PR.TyL[yP Z, Fo].EI V) (k1, PE0.cV T (Fo.tob V k1) (symH P1) b) (k2, PE0.cV T (Fo.tob V k2) (symH P2) b) =
+  idJ (Hom V Z) k1
+    (\ k3 H3 -> (P3 : Id W0.V (Fo.tob V k3) T) -> Id (PR.TyL[yP Z, Fo].EI V) (k1, PE0.cV T (Fo.tob V k1) (symH P1) b) (k3, PE0.cV T (Fo.tob V k3) (symH P3) b))
+    (\ P3 -> apH {Id W0.V T (Fo.tob V k1)} {PR.TyL[yP Z, Fo].EI V} (\ q -> (k1, PE0.cV T (Fo.tob V k1) q b))
+                (W0.isSetV T (Fo.tob V k1) (symH P1) (symH P3)))
+    k2 HP P2 ;
+
+module Coh (e e' : BaseP.IPt) (sel : (Z : Ob) (F : UL.U0 Z) -> BaseP.GLine[a].CompAtP[BaseP.GFam[a].famPath, yP Z, F.1, e, e'].CompAt)
+  (selEq : (Z' Z : Ob) (g : Hom Z' Z) (F : UL.U0 Z)
+     -> Id (BaseP.GLine[a].CompAtP[BaseP.GFam[a].famPath, yP Z', (UL.uAct Z' Z g F).1, e, e'].CompAt)
+           (sel Z' (UL.uAct Z' Z g F)) (BaseP.GSubst[a].SubC[yP Z', yP Z, yH Z' Z g, F.1, e, e', sel Z F].compAt))
+  (Y X : Ob) (h : Hom Y X) (l : V1.Ix ((BaseP.GFam[a+].FC[UL.UCtx]).ob X))
+  (y : BaseP.GLine[a+].EndKit[BaseP.GFam[a+].famPath, UL.UCtx, UL.EGen, e].TV.EI Y)
+  (q1 : Id (V1.Ix ((BaseP.GFam[a+].FC[UL.UCtx]).ob Y))
+           (BaseP.GLocal[a+].Loc[UL.UCtx, UL.EGen].Pull[X, l, e].MF.mapF Y
+              ((BaseP.GFam[a+].FC[BaseP.GLocal[a+].Pts[X].P]).actF Y X h (BaseP.GLocal[a+].dg X))) y.1)
+  (q2 : Id (V1.Ix ((BaseP.GFam[a+].FC[UL.UCtx]).ob Y))
+           (BaseP.GLocal[a+].Loc[UL.UCtx, UL.EGen].Pull[Y, (BaseP.GFam[a+].FC[UL.UCtx]).actF Y X h l, e].MF.mapF Y (BaseP.GLocal[a+].dg Y)) y.1)
+  (p : BaseP.GLine[a+].EndKit[BaseP.GFam[a+].famPath, UL.UCtx, UL.EGen, e].PT.Partial[Y, y]) {
+  Z : Ob = prodP X Iv ;
+  Z' : Ob = prodP Y Iv ;
+  g : Hom Z' Z = cylH Y X h ;
+  lh : V1.Ix ((BaseP.GFam[a+].FC[UL.UCtx]).ob Y) = (BaseP.GFam[a+].FC[UL.UCtx]).actF Y X h l ;
+  Fx : UL.U0 Z = PE0.FC X l ;
+  d1L : V1.Ix ((BaseP.GFam[a+].FC[BaseP.GLocal[a+].Pts[X].P]).ob Y) =
+    (BaseP.GFam[a+].FC[BaseP.GLocal[a+].Pts[X].P]).actF Y X h (BaseP.GLocal[a+].dg X) ;
+
+  module KA = BaseP.GLine[a+].EndKit[BaseP.GFam[a+].famPath, UL.UCtx, UL.EGen, e] ;
+  module TA = L1.TyL[UL.UCtx, UL.EGen] ;
+  module EX = PE0.ElP[X, l, Fx, PE0.QdC X l] ;
+  module TX = EX.T[e, e', sel Z Fx].TR ;
+  module PLX = BaseP.GLocal[a+].Loc[UL.UCtx, UL.EGen].Pull[X, l, e] ;
+  module PPX = PLX.PP[Y, d1L, y, q1] ;
+  module PLY = BaseP.GLocal[a+].Loc[UL.UCtx, UL.EGen].Pull[Y, lh, e] ;
+  module PPY = PLY.PP[Y, BaseP.GLocal[a+].dg Y, y, q2] ;
+  module MC = BaseP.GSubst[a].SubC[yP Z', yP Z, yH Z' Z g, Fx.1, e, e', sel Z Fx].M ;
+  module PE = BaseP.GProbEq[a].ProbEq[yP Z, Fx.1, e, e', Y] ;
+  module KD0' = BaseP.GLine[a].EndKit[BaseP.GFam[a].famPath, yP Z, Fx.1, e'] ;
+
+  -- the same element of El, pulled back along two paths of points
+  coeEq (V : Ob) (z z' : TA.EI V) (Pz : Id (TA.EI V) z z') (s : TA.Pt V) (q : Id (TA.Pt V) z.1 s) (q' : Id (TA.Pt V) z'.1 s)
+    : Id (TA.T V s) (TA.coeT V z.1 s q z.2) (TA.coeT V z'.1 s q' z'.2) =
+    idJ (TA.EI V) z (\ z2 P2 -> (q2 : Id (TA.Pt V) z2.1 s) -> Id (TA.T V s) (TA.coeT V z.1 s q z.2) (TA.coeT V z2.1 s q2 z2.2))
+      (\ q2 -> apH (\ r -> TA.coeT V z.1 s r z.2) (V1.isSetIx (UL.UCtx.ob V) z.1 s q q2)) z' Pz q' ;
+
+  module BaseC (Qd' : (W : Ob) (z : V1.Ix ((BaseP.GLocal[a+].Pts[Y].P).ob W))
+                 -> Id (UL.U0 W) (UL.uAct W Z' (pairH Y Iv W z.1 z.2) (UL.uAct Z' Z g Fx)) (lh.1 W z.1 z.2)) {
+    module EY = PE0.ElP[Y, lh, UL.uAct Z' Z g Fx, Qd'] ;
+    module TY = EY.T[e, e', sel Z' (UL.uAct Z' Z g Fx)].TR ;
+
+    W1 : BaseP.GLine[a].CompAtP[BaseP.GFam[a].famPath, yP Z, Fx.1, e, e'].TV.EI Y = TX.M.tvN Y PPX.x0 ;
+    M1 : PE.CC.PT.Partial[Y, W1] = TX.M.mapP Y PPX.x0 (PPX.part p) ;
+    W2' : BaseP.GLine[a].CompAtP[BaseP.GFam[a].famPath, yP Z', (UL.uAct Z' Z g Fx).1, e, e'].TV.EI Y = TY.M.tvN Y PPY.x0 ;
+    W2 : BaseP.GLine[a].CompAtP[BaseP.GFam[a].famPath, yP Z, Fx.1, e, e'].TV.EI Y = MC.MP.tvN Y W2' ;
+    M2 : PE.CC.PT.Partial[Y, W2] = MC.MP.MN.mapP Y W2' (TY.M.mapP Y PPY.x0 (PPY.part p)) ;
+
+    -- an El element at (h a , j), read in F_X directly and through h * Iv
+    VAL (V : Ob) (a0 : Hom V Y) (j : Hom V Iv) (b1 b2 : W0.Ix (UL.fib0 V (l.1 V (compH V Y X h a0) j))) (Hb : Id (W0.Ix (UL.fib0 V (l.1 V (compH V Y X h a0) j))) b1 b2)
+      : Id (PR.TyL[yP Z, Fx.1].EI V) (TX.M.PhE V ((compH V Y X h a0, j), b1)) (MC.MP.mE.nt V (TY.M.PhE V ((a0, j), b2))) =
+      transH (sigV Z V Fx.1 (pairH X Iv V (compH V Y X h a0) j) (compH V Z' Z g (pairH Y Iv V a0 j))
+                (symH (PosetConn[a].cyl-pair V Y X h a0 j)) (UL.fib0 V (l.1 V (compH V Y X h a0) j))
+                (EX.Pv V (compH V Y X h a0, j)) (EY.Pv V (a0, j)) b1)
+             (apH (\ b -> (compH V Z' Z g (pairH Y Iv V a0 j), EY.ph V (a0, j) b)) Hb) ;
+
+    Hl (W : Ob) (f : Hom W Y) (i : Hom W Iv) : Id (Hom W Z) (W1.1.1 W f i) (W2.1.1 W f i) = symH (PosetConn[a].cyl-pair W Y X h f i) ;
+
+    He : Id (PR.TyL[yP Z, Fx.1].EI Y) (PE.CC.EK.endE Y W1) (PE.CC.EK.endE Y W2) =
+      VAL Y (idH Y) (ptH Y e) PPX.x0.2 PPY.x0.2
+        (coeEq Y (y.1.1 Y (idH Y) (ptH Y e), y.2) (y.1.1 Y (idH Y) (ptH Y e), y.2) (refl (y.1.1 Y (idH Y) (ptH Y e), y.2)) _
+           (symH (apH (\ k -> k.1 Y (idH Y) (ptH Y e)) q1)) (symH (apH (\ k -> k.1 Y (idH Y) (ptH Y e)) q2))) ;
+
+    Hv (k : Fin p.pr) (W : Ob) (f : Hom W Y) (i : Lands W Y (p.ps k).pQ f) (i' : Lands W Y (p.ps k).pQ f) (V : Ob) (g' : Hom V W) (j : Hom V Iv)
+      : Id (PR.TyL[yP Z, Fx.1].EI V)
+           (BaseP.GFam[a].famConn.levA (yP Z) Fx.1 W (PE.CC.EK.lineL W ((M1.ps k).pv W f i)) V g' j)
+           (BaseP.GFam[a].famConn.levA (yP Z) Fx.1 W (PE.CC.EK.lineL W ((M2.ps k).pv W f i')) V g' j) =
+      calc (PR.TyL[yP Z, Fx.1].EI V) {
+          BaseP.GFam[a].famConn.levA (yP Z) Fx.1 W (PE.CC.EK.lineL W ((M1.ps k).pv W f i)) V g' j
+        =< TX.M.TSN[W, PPX.res W f ((p.ps k).pv W f i) ((p.ps k).ppt W f i)].res-lev V g' j >
+          TX.M.PhE V ((PPX.res W f ((p.ps k).pv W f i) ((p.ps k).ppt W f i)).2.1.1.1 V g' j)
+        =< apH (TX.M.PhE V) (PPX.res-val W f ((p.ps k).pv W f i) ((p.ps k).ppt W f i) V g' j) >
+          TX.M.PhE V (PLX.TSP[Y, d1L, y, q1, W, f, (p.ps k).pv W f i, (p.ps k).ppt W f i].t V g' j)
+        =< VAL V (compH V W Y f g') j _ _
+             (coeEq V (((p.ps k).pv W f i).2.1.1.1 V g' j) (((p.ps k).pv W f i').2.1.1.1 V g' j)
+                (apH (\ w -> w.2.1.1.1 V g' j) (KA.PT.pv-irr Y y (p.ps k) W f i i')) _
+                (PLX.TSP[Y, d1L, y, q1, W, f, (p.ps k).pv W f i, (p.ps k).ppt W f i].qg V g' j)
+                (PLY.TSP[Y, BaseP.GLocal[a+].dg Y, y, q2, W, f, (p.ps k).pv W f i', (p.ps k).ppt W f i'].qg V g' j)) >
+          MC.MP.mE.nt V (TY.M.PhE V (PLY.TSP[Y, BaseP.GLocal[a+].dg Y, y, q2, W, f, (p.ps k).pv W f i', (p.ps k).ppt W f i'].t V g' j))
+        =< apH (\ z -> MC.MP.mE.nt V (TY.M.PhE V z)) (symH (PPY.res-val W f ((p.ps k).pv W f i') ((p.ps k).ppt W f i') V g' j)) >
+          MC.MP.mE.nt V (TY.M.PhE V ((PPY.res W f ((p.ps k).pv W f i') ((p.ps k).ppt W f i')).2.1.1.1 V g' j))
+        =< apH (MC.MP.mE.nt V)
+             (symH {PR.TyL[yP Z', (UL.uAct Z' Z g Fx).1].EI V}
+                   {BaseP.GFam[a].famConn.levA (yP Z') (UL.uAct Z' Z g Fx).1 W
+                      (BaseP.GLine[a].EndKit[BaseP.GFam[a].famPath, yP Z', (UL.uAct Z' Z g Fx).1, e].lineL W
+                         (TY.M.tsN W (PPY.res W f ((p.ps k).pv W f i') ((p.ps k).ppt W f i')))) V g' j}
+                   {TY.M.PhE V ((PPY.res W f ((p.ps k).pv W f i') ((p.ps k).ppt W f i')).2.1.1.1 V g' j)}
+                   (TY.M.TSN[W, PPY.res W f ((p.ps k).pv W f i') ((p.ps k).ppt W f i')].res-lev V g' j)) >
+          MC.MP.mE.nt V ((TY.M.tsN W (PPY.res W f ((p.ps k).pv W f i') ((p.ps k).ppt W f i'))).2.1.1.1 V g' j)
+        =< symH {PR.TyL[yP Z, Fx.1].EI V}
+             {BaseP.GFam[a].famConn.levA (yP Z) Fx.1 W (PE.CC.EK.lineL W (MC.MP.tsN W (TY.M.tsN W (PPY.res W f ((p.ps k).pv W f i') ((p.ps k).ppt W f i'))))) V g' j}
+             {MC.MP.mE.nt V ((TY.M.tsN W (PPY.res W f ((p.ps k).pv W f i') ((p.ps k).ppt W f i'))).2.1.1.1 V g' j)}
+             (MC.MP.TSN[W, TY.M.tsN W (PPY.res W f ((p.ps k).pv W f i') ((p.ps k).ppt W f i'))].res-lev V g' j) >
+          BaseP.GFam[a].famConn.levA (yP Z) Fx.1 W (PE.CC.EK.lineL W ((M2.ps k).pv W f i')) V g' j } ;
+
+    E12 : Id (PE.CC.TV'.EI Y) (W1.1, (sel Z Fx).cop Y W1 M1) (W2.1, (sel Z Fx).cop Y W2 M2) =
+      PE.cop-eq (sel Z Fx) W1 W2 Hl He M1 M2 (refl p.pr) (\ k -> refl (p.ps k).pQ) Hv ;
+
+    main : Id (W0.Ix (UL.fib0 Y (l.1 Y (compH Y Y X h (idH Y)) (ptH Y e'))))
+              (TX.cop Y PPX.x0 (PPX.part p)) (TY.cop Y PPY.x0 (PPY.part p)) =
+      transH (cVsig Z Y Fx.1 _ _ ((sel Z Fx).cop Y W1 M1) ((sel Z Fx).cop Y W2 M2) (apH (KD0'.endE Y) E12)
+                (UL.fib0 Y (l.1 Y (compH Y Y X h (idH Y)) (ptH Y e')))
+                (EX.Pv Y (compH Y Y X h (idH Y), ptH Y e')) (EY.Pv Y (idH Y, ptH Y e')))
+             (apH (\ c -> EY.ps Y (idH Y, ptH Y e') (c.cop Y W2' (TY.M.mapP Y PPY.x0 (PPY.part p)))) (symH (selEq Z' Z g Fx))) ;
+  } ;
+
+  -- F_Y is F_X along h * Iv
+  R : Id (UL.U0 Z') (UL.uAct Z' Z g Fx) (PE0.FC Y lh) =
+    transH (l.2 Z' Z g (pr1 X Iv) (pr2 X Iv))
+      (transH (apH (\ k -> l.1 Z' k (compH Z' Z Iv (pr2 X Iv) g)) (pr1-pair X Iv Z' (compH Z' Y X h (pr1 Y Iv)) (pr2 Y Iv)))
+              (apH (\ k -> l.1 Z' (compH Z' Y X h (pr1 Y Iv)) k) (pr2-pair X Iv Z' (compH Z' Y X h (pr1 Y Iv)) (pr2 Y Iv)))) ;
+
+  res : Id (W0.Ix (UL.fib0 Y (l.1 Y (compH Y Y X h (idH Y)) (ptH Y e'))))
+           (TX.cop Y PPX.x0 (PPX.part p))
+           (PE0.ElP[Y, lh, PE0.FC Y lh, PE0.QdC Y lh].T[e, e', sel Z' (PE0.FC Y lh)].TR.cop Y PPY.x0 (PPY.part p)) =
+    idJ (UL.U0 Z') (UL.uAct Z' Z g Fx)
+      (\ F' R' -> (Qd' : (W : Ob) (z : V1.Ix ((BaseP.GLocal[a+].Pts[Y].P).ob W))
+                     -> Id (UL.U0 W) (UL.uAct W Z' (pairH Y Iv W z.1 z.2) F') (lh.1 W z.1 z.2))
+         -> Id (W0.Ix (UL.fib0 Y (l.1 Y (compH Y Y X h (idH Y)) (ptH Y e'))))
+               (TX.cop Y PPX.x0 (PPX.part p)) (PE0.ElP[Y, lh, F', Qd'].T[e, e', sel Z' F'].TR.cop Y PPY.x0 (PPY.part p)))
+      (\ Qd' -> BaseC[Qd'].main)
+      (PE0.FC Y lh) R (PE0.QdC Y lh) ;
+
+  opaque BaseC.main ; opaque res ;
+
+  coh : Id (TA.EI Y)
+           (l.1 Y (compH Y Y X h (idH Y)) (ptH Y e'), (PE0.cl e e' sel X l).cop Y PPX.x0 (PPX.part p))
+           (l.1 Y (compH Y Y X h (idH Y)) (ptH Y e'), (PE0.cl e e' sel Y lh).cop Y PPY.x0 (PPY.part p)) =
+    apH {W0.Ix (UL.fib0 Y (l.1 Y (compH Y Y X h (idH Y)) (ptH Y e')))} {TA.EI Y}
+      (\ b -> (l.1 Y (compH Y Y X h (idH Y)) (ptH Y e'), b)) res ;
+} ;
+
+
+------------------------------------------------------------------------
+-- El is fibrant

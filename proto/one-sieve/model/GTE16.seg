@@ -1,0 +1,62 @@
+-- GTE16.seg (inside IvBase.Cn): transport along a line is an
+-- equivalence, as equivalence data (GEqExt.EqDat), natural in the context.
+--
+-- The equivalence is built ONCE over the universal context of lines,
+-- P = pth G with ln = id (GTE14, GTE15); for a family of lines ln : D -> P
+-- it is that data along ln (GEqLaws.eqDSub: SubMap, EqSub, EqSubEsi).
+-- Naturality along s : D' -> D is then the composition law of eqDSub
+-- (GEqLaws2.eqD-o):
+--
+--   dataU                 the universal data (SB , SA , tr ; trEquiv , trKesi)
+--   TrD[.., D, ln].dat    the data at ln
+--   trNat s               (data at ln)[s] = data at (ln o s)
+--
+-- From a fibrancy structure (c , e) of A, in the direction d (caOf / cbOf,
+-- ceaOf / cebOf: by cases on d).
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+-- the line ESI of the compositions in the direction d and back
+ceaOf (G : PCtx) (A : PTy[G]) : (d : Bool) (c : GFibE[lv].FE[G, A].Comp) -> GFibE[lv].FE[G, A].ESIC c
+  -> CompAtP[GFam[lv].famPath, G, A, src d, tgt d].CESI (GTE14[lv].caOf G A d c) = split {
+  true -> \ c e -> e.1 ;
+  false -> \ c e -> e.2 } ;
+
+cebOf (G : PCtx) (A : PTy[G]) : (d : Bool) (c : GFibE[lv].FE[G, A].Comp) -> GFibE[lv].FE[G, A].ESIC c
+  -> CompAtP[GFam[lv].famPath, G, A, tgt d, src d].CESI (GTE14[lv].cbOf G A d c) = split {
+  true -> \ c e -> e.2 ;
+  false -> \ c e -> e.1 } ;
+
+module TrU (G : PCtx) (A : PTy[G]) (c : GFibE[lv].FE[G, A].Comp) (e : GFibE[lv].FE[G, A].ESIC c) (d : Bool) {
+  P : PCtx = GFam[lv].famPath.pth G ;
+
+  module TE = GTE14[lv].TrE[G, A, d, GTE14[lv].caOf G A d c, GTE14[lv].cbOf G A d c, c.1, P, idS P] ;
+  module KE = GTE15[lv].KE[G, A, d, GTE14[lv].caOf G A d c, GTE14[lv].cbOf G A d c, c.1, P, idS P,
+                           ceaOf G A d c e, cebOf G A d c e] ;
+
+  triU : GEqExt[lv].EqDat[P].Tri = (TE.T1.SB, (TE.T1.SA, TE.T1.tr)) ;
+
+  eqU : GEqExt[lv].EqDat[P].EqOn triU = (TE.trEquiv, KE.trKesi) ;
+
+  dataU : (u : GEqExt[lv].EqDat[P].Tri) * GEqExt[lv].EqDat[P].EqOn u = (triU, eqU) ;
+
+  -- the data at a family of lines
+  dat (D : PCtx) (ln : PSub[D, P]) : (u : GEqExt[lv].EqDat[D].Tri) * GEqExt[lv].EqDat[D].EqOn u =
+    GEqLaws[lv].eqDSub D P ln triU eqU ;
+
+  -- naturality: along s : D' -> D
+  trNat (D' D : PCtx) (s : PSub[D', D]) (ln : PSub[D, P])
+    : Id ((u : GEqExt[lv].EqDat[D'].Tri) * GEqExt[lv].EqDat[D'].EqOn u)
+         (GEqLaws[lv].eqDSub D' D s (dat D ln).1 (dat D ln).2) (dat D' (oS D' D P ln s)) =
+    symH GEqLaws2[lv].LawO[D', D, P, ln, s, triU, eqU].eqD-o ;
+} ;

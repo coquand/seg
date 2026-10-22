@@ -1,0 +1,66 @@
+-- PElYon2.seg: El of the poset universe at a Yoneda code is the code,
+-- part 2 (PElYon has the composites, Dir / At): El's compositions along
+-- the Yoneda code are F's (ceq01 / ceq10, by At.copEq), so El's
+-- fibration there is F's (elYonCl).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosS[a] ; open PSB ; open PSCyl ;
+module W0 = V[a] ;
+open Arith[a] ;
+module V1 = V[a+] ;
+module BaseP = PosS[a].PSB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module L1 = BaseP.GPre[a+] ;
+open BaseP.GYon[a] ;
+module UL = BaseP.GUnivL.UL ;
+module PE0 = PElL[a] ;
+module PE2 = PElL2[a] ;
+
+module PY1 = PElYon[a] ;
+module PYA = PElYonB[a] ;
+module EC = PY1.EC ;
+
+module EY (Z : Ob) (F : UL.U0 Z) {
+  module E = PY1.EY[Z, F] ;
+  ----------------------------------------------------------------------
+  -- ElYonCl: El at the Yoneda code of F, with its fibration structure, is F
+
+  module D01 = E.Dir[e0, e1, PE0.sel01, \ Z' Z1 g F1 -> refl (PE0.sel01 Z' (UL.uAct Z' Z1 g F1))] ;
+  module D10 = E.Dir[e1, e0, PE0.sel10, \ Z' Z1 g F1 -> refl (PE0.sel10 Z' (UL.uAct Z' Z1 g F1))] ;
+  module TI = BaseP.GTransferSub.TrId[yP Z, F.1, F.2.1] ;
+  module TP = BaseP.GEqLaws[a].TyEqPw[yP Z, E.FC.ElTy, F.1, E.YN.Po, E.YN.H1] ;
+
+  ceq01 : Id (D01.CD.CompAt) D01.TrEl.compAt D01.TrF.compAt =
+    D01.CD.CompAt-ext D01.TrEl.compAt D01.TrF.compAt (\ X x p -> PYA.At[Z, F, e0, e1, PE0.sel01, \ Z' Z1 g F1 -> refl (PE0.sel01 Z' (UL.uAct Z' Z1 g F1)), X, x, p].copEq) ;
+  ceq10 : Id (D10.CD.CompAt) D10.TrEl.compAt D10.TrF.compAt =
+    D10.CD.CompAt-ext D10.TrEl.compAt D10.TrF.compAt (\ X x p -> PYA.At[Z, F, e1, e0, PE0.sel10, \ Z' Z1 g F1 -> refl (PE0.sel10 Z' (UL.uAct Z' Z1 g F1)), X, x, p].copEq) ;
+
+  compEq : Id ((T : PTy[yP Z]) * TI.ClTy T) (E.FC.ElTy, (D01.TrEl.compAt, D10.TrEl.compAt)) (F.1, F.2.1) =
+    transH
+      (apH {TI.ClTy E.FC.ElTy} {(T : PTy[yP Z]) * TI.ClTy T} (\ z -> (E.FC.ElTy, z))
+        (transH (apH {D01.CD.CompAt} {TI.ClTy E.FC.ElTy} (\ z -> (z, D10.TrEl.compAt)) ceq01)
+                (apH {D10.CD.CompAt} {TI.ClTy E.FC.ElTy} (\ z -> (D01.TrF.compAt, z)) ceq10)))
+      (TI.trId E.FC.ElTy E.YN.elYon E.phPo E.psPo E.ph-psPo E.ps-phPo E.PhNPo
+         (\ W d b -> BaseP.GEqLaws[a].TriL[yP Z].trE-pw W E.FC.ElTy F.1 E.YN.elYon (E.YN.Po W) TP.P (d, b))) ;
+
+  isProp-ESIC (T : PTy[yP Z]) (c2 : TI.ClTy T) : isProp (BaseP.GFibE[a].FE[yP Z, T].ESIC c2) =
+    isProp-Sigma (BaseP.GFibE[a].FE[yP Z, T].C01.CESI c2.1) (\ z -> BaseP.GFibE[a].FE[yP Z, T].C10.CESI c2.2)
+      (BaseP.GFibE[a].FE[yP Z, T].C01.isProp-CESI c2.1) (\ z -> BaseP.GFibE[a].FE[yP Z, T].C10.isProp-CESI c2.2) ;
+
+  -- the lemma
+  elYonCl : Id (BaseP.GFibE[a].FibEL (yP Z)) E.FC.fib F =
+    idJ ((T : PTy[yP Z]) * TI.ClTy T) (E.FC.ElTy, (D01.TrEl.compAt, D10.TrEl.compAt))
+      (\ z Q -> (e2 : BaseP.GFibE[a].FE[yP Z, z.1].ESIC z.2) -> Id (BaseP.GFibE[a].FibEL (yP Z)) E.FC.fib (z.1, (z.2, e2)))
+      (\ e2 -> apH {BaseP.GFibE[a].FE[yP Z, E.FC.ElTy].ESIC (D01.TrEl.compAt, D10.TrEl.compAt)} {BaseP.GFibE[a].FibEL (yP Z)}
+                  (\ q -> (E.FC.ElTy, ((D01.TrEl.compAt, D10.TrEl.compAt), q)))
+                  (isProp-ESIC E.FC.ElTy (D01.TrEl.compAt, D10.TrEl.compAt) E.FC.fib.2.2 e2))
+      (F.1, F.2.1) compEq F.2.2 ;
+
+  opaque ceq01 ; opaque ceq10 ; opaque compEq ; opaque elYonCl ;
+} ;

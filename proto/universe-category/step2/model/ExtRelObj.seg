@@ -1,0 +1,244 @@
+-- ExtRelObj.seg: MODEL/Poset/ExtRelObj.agda.  Naturality of Ext for related
+-- data (UnivOp.uunif / uins), part 1: the objects.  Data d' over y Y and d
+-- over y X related along h by RelG.URelB (extents rf, fibres of B by Po,
+-- actions H1, beta H3), and the fibres of the two A's identified (PoA).
+--   mapA       E(A'') -> E(A) over y h (points h o g, fibres by PoA)
+--   mapPairs   a pair of d' at g gives a pair of d at h o g
+--   PhiM       the EMap Ext(d') -> Ext(d) over y h (by cases on the
+--              extent), Phi-ext, Phi-act
+--
+-- The hypotheses PoA, PoAH, mAof, mAofE have named types (PoATy, ...),
+-- shared with ExtRelB / ExtRelA.  Agda's where-blocks are split helpers
+-- and the segment MP.  Agda's  subst Ix  is subV.  ExtRelObj2.seg continues
+-- the segment RO (as RO2).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+open BaseP.GYon[a] ;
+open Cofib[a] ; open GP ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open UMapOver[a] ;
+open UnivOp[a] ;
+
+subV (P Q : W0.V) (e : Id W0.V P Q) (x : W0.Ix P) : W0.Ix Q = subst W0.V (\ z -> W0.Ix z) P Q e x ;
+
+subT (b c : Bool) (e : Id Bool b c) (x : IsT b) : IsT c = subst Bool (\ z -> IsT z) b c e x ;
+
+------------------------------------------------------------------------
+-- The hypotheses
+
+PoATy (Y X : Ob) (h : Hom Y X) (A'' : PTy[yP Y]) (A : PTy[yP X]) : U a+ =
+  (W : Ob) (g : Hom W Y) -> Id W0.V (A''.tob W g) (A.tob W (compH W Y X h g)) ;
+
+-- PoA is natural: acting by k in A'' and then identifying (at g o k) is
+-- identifying (at g) and then acting by k in A; the action of A lands at
+-- h o (g o k), which is (h o g) o k by associativity.
+PoAHTy (Y X : Ob) (h : Hom Y X) (A'' : PTy[yP Y]) (A : PTy[yP X]) (PoA : PoATy Y X h A'' A) : U a =
+  (V W : Ob) (k : Hom V W) (g : Hom W Y) (x : W0.Ix (A''.tob W g))
+  -> Id (W0.Ix (A.tob V (compH V Y X h (compH V W Y g k))))
+        (subV (A''.tob V (compH V W Y g k)) (A.tob V (compH V Y X h (compH V W Y g k))) (PoA V (compH V W Y g k))
+              (A''.tact V W k g (compH V W Y g k) (refl (compH V W Y g k)) x))
+        (A.tact V W k (compH W Y X h g) (compH V Y X h (compH V W Y g k)) (comp-assoc V W Y X h g k)
+              (subV (A''.tob W g) (A.tob W (compH W Y X h g)) (PoA W g) x)) ;
+
+MAofTy (Y X : Ob) (h : Hom Y X) (A'' : PTy[yP Y]) (A : PTy[yP X]) (psY : GP.Cof[yP Y]) (psX : GP.Cof[yP X]) (d' : UDataOn[Y, A'', psY]) (d : UDataOn[X, A, psX]) : U a+ =
+  (rf : RelPre[Y, X, h, psY, psX].RFull)
+  -> EMap[GP.CofL[yP Y, psY].resCtx, GP.CofL[yP X, psX].resCtx, RelPre[Y, X, h, psY, psX].sR rf,
+          subTy (GP.CofL[yP Y, psY].resCtx) (yP Y) A'' (GP.CofL[yP Y, psY].inclR),
+          subTy (GP.CofL[yP X, psX].resCtx) (yP X) A (GP.CofL[yP X, psX].inclR)] ;
+
+MAofETy (Y X : Ob) (h : Hom Y X) (A'' : PTy[yP Y]) (A : PTy[yP X]) (PoA : PoATy Y X h A'' A)
+  (psY : GP.Cof[yP Y]) (psX : GP.Cof[yP X]) (d' : UDataOn[Y, A'', psY]) (d : UDataOn[X, A, psX]) (mAof : MAofTy Y X h A'' A psY psX d' d) : U a =
+  (rf : RelPre[Y, X, h, psY, psX].RFull) (W : Ob) (g : Hom W Y) (q : IsT (GP.CofL[yP Y, psY].full W g))
+  (x : W0.Ix (A''.tob W g))
+  -> Id (W0.Ix ((extP (GP.CofL[yP X, psX].resCtx) (subTy (GP.CofL[yP X, psX].resCtx) (yP X) A (GP.CofL[yP X, psX].inclR))).ob W))
+        ((mAof rf).mE W ((g, q), x))
+        ((compH W Y X h g, subT (GP.CofL[yP Y, psY].full W g) (GP.CofL[yP X, psX].full W (compH W Y X h g)) (rf W g) q),
+         subV (A''.tob W g) (A.tob W (compH W Y X h g)) (PoA W g) x) ;
+
+------------------------------------------------------------------------
+
+-- box-world (ExtRel*, to be retired): RO reads Ext's codes by the cases of
+-- ExtV, so extOb (locked after GExt4) is unfolded here only
+transparent BaseP.GExt2[a].ExtB2.extOb ;
+
+module RO (Y X : Ob) (h : Hom Y X) (A'' : PTy[yP Y]) (A : PTy[yP X]) (PoA : PoATy Y X h A'' A) (PoAH : PoAHTy Y X h A'' A PoA)
+  (psY : GP.Cof[yP Y]) (psX : GP.Cof[yP X]) (d' : UDataOn[Y, A'', psY]) (d : UDataOn[X, A, psX]) (mAof : MAofTy Y X h A'' A psY psX d' d) (mAofE : MAofETy Y X h A'' A PoA psY psX d' d mAof)
+  (R : RelG[Y, X, h, A'', A, psY, psX, d', d, mAof].URelB) {
+
+  module RG = RelG[Y, X, h, A'', A, psY, psX, d', d, mAof] ;
+  module RP = RelPre[Y, X, h, psY, psX] ;
+  module CY = GP.CofL[yP Y, psY] ;
+  module CX = GP.CofL[yP X, psX] ;
+
+  module EX = BaseP.GExt[a].ExtDef[yP X, A, psX] ;
+  module EXB = EX.ExtB[d.Bf.1, d.beta] ;
+  module EXB2 = BaseP.GExt2[a].ExtB2[yP X, A, psX, d.Bf.1, d.beta] ;
+  module EXB3 = BaseP.GExt3[a].ExtB3[yP X, A, psX, d.Bf.1, d.beta] ;
+  module EXB4 = BaseP.GExt4[a].ExtB4[yP X, A, psX, d.Bf.1, d.beta] ;
+  module EY = BaseP.GExt[a].ExtDef[yP Y, A'', psY] ;
+  module EYB = EY.ExtB[d'.Bf.1, d'.beta] ;
+  module EYB2 = BaseP.GExt2[a].ExtB2[yP Y, A'', psY, d'.Bf.1, d'.beta] ;
+  module EYB3 = BaseP.GExt3[a].ExtB3[yP Y, A'', psY, d'.Bf.1, d'.beta] ;
+  module EYB4 = BaseP.GExt4[a].ExtB4[yP Y, A'', psY, d'.Bf.1, d'.beta] ;
+
+  mBE (W : Ob) (w : EYB.TB.EI W) : EXB.TB.EI W = RG.mBE R.rf R.Po W w ;
+
+  -- the relation's hypotheses, restated once with this module's names
+  H1w (V W : Ob) (k : Hom V W) (w : EYB.TB.EI W)
+    : Id (EXB.TB.EI V) (mBE V (EYB.EB.act V W k w)) (EXB.EB.act V W k (mBE W w)) = R.H1 V W k w ;
+
+  H3w (W : Ob) (w : EYB.TB.EI W)
+    : Id (EX.TA'.EI W) ((mAof R.rf).mE W (d'.beta.mE W w)) (d.beta.mE W (mBE W w)) = R.H3 W w ;
+
+  opaque H1w ; opaque H3w ;
+
+  -- the A's along h
+  mapA (W : Ob) (w : EY.TA.EI W) : EX.TA.EI W =
+    (compH W Y X h w.1, subV (A''.tob W w.1) (A.tob W (compH W Y X h w.1)) (PoA W w.1) w.2) ;
+
+  -- mapA commutes with the actions: acting by k on (g, x) gives (g o k, k.x);
+  -- its image is (h o (g o k), PoA (k.x)), which by naturality of PoA is the
+  -- action of k on (h o g, PoA x), landing at h o (g o k) = (h o g) o k.
+  mapA-act (V W : Ob) (k : Hom V W) (w : EY.TA.EI W)
+    : Id (EX.TA.EI V) (mapA V (EY.EA.act V W k w)) (EX.EA.act V W k (mapA W w)) =
+    calc (EX.TA.EI V) {
+      mapA V (EY.EA.act V W k w)
+        =< apH (mapA V) (EY.TA.pr-tact V W k w.1 (compH V W Y w.1 k) (refl (compH V W Y w.1 k)) w.2) >
+      mapA V (compH V W Y w.1 k, A''.tact V W k w.1 (compH V W Y w.1 k) (refl (compH V W Y w.1 k)) w.2)
+        =< apH {W0.Ix (A.tob V (compH V Y X h (compH V W Y w.1 k)))} {EX.TA.EI V}
+               (\ z -> (compH V Y X h (compH V W Y w.1 k), z)) (PoAH V W k w.1 w.2) >
+      (compH V Y X h (compH V W Y w.1 k),
+       A.tact V W k (compH W Y X h w.1) (compH V Y X h (compH V W Y w.1 k)) (comp-assoc V W Y X h w.1 k)
+         (subV (A''.tob W w.1) (A.tob W (compH W Y X h w.1)) (PoA W w.1) w.2))
+        =< symH (EX.TA.pr-tact V W k (compH W Y X h w.1) (compH V Y X h (compH V W Y w.1 k))
+                  (comp-assoc V W Y X h w.1 k)
+                  (subV (A''.tob W w.1) (A.tob W (compH W Y X h w.1)) (PoA W w.1) w.2)) >
+      EX.EA.act V W k (mapA W w) } ;
+
+  -- toEA after mA is mapA after toEA
+  toEA-mA (W : Ob) (w : EY.TA'.EI W)
+    : Id (EX.TA.EI W) (EX.toEA W ((mAof R.rf).mE W w)) (mapA W (EY.toEA W w)) =
+    apH (EX.toEA W) (mAofE R.rf W w.1.1 w.1.2 w.2) ;
+
+  opaque mapA-act ; opaque toEA-mA ;
+
+  -- the two maps as EMaps
+  mapAM : EMap[yP Y, yP X, yH Y X h, A'', A] =
+    (mkEMap (yP Y) (yP X) (yH Y X h) A'' A mapA (\ W w -> refl (compH W Y X h w.1)) mapA-act) ;
+
+  mBM : EMap[CY.resCtx, CX.resCtx, RP.sR R.rf, d'.Bf.1, d.Bf.1] = RG.mB R.rf R.Po R.H1 ;
+
+  ----------------------------------------------------------------------
+  -- Pairs
+
+  module MP (W : Ob) (g : Hom W Y) (u : EYB.Pairs W g) {
+    av : W0.Ix (A.tob W (compH W Y X h g)) = subV (A''.tob W g) (A.tob W (compH W Y X h g)) (PoA W g) (EYB.pa W g u) ;
+
+    qBack (V : Ob) (k : Hom V W) (q : IsT (CX.full V (compH V W X (compH W Y X h g) k))) : IsT (CY.full V (compH V W Y g k)) =
+      -- (h o g) o k = h o (g o k), and the extent of d there is that of d' at g o k
+      subT (CX.full V (compH V W X (compH W Y X h g) k)) (CY.full V (compH V W Y g k))
+        (transH {Bool} (apH (CX.full V) (comp-assoc V W Y X h g k)) (symH {Bool} (R.rf V (compH V W Y g k)))) q ;
+
+    bE : EXB.BETy W (compH W Y X h g) = \ V k q -> mBE V (EYB.pb W g u V k (qBack V k q)) ;
+
+    bpt : EXB.BptTy W (compH W Y X h g) bE = \ V k q ->
+      -- the point of bE is h o (g o k) = (h o g) o k
+      CX.res-eq V (bE V k q).1 (compH V W X (compH W Y X h g) k, q) (symH (comp-assoc V W Y X h g k)) ;
+
+    bal : EXB.BalTy W (compH W Y X h g) av bE = \ V k q ->
+      transH (apH (EX.toEA V) (symH (H3w V (EYB.pb W g u V k (qBack V k q)))))
+       (transH (toEA-mA V (d'.beta.mE V (EYB.pb W g u V k (qBack V k q))))
+        (transH (apH (mapA V) (EYB.pal W g u V k (qBack V k q)))
+                (mapA-act V W k (g, EYB.pa W g u)))) ;
+
+    bnat : EXB.BnatTy W (compH W Y X h g) bE = \ V' V chi k q q' ->
+      transH (symH (H1w V' V chi (EYB.pb W g u V k (qBack V k q))))
+             (apH (mBE V') (EYB.pnatF W g u V' V chi k (qBack V k q) (qBack V' (compH V' V W k chi) q'))) ;
+
+    opaque bpt ; opaque bal ; opaque bnat ;
+
+    pr : EXB.Pairs W (compH W Y X h g) = EXB.mkPairs W (compH W Y X h g) av bE bpt bal bnat ;
+  } ;
+
+  mapPairs (W : Ob) (g : Hom W Y) (u : EYB.Pairs W g) : EXB.Pairs W (compH W Y X h g) = MP[W, g, u].pr ;
+
+  ----------------------------------------------------------------------
+  -- The map Phi : Ext(d') -> Ext(d) over y h, by cases on the extent
+
+  phi (W : Ob) (g : Hom W Y) : (c : Bool) (e : Id Bool (CY.full W g) c) -> W0.Ix (EYB2.ExtV W g c e) -> EXB3.TX.EI W = split {
+    true -> \ e u -> EXB3.fromB W (mBE W ((g, e), u)) ;
+    false -> \ e u -> EXB3.fromP W (compH W Y X h g) (transH {Bool} (symH {Bool} (R.rf W g)) e) (mapPairs W g u) } ;
+
+  PhiE (W : Ob) (w : EYB3.TX.EI W) : EXB3.TX.EI W = phi W w.1 (CY.full W w.1) (refl (CY.full W w.1)) w.2 ;
+
+  ppAux (W : Ob) (g : Hom W Y) : (c : Bool) (e : Id Bool (CY.full W g) c) (u : W0.Ix (EYB2.ExtV W g c e))
+    -> Id (Hom W X) (phi W g c e u).1 (compH W Y X h g) = split {
+    true -> \ e u -> refl (compH W Y X h g) ;
+    false -> \ e u -> refl (compH W Y X h g) } ;
+
+  Phi-pt (W : Ob) (w : EYB3.TX.EI W) : Id (Hom W X) (PhiE W w).1 (compH W Y X h w.1) =
+    ppAux W w.1 (CY.full W w.1) (refl (CY.full W w.1)) w.2 ;
+
+  resSub (W : Ob) (g : Hom W Y) (p : IsT (CY.full W g)) (b : W0.Ix (d'.Bf.1.tob W (g, p))) (e : IsT (CY.full W g))
+    (P : Id (IsT (CY.full W g)) p e)
+    : Id (EYB.TB.EI W) ((g, e), EYB3.substq W g p e P b) ((g, p), b) =
+    idJ (IsT (CY.full W g)) p (\ e1 P1 -> Id (EYB.TB.EI W) ((g, e1), EYB3.substq W g p e1 P1 b) ((g, p), b))
+      (refl ((g, p), b)) e P ;
+
+  pbAux (W : Ob) (g : Hom W Y) (p : IsT (CY.full W g)) (b : W0.Ix (d'.Bf.1.tob W (g, p)))
+    : (c : Bool) (e : Id Bool (CY.full W g) c)
+      -> Id (EXB3.TX.EI W) (phi W g c e (EYB3.inB' W g c e p b)) (EXB3.fromB W (mBE W ((g, p), b))) = split {
+    true -> \ e -> apH (\ z -> EXB3.fromB W (mBE W z)) (resSub W g p b e (isProp-IsT' (CY.full W g) p e)) ;
+    false -> \ e -> absurd _ (false-true (transH {Bool} (symH {Bool} e) p)) } ;
+
+  Phi-B (W : Ob) (g : Hom W Y) (p : IsT (CY.full W g)) (b : W0.Ix (d'.Bf.1.tob W (g, p)))
+    : Id (EXB3.TX.EI W) (PhiE W (EYB3.fromB W ((g, p), b))) (EXB3.fromB W (mBE W ((g, p), b))) =
+    pbAux W g p b (CY.full W g) (refl (CY.full W g)) ;
+
+  ppAuxP (W : Ob) (g : Hom W Y) (np' : Id Bool (CY.full W g) false) (u : EYB.Pairs W g)
+    : (c : Bool) (e : Id Bool (CY.full W g) c)
+      -> Id (EXB3.TX.EI W) (phi W g c e (EYB3.inP' W g c e np' u))
+            (EXB3.fromP W (compH W Y X h g) (transH {Bool} (symH {Bool} (R.rf W g)) np') (mapPairs W g u)) = split {
+    true -> \ e -> absurd _ (false-true (transH {Bool} (symH {Bool} np') e)) ;
+    false -> \ e -> ap (Id Bool (CX.full W (compH W Y X h g)) false) (EXB3.TX.EI W)
+                        (\ z -> EXB3.fromP W (compH W Y X h g) z (mapPairs W g u))
+                        (transH {Bool} (symH {Bool} (R.rf W g)) e) (transH {Bool} (symH {Bool} (R.rf W g)) np')
+                        (isSet-Bool (CX.full W (compH W Y X h g)) false (transH {Bool} (symH {Bool} (R.rf W g)) e) (transH {Bool} (symH {Bool} (R.rf W g)) np')) } ;
+
+  Phi-P (W : Ob) (g : Hom W Y) (np' : Id Bool (CY.full W g) false) (u : EYB.Pairs W g)
+    : Id (EXB3.TX.EI W) (PhiE W (EYB3.fromP W g np' u))
+         (EXB3.fromP W (compH W Y X h g) (transH {Bool} (symH {Bool} (R.rf W g)) np') (mapPairs W g u)) =
+    ppAuxP W g np' u (CY.full W g) (refl (CY.full W g)) ;
+
+  -- the components of mapPairs
+  mapPairs-a (W : Ob) (g : Hom W Y) (u : EYB.Pairs W g)
+    : Id (W0.Ix (A.tob W (compH W Y X h g))) (EXB.pa W (compH W Y X h g) (mapPairs W g u))
+         (subV (A''.tob W g) (A.tob W (compH W Y X h g)) (PoA W g) (EYB.pa W g u)) =
+    EXB.mkPairs-a W (compH W Y X h g) MP[W, g, u].av MP[W, g, u].bE MP[W, g, u].bpt MP[W, g, u].bal MP[W, g, u].bnat ;
+
+  mapPairs-b (W : Ob) (g : Hom W Y) (u : EYB.Pairs W g) (V : Ob) (k : Hom V W)
+    (q : IsT (CX.full V (compH V W X (compH W Y X h g) k))) (q' : IsT (CY.full V (compH V W Y g k)))
+    : Id (EXB.TB.EI V) (EXB.pb W (compH W Y X h g) (mapPairs W g u) V k q) (mBE V (EYB.pb W g u V k q')) =
+    transH (EXB.mkPairs-b W (compH W Y X h g) MP[W, g, u].av MP[W, g, u].bE MP[W, g, u].bpt MP[W, g, u].bal MP[W, g, u].bnat V k q)
+           (apH (\ z -> mBE V (EYB.pb W g u V k z)) (isProp-IsT' (CY.full V (compH V W Y g k)) (MP[W, g, u].qBack V k q) q')) ;
+
+  opaque ppAux ; opaque Phi-pt ; opaque resSub ; opaque pbAux ; opaque Phi-B ; opaque ppAuxP ; opaque Phi-P ;
+  opaque mapPairs-a ; opaque mapPairs-b ;
+
+} ;
+
+opaque BaseP.GExt2[a].ExtB2.extOb ;

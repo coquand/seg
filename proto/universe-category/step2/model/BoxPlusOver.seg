@@ -1,0 +1,125 @@
+-- BoxPlusOver.seg: MODEL/Poset/BoxPlusOver.agda.  Extended boxes (BoxPlus)
+-- over a map of total presheaves: if the fillers are related along m
+-- (FillRel) and the families of paths correspond (eQ, eV), then the
+-- fillers of the extended boxes correspond (FEp-rel); FEp-relG for a box
+-- and a length that are only propositionally the mapped ones.
+--
+-- Agda's anonymous module over (X c' r F' F eQ eV) is the segment BPX.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+open Cofib[a] ; open GP ;
+open ExtKit[a] ;
+open ExtBox2[a] ;
+open UMapOver[a] ;
+
+module BPO (G' G : PCtx) (sg : PSub[G', G]) (A' : PTy[G']) (A : PTy[G]) (m : EMap[G', G, sg, A', A]) (eS : El Iv)
+  (fS' : FibM.FillDef[G', A'].FillOp[eS]) (fS : FibM.FillDef[G, A].FillOp[eS])
+  (FR : MapOverR[a].MOR[G', G, sg, A', A, m].FillRel eS fS' fS) {
+
+  module P' = BoxPlus[G', A', eS, fS'] ;
+  module P = BoxPlus[G, A, eS, fS] ;
+  open MapOver[G', G, sg, A', A, m] ;
+
+  module BPX (X : Ob) (c' : B1.Box[eS, X]) (r : Nat) (F' : P'.PFam[X, c', r]) (F : P.PFam[X, mapBox eS X c', r])
+    (eQ : (k : Fin r) -> Id (Subset X) (F'.pQ' k) (F.pQ' k))
+    (eV : (k : Fin r) (W : Ob) (f : Hom W X) (i : Lands W X (F'.pQ' k) f)
+      -> Id (T2.EI (prodP W Iv)) (m.mE (prodP W Iv) (F'.pPv k W f i)) (F.pPv k W f (lands-sub W X (F'.pQ' k) (F.pQ' k) (eQ k) f i))) {
+
+    module X' = P'.Px[X, c', r, F'] ;
+    module XX = P.Px[X, mapBox eS X c', r, F] ;
+    module MBc = MB[eS, X, c'] ;
+    module MBb = MB[eS, X, X'.box] ;
+
+    valRel : (s : Plus (Fin c'.br) (Fin r)) (W : Ob) (psi : Hom W (prodP X Iv))
+      (i : InQ W X (X'.sideAt s).sQ psi) (i2 : InQ W X (XX.sideAt s).sQ psi)
+      -> Id (T2.EI W) (m.mE W (X'.valAt s W psi i)) (XX.valAt s W psi i2) = split {
+      inl l -> \ W psi i i2 ->
+        transH (symH (MBc.S-E l W psi i))
+               (apH ((MBc.Sd l).svE W psi) (isProp-InQ W X (c'.bs l).sQ psi i i2)) ;
+      inr k -> \ W psi i i2 ->
+        transH (m.mE-act W (prodP W Iv) (evm X W psi) (F'.pPv k W (X'.pf W psi) (i)))
+         (apH (T2.E.act W (prodP W Iv) (evm X W psi))
+          (transH (eV k W (X'.pf W psi) (i))
+                  (apH (F.pPv k W (X'.pf W psi))
+                       (isProp-Lands W X (F.pQ' k) (X'.pf W psi)
+                          (lands-sub W X (F'.pQ' k) (F.pQ' k) (eQ k) (X'.pf W psi) (i))
+                          (i2))))) } ;
+
+    sQRel : (s : Plus (Fin c'.br) (Fin r)) -> Id (Subset X) (X'.sideAt s).sQ (XX.sideAt s).sQ = split {
+      inl l -> refl ((c'.bs l).sQ) ;
+      inr k -> eQ k } ;
+
+    opaque valRel ; opaque sQRel ;
+
+    boxEq : Id (B2.Box[eS, X]) (mapBox eS X X'.box) XX.box =
+      B2.box-ext eS X MBb.rho MBc.rho MBb.u MBc.u (plus c'.br r) MBb.Sd XX.sides MBb.cs XX.cs MBb.cb XX.cb
+        (refl MBc.rho)
+        (transH MBb.u-E (symH MBc.u-E))
+        (\ l -> sQRel (splitF c'.br r l))
+        (\ l W psi i i' ->
+          transH (MBb.S-E l W psi i)
+           (transH (apH (m.mE W) (X'.valAt-E (splitF c'.br r l) W psi i))
+            (transH (valRel (splitF c'.br r l) W psi i i')
+                    (symH (XX.valAt-E (splitF c'.br r l) W psi i'))))) ;
+
+    opaque boxEq ;
+
+    FEp-rel : Id (T2.EI (prodP X Iv)) (m.mE (prodP X Iv) (P'.FEp X c' r F')) (P.FEp X (mapBox eS X c') r F) =
+      transH (apH (m.mE (prodP X Iv)) (P'.FEp-def X c' r F'))
+       (transH (FR X X'.box)
+        (transH (apH (\ bb -> (bb.brho, fS.fop X bb)) boxEq)
+                (symH (P.FEp-def X (mapBox eS X c') r F)))) ;
+
+    opaque FEp-rel ;
+  } ;
+
+  FEp-rel (X : Ob) (c' : B1.Box[eS, X]) (r : Nat) (F' : P'.PFam[X, c', r]) (F : P.PFam[X, mapBox eS X c', r])
+    (eQ : (k : Fin r) -> Id (Subset X) (F'.pQ' k) (F.pQ' k))
+    (eV : (k : Fin r) (W : Ob) (f : Hom W X) (i : Lands W X (F'.pQ' k) f)
+      -> Id (T2.EI (prodP W Iv)) (m.mE (prodP W Iv) (F'.pPv k W f i)) (F.pPv k W f (lands-sub W X (F'.pQ' k) (F.pQ' k) (eQ k) f i)))
+    : Id (T2.EI (prodP X Iv)) (m.mE (prodP X Iv) (P'.FEp X c' r F')) (P.FEp X (mapBox eS X c') r F) =
+    BPX[X, c', r, F', F, eQ, eV].FEp-rel ;
+
+  -- the same for a box c equal to mapBox c' and r' = r propositionally
+  FEp-relG (X : Ob) (c' : B1.Box[eS, X]) (c : B2.Box[eS, X]) (ec : Id (B2.Box[eS, X]) (mapBox eS X c') c)
+    (r' r : Nat) (er : Id Nat r' r) (F' : P'.PFam[X, c', r']) (F : P.PFam[X, c, r])
+    (eQ : (k : Fin r') -> Id (Subset X) (F'.pQ' k) (F.pQ' (subst Nat (\ n -> Fin n) r' r er k)))
+    (eV : (k : Fin r') (W : Ob) (f : Hom W X) (i : Lands W X (F'.pQ' k) f)
+      -> Id (T2.EI (prodP W Iv)) (m.mE (prodP W Iv) (F'.pPv k W f i))
+            (F.pPv (subst Nat (\ n -> Fin n) r' r er k) W f (lands-sub W X (F'.pQ' k) (F.pQ' (subst Nat (\ n -> Fin n) r' r er k)) (eQ k) f i)))
+    : Id (T2.EI (prodP X Iv)) (m.mE (prodP X Iv) (P'.FEp X c' r' F')) (P.FEp X c r F) =
+    idJ (B2.Box[eS, X]) (mapBox eS X c')
+      (\ c1 E1 -> (F1 : P.PFam[X, c1, r])
+         (eQ1 : (k : Fin r') -> Id (Subset X) (F'.pQ' k) (F1.pQ' (subst Nat (\ n -> Fin n) r' r er k)))
+         -> ((k : Fin r') (W : Ob) (f : Hom W X) (i : Lands W X (F'.pQ' k) f)
+             -> Id (T2.EI (prodP W Iv)) (m.mE (prodP W Iv) (F'.pPv k W f i))
+                   (F1.pPv (subst Nat (\ n -> Fin n) r' r er k) W f (lands-sub W X (F'.pQ' k) (F1.pQ' (subst Nat (\ n -> Fin n) r' r er k)) (eQ1 k) f i)))
+         -> Id (T2.EI (prodP X Iv)) (m.mE (prodP X Iv) (P'.FEp X c' r' F')) (P.FEp X c1 r F1))
+      (idJ Nat r'
+        (\ r1 R1 -> (F1 : P.PFam[X, mapBox eS X c', r1])
+           (eQ1 : (k : Fin r') -> Id (Subset X) (F'.pQ' k) (F1.pQ' (subst Nat (\ n -> Fin n) r' r1 R1 k)))
+           -> ((k : Fin r') (W : Ob) (f : Hom W X) (i : Lands W X (F'.pQ' k) f)
+               -> Id (T2.EI (prodP W Iv)) (m.mE (prodP W Iv) (F'.pPv k W f i))
+                     (F1.pPv (subst Nat (\ n -> Fin n) r' r1 R1 k) W f (lands-sub W X (F'.pQ' k) (F1.pQ' (subst Nat (\ n -> Fin n) r' r1 R1 k)) (eQ1 k) f i)))
+           -> Id (T2.EI (prodP X Iv)) (m.mE (prodP X Iv) (P'.FEp X c' r' F')) (P.FEp X (mapBox eS X c') r1 F1))
+        (\ F1 eQ1 eV1 -> FEp-rel X c' r' F' F1 eQ1 eV1)
+        r er)
+      c ec F eQ eV ;
+
+  opaque FEp-relG ;
+} ;

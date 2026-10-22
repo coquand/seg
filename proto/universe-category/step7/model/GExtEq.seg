@@ -1,0 +1,594 @@
+-- GExtEq.seg (inside IvBase, any base; Step 2 probe): the equivalence
+-- structure of the universal glue data, from the points' own.  At a point
+-- x = (w , fu) of the universal extent at stage Z, the triple restricted
+-- along y x (level a+) is moved down to the point's triple over its
+-- restricted representable RC (level a) by sg g = (g , _), covered by the
+-- fibrewise isomorphisms of B and A (they differ by comp-idr only); the
+-- point's equivalence moves up by GTransferEq.TrEq.  Here: the move data.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Trees[a] ;
+open Arith[a] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open Encode[a, a+] ;
+module L = GPre[a+].PS ;
+module LP = GPre[a+] ;
+
+-- transport along a path of maps and back
+substRound (W Z : Ob) (o : Hom W Z -> W0.V) (g g' : Hom W Z) (p : Id (Hom W Z) g g') (z : W0.Ix (o g))
+  : Id (W0.Ix (o g)) (subst (Hom W Z) (\ k -> W0.Ix (o k)) g' g (symH p) (subst (Hom W Z) (\ k -> W0.Ix (o k)) g g' p z)) z =
+  idJ (Hom W Z) g (\ g2 p2 -> Id (W0.Ix (o g)) (subst (Hom W Z) (\ k -> W0.Ix (o k)) g2 g (symH p2) (subst (Hom W Z) (\ k -> W0.Ix (o k)) g g2 p2 z)) z)
+    (refl z) g' p ;
+
+substRound' (W Z : Ob) (o : Hom W Z -> W0.V) (g g' : Hom W Z) (p : Id (Hom W Z) g g') (z : W0.Ix (o g'))
+  : Id (W0.Ix (o g')) (subst (Hom W Z) (\ k -> W0.Ix (o k)) g g' p (subst (Hom W Z) (\ k -> W0.Ix (o k)) g' g (symH p) z)) z =
+  idJ (Hom W Z) g (\ g2 p2 -> (z2 : W0.Ix (o g2)) -> Id (W0.Ix (o g2)) (subst (Hom W Z) (\ k -> W0.Ix (o k)) g g2 p2 (subst (Hom W Z) (\ k -> W0.Ix (o k)) g2 g (symH p2) z2)) z2)
+    (\ z2 -> refl z2) g' p z ;
+
+opaque substRound ; opaque substRound' ;
+
+-- transports in a family over maps: composition, and any two parallel paths
+substHT (W Z : Ob) (o : Hom W Z -> W0.V) (k1 k2 k3 : Hom W Z) (p : Id (Hom W Z) k1 k2) (q : Id (Hom W Z) k2 k3) (z : W0.Ix (o k1))
+  : Id (W0.Ix (o k3)) (subst (Hom W Z) (\ k -> W0.Ix (o k)) k2 k3 q (subst (Hom W Z) (\ k -> W0.Ix (o k)) k1 k2 p z))
+                      (subst (Hom W Z) (\ k -> W0.Ix (o k)) k1 k3 (transH p q) z) =
+  idJ (Hom W Z) k2 (\ k4 q4 -> Id (W0.Ix (o k4)) (subst (Hom W Z) (\ k -> W0.Ix (o k)) k2 k4 q4 (subst (Hom W Z) (\ k -> W0.Ix (o k)) k1 k2 p z))
+                                                (subst (Hom W Z) (\ k -> W0.Ix (o k)) k1 k4 (transH p q4) z))
+    (refl (subst (Hom W Z) (\ k -> W0.Ix (o k)) k1 k2 p z)) k3 q ;
+
+substHI (W Z : Ob) (o : Hom W Z -> W0.V) (k1 k2 : Hom W Z) (p p' : Id (Hom W Z) k1 k2) (z : W0.Ix (o k1))
+  : Id (W0.Ix (o k2)) (subst (Hom W Z) (\ k -> W0.Ix (o k)) k1 k2 p z) (subst (Hom W Z) (\ k -> W0.Ix (o k)) k1 k2 p' z) =
+  apH (\ r -> subst (Hom W Z) (\ k -> W0.Ix (o k)) k1 k2 r z) (W0.isSetIx (homV W Z) k1 k2 p p') ;
+
+opaque substHT ; opaque substHI ;
+
+------------------------------------------------------------------------
+-- a triple substituted twice is the triple substituted along the
+-- composite (at level a+), with the same objects (tripO)
+
+module TripO (G D D' : L.PCtx) (B A : L.PTy[G]) (al : GLine[a+].PMap[G, B, A]) (s : L.PSub[D, G]) (s' : L.PSub[D', D]) {
+  module S1 = GEquivSub[a+].SubMap[D, G, s, B, A, al] ;
+  module S2 = GEquivSub[a+].SubMap[D', D, s', L.subTy D G B s, L.subTy D G A s, S1.subMap] ;
+  module S3 = GEquivSub[a+].SubMap[D', G, L.oS D' D G s s', B, A, al] ;
+  module T1A = LP.TyL[D', L.subTy D' D (L.subTy D G A s) s'] ;
+  module TsA = LP.TyL[D, L.subTy D G A s] ;
+
+  t1 : GEqExt[a+].EqDat[D'].Tri = (L.subTy D' D (L.subTy D G B s) s', (L.subTy D' D (L.subTy D G A s) s', S2.subMap)) ;
+  t2 : GEqExt[a+].EqDat[D'].Tri = (L.subTy D' G B (L.oS D' D G s s'), (L.subTy D' G A (L.oS D' D G s s'), S3.subMap)) ;
+
+  -- fromE at its own point
+  fr1 (X : Ob) (y : V1.Ix (D'.ob X)) (v : V1.Ix (A.tob X (s.nt X (s'.nt X y))))
+    : Id (V1.Ix (A.tob X (s.nt X (s'.nt X y)))) (T1A.fromE X y (y, v) (refl y)) v =
+    T1A.pr-inj X y (T1A.fromE X y (y, v) (refl y)) v (T1A.fromE-eq X y (y, v) (refl y)) ;
+  frs (X : Ob) (z : V1.Ix (D.ob X)) (v : V1.Ix (A.tob X (s.nt X z)))
+    : Id (V1.Ix (A.tob X (s.nt X z))) (TsA.fromE X z (z, v) (refl z)) v =
+    TsA.pr-inj X z (TsA.fromE X z (z, v) (refl z)) v (TsA.fromE-eq X z (z, v) (refl z)) ;
+
+  Hm (X : Ob) (w : LP.TyL[D', L.subTy D' G B (L.oS D' D G s s')].EI X)
+    : Id (LP.TyL[D', L.subTy D' G A (L.oS D' D G s s')].EI X) (S3.subMap.mE X w)
+         (w.1, T1A.fromE X w.1 (S2.subMap.mE X (w.1, w.2)) (S2.subMap.mpt X (w.1, w.2))) =
+    apH {V1.Ix (A.tob X (s.nt X (s'.nt X w.1)))} {LP.TyL[D', L.subTy D' G A (L.oS D' D G s s')].EI X} (\ z -> (w.1, z))
+      (symH (transH (fr1 X w.1 (S2.subMap.mE X (w.1, w.2)).2)
+                    (frs X (s'.nt X w.1) (S1.subMap.mE X (s'.nt X w.1, w.2)).2))) ;
+
+  P : Id (GEqExt[a+].EqDat[D'].Tri) t1 t2 =
+    GEqLaws[a+].TriL[D'].triExtPw t1.1 t1.2.1 t1.2.2 t2.1 t2.2.1 t2.2.2
+      (\ I x -> refl (B.tob I (s.nt I (s'.nt I x))))
+      (\ J I f x y e a0 -> L.tact-irr G B J I f (s.nt I (s'.nt I x)) (s.nt J (s'.nt J y))
+         (L.ntEq D G s J I f (s'.nt I x) (s'.nt J y) (L.ntEq D' D s' J I f x y e)) (L.ntEq D' G (L.oS D' D G s s') J I f x y e) a0)
+      (\ I x -> refl (A.tob I (s.nt I (s'.nt I x))))
+      (\ J I f x y e a0 -> L.tact-irr G A J I f (s.nt I (s'.nt I x)) (s.nt J (s'.nt J y))
+         (L.ntEq D G s J I f (s'.nt I x) (s'.nt J y) (L.ntEq D' D s' J I f x y e)) (L.ntEq D' G (L.oS D' D G s s') J I f x y e) a0)
+      Hm ;
+
+  opaque fr1 ; opaque frs ; opaque Hm ; opaque P ;
+} ;
+
+------------------------------------------------------------------------
+-- the moves back (GEqExt.Psi) along composite paths and along the path of
+-- triples induced by a path of substitutions (at level a+)
+
+module PsiL (Dh : L.PCtx) {
+  module ED = GEqExt[a+].EqDat[Dh] ;
+
+  psiTrans (t1 t2 t3 : ED.Tri) (P : Id ED.Tri t1 t2) (Q : Id ED.Tri t2 t3) (X : Ob) (w : LP.TyL[Dh, t3.2.1].EI X)
+    : Id (LP.TyL[Dh, t1.2.1].EI X) (ED.Psi t1 t3 (Paths[a++].transH P Q) X w) (ED.Psi t1 t2 P X (ED.Psi t2 t3 Q X w)) =
+    idJ ED.Tri t2
+      (\ u R -> (w2 : LP.TyL[Dh, u.2.1].EI X)
+         -> Id (LP.TyL[Dh, t1.2.1].EI X) (ED.Psi t1 u (Paths[a++].transH P R) X w2) (ED.Psi t1 t2 P X (ED.Psi t2 u R X w2)))
+      (\ w2 -> refl (ED.Psi t1 t2 P X w2)) t3 Q w ;
+
+  psiBTrans (t1 t2 t3 : ED.Tri) (P : Id ED.Tri t1 t2) (Q : Id ED.Tri t2 t3) (X : Ob) (w : LP.TyL[Dh, t3.1].EI X)
+    : Id (LP.TyL[Dh, t1.1].EI X) (ED.PsiB t1 t3 (Paths[a++].transH P Q) X w) (ED.PsiB t1 t2 P X (ED.PsiB t2 t3 Q X w)) =
+    idJ ED.Tri t2
+      (\ u R -> (w2 : LP.TyL[Dh, u.1].EI X)
+         -> Id (LP.TyL[Dh, t1.1].EI X) (ED.PsiB t1 u (Paths[a++].transH P R) X w2) (ED.PsiB t1 t2 P X (ED.PsiB t2 u R X w2)))
+      (\ w2 -> refl (ED.PsiB t1 t2 P X w2)) t3 Q w ;
+
+  module Trip (G : L.PCtx) (B A : L.PTy[G]) (al : GLine[a+].PMap[G, B, A]) {
+    trip (s0 : L.PSub[Dh, G]) : ED.Tri =
+      (L.subTy Dh G B s0, (L.subTy Dh G A s0, GEquivSub[a+].SubMap[Dh, G, s0, B, A, al].subMap)) ;
+
+    psiAp (s1 s2 : L.PSub[Dh, G]) (Q : Id (L.PSub[Dh, G]) s1 s2) (X : Ob) (w : LP.TyL[Dh, L.subTy Dh G A s2].EI X)
+      : Id (LP.TyL[Dh, L.subTy Dh G A s1].EI X) (ED.Psi (trip s1) (trip s2) (Paths[a++].apH trip Q) X w)
+           (w.1, subst (L.PSub[Dh, G]) (\ s3 -> V1.Ix (A.tob X (s3.nt X w.1))) s2 s1 (Paths[a++].symH Q) w.2) =
+      idJ (L.PSub[Dh, G]) s1
+        (\ s3 R -> (w2 : LP.TyL[Dh, L.subTy Dh G A s3].EI X)
+           -> Id (LP.TyL[Dh, L.subTy Dh G A s1].EI X) (ED.Psi (trip s1) (trip s3) (Paths[a++].apH trip R) X w2)
+                 (w2.1, subst (L.PSub[Dh, G]) (\ s4 -> V1.Ix (A.tob X (s4.nt X w2.1))) s3 s1 (Paths[a++].symH R) w2.2))
+        (\ w2 -> refl w2) s2 Q w ;
+
+    psiBAp (s1 s2 : L.PSub[Dh, G]) (Q : Id (L.PSub[Dh, G]) s1 s2) (X : Ob) (w : LP.TyL[Dh, L.subTy Dh G B s2].EI X)
+      : Id (LP.TyL[Dh, L.subTy Dh G B s1].EI X) (ED.PsiB (trip s1) (trip s2) (Paths[a++].apH trip Q) X w)
+           (w.1, subst (L.PSub[Dh, G]) (\ s3 -> V1.Ix (B.tob X (s3.nt X w.1))) s2 s1 (Paths[a++].symH Q) w.2) =
+      idJ (L.PSub[Dh, G]) s1
+        (\ s3 R -> (w2 : LP.TyL[Dh, L.subTy Dh G B s3].EI X)
+           -> Id (LP.TyL[Dh, L.subTy Dh G B s1].EI X) (ED.PsiB (trip s1) (trip s3) (Paths[a++].apH trip R) X w2)
+                 (w2.1, subst (L.PSub[Dh, G]) (\ s4 -> V1.Ix (B.tob X (s4.nt X w2.1))) s3 s1 (Paths[a++].symH R) w2.2))
+        (\ w2 -> refl w2) s2 Q w ;
+
+    opaque psiAp ; opaque psiBAp ;
+  } ;
+
+  opaque psiTrans ; opaque psiBTrans ;
+} ;
+
+module EQ (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[GYon[a].yP X]) -> Enc (Cl (GYon[a].yP X) A)) {
+  module UU = GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module UB = GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module CM = GExtCmp.CM[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module DD = GGlueD.GD[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module EE = GGlueE.GE[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module Y = GYon[a+] ;
+
+  module Pt (Z : Ob) (x : V1.Ix (UB.CU.resCtx.ob Z)) {
+    module T0 = EE.Tr[Z, x.1.1, x.1.2.1, x.1.2.2.1] ;
+
+    YZ : L.PCtx = Y.yP Z ;
+    sx : L.PSub[Y.yP Z, UB.CU.resCtx] = Y.yPt UB.CU.resCtx Z x ;
+
+    Bp : L.PTy[Y.yP Z] = L.subTy (Y.yP Z) UB.CU.resCtx UB.BU sx ;
+    Ap : L.PTy[Y.yP Z] = L.subTy (Y.yP Z) UB.CU.resCtx UB.AU' sx ;
+    module SMp = GEquivSub[a+].SubMap[Y.yP Z, UB.CU.resCtx, sx, UB.BU, UB.AU', UB.alU] ;
+
+    -- the point's extent along g
+    q0 : IsT (GGlueD.fl Z x.1.2.1 Z (idH Z)) = UB.qU Z x.1 x.2 ;
+    qg (W : Ob) (g : Hom W Z) : IsT (GGlueD.fl Z x.1.2.1 W g) =
+      substH (\ k -> IsT (GGlueD.fl Z x.1.2.1 W k)) (comp-idl W Z g)
+        (GGlueE.fl-act Z x.1.2.1 W Z g (idH Z) q0) ;
+
+    sg (W : Ob) (g : Hom W Z) : W0.Ix (T0.R.RC.ob W) = (g, qg W g) ;
+
+    sg-nat (V W : Ob) (k : Hom V W) (g : Hom W Z) : Id (W0.Ix (T0.R.RC.ob V)) (sg V (compH V W Z g k)) (T0.R.RC.act V W k (sg W g)) =
+      T0.R.pt-eq V (sg V (compH V W Z g k)) (T0.R.RC.act V W k (sg W g)) (refl (compH V W Z g k)) ;
+
+    -- the codes of B on the two sides
+    cp (W : Ob) (g : Hom W Z) : UU.U0 W = UB.bmap.nt W (sx.nt W g) ;
+    c0 (W : Ob) (g : Hom W Z) : UU.U0 W = x.1.2.2.1.1 W g (qg W g) ;
+
+    PB (W : Ob) (g : Hom W Z) : Id (UU.U0 W) (cp W g) (c0 W g) =
+      DD.Bhom Z x.1.2.1 x.1.2.2.1.1 W (compH W W Z g (idH W)) g (comp-idr W Z g)
+        (GGlueD.fl-pre W Z g x.1.2.1 W (idH W) (UB.qU W (sx.nt W g).1 (sx.nt W g).2)) (qg W g) ;
+
+    phB (W : Ob) (g : Hom W Z) (b : V1.Ix (Bp.tob W g)) : W0.Ix (T0.Bt.tob W (sg W g)) = DD.trB W (cp W g) (c0 W g) (PB W g) b ;
+    psB (W : Ob) (g : Hom W Z) (b : W0.Ix (T0.Bt.tob W (sg W g))) : V1.Ix (Bp.tob W g) = DD.trB W (c0 W g) (cp W g) (symH (PB W g)) b ;
+
+    phB-psB (W : Ob) (g : Hom W Z) (b : W0.Ix (T0.Bt.tob W (sg W g))) : Id (W0.Ix (T0.Bt.tob W (sg W g))) (phB W g (psB W g b)) b =
+      transH (CM.trC-comp W (c0 W g) (cp W g) (c0 W g) (symH (PB W g)) (PB W g) b) (CM.trC-irr W (c0 W g) (c0 W g) (transH (symH (PB W g)) (PB W g)) (refl (c0 W g)) b) ;
+    psB-phB (W : Ob) (g : Hom W Z) (b : V1.Ix (Bp.tob W g)) : Id (V1.Ix (Bp.tob W g)) (psB W g (phB W g b)) b =
+      transH (CM.trC-comp W (cp W g) (c0 W g) (cp W g) (PB W g) (symH (PB W g)) b) (CM.trC-irr W (cp W g) (cp W g) (transH (PB W g) (symH (PB W g))) (refl (cp W g)) b) ;
+
+    -- A on the two sides: A at g id and at g
+    phA (W : Ob) (g : Hom W Z) (a0 : V1.Ix (Ap.tob W g)) : W0.Ix (T0.At.tob W (sg W g)) =
+      subst (Hom W Z) (\ k -> W0.Ix (x.1.1.1.tob W k)) (compH W W Z g (idH W)) g (comp-idr W Z g) a0 ;
+    psA (W : Ob) (g : Hom W Z) (a0 : W0.Ix (T0.At.tob W (sg W g))) : V1.Ix (Ap.tob W g) =
+      subst (Hom W Z) (\ k -> W0.Ix (x.1.1.1.tob W k)) g (compH W W Z g (idH W)) (symH (comp-idr W Z g)) a0 ;
+
+    phA-psA (W : Ob) (g : Hom W Z) (a0 : W0.Ix (T0.At.tob W (sg W g))) : Id (W0.Ix (T0.At.tob W (sg W g))) (phA W g (psA W g a0)) a0 =
+      substRound' W Z (x.1.1.1.tob W) (compH W W Z g (idH W)) g (comp-idr W Z g) a0 ;
+    psA-phA (W : Ob) (g : Hom W Z) (a0 : V1.Ix (Ap.tob W g)) : Id (V1.Ix (Ap.tob W g)) (psA W g (phA W g a0)) a0 =
+      substRound W Z (x.1.1.1.tob W) (compH W W Z g (idH W)) g (comp-idr W Z g) a0 ;
+
+    module TAp = LP.TyL[Y.yP Z, Ap] ;
+    module TBp = LP.TyL[Y.yP Z, Bp] ;
+
+    -- the action on A, moved
+    module NA (V W : Ob) (k : Hom V W) (g : Hom W Z) (a0 : V1.Ix (Ap.tob W g)) {
+      F : UU.U0 W = UU.uAct W Z g x.1.1 ;
+      F' : UU.U0 V = UU.uAct V Z (compH V W Z g k) x.1.1 ;
+      e : Id (UU.U0 V) (UU.uAct V W k F) F' =
+        L.ntEq UB.GDr UU.UCtx UB.pA V W k (sx.nt W g).1 (sx.nt V (compH V W Z g k)).1
+          (L.ntEq UB.CU.resCtx UB.GDr UB.CU.inclR V W k (sx.nt W g) (sx.nt V (compH V W Z g k))
+             (L.ntEq (Y.yP Z) UB.CU.resCtx sx V W k g (compH V W Z g k) (refl (compH V W Z g k)))) ;
+      ya0 : Hom V Z = compH V W Z g (compH V V W k (idH V)) ;
+      ya1 : Hom V Z = compH V V Z (compH V W Z g k) (idH V) ;
+      ea0 : Id (Hom V Z) (compH V W Z (compH W W Z g (idH W)) k) ya0 =
+        ntEq (GYon[a].yP W) (GYon[a].yP Z) (GYon[a].yH W Z g) V W k (idH W) (compH V V W k (idH V)) (UU.idf-eq V W k) ;
+      Pa1 : Id (Hom V Z) ya0 ya1 = transH (apH (compH V W Z g) (comp-idr V W k)) (symH (comp-idr V Z (compH V W Z g k))) ;
+      ea2 : Id (Hom V Z) (compH V W Z (compH W W Z g (idH W)) k) (compH V W Z g k) = transH (transH ea0 Pa1) (comp-idr V Z (compH V W Z g k)) ;
+      t : W0.Ix (x.1.1.1.tob V ya0) = x.1.1.1.tact V W k (compH W W Z g (idH W)) ya0 ea0 a0 ;
+
+      res (eR : Id (Hom V Z) (compH V W Z g k) (compH V W Z g k))
+        : Id (W0.Ix (x.1.1.1.tob V (compH V W Z g k))) (phA V (compH V W Z g k) (UU.tactG V W k F F' e a0))
+                                                         (x.1.1.1.tact V W k g (compH V W Z g k) eR (phA W g a0)) =
+        calc (W0.Ix (x.1.1.1.tob V (compH V W Z g k))) {
+            phA V (compH V W Z g k) (UU.tactG V W k F F' e a0)
+          =< apH (phA V (compH V W Z g k))
+               (transH (UU.substF V (UU.uAct V W k F) F' e t)
+                       (UU.fib-move (Hom V Z) (x.1.1.1.tob V) ya0 ya1 Pa1 (ap (UU.U0 V) W0.V (UU.fib0 V) (UU.uAct V W k F) F' e) t)) >
+            phA V (compH V W Z g k) (subst (Hom V Z) (\ h -> W0.Ix (x.1.1.1.tob V h)) ya0 ya1 Pa1 t)
+          =< apH (phA V (compH V W Z g k))
+               (UU.tact-move (GYon[a].yP Z) x.1.1.1 V W k (compH W W Z g (idH W)) ya0 ya1 ea0 (transH ea0 Pa1) Pa1 a0) >
+            phA V (compH V W Z g k) (x.1.1.1.tact V W k (compH W W Z g (idH W)) ya1 (transH ea0 Pa1) a0)
+          =< UU.tact-move (GYon[a].yP Z) x.1.1.1 V W k (compH W W Z g (idH W)) ya1 (compH V W Z g k) (transH ea0 Pa1) ea2
+               (comp-idr V Z (compH V W Z g k)) a0 >
+            x.1.1.1.tact V W k (compH W W Z g (idH W)) (compH V W Z g k) ea2 a0
+          =< symH (UU.tact-src-move (GYon[a].yP Z) x.1.1.1 V W k (compH W W Z g (idH W)) g (compH V W Z g k) (comp-idr W Z g) eR ea2 a0) >
+            x.1.1.1.tact V W k g (compH V W Z g k) eR (phA W g a0) } ;
+    } ;
+
+    -- pairs over RC with the same map, A's family does not read the proof
+    pairA (V : Ob) (h : Hom V Z) (q1 q2 : IsT (GGlueD.fl Z x.1.2.1 V h)) (s1 s2 : W0.Ix (x.1.1.1.tob V h)) (P : Id (W0.Ix (x.1.1.1.tob V h)) s1 s2)
+      : Id (GPR.TyL[T0.R.RC, T0.At].EI V) ((h, q1), s1) ((h, q2), s2) =
+      transH (apH {IsT (GGlueD.fl Z x.1.2.1 V h)} {GPR.TyL[T0.R.RC, T0.At].EI V} (\ z -> ((h, z), s1))
+                (isProp-IsT' (GGlueD.fl Z x.1.2.1 V h) q1 q2))
+             (apH {W0.Ix (x.1.1.1.tob V h)} {GPR.TyL[T0.R.RC, T0.At].EI V} (\ z -> ((h, q2), z)) P) ;
+
+    PhNA (V W : Ob) (k : Hom V W) (u : TAp.EI W)
+      : Id (GPR.TyL[T0.R.RC, T0.At].EI V)
+           (sg V (TAp.E.act V W k u).1, phA V (TAp.E.act V W k u).1 (TAp.E.act V W k u).2)
+           (GPR.TyL[T0.R.RC, T0.At].E.act V W k (sg W u.1, phA W u.1 u.2)) =
+      pairA V (compH V W Z u.1 k) (qg V (compH V W Z u.1 k)) (T0.R.RC.act V W k (sg W u.1)).2 _ _
+        (NA[V, W, k, u.1, u.2].res (ntEq T0.R.RC (GYon[a].yP Z) T0.R.inclRC V W k (sg W u.1) (T0.R.RC.act V W k (sg W u.1))
+                                      (refl (T0.R.RC.act V W k (sg W u.1))))) ;
+
+    -- pairs over RC with the same map, B's family through the codes
+    pairB (V : Ob) (h : Hom V Z) (q1 q2 : IsT (GGlueD.fl Z x.1.2.1 V h))
+      (s1 : W0.Ix (UU.fib0 V (x.1.2.2.1.1 V h q1))) (s2 : W0.Ix (UU.fib0 V (x.1.2.2.1.1 V h q2)))
+      (P : Id (W0.Ix (UU.fib0 V (x.1.2.2.1.1 V h q2)))
+              (DD.trB V (x.1.2.2.1.1 V h q1) (x.1.2.2.1.1 V h q2)
+                 (apH (x.1.2.2.1.1 V h) (isProp-IsT' (GGlueD.fl Z x.1.2.1 V h) q1 q2)) s1) s2)
+      : Id (GPR.TyL[T0.R.RC, T0.Bt].EI V) ((h, q1), s1) ((h, q2), s2) =
+      idJ (IsT (GGlueD.fl Z x.1.2.1 V h)) q1
+        (\ q3 Q3 -> (s3 : W0.Ix (UU.fib0 V (x.1.2.2.1.1 V h q3)))
+           -> Id (W0.Ix (UU.fib0 V (x.1.2.2.1.1 V h q3)))
+                 (DD.trB V (x.1.2.2.1.1 V h q1) (x.1.2.2.1.1 V h q3) (apH (x.1.2.2.1.1 V h) Q3) s1) s3
+           -> Id (GPR.TyL[T0.R.RC, T0.Bt].EI V) ((h, q1), s1) ((h, q3), s3))
+        (\ s3 P3 -> apH {W0.Ix (UU.fib0 V (x.1.2.2.1.1 V h q1))} {GPR.TyL[T0.R.RC, T0.Bt].EI V} (\ z -> ((h, q1), z)) P3)
+        q2 (isProp-IsT' (GGlueD.fl Z x.1.2.1 V h) q1 q2) s2
+        (transH (CM.trC-irr V (x.1.2.2.1.1 V h q1) (x.1.2.2.1.1 V h q2) (apH (x.1.2.2.1.1 V h) (isProp-IsT' (GGlueD.fl Z x.1.2.1 V h) q1 q2))
+                   (apH (x.1.2.2.1.1 V h) (isProp-IsT' (GGlueD.fl Z x.1.2.1 V h) q1 q2)) s1) P) ;
+
+    module NB (V W : Ob) (k : Hom V W) (u : TBp.EI W) {
+      g : Hom W Z = u.1 ;
+      qa : IsT (GGlueD.fl Z x.1.2.1 V (compH V W Z g k)) = (T0.R.RC.act V W k (sg W g)).2 ;
+      F1 : UU.U0 W = cp W g ;
+      F1' : UU.U0 W = c0 W g ;
+      F2 : UU.U0 V = cp V (compH V W Z g k) ;
+      F2' : UU.U0 V = x.1.2.2.1.1 V (compH V W Z g k) qa ;
+      eb : Id (UU.U0 V) (UU.uAct V W k F1) F2 =
+        L.ntEq UB.CU.resCtx UU.UCtx UB.bmap V W k (sx.nt W g) (sx.nt V (compH V W Z g k))
+          (L.ntEq (Y.yP Z) UB.CU.resCtx sx V W k g (compH V W Z g k) (refl (compH V W Z g k))) ;
+      eb' : Id (UU.U0 V) (UU.uAct V W k F1') F2' =
+        x.1.2.2.1.2.1 V W k g (qg W g) (compH V W Z g k)
+          (apH (\ z -> z.1) (refl (T0.R.RC.act V W k (sg W g)))) qa ;
+      Q : Id (UU.U0 V) F2 F2' = transH (PB V (compH V W Z g k))
+        (apH (x.1.2.2.1.1 V (compH V W Z g k)) (isProp-IsT' (GGlueD.fl Z x.1.2.1 V (compH V W Z g k)) (qg V (compH V W Z g k)) qa)) ;
+
+      res : Id (GPR.TyL[T0.R.RC, T0.Bt].EI V)
+               (sg V (TBp.E.act V W k u).1, phB V (TBp.E.act V W k u).1 (TBp.E.act V W k u).2)
+               (GPR.TyL[T0.R.RC, T0.Bt].E.act V W k (sg W u.1, phB W u.1 u.2)) =
+        pairB V (compH V W Z g k) (qg V (compH V W Z g k)) qa _ _
+          (calc (W0.Ix (UU.fib0 V F2')) {
+              DD.trB V (c0 V (compH V W Z g k)) F2' (apH (x.1.2.2.1.1 V (compH V W Z g k))
+                  (isProp-IsT' (GGlueD.fl Z x.1.2.1 V (compH V W Z g k)) (qg V (compH V W Z g k)) qa))
+                (DD.trB V F2 (c0 V (compH V W Z g k)) (PB V (compH V W Z g k)) (UU.tactG V W k F1 F2 eb u.2))
+            =< CM.trC-comp V F2 (c0 V (compH V W Z g k)) F2' (PB V (compH V W Z g k))
+                 (apH (x.1.2.2.1.1 V (compH V W Z g k)) (isProp-IsT' (GGlueD.fl Z x.1.2.1 V (compH V W Z g k)) (qg V (compH V W Z g k)) qa))
+                 (UU.tactG V W k F1 F2 eb u.2) >
+              DD.trB V F2 F2' Q (UU.tactG V W k F1 F2 eb u.2)
+            =< GExtU.XU[Cl, clSub, clSub-id, clSub-o, encCl].tactGcong V W k F1 F1' (PB W g) F2 F2' Q eb eb' u.2 >
+              UU.tactG V W k F1' F2' eb' (DD.trB W F1 F1' (PB W g) u.2)
+            =< refl (UU.tactG V W k F1' F2' eb' (DD.trB W F1 F1' (PB W g) u.2)) >
+              (GPR.TyL[T0.R.RC, T0.Bt].E.act V W k (sg W u.1, phB W u.1 u.2)).2 }) ;
+    } ;
+
+    PhNB (V W : Ob) (k : Hom V W) (u : TBp.EI W)
+      : Id (GPR.TyL[T0.R.RC, T0.Bt].EI V)
+           (sg V (TBp.E.act V W k u).1, phB V (TBp.E.act V W k u).1 (TBp.E.act V W k u).2)
+           (GPR.TyL[T0.R.RC, T0.Bt].E.act V W k (sg W u.1, phB W u.1 u.2)) = NB[V, W, k, u].res ;
+
+    opaque PhNA ; opaque PhNB ;
+
+    -- alpha, moved
+    alSq (W : Ob) (u : TBp.EI W)
+      : Id (GPR.TyL[T0.R.RC, T0.At].EI W) (sg W (SMp.subMap.mE W u).1, phA W (SMp.subMap.mE W u).1 (SMp.subMap.mE W u).2)
+                                          (T0.al.mE W (sg W u.1, phB W u.1 u.2)) =
+      apH {W0.Ix (x.1.1.1.tob W u.1)} {GPR.TyL[T0.R.RC, T0.At].EI W} (\ z -> (sg W u.1, z))
+        (transH (apH (phA W u.1)
+                   (UB.TAU.pr-inj W (sx.nt W u.1) (SMp.subMap.mE W u).2 (UB.alE W (sx.nt W u.1, u.2)).2
+                      (UB.TAU.fromE-eq W (sx.nt W u.1) (UB.alE W (sx.nt W u.1, u.2)) (refl (sx.nt W u.1)))))
+                (DD.alHom Z x.1.1 x.1.2.1 x.1.2.2.1 W (compH W W Z u.1 (idH W)) u.1 (comp-idr W Z u.1)
+                   (GGlueD.fl-pre W Z u.1 x.1.2.1 W (idH W) (UB.qU W (sx.nt W u.1).1 (sx.nt W u.1).2)) (qg W u.1) u.2)) ;
+
+    opaque alSq ;
+
+    module TE = GTransferEq[a, a+, a+].TrEq[Y.yP Z, Bp, Ap, SMp.subMap, T0.R.RC, T0.Bt, T0.At, T0.al,
+      sg, sg-nat, phB, psB, phB-psB, psB-phB, phA, psA, phA-psA, psA-phA, PhNA, PhNB, x.1.2.2.2.1, alSq] ;
+
+    -- the local structure at x
+    Lx : GEqExt[a+].EqDat[Y.yP Z].EqOn (GYonEq1[a+].triY UB.CU.resCtx UB.BU UB.AU' UB.alU Z x) =
+      (TE.trEq, TE.trKesi x.1.2.2.2.2) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- coherence along y h: the restricted point x' = x h
+
+  substFst (G : PCtx) (t t' : GEqExt[a].EqDat[G].Tri) (P : Id (GEqExt[a].EqDat[G].Tri) t t') (e : GEqExt[a].EqDat[G].EqOn t)
+    : Id (GEquiv[a].EquivOp G t'.1 t'.2.1 t'.2.2)
+         (subst (GEqExt[a].EqDat[G].Tri) (\ u -> GEqExt[a].EqDat[G].EqOn u) t t' P e).1
+         (subst (GEqExt[a].EqDat[G].Tri) (\ u -> GEquiv[a].EquivOp G u.1 u.2.1 u.2.2) t t' P e.1) =
+    idJ (GEqExt[a].EqDat[G].Tri) t
+      (\ u Q -> Id (GEquiv[a].EquivOp G u.1 u.2.1 u.2.2)
+                   (subst (GEqExt[a].EqDat[G].Tri) (\ u2 -> GEqExt[a].EqDat[G].EqOn u2) t u Q e).1
+                   (subst (GEqExt[a].EqDat[G].Tri) (\ u2 -> GEquiv[a].EquivOp G u2.1 u2.2.1 u2.2.2) t u Q e.1))
+      (refl e.1) t' P ;
+
+  opaque substFst ;
+
+  module Co (Z Z' : Ob) (h : Hom Z' Z) (x : V1.Ix (UB.CU.resCtx.ob Z)) {
+    x' : V1.Ix (UB.CU.resCtx.ob Z') = UB.CU.resCtx.act Z' Z h x ;
+    module Q0 = Pt[Z, x] ;
+    module Q1 = Pt[Z', x'] ;
+
+    lh : PSub[Q1.T0.R.RC, Q0.T0.R.RC] = EE.lift Z' Z h x.1.2.1 ;
+    module FI = GEquivSub2[a].FibIso[Q1.T0.R.RC, Q0.T0.R.RC, lh, Q0.T0.Bt, Q0.T0.At, Q0.T0.al] ;
+
+    -- the moves of x' read against the triple of x restricted along lh
+    PhNA' (V W : Ob) (k : Hom V W) (u : Q1.TAp.EI W)
+      : Id (GPR.TyL[Q1.T0.R.RC, FI.A'].EI V)
+           (Q1.sg V (Q1.TAp.E.act V W k u).1, Q1.phA V (Q1.TAp.E.act V W k u).1 (Q1.TAp.E.act V W k u).2)
+           (GPR.TyL[Q1.T0.R.RC, FI.A'].E.act V W k (Q1.sg W u.1, Q1.phA W u.1 u.2)) =
+      transH (Q1.PhNA V W k u)
+        (apH {W0.Ix (x.1.1.1.tob V (compH V Z' Z h (compH V W Z' u.1 k)))} {GPR.TyL[Q1.T0.R.RC, FI.A'].EI V}
+           (\ z -> (Q1.T0.R.RC.act V W k (Q1.sg W u.1), z))
+           (tact-irr (GYon[a].yP Z) x.1.1.1 V W k (compH W Z' Z h u.1) (compH V Z' Z h (compH V W Z' u.1 k))
+              (ntEq (GYon[a].yP Z') (GYon[a].yP Z) (GYon[a].yH Z' Z h) V W k u.1 (compH V W Z' u.1 k)
+                 (ntEq Q1.T0.R.RC (GYon[a].yP Z') Q1.T0.R.inclRC V W k (Q1.sg W u.1) (Q1.T0.R.RC.act V W k (Q1.sg W u.1)) (refl (Q1.T0.R.RC.act V W k (Q1.sg W u.1)))))
+              (ntEq Q0.T0.R.RC (GYon[a].yP Z) Q0.T0.R.inclRC V W k (lh.nt W (Q1.sg W u.1)) (lh.nt V (Q1.T0.R.RC.act V W k (Q1.sg W u.1)))
+                 (ntEq Q1.T0.R.RC Q0.T0.R.RC lh V W k (Q1.sg W u.1) (Q1.T0.R.RC.act V W k (Q1.sg W u.1)) (refl (Q1.T0.R.RC.act V W k (Q1.sg W u.1)))))
+              (Q1.phA W u.1 u.2))) ;
+
+    PhNB' (V W : Ob) (k : Hom V W) (u : Q1.TBp.EI W)
+      : Id (GPR.TyL[Q1.T0.R.RC, FI.B'].EI V)
+           (Q1.sg V (Q1.TBp.E.act V W k u).1, Q1.phB V (Q1.TBp.E.act V W k u).1 (Q1.TBp.E.act V W k u).2)
+           (GPR.TyL[Q1.T0.R.RC, FI.B'].E.act V W k (Q1.sg W u.1, Q1.phB W u.1 u.2)) =
+      transH (Q1.PhNB V W k u)
+        (apH {W0.Ix (UU.fib0 V (x'.1.2.2.1.1 V (compH V W Z' u.1 k) (Q1.T0.R.RC.act V W k (Q1.sg W u.1)).2))}
+             {GPR.TyL[Q1.T0.R.RC, FI.B'].EI V}
+           (\ z -> (Q1.T0.R.RC.act V W k (Q1.sg W u.1), z))
+           (GSmall.tact-irr UU.UCtx UU.El V W k (x'.1.2.2.1.1 W u.1 (Q1.qg W u.1))
+              (x'.1.2.2.1.1 V (compH V W Z' u.1 k) (Q1.T0.R.RC.act V W k (Q1.sg W u.1)).2)
+              (x'.1.2.2.1.2.1 V W k u.1 (Q1.qg W u.1) (compH V W Z' u.1 k)
+                 (apH (\ z -> z.1) (refl (Q1.T0.R.RC.act V W k (Q1.sg W u.1)))) (Q1.T0.R.RC.act V W k (Q1.sg W u.1)).2)
+              (x.1.2.2.1.2.1 V W k (lh.nt W (Q1.sg W u.1)).1 (lh.nt W (Q1.sg W u.1)).2 (lh.nt V (Q1.T0.R.RC.act V W k (Q1.sg W u.1))).1
+                 (apH (\ z -> z.1) (ntEq Q1.T0.R.RC Q0.T0.R.RC lh V W k (Q1.sg W u.1) (Q1.T0.R.RC.act V W k (Q1.sg W u.1))
+                                      (refl (Q1.T0.R.RC.act V W k (Q1.sg W u.1)))))
+                 (lh.nt V (Q1.T0.R.RC.act V W k (Q1.sg W u.1))).2)
+              (Q1.phB W u.1 u.2))) ;
+
+    alSq' (W : Ob) (u : Q1.TBp.EI W)
+      : Id (GPR.TyL[Q1.T0.R.RC, FI.A'].EI W) (Q1.sg W (Q1.SMp.subMap.mE W u).1, Q1.phA W (Q1.SMp.subMap.mE W u).1 (Q1.SMp.subMap.mE W u).2)
+                                             (FI.al'.mE W (Q1.sg W u.1, Q1.phB W u.1 u.2)) =
+      transH (Q1.alSq W u)
+        (symH (apH {W0.Ix (x.1.1.1.tob W (compH W Z' Z h u.1))} {GPR.TyL[Q1.T0.R.RC, FI.A'].EI W} (\ z -> (Q1.sg W u.1, z))
+           (FI.SA.TC.pr-inj W (lh.nt W (Q1.sg W u.1))
+              (FI.SA.TC.fromE W (lh.nt W (Q1.sg W u.1)) (Q0.T0.alE W (lh.nt W (Q1.sg W u.1), Q1.phB W u.1 u.2)) (refl (lh.nt W (Q1.sg W u.1))))
+              (Q0.T0.alE W (lh.nt W (Q1.sg W u.1), Q1.phB W u.1 u.2)).2
+              (FI.SA.TC.fromE-eq W (lh.nt W (Q1.sg W u.1)) (Q0.T0.alE W (lh.nt W (Q1.sg W u.1), Q1.phB W u.1 u.2)) (refl (lh.nt W (Q1.sg W u.1))))))) ;
+
+    opaque PhNA' ; opaque PhNB' ; opaque alSq' ;
+
+    -- moving after restricting x's structure along lh is moving along the composite
+    module TC = GTransferEqComp[a, a+, a+].TrEqComp[Y.yP Z', Q1.Bp, Q1.Ap, Q1.SMp.subMap, Q0.T0.R.RC, Q0.T0.Bt, Q0.T0.At, Q0.T0.al,
+      x.1.2.2.2.1, Q1.T0.R.RC, lh, Q1.sg, Q1.sg-nat, Q1.phB, Q1.psB, Q1.phB-psB, Q1.psB-phB, Q1.phA, Q1.psA, Q1.phA-psA, Q1.psA-phA,
+      PhNA', PhNB', alSq'] ;
+
+    -- x''s own structure is that restriction, transported along triEq
+    module TQ = EE.TriEq[Z', Z, h, x.1.1, x.1.2.1, x.1.2.2.1] ;
+    module EDr = GEqExt[a].EqDat[Q1.T0.R.RC] ;
+
+    CA (X : Ob) (w : Q1.TAp.EI X)
+      : Id (GPR.TyL[Q1.T0.R.RC, FI.A'].EI X) (EDr.Psi (FI.B', (FI.A', FI.al')) Q1.T0.tri TQ.triEq X (Q1.sg X w.1, Q1.phA X w.1 w.2))
+                                             (Q1.sg X w.1, Q1.phA X w.1 w.2) =
+      transH (EDr.Psi-tob (FI.B', (FI.A', FI.al')) Q1.T0.tri TQ.triEq X (Q1.sg X w.1, Q1.phA X w.1 w.2))
+             (EDr.substLoop X FI.A'.tob (apH (\ u -> u.2.1.tob) (symH TQ.triEq)) (Q1.sg X w.1, Q1.phA X w.1 w.2)) ;
+
+    CB (X : Ob) (w : Q1.TBp.EI X)
+      : Id (GPR.TyL[Q1.T0.R.RC, FI.B'].EI X) (EDr.PsiB (FI.B', (FI.A', FI.al')) Q1.T0.tri TQ.triEq X (Q1.sg X w.1, Q1.phB X w.1 w.2))
+                                             (Q1.sg X w.1, Q1.phB X w.1 w.2) =
+      transH (EDr.PsiB-tob (FI.B', (FI.A', FI.al')) Q1.T0.tri TQ.triEq X (Q1.sg X w.1, Q1.phB X w.1 w.2))
+             (EDr.substLoop X FI.B'.tob (apH (\ u -> u.1.tob) (symH TQ.triEq)) (Q1.sg X w.1, Q1.phB X w.1 w.2)) ;
+
+    module TT = GTransferEqComp[a, a+, a+].TrEqTr[Y.yP Z', Q1.Bp, Q1.Ap, Q1.SMp.subMap, Q1.T0.R.RC,
+      (FI.B', (FI.A', FI.al')), Q1.T0.tri, TQ.triEq, TC.ES.eqSub, Q1.sg, Q1.sg-nat,
+      Q1.phB, Q1.psB, Q1.phB-psB, Q1.psB-phB, Q1.phA, Q1.psA, Q1.phA-psA, Q1.psA-phA, PhNA', PhNB', alSq',
+      Q1.phB, Q1.psB, Q1.phB-psB, Q1.psB-phB, Q1.phA, Q1.psA, Q1.phA-psA, Q1.psA-phA, Q1.PhNA, Q1.PhNB, Q1.alSq, CA, CB] ;
+
+    -- x''s moved structure is x's moved along the composite
+    lEq : Id (GEquiv[a+].EquivOp (Y.yP Z') Q1.Bp Q1.Ap Q1.SMp.subMap) Q1.TE.trEq TC.T2.trEq =
+      Paths[a++].transH (Paths[a++].apH {GEquiv[a].EquivOp Q1.T0.R.RC Q1.T0.Bt Q1.T0.At Q1.T0.al} {GEquiv[a+].EquivOp (Y.yP Z') Q1.Bp Q1.Ap Q1.SMp.subMap}
+                  (\ k -> GTransferEq[a, a+, a+].TrEq[Y.yP Z', Q1.Bp, Q1.Ap, Q1.SMp.subMap, Q1.T0.R.RC, Q1.T0.Bt, Q1.T0.At, Q1.T0.al,
+                     Q1.sg, Q1.sg-nat, Q1.phB, Q1.psB, Q1.phB-psB, Q1.psB-phB, Q1.phA, Q1.psA, Q1.phA-psA, Q1.psA-phA, Q1.PhNA, Q1.PhNB, k, Q1.alSq].trEq)
+                (substFst Q1.T0.R.RC (FI.B', (FI.A', FI.al')) Q1.T0.tri TQ.triEq
+                   (GEqLaws[a].eqDSub Q1.T0.R.RC Q0.T0.R.RC lh Q0.T0.tri x.1.2.2.2).2))
+        (Paths[a++].transH TT.trEqTr TC.compEq) ;
+
+    ------------------------------------------------------------------
+    -- the source side: x's structure substituted along y h is moved along sg o y h
+
+    module TS = GTransferEqSub[a, a+, a+].TrEqSub[Y.yP Z, Q0.Bp, Q0.Ap, Q0.SMp.subMap, Q0.T0.R.RC, Q0.T0.Bt, Q0.T0.At, Q0.T0.al,
+      Q0.sg, Q0.sg-nat, Q0.phB, Q0.psB, Q0.phB-psB, Q0.psB-phB, Q0.phA, Q0.psA, Q0.phA-psA, Q0.psA-phA, Q0.PhNA, Q0.PhNB,
+      x.1.2.2.2.1, Q0.alSq, Y.yP Z', Y.yH Z' Z h] ;
+
+    -- the path of triples: substituting twice, then the Yoneda maps agree
+    module TO = TripO[UB.CU.resCtx, Y.yP Z, Y.yP Z', UB.BU, UB.AU', UB.alU, Q0.sx, Y.yH Z' Z h] ;
+    module PL = PsiL[Y.yP Z'] ;
+    module TPs = PL.Trip[UB.CU.resCtx, UB.BU, UB.AU', UB.alU] ;
+
+    s1 : L.PSub[Y.yP Z', UB.CU.resCtx] = L.oS (Y.yP Z') (Y.yP Z) UB.CU.resCtx Q0.sx (Y.yH Z' Z h) ;
+    Qs : Id (L.PSub[Y.yP Z', UB.CU.resCtx]) s1 Q1.sx =
+      L.sub-ext (Y.yP Z') UB.CU.resCtx s1 Q1.sx (\ W g -> UB.CU.resCtx.act-o W Z' Z h g x) ;
+
+    tri : Id (GEqExt[a+].EqDat[Y.yP Z'].Tri) TO.t1 (TPs.trip Q1.sx) = Paths[a++].transH TO.P (Paths[a++].apH TPs.trip Qs) ;
+
+    -- reading the moves back along tri
+    psiA (X : Ob) (w : Q1.TAp.EI X)
+      : Id (LP.TyL[Y.yP Z', TO.t1.2.1].EI X) (PL.ED.Psi TO.t1 (TPs.trip Q1.sx) tri X w)
+           (w.1, subst (L.PSub[Y.yP Z', UB.CU.resCtx]) (\ s3 -> V1.Ix (UB.AU'.tob X (s3.nt X w.1))) Q1.sx s1 (Paths[a++].symH Qs) w.2) =
+      transH (PL.psiTrans TO.t1 TO.t2 (TPs.trip Q1.sx) TO.P (Paths[a++].apH TPs.trip Qs) X w)
+        (transH (apH (PL.ED.Psi TO.t1 TO.t2 TO.P X) (TPs.psiAp s1 Q1.sx Qs X w))
+          (transH (PL.ED.Psi-tob TO.t1 TO.t2 TO.P X (w.1, subst (L.PSub[Y.yP Z', UB.CU.resCtx]) (\ s3 -> V1.Ix (UB.AU'.tob X (s3.nt X w.1))) Q1.sx s1 (Paths[a++].symH Qs) w.2))
+                  (PL.ED.substLoop X TO.t1.2.1.tob (Paths[a++].apH (\ u -> u.2.1.tob) (Paths[a++].symH TO.P))
+                     (w.1, subst (L.PSub[Y.yP Z', UB.CU.resCtx]) (\ s3 -> V1.Ix (UB.AU'.tob X (s3.nt X w.1))) Q1.sx s1 (Paths[a++].symH Qs) w.2)))) ;
+
+    psiB (X : Ob) (w : Q1.TBp.EI X)
+      : Id (LP.TyL[Y.yP Z', TO.t1.1].EI X) (PL.ED.PsiB TO.t1 (TPs.trip Q1.sx) tri X w)
+           (w.1, subst (L.PSub[Y.yP Z', UB.CU.resCtx]) (\ s3 -> V1.Ix (UB.BU.tob X (s3.nt X w.1))) Q1.sx s1 (Paths[a++].symH Qs) w.2) =
+      transH (PL.psiBTrans TO.t1 TO.t2 (TPs.trip Q1.sx) TO.P (Paths[a++].apH TPs.trip Qs) X w)
+        (transH (apH (PL.ED.PsiB TO.t1 TO.t2 TO.P X) (TPs.psiBAp s1 Q1.sx Qs X w))
+          (transH (PL.ED.PsiB-tob TO.t1 TO.t2 TO.P X (w.1, subst (L.PSub[Y.yP Z', UB.CU.resCtx]) (\ s3 -> V1.Ix (UB.BU.tob X (s3.nt X w.1))) Q1.sx s1 (Paths[a++].symH Qs) w.2))
+                  (PL.ED.substLoop X TO.t1.1.tob (Paths[a++].apH (\ u -> u.1.tob) (Paths[a++].symH TO.P))
+                     (w.1, subst (L.PSub[Y.yP Z', UB.CU.resCtx]) (\ s3 -> V1.Ix (UB.BU.tob X (s3.nt X w.1))) Q1.sx s1 (Paths[a++].symH Qs) w.2)))) ;
+
+    opaque psiA ; opaque psiB ;
+
+    -- the values: A through the maps, B through the codes
+    module ValA (X : Ob) (g : Hom X Z') (a0 : V1.Ix (Q1.Ap.tob X g)) {
+      kk1 : Hom X Z = compH X X Z (compH X Z' Z h g) (idH X) ;
+      kk2 : Hom X Z = compH X Z' Z h (compH X X Z' g (idH X)) ;
+      pH : Id (Hom X Z) kk2 kk1 = transH (apH (compH X Z' Z h) (comp-idr X Z' g)) (symH (comp-idr X Z (compH X Z' Z h g))) ;
+      fA (s3 : L.PSub[Y.yP Z', UB.CU.resCtx]) : W0.V = UU.fib0 X (s3.nt X g).1.1 ;
+      sA : W0.Ix (x.1.1.1.tob X kk1) =
+        subst (L.PSub[Y.yP Z', UB.CU.resCtx]) (\ s3 -> V1.Ix (UB.AU'.tob X (s3.nt X g))) Q1.sx s1 (Paths[a++].symH Qs) a0 ;
+
+      st1 : Id (W0.Ix (x.1.1.1.tob X kk1)) sA (subst (Hom X Z) (\ k -> W0.Ix (x.1.1.1.tob X k)) kk2 kk1 pH a0) =
+        transH (subst-ap (L.PSub[Y.yP Z', UB.CU.resCtx]) W0.V fA (\ v -> W0.Ix v) Q1.sx s1 (Paths[a++].symH Qs) a0)
+               (UU.fib-move (Hom X Z) (x.1.1.1.tob X) kk2 kk1 pH (ap (L.PSub[Y.yP Z', UB.CU.resCtx]) W0.V fA Q1.sx s1 (Paths[a++].symH Qs)) a0) ;
+
+      res : Id (W0.Ix (x.1.1.1.tob X (compH X Z' Z h g))) (Q0.phA X (compH X Z' Z h g) sA) (Q1.phA X g a0) =
+        transH (apH (Q0.phA X (compH X Z' Z h g)) st1)
+         (transH (substHT X Z (x.1.1.1.tob X) kk2 kk1 (compH X Z' Z h g) pH (comp-idr X Z (compH X Z' Z h g)) a0)
+          (transH (substHI X Z (x.1.1.1.tob X) kk2 (compH X Z' Z h g) (transH pH (comp-idr X Z (compH X Z' Z h g)))
+                     (ap (Hom X Z') (Hom X Z) (compH X Z' Z h) (compH X X Z' g (idH X)) g (comp-idr X Z' g)) a0)
+                  (symH (subst-ap (Hom X Z') (Hom X Z) (compH X Z' Z h) (\ k -> W0.Ix (x.1.1.1.tob X k)) (compH X X Z' g (idH X)) g (comp-idr X Z' g) a0)))) ;
+    } ;
+
+    module ValB (X : Ob) (g : Hom X Z') (b0 : V1.Ix (Q1.Bp.tob X g)) {
+      fB (s3 : L.PSub[Y.yP Z', UB.CU.resCtx]) : UU.U0 X = UB.bmap.nt X (s3.nt X g) ;
+      q1 : IsT (GGlueD.fl Z x.1.2.1 X (compH X Z' Z h g)) = Q0.qg X (compH X Z' Z h g) ;
+      q2 : IsT (GGlueD.fl Z x.1.2.1 X (compH X Z' Z h g)) = (lh.nt X (Q1.sg X g)).2 ;
+      Pa : Id (UU.U0 X) (fB Q1.sx) (fB s1) = ap (L.PSub[Y.yP Z', UB.CU.resCtx]) (UU.U0 X) fB Q1.sx s1 (Paths[a++].symH Qs) ;
+      Pq : Id (UU.U0 X) (x.1.2.2.1.1 X (compH X Z' Z h g) q1) (x.1.2.2.1.1 X (compH X Z' Z h g) q2) =
+        apH (x.1.2.2.1.1 X (compH X Z' Z h g)) (isProp-IsT' (GGlueD.fl Z x.1.2.1 X (compH X Z' Z h g)) q1 q2) ;
+      sB : W0.Ix (UU.fib0 X (fB s1)) =
+        subst (L.PSub[Y.yP Z', UB.CU.resCtx]) (\ s3 -> V1.Ix (UB.BU.tob X (s3.nt X g))) Q1.sx s1 (Paths[a++].symH Qs) b0 ;
+
+      res : Id (W0.Ix (UU.fib0 X (x.1.2.2.1.1 X (compH X Z' Z h g) q2)))
+               (DD.trB X (x.1.2.2.1.1 X (compH X Z' Z h g) q1) (x.1.2.2.1.1 X (compH X Z' Z h g) q2) Pq (Q0.phB X (compH X Z' Z h g) sB))
+               (Q1.phB X g b0) =
+        calc (W0.Ix (UU.fib0 X (x.1.2.2.1.1 X (compH X Z' Z h g) q2))) {
+            DD.trB X (x.1.2.2.1.1 X (compH X Z' Z h g) q1) (x.1.2.2.1.1 X (compH X Z' Z h g) q2) Pq
+              (DD.trB X (fB s1) (x.1.2.2.1.1 X (compH X Z' Z h g) q1) (Q0.PB X (compH X Z' Z h g)) sB)
+          =< apH (\ t -> DD.trB X (x.1.2.2.1.1 X (compH X Z' Z h g) q1) (x.1.2.2.1.1 X (compH X Z' Z h g) q2) Pq
+                           (DD.trB X (fB s1) (x.1.2.2.1.1 X (compH X Z' Z h g) q1) (Q0.PB X (compH X Z' Z h g)) t))
+               (subst-ap (L.PSub[Y.yP Z', UB.CU.resCtx]) (UU.U0 X) fB (\ F -> W0.Ix (UU.fib0 X F)) Q1.sx s1 (Paths[a++].symH Qs) b0) >
+            DD.trB X (x.1.2.2.1.1 X (compH X Z' Z h g) q1) (x.1.2.2.1.1 X (compH X Z' Z h g) q2) Pq
+              (DD.trB X (fB s1) (x.1.2.2.1.1 X (compH X Z' Z h g) q1) (Q0.PB X (compH X Z' Z h g)) (DD.trB X (fB Q1.sx) (fB s1) Pa b0))
+          =< apH (DD.trB X (x.1.2.2.1.1 X (compH X Z' Z h g) q1) (x.1.2.2.1.1 X (compH X Z' Z h g) q2) Pq)
+               (CM.trC-comp X (fB Q1.sx) (fB s1) (x.1.2.2.1.1 X (compH X Z' Z h g) q1) Pa (Q0.PB X (compH X Z' Z h g)) b0) >
+            DD.trB X (x.1.2.2.1.1 X (compH X Z' Z h g) q1) (x.1.2.2.1.1 X (compH X Z' Z h g) q2) Pq
+              (DD.trB X (fB Q1.sx) (x.1.2.2.1.1 X (compH X Z' Z h g) q1) (transH Pa (Q0.PB X (compH X Z' Z h g))) b0)
+          =< CM.trC-comp X (fB Q1.sx) (x.1.2.2.1.1 X (compH X Z' Z h g) q1) (x.1.2.2.1.1 X (compH X Z' Z h g) q2)
+               (transH Pa (Q0.PB X (compH X Z' Z h g))) Pq b0 >
+            DD.trB X (fB Q1.sx) (x.1.2.2.1.1 X (compH X Z' Z h g) q2) (transH (transH Pa (Q0.PB X (compH X Z' Z h g))) Pq) b0
+          =< CM.trC-irr X (fB Q1.sx) (x.1.2.2.1.1 X (compH X Z' Z h g) q2) (transH (transH Pa (Q0.PB X (compH X Z' Z h g))) Pq) (Q1.PB X g) b0 >
+            Q1.phB X g b0 } ;
+    } ;
+
+    CA2 (X : Ob) (w : Q1.TAp.EI X)
+      : Id (GPR.TyL[Q0.T0.R.RC, Q0.T0.At].EI X)
+           (TS.sg' X (PL.ED.Psi TO.t1 (TPs.trip Q1.sx) tri X w).1,
+            Q0.phA X ((Y.yH Z' Z h).nt X (PL.ED.Psi TO.t1 (TPs.trip Q1.sx) tri X w).1) (PL.ED.Psi TO.t1 (TPs.trip Q1.sx) tri X w).2)
+           (TC.sg2 X w.1, Q1.phA X w.1 w.2) =
+      transH (apH (\ z -> (TS.sg' X z.1, Q0.phA X ((Y.yH Z' Z h).nt X z.1) z.2)) (psiA X w))
+        (Q0.pairA X (compH X Z' Z h w.1) (Q0.qg X (compH X Z' Z h w.1)) (lh.nt X (Q1.sg X w.1)).2 _ _ ValA[X, w.1, w.2].res) ;
+
+    CB2 (X : Ob) (w : Q1.TBp.EI X)
+      : Id (GPR.TyL[Q0.T0.R.RC, Q0.T0.Bt].EI X)
+           (TS.sg' X (PL.ED.PsiB TO.t1 (TPs.trip Q1.sx) tri X w).1,
+            Q0.phB X ((Y.yH Z' Z h).nt X (PL.ED.PsiB TO.t1 (TPs.trip Q1.sx) tri X w).1) (PL.ED.PsiB TO.t1 (TPs.trip Q1.sx) tri X w).2)
+           (TC.sg2 X w.1, Q1.phB X w.1 w.2) =
+      transH (apH (\ z -> (TS.sg' X z.1, Q0.phB X ((Y.yH Z' Z h).nt X z.1) z.2)) (psiB X w))
+        (Q0.pairB X (compH X Z' Z h w.1) (Q0.qg X (compH X Z' Z h w.1)) (lh.nt X (Q1.sg X w.1)).2 _ _ ValB[X, w.1, w.2].res) ;
+
+    opaque CA2 ; opaque CB2 ;
+
+    module TCg = GTransferEqCong[a, a+, a+].TrEqCong[Y.yP Z', Q0.T0.R.RC, Q0.T0.Bt, Q0.T0.At, Q0.T0.al, x.1.2.2.2.1,
+      TS.FI.B', TS.FI.A', TS.FI.al', TS.sg', TS.sg'-nat,
+      \ W d b -> Q0.phB W ((Y.yH Z' Z h).nt W d) b, \ W d b -> Q0.psB W ((Y.yH Z' Z h).nt W d) b,
+      \ W d b -> Q0.phB-psB W ((Y.yH Z' Z h).nt W d) b, \ W d b -> Q0.psB-phB W ((Y.yH Z' Z h).nt W d) b,
+      \ W d b -> Q0.phA W ((Y.yH Z' Z h).nt W d) b, \ W d b -> Q0.psA W ((Y.yH Z' Z h).nt W d) b,
+      \ W d b -> Q0.phA-psA W ((Y.yH Z' Z h).nt W d) b, \ W d b -> Q0.psA-phA W ((Y.yH Z' Z h).nt W d) b,
+      TS.PhNA', TS.PhNB', TS.alSq',
+      Q1.Bp, Q1.Ap, Q1.SMp.subMap, TC.sg2, TC.sg2-nat, Q1.phB, Q1.psB, Q1.phB-psB, Q1.psB-phB, Q1.phA, Q1.psA, Q1.phA-psA, Q1.psA-phA,
+      TC.PhNA2, TC.PhNB2, TC.alSq2, tri, CA2, CB2] ;
+
+    module EDh = GEqExt[a+].EqDat[Y.yP Z'] ;
+
+    -- the coherence of YE3 at x along h
+    coh : Id ((u : EDh.Tri) * EDh.EqOn u)
+             (GEqLaws[a+].eqDSub (Y.yP Z') (Y.yP Z) (Y.yH Z' Z h) (GYonEq1[a+].triY UB.CU.resCtx UB.BU UB.AU' UB.alU Z x) Q0.Lx)
+             (GYonEq1[a+].triY UB.CU.resCtx UB.BU UB.AU' UB.alU Z' x', Q1.Lx) =
+      Paths[a++].transH
+        (Paths[a++].apH {EDh.EqOn TO.t1} {(u : EDh.Tri) * EDh.EqOn u} (\ z -> (TO.t1, z))
+           (Prelude[a++].Sigma-eq (GEquiv[a+].EquivOp (Y.yP Z') TS.FI.B' TS.FI.A' TS.FI.al')
+              (\ k -> GCofEsi[a+].PartialsEsi[GEquiv[a+].HFib[Y.yP Z', TS.FI.B', TS.FI.A', TS.FI.al'].EA,
+                                             GEquiv[a+].HFib[Y.yP Z', TS.FI.B', TS.FI.A', TS.FI.al'].FibT].KESI k)
+              TS.ES.eqSub TS.T'.trEq
+              (GEquivSub3[a+].EqSubEsi[Y.yP Z', Y.yP Z, Y.yH Z' Z h, Q0.Bp, Q0.Ap, Q0.SMp.subMap, Q0.TE.trEq, Q0.TE.trKesi x.1.2.2.2.2].eqSubEsi)
+              (TS.T'.trKesi x.1.2.2.2.2)
+              TS.eqNat
+              (GCofEsi[a+].PartialsEsi[GEquiv[a+].HFib[Y.yP Z', TS.FI.B', TS.FI.A', TS.FI.al'].EA,
+                                      GEquiv[a+].HFib[Y.yP Z', TS.FI.B', TS.FI.A', TS.FI.al'].FibT].isProp-KESI TS.T'.trEq)))
+        (Paths[a++].transH (TCg.res x.1.2.2.2.2)
+          (Paths[a++].apH {EDh.EqOn (TPs.trip Q1.sx)} {(u : EDh.Tri) * EDh.EqOn u} (\ z -> (TPs.trip Q1.sx, z))
+             (Prelude[a++].Sigma-eq (GEquiv[a+].EquivOp (Y.yP Z') Q1.Bp Q1.Ap Q1.SMp.subMap)
+                (\ k -> GCofEsi[a+].PartialsEsi[GEquiv[a+].HFib[Y.yP Z', Q1.Bp, Q1.Ap, Q1.SMp.subMap].EA,
+                                               GEquiv[a+].HFib[Y.yP Z', Q1.Bp, Q1.Ap, Q1.SMp.subMap].FibT].KESI k)
+                TC.T2.trEq Q1.TE.trEq (TC.T2.trKesi x.1.2.2.2.2) (Q1.TE.trKesi x'.1.2.2.2.2)
+                (Paths[a++].symH lEq)
+                (GCofEsi[a+].PartialsEsi[GEquiv[a+].HFib[Y.yP Z', Q1.Bp, Q1.Ap, Q1.SMp.subMap].EA,
+                                        GEquiv[a+].HFib[Y.yP Z', Q1.Bp, Q1.Ap, Q1.SMp.subMap].FibT].isProp-KESI Q1.TE.trEq)))) ;
+
+    opaque coh ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- the equivalence structure of the universal alpha, glued (YE3)
+
+  module YU = GYonEq3[a+].YE3[UB.CU.resCtx, UB.BU, UB.AU', UB.alU, \ Z x -> Pt[Z, x].Lx, \ Z Z' h x -> Co[Z, Z', h, x].coh] ;
+
+  eqU : GEqExt[a+].EqDat[UB.CU.resCtx].EqOn (UB.BU, (UB.AU', UB.alU)) = YU.eqOn ;
+} ;

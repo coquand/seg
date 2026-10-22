@@ -1,0 +1,296 @@
+-- GXsubEq.seg (inside IvBase, any base; Step 3): equivalence data on
+-- small types over a large context, substituted along a map into it (the
+-- analogue of GSmall.xsub for maps and equivalence structures).  For B , A
+-- small over G, al : up B -> up A with an equivalence structure k (level
+-- a+), and s : D -> G:
+--
+--   s*(al , k)   on (xsub B s , xsub A s): al and k moved along s with
+--                identity fibre maps (GTransferEq.TrMap / TrEq)
+--   (o)  NatD    along t : T -> D, t*(s*(al,k)) = (s o t)*(al,k)
+--                (GTransferEqSub.eqNat, then GTransferEqCong along the
+--                triple path of xsub-o)
+--   (L)  LgSub   along u : G' -> G (large), s'*(u*(al,k)) = (u o s')*(al,k)
+--                (GTransferEqComp.compEq; the two maps agree)
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GLine[a] ;
+module GX = GEqExt[a] ;
+module GL = GEqLaws[a] ;
+module L = GPre[a+].PS ;
+module LP = GPre[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+
+-- a map into G after a large map
+xoL (D : PCtx) (G' G : L.PCtx) (u : L.PSub[G', G]) (s : GSmall.XSub[D, G']) : GSmall.XSub[D, G] =
+  new GSmall.XSub[D, G, \ I x -> u.nt I (s.nt I x),
+    \ J I f x -> transH (apH (u.nt J) (s.nt-nat J I f x)) (u.nt-nat J I f (s.nt I x))] ;
+
+-- an element of the total of a small type read at two equal points
+pairT (G : L.PCtx) (A : GSmall.SPTy[G]) (V W : Ob) (g : Hom V W) (x : V1.Ix (G.ob W)) (x' : V1.Ix (G.ob V))
+  (e : Id (V1.Ix (G.ob V)) (G.act V W g x) x') (z : W0.Ix (A.tob W x))
+  : Id (LP.TyL[G, GSmall.up G A].EI V) (x', A.tact V W g x x' e z) (G.act V W g x, A.tact V W g x (G.act V W g x) (refl (G.act V W g x)) z) =
+  idJ (V1.Ix (G.ob V)) (G.act V W g x)
+    (\ x2 e2 -> Id (LP.TyL[G, GSmall.up G A].EI V) (x2, A.tact V W g x x2 e2 z) (G.act V W g x, A.tact V W g x (G.act V W g x) (refl (G.act V W g x)) z))
+    (refl (G.act V W g x, A.tact V W g x (G.act V W g x) (refl (G.act V W g x)) z)) x' e ;
+
+opaque pairT ;
+
+-- maps into a large context with the same points are equal
+xsubExt (D : PCtx) (G : L.PCtx) (s1 s2 : GSmall.XSub[D, G])
+  (P : (I : Ob) (x : W0.Ix (D.ob I)) -> Id (V1.Ix (G.ob I)) (s1.nt I x) (s2.nt I x)) : Id (GSmall.XSub[D, G]) s1 s2 =
+  idJ ((I : Ob) -> W0.Ix (D.ob I) -> V1.Ix (G.ob I)) s1.nt
+    (\ n Q -> (nn : (J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) -> Id (V1.Ix (G.ob J)) (n J (D.act J I f x)) (G.act J I f (n I x)))
+       -> Id (GSmall.XSub[D, G]) s1 (new GSmall.XSub[D, G, n, nn]))
+    (\ nn -> apH {(J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) -> Id (V1.Ix (G.ob J)) (s1.nt J (D.act J I f x)) (G.act J I f (s1.nt I x))}
+                 {GSmall.XSub[D, G]} (\ z -> new GSmall.XSub[D, G, s1.nt, z])
+       (funext Ob (\ J -> (I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) -> Id (V1.Ix (G.ob J)) (s1.nt J (D.act J I f x)) (G.act J I f (s1.nt I x))) s1.nt-nat nn (\ J ->
+        funext Ob (\ I -> (f : Hom J I) (x : W0.Ix (D.ob I)) -> Id (V1.Ix (G.ob J)) (s1.nt J (D.act J I f x)) (G.act J I f (s1.nt I x))) (s1.nt-nat J) (nn J) (\ I ->
+        funext (Hom J I) (\ f -> (x : W0.Ix (D.ob I)) -> Id (V1.Ix (G.ob J)) (s1.nt J (D.act J I f x)) (G.act J I f (s1.nt I x))) (s1.nt-nat J I) (nn J I) (\ f ->
+        funext (W0.Ix (D.ob I)) (\ x -> Id (V1.Ix (G.ob J)) (s1.nt J (D.act J I f x)) (G.act J I f (s1.nt I x))) (s1.nt-nat J I f) (nn J I f) (\ x ->
+          V1.isSetIx (G.ob J) (s1.nt J (D.act J I f x)) (G.act J I f (s1.nt I x)) (s1.nt-nat J I f x) (nn J I f x)))))))
+    s2.nt
+    (funext Ob (\ I -> W0.Ix (D.ob I) -> V1.Ix (G.ob I)) s1.nt s2.nt (\ I ->
+       funext (W0.Ix (D.ob I)) (\ x -> V1.Ix (G.ob I)) (s1.nt I) (s2.nt I) (\ x -> P I x)))
+    s2.nt-nat ;
+
+opaque xsubExt ;
+
+ES (D : PCtx) : U a+ = (u : GX.EqDat[D].Tri) * GX.EqDat[D].EqOn u ;
+
+module XE (G : L.PCtx) (B A : GSmall.SPTy[G]) (al : GLine[a+].PMap[G, GSmall.up G B, GSmall.up G A])
+  (k0 : GEquiv[a+].EquivOp G (GSmall.up G B) (GSmall.up G A) al)
+  (ke0 : GCofEsi[a+].PartialsEsi[GEquiv[a+].HFib[G, GSmall.up G B, GSmall.up G A, al].EA, GEquiv[a+].HFib[G, GSmall.up G B, GSmall.up G A, al].FibT].KESI k0)
+  (D : PCtx) (s : GSmall.XSub[D, G]) {
+  Bs : PTy[D] = GSmall.xsub D G B s ;
+  As : PTy[D] = GSmall.xsub D G A s ;
+
+  module TBs = GPR.TyL[D, Bs] ;
+  module TAs = GPR.TyL[D, As] ;
+
+  PhNB (V W : Ob) (g : Hom V W) (w : TBs.EI W)
+    : Id (LP.TyL[G, GSmall.up G B].EI V) (s.nt V (TBs.E.act V W g w).1, (TBs.E.act V W g w).2) (LP.TyL[G, GSmall.up G B].E.act V W g (s.nt W w.1, w.2)) =
+    pairT G B V W g (s.nt W w.1) (s.nt V (D.act V W g w.1)) (GSmall.xntEq D G s V W g w.1 (D.act V W g w.1) (refl (D.act V W g w.1))) w.2 ;
+
+  PhNA (V W : Ob) (g : Hom V W) (w : TAs.EI W)
+    : Id (LP.TyL[G, GSmall.up G A].EI V) (s.nt V (TAs.E.act V W g w).1, (TAs.E.act V W g w).2) (LP.TyL[G, GSmall.up G A].E.act V W g (s.nt W w.1, w.2)) =
+    pairT G A V W g (s.nt W w.1) (s.nt V (D.act V W g w.1)) (GSmall.xntEq D G s V W g w.1 (D.act V W g w.1) (refl (D.act V W g w.1))) w.2 ;
+
+  module TM = GTransferEq[a+, a, a+].TrMap[D, Bs, As, G, GSmall.up G B, GSmall.up G A, al, s.nt,
+    \ W d b -> b, \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, PhNA, PhNB] ;
+
+  alS : PMap[D, Bs, As] = TM.trMap ;
+
+  module TE = GTransferEq[a+, a, a+].TrEq[D, Bs, As, alS, G, GSmall.up G B, GSmall.up G A, al, s.nt, s.nt-nat,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, PhNA, PhNB, k0, TM.alSq] ;
+
+  tri : GX.EqDat[D].Tri = (Bs, (As, alS)) ;
+
+  -- s*(al , k)
+  es : ES D = (tri, (TE.trEq, TE.trKesi ke0)) ;
+} ;
+
+----------------------------------------------------------------------
+-- the moves back along a path of triples are transports along its
+-- components
+
+module PsiT (G : PCtx) {
+  module ED = GX.EqDat[G] ;
+  module TL = GL.TriL[G] ;
+
+  psiA (t t2 : ED.Tri) (P : Id ED.Tri t t2) (X : Ob) (w : GPR.TyL[G, t2.2.1].EI X)
+    : Id (GPR.TyL[G, t.2.1].EI X) (ED.Psi t t2 P X w) (TL.trE X t2.2.1 t.2.1 (apH (\ u -> u.2.1) (symH P)) w) =
+    idJ ED.Tri t
+      (\ u Q -> (w2 : GPR.TyL[G, u.2.1].EI X) -> Id (GPR.TyL[G, t.2.1].EI X) (ED.Psi t u Q X w2) (TL.trE X u.2.1 t.2.1 (apH (\ v -> v.2.1) (symH Q)) w2))
+      (\ w2 -> refl w2) t2 P w ;
+
+  psiB (t t2 : ED.Tri) (P : Id ED.Tri t t2) (X : Ob) (w : GPR.TyL[G, t2.1].EI X)
+    : Id (GPR.TyL[G, t.1].EI X) (ED.PsiB t t2 P X w) (TL.trE X t2.1 t.1 (apH (\ u -> u.1) (symH P)) w) =
+    idJ ED.Tri t
+      (\ u Q -> (w2 : GPR.TyL[G, u.1].EI X) -> Id (GPR.TyL[G, t.1].EI X) (ED.PsiB t u Q X w2) (TL.trE X u.1 t.1 (apH (\ v -> v.1) (symH Q)) w2))
+      (\ w2 -> refl w2) t2 P w ;
+
+  opaque psiA ; opaque psiB ;
+} ;
+
+----------------------------------------------------------------------
+-- (o): along t : T -> D
+
+module NatD (G : L.PCtx) (B A : GSmall.SPTy[G]) (al : GLine[a+].PMap[G, GSmall.up G B, GSmall.up G A])
+  (k0 : GEquiv[a+].EquivOp G (GSmall.up G B) (GSmall.up G A) al)
+  (ke0 : GCofEsi[a+].PartialsEsi[GEquiv[a+].HFib[G, GSmall.up G B, GSmall.up G A, al].EA, GEquiv[a+].HFib[G, GSmall.up G B, GSmall.up G A, al].FibT].KESI k0)
+  (D : PCtx) (s : GSmall.XSub[D, G]) (T : PCtx) (t : PSub[T, D]) {
+  module X1 = XE[G, B, A, al, k0, ke0, D, s] ;
+  module TES = GTransferEqSub[a+, a, a+].TrEqSub[D, X1.Bs, X1.As, X1.alS, G, GSmall.up G B, GSmall.up G A, al, s.nt, s.nt-nat,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, X1.PhNA, X1.PhNB, k0, X1.TM.alSq, T, t] ;
+  module X2 = XE[G, B, A, al, k0, ke0, T, GSmall.xoS T D G s t] ;
+  module ED = GX.EqDat[T] ;
+  module TL = GL.TriL[T] ;
+  module PT = PsiT[T] ;
+
+  t1 : ED.Tri = (TES.FI.B', (TES.FI.A', TES.FI.al')) ;
+
+  -- the structure: eqNat, the KESI a proposition
+  eD : Id (ES T) (GL.eqDSub T D t X1.tri X1.es.2) (t1, (TES.T'.trEq, TES.T'.trKesi ke0)) =
+    apH {ED.EqOn t1} {ES T} (\ z -> (t1, z))
+      (Sigma-eq (GEquiv[a].EquivOp T TES.FI.B' TES.FI.A' TES.FI.al')
+         (\ k -> GCofEsi[a].PartialsEsi[TES.T'.HD.EA, TES.T'.HD.FibT].KESI k)
+         TES.ES.eqSub TES.T'.trEq (GL.eqDSub T D t X1.tri X1.es.2).2.2 (TES.T'.trKesi ke0)
+         TES.eqNat (GCofEsi[a].PartialsEsi[TES.T'.HD.EA, TES.T'.HD.FibT].isProp-KESI TES.T'.trEq)) ;
+
+  -- the triple path: the types by xsub-o, the maps by uniqueness of the square
+  QB : Id (PTy[T]) TES.FI.B' X2.Bs = GSmall.xsub-o T D G B s t ;
+  QA : Id (PTy[T]) TES.FI.A' X2.As = GSmall.xsub-o T D G A s t ;
+
+  uniq (X : Ob) (w : GPR.TyL[T, X2.Bs].EI X) : Id (GPR.TyL[T, X2.As].EI X) (X2.alS.mE X w) (TES.FI.al'.mE X w) =
+    X2.TM.tbEqA X (X2.alS.mE X w) (TES.FI.al'.mE X w) (refl w.1) (transH (X2.TM.alSq X w) (symH (TES.alSq' X w))) ;
+
+  tri : Id ED.Tri t1 X2.tri =
+    TL.triExt TES.FI.B' TES.FI.A' TES.FI.al' X2.Bs X2.As X2.alS QB QA
+      (\ X w -> transH (uniq X w)
+         (symH (transH (TL.trE-tob X TES.FI.A' X2.As QA (refl X2.As.tob) (TES.FI.al'.mE X (TL.trE X X2.Bs TES.FI.B' (symH QB) w)))
+                 (apH (TES.FI.al'.mE X) (TL.trE-tob X X2.Bs TES.FI.B' (symH QB) (refl X2.Bs.tob) w))))) ;
+
+  CA (X : Ob) (w : GPR.TyL[T, X2.As].EI X)
+    : Id (LP.TyL[G, GSmall.up G A].EI X) (s.nt X (t.nt X (ED.Psi t1 X2.tri tri X w).1), (ED.Psi t1 X2.tri tri X w).2) (s.nt X (t.nt X w.1), w.2) =
+    apH (\ u -> (s.nt X (t.nt X u.1), u.2))
+      (transH (PT.psiA t1 X2.tri tri X w) (TL.trE-tob X X2.As TES.FI.A' (apH (\ u -> u.2.1) (symH tri)) (refl X2.As.tob) w)) ;
+
+  CB (X : Ob) (w : GPR.TyL[T, X2.Bs].EI X)
+    : Id (LP.TyL[G, GSmall.up G B].EI X) (s.nt X (t.nt X (ED.PsiB t1 X2.tri tri X w).1), (ED.PsiB t1 X2.tri tri X w).2) (s.nt X (t.nt X w.1), w.2) =
+    apH (\ u -> (s.nt X (t.nt X u.1), u.2))
+      (transH (PT.psiB t1 X2.tri tri X w) (TL.trE-tob X X2.Bs TES.FI.B' (apH (\ u -> u.1) (symH tri)) (refl X2.Bs.tob) w)) ;
+
+  opaque eD ; opaque uniq ; opaque tri ; opaque CA ; opaque CB ;
+
+  module TC = GTransferEqCong[a+, a, a+].TrEqCong[T, G, GSmall.up G B, GSmall.up G A, al, k0,
+    TES.FI.B', TES.FI.A', TES.FI.al', TES.sg', TES.sg'-nat,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b,
+    TES.PhNA', TES.PhNB', TES.alSq',
+    X2.Bs, X2.As, X2.alS, (GSmall.xoS T D G s t).nt, (GSmall.xoS T D G s t).nt-nat,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b,
+    X2.PhNA, X2.PhNB, X2.TM.alSq, tri, CA, CB] ;
+
+  -- (o)
+  natD : Id (ES T) (GL.eqDSub T D t X1.tri X1.es.2) X2.es = transH eD (TC.res ke0) ;
+
+  opaque natD ;
+} ;
+
+----------------------------------------------------------------------
+-- (L): along a large u : G' -> G.  u*(al , k) is the data on the large
+-- types (up B)[u] , (up A)[u]; moved along s' it lands on the small types
+-- along u o s' (the same fibres)
+
+pairTL (G : L.PCtx) (A : L.PTy[G]) (V W : Ob) (g : Hom V W) (x : V1.Ix (G.ob W)) (x' : V1.Ix (G.ob V))
+  (e : Id (V1.Ix (G.ob V)) (G.act V W g x) x') (z : V1.Ix (A.tob W x))
+  : Id (LP.TyL[G, A].EI V) (x', A.tact V W g x x' e z) (G.act V W g x, A.tact V W g x (G.act V W g x) (refl (G.act V W g x)) z) =
+  idJ (V1.Ix (G.ob V)) (G.act V W g x)
+    (\ x2 e2 -> Id (LP.TyL[G, A].EI V) (x2, A.tact V W g x x2 e2 z) (G.act V W g x, A.tact V W g x (G.act V W g x) (refl (G.act V W g x)) z))
+    (refl (G.act V W g x, A.tact V W g x (G.act V W g x) (refl (G.act V W g x)) z)) x' e ;
+
+opaque pairTL ;
+
+module LgSub (G : L.PCtx) (B A : GSmall.SPTy[G]) (al : GLine[a+].PMap[G, GSmall.up G B, GSmall.up G A])
+  (k0 : GEquiv[a+].EquivOp G (GSmall.up G B) (GSmall.up G A) al)
+  (ke0 : GCofEsi[a+].PartialsEsi[GEquiv[a+].HFib[G, GSmall.up G B, GSmall.up G A, al].EA, GEquiv[a+].HFib[G, GSmall.up G B, GSmall.up G A, al].FibT].KESI k0)
+  (G' : L.PCtx) (u : L.PSub[G', G]) (D : PCtx) (s : GSmall.XSub[D, G']) {
+  module FI = GEquivSub2[a+].FibIso[G', G, u, GSmall.up G B, GSmall.up G A, al] ;
+  module ESu = GEquivSub2[a+].EqSub[G', G, u, GSmall.up G B, GSmall.up G A, al, k0] ;
+
+  keu : GCofEsi[a+].PartialsEsi[GEquiv[a+].HFib[G', FI.B', FI.A', FI.al'].EA, GEquiv[a+].HFib[G', FI.B', FI.A', FI.al'].FibT].KESI ESu.eqSub =
+    GEquivSub3[a+].EqSubEsi[G', G, u, GSmall.up G B, GSmall.up G A, al, k0, ke0].eqSubEsi ;
+
+  -- (u o s')*(al , k)
+  module Y2 = XE[G, B, A, al, k0, ke0, D, xoL D G' G u s] ;
+  module ED = GX.EqDat[D] ;
+  module TL = GL.TriL[D] ;
+  module PT = PsiT[D] ;
+
+  -- s'*(u*(al , k)), on the same small types
+  PhNB1 (V W : Ob) (g : Hom V W) (w : Y2.TBs.EI W)
+    : Id (LP.TyL[G', FI.B'].EI V) (s.nt V (Y2.TBs.E.act V W g w).1, (Y2.TBs.E.act V W g w).2) (LP.TyL[G', FI.B'].E.act V W g (s.nt W w.1, w.2)) =
+    transH (apH {W0.Ix (B.tob V (u.nt V (s.nt V (D.act V W g w.1))))} {LP.TyL[G', FI.B'].EI V} (\ z -> (s.nt V (D.act V W g w.1), z))
+              (GSmall.tact-irr G B V W g (u.nt W (s.nt W w.1)) (u.nt V (s.nt V (D.act V W g w.1)))
+                 (GSmall.xntEq D G (xoL D G' G u s) V W g w.1 (D.act V W g w.1) (refl (D.act V W g w.1)))
+                 (L.ntEq G' G u V W g (s.nt W w.1) (s.nt V (D.act V W g w.1)) (GSmall.xntEq D G' s V W g w.1 (D.act V W g w.1) (refl (D.act V W g w.1)))) w.2))
+      (pairTL G' FI.B' V W g (s.nt W w.1) (s.nt V (D.act V W g w.1)) (GSmall.xntEq D G' s V W g w.1 (D.act V W g w.1) (refl (D.act V W g w.1))) w.2) ;
+
+  PhNA1 (V W : Ob) (g : Hom V W) (w : Y2.TAs.EI W)
+    : Id (LP.TyL[G', FI.A'].EI V) (s.nt V (Y2.TAs.E.act V W g w).1, (Y2.TAs.E.act V W g w).2) (LP.TyL[G', FI.A'].E.act V W g (s.nt W w.1, w.2)) =
+    transH (apH {W0.Ix (A.tob V (u.nt V (s.nt V (D.act V W g w.1))))} {LP.TyL[G', FI.A'].EI V} (\ z -> (s.nt V (D.act V W g w.1), z))
+              (GSmall.tact-irr G A V W g (u.nt W (s.nt W w.1)) (u.nt V (s.nt V (D.act V W g w.1)))
+                 (GSmall.xntEq D G (xoL D G' G u s) V W g w.1 (D.act V W g w.1) (refl (D.act V W g w.1)))
+                 (L.ntEq G' G u V W g (s.nt W w.1) (s.nt V (D.act V W g w.1)) (GSmall.xntEq D G' s V W g w.1 (D.act V W g w.1) (refl (D.act V W g w.1)))) w.2))
+      (pairTL G' FI.A' V W g (s.nt W w.1) (s.nt V (D.act V W g w.1)) (GSmall.xntEq D G' s V W g w.1 (D.act V W g w.1) (refl (D.act V W g w.1))) w.2) ;
+
+  opaque PhNB1 ; opaque PhNA1 ;
+
+  module M1 = GTransferEq[a+, a, a+].TrMap[D, Y2.Bs, Y2.As, G', FI.B', FI.A', FI.al', s.nt,
+    \ W d b -> b, \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, PhNA1, PhNB1] ;
+
+  alS1 : PMap[D, Y2.Bs, Y2.As] = M1.trMap ;
+
+  module T1 = GTransferEq[a+, a, a+].TrEq[D, Y2.Bs, Y2.As, alS1, G', FI.B', FI.A', FI.al', s.nt, s.nt-nat,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, PhNA1, PhNB1, ESu.eqSub, M1.alSq] ;
+
+  tri1 : ED.Tri = (Y2.Bs, (Y2.As, alS1)) ;
+
+  es1 : ES D = (tri1, (T1.trEq, T1.trKesi keu)) ;
+
+  module TC = GTransferEqComp[a+, a, a+].TrEqComp[D, Y2.Bs, Y2.As, alS1, G, GSmall.up G B, GSmall.up G A, al, k0, G', u, s.nt, s.nt-nat,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, PhNA1, PhNB1, M1.alSq] ;
+
+  -- the structure: compEq, the KESI a proposition
+  eD : Id (ES D) es1 (tri1, (TC.T2.trEq, TC.T2.trKesi ke0)) =
+    apH {ED.EqOn tri1} {ES D} (\ z -> (tri1, z))
+      (Sigma-eq (GEquiv[a].EquivOp D Y2.Bs Y2.As alS1)
+         (\ k -> GCofEsi[a].PartialsEsi[T1.HD.EA, T1.HD.FibT].KESI k)
+         T1.trEq TC.T2.trEq (T1.trKesi keu) (TC.T2.trKesi ke0)
+         TC.compEq (GCofEsi[a].PartialsEsi[T1.HD.EA, T1.HD.FibT].isProp-KESI TC.T2.trEq)) ;
+
+  -- the two maps agree (uniqueness of the square)
+  uniq (X : Ob) (w : Y2.TBs.EI X) : Id (Y2.TAs.EI X) (Y2.alS.mE X w) (alS1.mE X w) =
+    Y2.TM.tbEqA X (Y2.alS.mE X w) (alS1.mE X w) (refl w.1) (transH (Y2.TM.alSq X w) (symH (TC.alSq2 X w))) ;
+
+  tri : Id ED.Tri tri1 Y2.tri =
+    TL.triExt Y2.Bs Y2.As alS1 Y2.Bs Y2.As Y2.alS (refl Y2.Bs) (refl Y2.As) (\ X w -> uniq X w) ;
+
+  CA (X : Ob) (w : Y2.TAs.EI X)
+    : Id (LP.TyL[G, GSmall.up G A].EI X) (u.nt X (s.nt X (ED.Psi tri1 Y2.tri tri X w).1), (ED.Psi tri1 Y2.tri tri X w).2) (u.nt X (s.nt X w.1), w.2) =
+    apH (\ v -> (u.nt X (s.nt X v.1), v.2))
+      (transH (PT.psiA tri1 Y2.tri tri X w) (TL.trE-tob X Y2.As Y2.As (apH (\ v -> v.2.1) (symH tri)) (refl Y2.As.tob) w)) ;
+
+  CB (X : Ob) (w : Y2.TBs.EI X)
+    : Id (LP.TyL[G, GSmall.up G B].EI X) (u.nt X (s.nt X (ED.PsiB tri1 Y2.tri tri X w).1), (ED.PsiB tri1 Y2.tri tri X w).2) (u.nt X (s.nt X w.1), w.2) =
+    apH (\ v -> (u.nt X (s.nt X v.1), v.2))
+      (transH (PT.psiB tri1 Y2.tri tri X w) (TL.trE-tob X Y2.Bs Y2.Bs (apH (\ v -> v.1) (symH tri)) (refl Y2.Bs.tob) w)) ;
+
+  opaque eD ; opaque uniq ; opaque tri ; opaque CA ; opaque CB ;
+
+  module TQ = GTransferEqCong[a+, a, a+].TrEqCong[D, G, GSmall.up G B, GSmall.up G A, al, k0,
+    Y2.Bs, Y2.As, alS1, TC.sg2, TC.sg2-nat,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b,
+    TC.PhNA2, TC.PhNB2, TC.alSq2,
+    Y2.Bs, Y2.As, Y2.alS, (xoL D G' G u s).nt, (xoL D G' G u s).nt-nat,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b,
+    Y2.PhNA, Y2.PhNB, Y2.TM.alSq, tri, CA, CB] ;
+
+  -- (L)
+  lgSub : Id (ES D) es1 Y2.es = transH eD (TQ.res ke0) ;
+
+  opaque lgSub ;
+} ;

@@ -1,0 +1,23 @@
+-- SmallCat.seg: MODEL/Lv/SmallCat.agda.  V-small categories: objects and
+-- hom-sets are the index types of iterative sets at a level k.  Shared by
+-- the presheaf CwFs at every level l >= k (Presheaf[k, l]).
+--
+-- Agda's  _oC_  with implicit objects is  oC K J I f g .
+
+level k ;
+module W = V[k] ;
+
+module SmallCat {
+  obV  : W.V ;
+  homV : W.Ix obV -> W.Ix obV -> W.V ;
+
+  Ob : U k = W.Ix obV ;
+  Hom (J I : Ob) : U k = W.Ix (homV J I) ;
+
+  idC (I : Ob) : Hom I I ;
+  oC (K J I : Ob) (f : Hom J I) (g : Hom K J) : Hom K I ;
+  oC-idl (J I : Ob) (f : Hom J I) : Id (Hom J I) (oC J I I (idC I) f) f ;
+  oC-idr (J I : Ob) (f : Hom J I) : Id (Hom J I) (oC J J I f (idC J)) f ;
+  oC-assoc (L K J I : Ob) (f : Hom J I) (g : Hom K J) (h : Hom L K)
+    : Id (Hom L I) (oC L K I (oC K J I f g) h) (oC L J I f (oC L K J g h)) ;
+} ;

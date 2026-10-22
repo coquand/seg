@@ -1,0 +1,76 @@
+-- GUaOpL.seg (inside IvBase.FaU, any base): the univalence operation at
+-- the LINE classifier ClL (GUnivL), the poset universe: every classifier
+-- parameter of GUaOp9.UaOp is a lemma, given El's fibration (cE , eE),
+-- fillers kU of EGen whose ends are cE (HU0 / HU1: GFillFib.EndC), and
+-- El at a Yoneda code being the code (yon: PElYon for posets).
+--   tautCl     El's fibration along codes (GElC.ElC.Fam.fib)
+--   glueCl     Ext's fibration (GExtFib), as given
+--   glueCl-sub Theorem 7's naturality (GExtNat10.FS), as given
+--   tautCl-sub GElC.ElF.FibSub.elFibSub
+--   clFullOp   GExtFullC.ExtFullC.Full.extFull, with GElC.ElF.Fam.End
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon ;
+open Encode[a, a+] ;
+open Trees[a] ;
+open Arith[a] ;
+module GP = GCofib[a] ;
+module GE1 = GFibE[a+] ;
+open GLine[a] ;
+
+module UaL
+  (cE : GE1.FE[GUnivL.UL.UCtx, GUnivL.UL.EGen].Comp)
+  (eE : GE1.FE[GUnivL.UL.UCtx, GUnivL.UL.EGen].ESIC cE)
+  (kU0 : GLine[a+].LineFibP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen].FibAt e0)
+  (kU1 : GLine[a+].LineFibP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen].FibAt e1)
+  (kU0e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0].SFm.SF].KESI kU0)
+  (kU1e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1].SFm.SF].KESI kU1)
+  (HU0 : Id (GLine[a+].CompAtP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0, e1].CompAt)
+            GLine[a+].CompAtP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0, e1].FromFib[kU0].ca cE.1)
+  (HU1 : Id (GLine[a+].CompAtP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1, e0].CompAt)
+            GLine[a+].CompAtP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1, e0].FromFib[kU1].ca cE.2)
+  (yon : (Z : Ob) (F1 : GUnivL.UL.U0 Z)
+     -> Id (GFibE[a].FibEL (yP Z))
+           GElC.ElC[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, cE, eE].Fam[yP Z, \ W g -> GUnivL.UL.uAct W Z g F1, \ Y' Y h g -> GUnivL.UL.uAct-o Y' Y Z g h F1].fib F1) {
+  module UU = GUnivL.UL ;
+  module EC = GElC.ElC[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, cE, eE] ;
+  module EF0 = GElC.ElF[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, cE, eE, kU0, kU1, kU0e, kU1e] ;
+
+  tautCl (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y)
+    (cnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y)) -> Id (UU.U0 Y') (c Y' (D.act Y' Y h x)) (UU.uAct Y' Y h (c Y x)))
+    : GUnivL.ClL D EC.Fam[D, c, cnat].ElTy = EC.Fam[D, c, cnat].fib.2 ;
+
+  glueCl (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+    (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+    (hB : GUnivL.ClL GP.CofL[G, psi].resCtx B)
+    (c : GFibE[a].FE[G, GExt2.ExtB2[G, A, psi, B, al].ExtT].Comp) (e : GFibE[a].FE[G, GExt2.ExtB2[G, A, psi, B, al].ExtT].ESIC c)
+    : GUnivL.ClL G GExt2.ExtB2[G, A, psi, B, al].ExtT = (c, e) ;
+
+  module CF (X : Ob) (F : UU.U0 X) (p : GCofib[a+].Partials[UU.UCtx, GUnivEq.UaU[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A].UaTy].Partial[X, F])
+    (l0 : Fin p.pr) (il0 : Lands X X (p.ps l0).pQ (idH X)) {
+    module U4 = GUaOp4.U4[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, cE, eE, kU0, kU1, kU0e, kU1e, X, F, p, tautCl, glueCl, l0, il0] ;
+    module O2 = U4.O2 ;
+    module FC = GExtFullC.ExtFullC[yP X, O2.AX, U4.O1.psi, U4.G.B, O2.al', U4.fl] ;
+    module FU = FC.Full[O2.FAX.k0, O2.FAX.k1, O2.FBg.k0, O2.FBg.k1, O2.FAX.k0e, O2.FAX.k1e, O2.FBg.k0e, O2.FBg.k1e, O2.eal', O2.keal',
+      O2.FBg.FC.fib.2.1, O2.FBg.FC.fib.2.2, O2.FBg.End[HU0, HU1].end0, O2.FBg.End[HU0, HU1].end1] ;
+    res : Id ((T : PTy[yP X]) * GUnivL.ClL (yP X) T) U4.O3.Bout
+             (U4.EFu.BF, GUnivL.clSubL (yP X) U4.O1.D U4.EFu.sec U4.G.B U4.O3.hB) = FU.extFull ;
+  } ;
+
+  module UO = GUaOp9.UaOp[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, cE, eE, kU0, kU1, kU0e, kU1e, tautCl, glueCl,
+    \ G A psi B al hB c e D' s psi' fullS c' e' FS -> symH FS,
+    \ D c cnat D' s -> symH EF0.FibSub[D, c, cnat, D', s].elFibSub,
+    yon,
+    \ X F p l0 il0 -> CF[X, F, p, l0, il0].res] ;
+
+  -- univalence: Sigma (X : U) Equiv (X , A) is contractible, uniformly
+  ua : GCofib[a+].Partials[UU.UCtx, GUnivEq.UaU[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A].UaTy].ContrOp = UO.ua ;
+} ;

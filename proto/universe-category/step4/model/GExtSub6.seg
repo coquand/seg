@@ -1,0 +1,265 @@
+-- GExtSub6.seg (inside IvBase, any base): Ext along a substitution, the
+-- action and the type (step (A)).
+--
+--   PhiNat   Phi commutes with the actions, by the forms of the elements
+--            (GExt3: B -> B, pair -> B, pair -> pair)
+--   tyEq     Ext(alpha[s]) = Ext(alpha)[s] as types (TyEqPw: the codes are
+--            equal (extObEq) and the actions agree through them (PhiNat))
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+open VCode[a] ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+module S2 = GExtSub2 ;
+module S5 = GExtSub5 ;
+
+module ActS (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D'])
+  (fullS : (X : Ob) (d : W0.Ix (D'.ob X)) -> Id Bool (GP.CofL[D', psi'].full X d) (GP.CofL[G, psi].full X (s.nt X d))) {
+  module PS = S5.PhiS[G, A, psi, B, al, D', s, psi', fullS] ;
+  module ES = PS.ES ;
+  module E2 = PS.E2 ;
+  module E2' = PS.E2' ;
+  module E3 = PS.E3 ;
+  module E3' = PS.E3' ;
+  module EB = PS.EB ;
+  module EB' = PS.EB' ;
+  module TX = PS.TX ;
+  module TX' = PS.TX' ;
+  module TB = PS.TB ;
+  module TB' = PS.TB' ;
+  module LB = PS.LB ;
+  module TA = PR.TyL[G, A] ;
+
+  ----------------------------------------------------------------------
+  -- B elements
+
+  coreB (J I : Ob) (f : Hom J I) (w : TB'.EI I)
+    : Id (TX.EI J) (PS.PhiE J (TX'.E.act J I f (E3'.fromB I w))) (TX.E.act J I f (PS.PhiE I (E3'.fromB I w))) =
+    calc (TX.EI J) {
+        PS.PhiE J (TX'.E.act J I f (E3'.fromB I w))
+      =< apH (PS.PhiE J) (E3'.actX-B J I f w) >
+        PS.PhiE J (E3'.fromB J (TB'.E.act J I f w))
+      =< PS.PhiB J (TB'.E.act J I f w) >
+        E3.fromB J (LB.mV J (TB'.E.act J I f w))
+      =< apH (E3.fromB J) (LB.mV-nat J I f w) >
+        E3.fromB J (TB.E.act J I f (LB.mV I w))
+      =< symH (E3.actX-B J I f (LB.mV I w)) >
+        TX.E.act J I f (E3.fromB I (LB.mV I w))
+      =< apH (TX.E.act J I f) (symH (PS.PhiB I w)) >
+        TX.E.act J I f (PS.PhiE I (E3'.fromB I w)) } ;
+
+  ----------------------------------------------------------------------
+  -- pairs to B
+
+  fullT (J I : Ob) (f : Hom J I) (x : W0.Ix (D'.ob I))
+    : Id Bool (ES.CL'.full J (D'.act J I f x)) (ES.CL.full J (G.act J I f (s.nt I x))) =
+    transH (ES.fullS J (D'.act J I f x)) (apH (ES.CL.full J) (s.nt-nat J I f x)) ;
+
+  qT (J I : Ob) (f : Hom J I) (x : W0.Ix (D'.ob I)) (q' : IsT (ES.CL'.full J (D'.act J I f x)))
+    : IsT (ES.CL.full J (G.act J I f (s.nt I x))) =
+    subst Bool (\ c -> IsT c) (ES.CL'.full J (D'.act J I f x)) (ES.CL.full J (G.act J I f (s.nt I x))) (fullT J I f x) q' ;
+
+  corePB (J I : Ob) (f : Hom J I) (x : W0.Ix (D'.ob I)) (np' : Id Bool (ES.CL'.full I x) false) (u : EB'.Pairs I x)
+    (q' : IsT (ES.CL'.full J (D'.act J I f x)))
+    : Id (TX.EI J) (PS.PhiE J (TX'.E.act J I f (E3'.fromP I x np' u))) (TX.E.act J I f (PS.PhiE I (E3'.fromP I x np' u))) =
+    calc (TX.EI J) {
+        PS.PhiE J (TX'.E.act J I f (E3'.fromP I x np' u))
+      =< apH (PS.PhiE J) (E3'.actX-PB J I f x np' u q') >
+        PS.PhiE J (E3'.fromB J (EB'.pb I x u J f q'))
+      =< PS.PhiB J (EB'.pb I x u J f q') >
+        E3.fromB J (LB.mV J (EB'.pb I x u J f q'))
+      =< apH (E3.fromB J) (symH (PS.MV[I, x, u].pb-mv J f (qT J I f x q') q')) >
+        E3.fromB J (EB.pb I (s.nt I x) (PS.mvPair I x u) J f (qT J I f x q'))
+      =< symH (E3.actX-PB J I f (s.nt I x) (PS.np I x np') (PS.mvPair I x u) (qT J I f x q')) >
+        TX.E.act J I f (E3.fromP I (s.nt I x) (PS.np I x np') (PS.mvPair I x u))
+      =< apH (TX.E.act J I f) (symH (PS.PhiP I x np' u)) >
+        TX.E.act J I f (PS.PhiE I (E3'.fromP I x np' u)) } ;
+
+  ----------------------------------------------------------------------
+  -- pairs to pairs
+
+  -- a pair moved along a path of points: its A part and its B family
+  paSub (J : Ob) (r1 r2 : W0.Ix (G.ob J)) (Pt : Id (W0.Ix (G.ob J)) r1 r2) (u1 : EB.Pairs J r1)
+    : Id (TA.T J r2) (EB.pa J r2 (subst (W0.Ix (G.ob J)) (\ z -> EB.Pairs J z) r1 r2 Pt u1)) (TA.coeT J r1 r2 Pt (EB.pa J r1 u1)) =
+    idJ (W0.Ix (G.ob J)) r1
+      (\ r3 P3 -> Id (TA.T J r3) (EB.pa J r3 (subst (W0.Ix (G.ob J)) (\ z -> EB.Pairs J z) r1 r3 P3 u1)) (TA.coeT J r1 r3 P3 (EB.pa J r1 u1)))
+      (refl (EB.pa J r1 u1)) r2 Pt ;
+
+  pbSub (J : Ob) (r1 r2 : W0.Ix (G.ob J)) (Pt : Id (W0.Ix (G.ob J)) r1 r2) (u1 : EB.Pairs J r1)
+    (W : Ob) (g : Hom W J) (q2 : IsT (ES.CL.full W (G.act W J g r2))) (q1 : IsT (ES.CL.full W (G.act W J g r1)))
+    : Id (TB.EI W) (EB.pb J r2 (subst (W0.Ix (G.ob J)) (\ z -> EB.Pairs J z) r1 r2 Pt u1) W g q2) (EB.pb J r1 u1 W g q1) =
+    idJ (W0.Ix (G.ob J)) r1
+      (\ r3 P3 -> (q3 : IsT (ES.CL.full W (G.act W J g r3)))
+         -> Id (TB.EI W) (EB.pb J r3 (subst (W0.Ix (G.ob J)) (\ z -> EB.Pairs J z) r1 r3 P3 u1) W g q3) (EB.pb J r1 u1 W g q1))
+      (\ q3 -> apH (EB.pb J r1 u1 W g) (isProp-IsT' (ES.CL.full W (G.act W J g r1)) q3 q1)) r2 Pt q2 ;
+
+  fromP-move (J : Ob) (r1 r2 : W0.Ix (G.ob J)) (Pt : Id (W0.Ix (G.ob J)) r1 r2)
+    (n1 : Id Bool (ES.CL.full J r1) false) (n2 : Id Bool (ES.CL.full J r2) false) (u1 : EB.Pairs J r1) (u2 : EB.Pairs J r2)
+    (H : Id (EB.Pairs J r2) (subst (W0.Ix (G.ob J)) (\ z -> EB.Pairs J z) r1 r2 Pt u1) u2)
+    : Id (TX.EI J) (E3.fromP J r1 n1 u1) (E3.fromP J r2 n2 u2) =
+    idJ (W0.Ix (G.ob J)) r1
+      (\ r3 P3 -> (n3 : Id Bool (ES.CL.full J r3) false) (u3 : EB.Pairs J r3)
+         -> Id (EB.Pairs J r3) (subst (W0.Ix (G.ob J)) (\ z -> EB.Pairs J z) r1 r3 P3 u1) u3
+         -> Id (TX.EI J) (E3.fromP J r1 n1 u1) (E3.fromP J r3 n3 u3))
+      (\ n3 u3 H3 -> transH (apH (\ n -> E3.fromP J r1 n u1) (isSet-Bool (ES.CL.full J r1) false n1 n3)) (apH (E3.fromP J r1 n3) H3))
+      r2 Pt n2 u2 H ;
+
+  module PP (J I : Ob) (f : Hom J I) (x : W0.Ix (D'.ob I)) (np' : Id Bool (ES.CL'.full I x) false) (u : EB'.Pairs I x)
+    (nq' : Id Bool (ES.CL'.full J (D'.act J I f x)) false) {
+    x' : W0.Ix (D'.ob J) = D'.act J I f x ;
+    r1 : W0.Ix (G.ob J) = s.nt J x' ;
+    r2 : W0.Ix (G.ob J) = G.act J I f (s.nt I x) ;
+    Pt : Id (W0.Ix (G.ob J)) r1 r2 = s.nt-nat J I f x ;
+
+    module PA' = E2'.PAct[J, I, f, x, x', refl x'] ;
+    module PA = E2.PAct[J, I, f, s.nt I x, r2, refl r2] ;
+
+    u1 : EB.Pairs J r1 = PS.mvPair J x' (PA'.pact u) ;
+    u2 : EB.Pairs J r2 = PA.pact (PS.mvPair I x u) ;
+
+    n1 : Id Bool (ES.CL.full J r1) false = PS.np J x' nq' ;
+    n2 : Id Bool (ES.CL.full J r2) false = transH (apH (ES.CL.full J) (symH Pt)) n1 ;
+
+    Pa : Id (TA.T J r2) (EB.pa J r2 (subst (W0.Ix (G.ob J)) (\ z -> EB.Pairs J z) r1 r2 Pt u1)) (EB.pa J r2 u2) =
+      calc (TA.T J r2) {
+          EB.pa J r2 (subst (W0.Ix (G.ob J)) (\ z -> EB.Pairs J z) r1 r2 Pt u1)
+        =< paSub J r1 r2 Pt u1 >
+          TA.coeT J r1 r2 Pt (EB.pa J r1 u1)
+        =< apH (TA.coeT J r1 r2 Pt) (transH (PS.MV[J, x', PA'.pact u].pa-mv) (PA'.pact-a u)) >
+          TA.coeT J r1 r2 Pt (A.tact J I f (s.nt I x) r1 (ntEq D' G s J I f x x' (refl x')) (EB'.pa I x u))
+        =< S2.tactMove G A J I f (s.nt I x) r1 r2 (ntEq D' G s J I f x x' (refl x')) (refl r2) Pt (EB'.pa I x u) >
+          A.tact J I f (s.nt I x) r2 (refl r2) (EB'.pa I x u)
+        =< apH (A.tact J I f (s.nt I x) r2 (refl r2)) (symH (PS.MV[I, x, u].pa-mv)) >
+          A.tact J I f (s.nt I x) r2 (refl r2) (EB.pa I (s.nt I x) (PS.mvPair I x u))
+        =< symH (PA.pact-a (PS.mvPair I x u)) >
+          EB.pa J r2 u2 } ;
+
+    -- fullness at the points of the family
+    qA (W : Ob) (g : Hom W J) (q : IsT (ES.CL.full W (G.act W J g r2))) : IsT (ES.CL.full W (G.act W J g r1)) =
+      ES.CL.full-eq W (G.act W J g r2) (G.act W J g r1) (apH (G.act W J g) (symH Pt)) q ;
+
+    qD (W : Ob) (g : Hom W J) (q : IsT (ES.CL.full W (G.act W J g r1))) : IsT (ES.CL'.full W (D'.act W J g x')) =
+      subst Bool (\ c -> IsT c) (ES.CL.full W (G.act W J g r1)) (ES.CL'.full W (D'.act W J g x'))
+        (symH (fullT W J g x')) q ;
+
+    Eb (W : Ob) (g : Hom W J) (q : IsT (ES.CL.full W (G.act W J g r2)))
+      : Id (TB.EI W) (EB.pb J r2 (subst (W0.Ix (G.ob J)) (\ z -> EB.Pairs J z) r1 r2 Pt u1) W g q) (EB.pb J r2 u2 W g q) =
+      calc (TB.EI W) {
+          EB.pb J r2 (subst (W0.Ix (G.ob J)) (\ z -> EB.Pairs J z) r1 r2 Pt u1) W g q
+        =< pbSub J r1 r2 Pt u1 W g q (qA W g q) >
+          EB.pb J r1 u1 W g (qA W g q)
+        =< PS.MV[J, x', PA'.pact u].pb-mv W g (qA W g q) (qD W g (qA W g q)) >
+          LB.mV W (EB'.pb J x' (PA'.pact u) W g (qD W g (qA W g q)))
+        =< apH (LB.mV W) (PA'.pact-b u W g (qD W g (qA W g q))) >
+          LB.mV W (EB'.pb I x u W (compH W J I f g) (PA'.qTr W g (qD W g (qA W g q))))
+        =< apH (\ z -> LB.mV W (EB'.pb I x u W (compH W J I f g) z))
+             (isProp-IsT' (ES.CL'.full W (D'.act W I (compH W J I f g) x)) (PA'.qTr W g (qD W g (qA W g q)))
+                (qD' W g q)) >
+          LB.mV W (EB'.pb I x u W (compH W J I f g) (qD' W g q))
+        =< symH (PS.MV[I, x, u].pb-mv W (compH W J I f g) (PA.qTr W g q) (qD' W g q)) >
+          EB.pb I (s.nt I x) (PS.mvPair I x u) W (compH W J I f g) (PA.qTr W g q)
+        =< symH (PA.pact-b (PS.mvPair I x u) W g q) >
+          EB.pb J r2 u2 W g q }
+     where {
+       qD' (W : Ob) (g : Hom W J) (q : IsT (ES.CL.full W (G.act W J g r2))) : IsT (ES.CL'.full W (D'.act W I (compH W J I f g) x)) =
+         subst Bool (\ c -> IsT c) (ES.CL.full W (G.act W I (compH W J I f g) (s.nt I x))) (ES.CL'.full W (D'.act W I (compH W J I f g) x))
+           (symH (fullT W I (compH W J I f g) x)) (PA.qTr W g q) ; } ;
+
+    H : Id (EB.Pairs J r2) (subst (W0.Ix (G.ob J)) (\ z -> EB.Pairs J z) r1 r2 Pt u1) u2 =
+      EB.pairs-eq J r2 (subst (W0.Ix (G.ob J)) (\ z -> EB.Pairs J z) r1 r2 Pt u1) u2 Pa Eb ;
+
+    core : Id (TX.EI J) (PS.PhiE J (TX'.E.act J I f (E3'.fromP I x np' u))) (TX.E.act J I f (PS.PhiE I (E3'.fromP I x np' u))) =
+      calc (TX.EI J) {
+          PS.PhiE J (TX'.E.act J I f (E3'.fromP I x np' u))
+        =< apH (PS.PhiE J) (E3'.actX-PP J I f x np' u nq') >
+          PS.PhiE J (E3'.fromP J x' nq' (PA'.pact u))
+        =< PS.PhiP J x' nq' (PA'.pact u) >
+          E3.fromP J r1 n1 u1
+        =< fromP-move J r1 r2 Pt n1 n2 u1 u2 H >
+          E3.fromP J r2 n2 u2
+        =< symH (E3.actX-PP J I f (s.nt I x) (PS.np I x np') (PS.mvPair I x u) n2) >
+          TX.E.act J I f (E3.fromP I (s.nt I x) (PS.np I x np') (PS.mvPair I x u))
+        =< apH (TX.E.act J I f) (symH (PS.PhiP I x np' u)) >
+          TX.E.act J I f (PS.PhiE I (E3'.fromP I x np' u)) } ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- Phi commutes with the actions
+
+  PhiNat (J I : Ob) (f : Hom J I) (v : TX'.EI I) : Id (TX.EI J) (PS.PhiE J (TX'.E.act J I f v)) (TX.E.act J I f (PS.PhiE I v)) =
+    E3'.caseFull I v.1 (Id (TX.EI J) (PS.PhiE J (TX'.E.act J I f v)) (TX.E.act J I f (PS.PhiE I v)))
+      (\ p -> transH (apH (\ z -> PS.PhiE J (TX'.E.act J I f z)) (symH (E3'.fromB-toB I v p)))
+                (transH (coreB J I f (E3'.toB I v p)) (apH (\ z -> TX.E.act J I f (PS.PhiE I z)) (E3'.fromB-toB I v p))))
+      (\ np' -> transH (apH (\ z -> PS.PhiE J (TX'.E.act J I f z)) (symH (E3'.fromP-toP I v np')))
+                  (transH (E3'.caseFull J (D'.act J I f v.1)
+                             (Id (TX.EI J) (PS.PhiE J (TX'.E.act J I f (E3'.fromP I v.1 np' (E3'.toP I v np'))))
+                                           (TX.E.act J I f (PS.PhiE I (E3'.fromP I v.1 np' (E3'.toP I v np')))))
+                             (\ q' -> corePB J I f v.1 np' (E3'.toP I v np') q')
+                             (\ nq' -> PP[J, I, f, v.1, np', E3'.toP I v np', nq'].core))
+                          (apH (\ z -> TX.E.act J I f (PS.PhiE I z)) (E3'.fromP-toP I v np')))) ;
+
+  opaque coreB ; opaque corePB ; opaque paSub ; opaque pbSub ; opaque fromP-move ; opaque PhiNat ;
+
+  ----------------------------------------------------------------------
+  -- the type
+
+  H1 (J I : Ob) (f : Hom J I) (x : W0.Ix (D'.ob I)) (y : W0.Ix (D'.ob J)) (e : Id (W0.Ix (D'.ob J)) (D'.act J I f x) y)
+    (a0 : W0.Ix (E2'.extOb I x))
+    : Id (W0.Ix (E2.extOb J (s.nt J y)))
+         (subst W0.V (\ z -> W0.Ix z) (E2'.extOb J y) (E2.extOb J (s.nt J y)) (PS.OS.extObEq J y) (E2'.ExtT.tact J I f x y e a0))
+         ((subTy D' G E2.ExtT s).tact J I f x y e (subst W0.V (\ z -> W0.Ix z) (E2'.extOb I x) (E2.extOb I (s.nt I x)) (PS.OS.extObEq I x) a0)) =
+    TX.pr-inj J (s.nt J y)
+      (subst W0.V (\ z -> W0.Ix z) (E2'.extOb J y) (E2.extOb J (s.nt J y)) (PS.OS.extObEq J y) (E2'.ExtT.tact J I f x y e a0))
+      ((subTy D' G E2.ExtT s).tact J I f x y e (subst W0.V (\ z -> W0.Ix z) (E2'.extOb I x) (E2.extOb I (s.nt I x)) (PS.OS.extObEq I x) a0))
+      (calc (TX.EI J) {
+          PS.PhiE J (y, E2'.ExtT.tact J I f x y e a0)
+        =< apH (PS.PhiE J) (symH (TX'.pr-tact J I f x y e a0)) >
+          PS.PhiE J (TX'.E.act J I f (x, a0))
+        =< PhiNat J I f (x, a0) >
+          TX.E.act J I f (PS.PhiE I (x, a0))
+        =< TX.pr-tact J I f (s.nt I x) (s.nt J y) (ntEq D' G s J I f x y e) (PS.PhiE I (x, a0)).2 >
+          (s.nt J y, (subTy D' G E2.ExtT s).tact J I f x y e (PS.PhiE I (x, a0)).2) }) ;
+
+  tyEq : Id (PTy[D']) E2'.ExtT (subTy D' G E2.ExtT s) =
+    GEqLaws[a].TyEqPw[D', E2'.ExtT, subTy D' G E2.ExtT s, PS.OS.extObEq, H1].tyEq ;
+
+  opaque H1 ; opaque tyEq ;
+
+  ----------------------------------------------------------------------
+  -- elements along tyEq and Phi (element-level, for the users of tyEq)
+
+  -- reading in B commutes with Phi
+  toBPhi0 (X : Ob) (v : TX'.EI X) (p' : IsT (ES.CL'.full X v.1)) (p : IsT (ES.CL.full X (s.nt X v.1)))
+    : Id (PS.TB.EI X) (PS.E3.toB X (PS.PhiE X v) p) (PS.LB.mV X (PS.E3'.toB X v p')) =
+    transH (PS.E3.toB-cong X (PS.PhiE X v) (PS.PhiE X (PS.E3'.fromB X (PS.E3'.toB X v p')))
+              (apH (PS.PhiE X) (symH (PS.E3'.fromB-toB X v p'))) p (PS.pp X (PS.E3'.toB X v p')))
+      (transH (PS.E3.toB-cong X (PS.PhiE X (PS.E3'.fromB X (PS.E3'.toB X v p'))) (PS.E3.fromB X (PS.LB.mV X (PS.E3'.toB X v p')))
+                 (PS.PhiB X (PS.E3'.toB X v p')) (PS.pp X (PS.E3'.toB X v p')) (PS.LB.mV X (PS.E3'.toB X v p')).1.2)
+              (PS.E3.toB-fromB X (PS.LB.mV X (PS.E3'.toB X v p')))) ;
+
+  -- transport along tyEq, lifted, is Phi
+  trPhi (W : Ob) (v : TX'.EI W)
+    : Id (TX.EI W) ((liftP D' G E2.ExtT s).nt W (GEqLaws[a].TriL[D'].trE W E2'.ExtT (subTy D' G E2.ExtT s) tyEq v)) (PS.PhiE W v) =
+    apH ((liftP D' G E2.ExtT s).nt W)
+      (GEqLaws[a].TriL[D'].trE-pw W E2'.ExtT (subTy D' G E2.ExtT s) tyEq (PS.OS.extObEq W)
+         GEqLaws[a].TyEqPw[D', E2'.ExtT, subTy D' G E2.ExtT s, PS.OS.extObEq, H1].P v) ;
+
+  -- reading in B commutes with transport along tyEq
+  toBPhi (W : Ob) (v : TX'.EI W) (p' : IsT (ES.CL'.full W v.1)) (u : TX.EI W)
+    (e : Id (TX.EI W) ((liftP D' G E2.ExtT s).nt W (GEqLaws[a].TriL[D'].trE W E2'.ExtT (subTy D' G E2.ExtT s) tyEq v)) u)
+    (q : IsT (ES.CL.full W u.1))
+    : Id (TB.EI W) (LB.mV W (E3'.toB W v p')) (E3.toB W u q) =
+    transH (symH (toBPhi0 W v p' (PS.pp W (E3'.toB W v p'))))
+      (E3.toB-cong W (PS.PhiE W v) u (transH (symH (trPhi W v)) e) (PS.pp W (E3'.toB W v p')) q) ;
+
+  opaque toBPhi0 ; opaque trPhi ; opaque toBPhi ;
+} ;

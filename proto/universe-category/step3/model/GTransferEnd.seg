@@ -1,0 +1,81 @@
+-- GTransferEnd.seg (inside IvBase): the end of a transferred filler is the
+-- transferred composite.  For fibrancy k0 of B0 at e, the composition
+-- from e to e' read off the end of TrF's filler (FromFib) is Tr of the
+-- composition read off the end of k0 (trEnd).
+
+level k l m ;
+constraint a <= k ;
+constraint a <= l ;
+constraint k <= m ;
+constraint l <= m ;
+open Base ;
+open Prelude[m+] ;
+open Paths[m+] ;
+open Trees[a] ;
+open Arith[a] ;
+module W0 = V[k] ;
+module W1 = V[l] ;
+module P0 = GPre[k] ;
+module P1 = GPre[l] ;
+module L0 = GLine[k] ;
+module L1 = GLine[l] ;
+module F0 = GFam[k] ;
+module F1 = GFam[l] ;
+
+module TrFEnd (D : P1.PS.PCtx) (B : P1.PS.PTy[D]) (D0 : P0.PS.PCtx) (B0 : P0.PS.PTy[D0])
+  (sg : (W : Ob) -> W1.Ix (D.ob W) -> W0.Ix (D0.ob W))
+  (sg-nat : (V W : Ob) (g : Hom V W) (d : W1.Ix (D.ob W)) -> Id (W0.Ix (D0.ob V)) (sg V (D.act V W g d)) (D0.act V W g (sg W d)))
+  (ph : (W : Ob) (d : W1.Ix (D.ob W)) -> W1.Ix (B.tob W d) -> W0.Ix (B0.tob W (sg W d)))
+  (ps : (W : Ob) (d : W1.Ix (D.ob W)) -> W0.Ix (B0.tob W (sg W d)) -> W1.Ix (B.tob W d))
+  (ph-ps : (W : Ob) (d : W1.Ix (D.ob W)) (b : W0.Ix (B0.tob W (sg W d))) -> Id (W0.Ix (B0.tob W (sg W d))) (ph W d (ps W d b)) b)
+  (ps-ph : (W : Ob) (d : W1.Ix (D.ob W)) (b : W1.Ix (B.tob W d)) -> Id (W1.Ix (B.tob W d)) (ps W d (ph W d b)) b)
+  (PhN : (V W : Ob) (g : Hom V W) (w : P1.TyL[D, B].EI W)
+     -> Id (P0.TyL[D0, B0].EI V)
+           (sg V (P1.TyL[D, B].E.act V W g w).1, ph V (P1.TyL[D, B].E.act V W g w).1 (P1.TyL[D, B].E.act V W g w).2)
+           (P0.TyL[D0, B0].E.act V W g (sg W w.1, ph W w.1 w.2)))
+  (e e' : IPt) (k0 : L0.LineFibP[F0.famPath, D0, B0].FibAt e)
+  (ke0 : GCofEsi[k].PartialsEsi[L0.EndKit[F0.famPath, D0, B0, e].TV.E, L0.EndKit[F0.famPath, D0, B0, e].SFm.SF].KESI k0) {
+  module TF = GTransfer[k, l, m].TrF[D, B, D0, B0, sg, sg-nat, ph, ps, ph-ps, ps-ph, PhN, e, k0, ke0] ;
+  module M = TF.M ;
+  module CD' = L1.CompAtP[F1.famPath, D, B, e, e'] ;
+  module CD0' = L0.CompAtP[F0.famPath, D0, B0, e, e'] ;
+  module FF = CD'.FromFib[TF.fibAt] ;
+  module FF0 = CD0'.FromFib[k0] ;
+  module TR = GTransfer[k, l, m].Tr[D, B, D0, B0, sg, sg-nat, ph, ps, ph-ps, ps-ph, PhN, e, e', FF0.ca] ;
+  module KD' = L1.EndKit[F1.famPath, D, B, e'] ;
+  module KD0' = L0.EndKit[F0.famPath, D0, B0, e'] ;
+  module LD' = L1.LevKit[F1.famPath, F1.famConn, D, B, e'] ;
+  module LD0' = L0.LevKit[F0.famPath, F0.famConn, D0, B0, e'] ;
+
+  module Pt (X : Ob) (w : CD'.TV.EI X) (p : CD'.PT.Partial[X, w]) {
+    module BK = TF.Back[X, w, TF.u0 X w p, refl (M.tvN X w)] ;
+
+    -- the end of the filler, read in E_B: the filler's line at (id , e')
+    endB : Id (M.TB.EI X) (KD'.endE X (FF.endK X w p)) (BK.t X (idH X) (ptH X e')) =
+      transH (LD'.endL-lev X (CD'.EK.lineL X (w, TF.kop X w p)))
+        (transH (apH (\ z -> F1.famConn.levA D B X (CD'.EK.lineL X z) X (idH X) (ptH X e')) (TF.kop-E X w p))
+                (BK.res-lev X (idH X) (ptH X e'))) ;
+
+    -- moved by PhE, it is the end of k0's filler, i.e. Tr's composite
+    endPh : Id (M.TB0.EI X) (M.PhE X (KD'.endE X (FF.endK X w p))) (M.PhE X (KD'.endE X (w.1, TR.cop X w p))) =
+      transH (apH (M.PhE X) endB)
+       (transH (BK.tPh X (idH X) (ptH X e'))
+        (transH (symH (LD0'.endL-lev X (CD0'.EK.lineL X (TF.u0 X w p))))
+         (transH (apH (KD0'.endE X) (symH (FF0.cop-E X (M.tvN X w) (M.mapP X w p))))
+                 (symH (TR.copE X w p))))) ;
+
+    ptEq : Id (W1.Ix ((F1.famPath.pth D).ob X)) (FF.endK X w p).1 w.1 = (F1.famPath.pevA D B e').mpt X (w.1, (TF.kop X w p).1) ;
+
+    endEq : Id (CD'.TV'.EI X) (FF.endK X w p) (w.1, TR.cop X w p) =
+      KD'.tv-eq X (FF.endK X w p) (w.1, TR.cop X w p) ptEq
+        (M.tbEq X (KD'.endE X (FF.endK X w p)) (KD'.endE X (w.1, TR.cop X w p))
+           (apH (\ z -> (F1.famPath.pev D e').nt X z) ptEq) endPh) ;
+
+    copEq : Id (CD'.TV'.T X w.1) (FF.cop X w p) (TR.cop X w p) =
+      CD'.TV'.pr-inj X w.1 (FF.cop X w p) (TR.cop X w p) (transH (FF.cop-E X w p) endEq) ;
+  } ;
+
+  trEnd : Id CD'.CompAt FF.ca TR.compAt = CD'.CompAt-ext FF.ca TR.compAt (\ X w p -> Pt[X, w, p].copEq) ;
+
+  opaque trEnd ;
+} ;

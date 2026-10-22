@@ -1,0 +1,180 @@
+-- GUaGlue1b.seg (inside IvBase, any base): the glued types and map
+-- (GUaGlue1) are natural, as triples (B , A , al) (strict, Ids of codes):
+--
+--   GSub    glue(kap)[s] = glue(kap o s)          (substitution)
+--   GCong   kap = kap' pointwise -> glue(kap) = glue(kap')
+--   GYonQ   over y Z, the canonical family f |-> q f glues to q's own
+--           triple (B_q , F_q , al_q)        (Yoneda; GElC.Yon for types)
+--
+-- So the triple of glue(kap) along the Yoneda map of a point x is the local
+-- triple of kap x (used to glue the equivalence structures, GUaGlue2);
+-- GSub is also the first piece of G4 (naturality of the univalence op).
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open GLine[a] ;
+module GE1 = GFibE[a+] ;
+module GX = GEqExt[a] ;
+module GL = GEqLaws[a] ;
+module GSB = GEquivSub[a] ;
+
+-- an element of E read at its own point
+fromE-pair (G : PCtx) (A : PTy[G]) (X : Ob) (y : W0.Ix (G.ob X)) (a0 : W0.Ix (A.tob X y))
+  : Id (W0.Ix (A.tob X y)) (GPR.TyL[G, A].fromE X y (y, a0) (refl y)) a0 =
+  GPR.TyL[G, A].pr-inj X y (GPR.TyL[G, A].fromE X y (y, a0) (refl y)) a0 (GPR.TyL[G, A].fromE-eq X y (y, a0) (refl y)) ;
+
+module GlueL (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE) {
+  module UA = GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module UU = UA.UU ;
+  module EC = GElC.ElC[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE] ;
+  module LC = GUaGlue1.Loc[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE] ;
+
+  ----------------------------------------------------------------------
+  -- substitution
+
+  module GSub (D : PCtx) (kap : (Y : Ob) -> W0.Ix (D.ob Y) -> UA.Q4 Y)
+    (kapnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y)) -> Id (UA.Q4 Y') (kap Y' (D.act Y' Y h x)) (UA.q4Act Y' Y (yH Y' Y h) (kap Y x)))
+    (D' : PCtx) (s : PSub[D', D]) {
+    module G1 = GUaGlue1.Glue[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, D, kap, kapnat] ;
+
+    ks (Y : Ob) (x : W0.Ix (D'.ob Y)) : UA.Q4 Y = kap Y (s.nt Y x) ;
+    ksnat (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D'.ob Y)) : Id (UA.Q4 Y') (ks Y' (D'.act Y' Y h x)) (UA.q4Act Y' Y (yH Y' Y h) (ks Y x)) =
+      transH (apH (kap Y') (s.nt-nat Y' Y h x)) (kapnat Y' Y h (s.nt Y x)) ;
+
+    module G2 = GUaGlue1.Glue[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, D', ks, ksnat] ;
+    module SM = GSB.SubMap[D', D, s, G1.B, G1.A, G1.al] ;
+    module TL = GL.TriL[D'] ;
+
+    QB : Id (PTy[D']) (subTy D' D G1.B s) G2.B =
+      transH (EC.elSub D G1.cB G1.cnatB D' s)
+             (EC.elCnat D' G2.cB (\ Y' Y h x -> transH (apH (G1.cB Y') (s.nt-nat Y' Y h x)) (G1.cnatB Y' Y h (s.nt Y x))) G2.cnatB) ;
+
+    QA : Id (PTy[D']) (subTy D' D G1.A s) G2.A =
+      transH (EC.elSub D G1.cF G1.cnatF D' s)
+             (EC.elCnat D' G2.cF (\ Y' Y h x -> transH (apH (G1.cF Y') (s.nt-nat Y' Y h x)) (G1.cnatF Y' Y h (s.nt Y x))) G2.cnatF) ;
+
+    trB (X : Ob) (w : GPR.TyL[D', G2.B].EI X) : Id (GPR.TyL[D', G2.B].EI X) (TL.trE X G2.B (subTy D' D G1.B s) (symH QB) w) w =
+      TL.trE-tob X G2.B (subTy D' D G1.B s) (symH QB) (refl G2.B.tob) w ;
+
+    trA (X : Ob) (w : GPR.TyL[D', G2.A].EI X) : Id (GPR.TyL[D', G2.A].EI X) (TL.trE X (subTy D' D G1.A s) G2.A QA w) w =
+      TL.trE-tob X (subTy D' D G1.A s) G2.A QA (refl G2.A.tob) w ;
+
+    mEq (X : Ob) (w : GPR.TyL[D', G2.B].EI X) : Id (GPR.TyL[D', G2.A].EI X) (G2.al.mE X w) (SM.mE X w) =
+      SM.SA.mV-inj X (G2.al.mE X w) (SM.mE X w) (refl w.1) (symH (SM.mE-V X w)) ;
+
+    P : Id (GX.EqDat[D'].Tri) (subTy D' D G1.B s, (subTy D' D G1.A s, SM.subMap)) (G2.B, (G2.A, G2.al)) =
+      TL.triExt (subTy D' D G1.B s) (subTy D' D G1.A s) SM.subMap G2.B G2.A G2.al QB QA
+        (\ X w -> transH (mEq X w)
+           (symH (transH (trA X (SM.mE X (TL.trE X G2.B (subTy D' D G1.B s) (symH QB) w))) (apH (SM.mE X) (trB X w))))) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- pointwise equal classifying maps
+
+  -- the local map read at the identity, along a path of local data (any
+  -- paths of codes: V is a set)
+  aOfq-move (Y : Ob) (q q' : UA.Q4 Y) (P : Id (UA.Q4 Y) q q')
+    (pF : Id W0.V (UU.fib0 Y q.1) (UU.fib0 Y q'.1)) (pB : Id W0.V (UU.fib0 Y q'.2.1) (UU.fib0 Y q.2.1)) (b : W0.Ix (UU.fib0 Y q'.2.1))
+    : Id (W0.Ix (UU.fib0 Y q'.1)) (LC.aOfq Y q' b)
+         (subst W0.V (\ z -> W0.Ix z) (UU.fib0 Y q.1) (UU.fib0 Y q'.1) pF
+           (LC.aOfq Y q (subst W0.V (\ z -> W0.Ix z) (UU.fib0 Y q'.2.1) (UU.fib0 Y q.2.1) pB b))) =
+    idJ (UA.Q4 Y) q
+      (\ q2 P2 -> (pF2 : Id W0.V (UU.fib0 Y q.1) (UU.fib0 Y q2.1)) (pB2 : Id W0.V (UU.fib0 Y q2.2.1) (UU.fib0 Y q.2.1)) (b2 : W0.Ix (UU.fib0 Y q2.2.1))
+         -> Id (W0.Ix (UU.fib0 Y q2.1)) (LC.aOfq Y q2 b2)
+               (subst W0.V (\ z -> W0.Ix z) (UU.fib0 Y q.1) (UU.fib0 Y q2.1) pF2
+                 (LC.aOfq Y q (subst W0.V (\ z -> W0.Ix z) (UU.fib0 Y q2.2.1) (UU.fib0 Y q.2.1) pB2 b2))))
+      (\ pF2 pB2 b2 ->
+         transH (apH (LC.aOfq Y q) (symH (UU.loopV (UU.fib0 Y q.2.1) pB2 b2)))
+                (symH (UU.loopV (UU.fib0 Y q.1) pF2
+                         (LC.aOfq Y q (subst W0.V (\ z -> W0.Ix z) (UU.fib0 Y q.2.1) (UU.fib0 Y q.2.1) pB2 b2)))))
+      q' P pF pB b ;
+
+  module GCong (D : PCtx)
+    (kap : (Y : Ob) -> W0.Ix (D.ob Y) -> UA.Q4 Y)
+    (kapnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y)) -> Id (UA.Q4 Y') (kap Y' (D.act Y' Y h x)) (UA.q4Act Y' Y (yH Y' Y h) (kap Y x)))
+    (kap' : (Y : Ob) -> W0.Ix (D.ob Y) -> UA.Q4 Y)
+    (kapnat' : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y)) -> Id (UA.Q4 Y') (kap' Y' (D.act Y' Y h x)) (UA.q4Act Y' Y (yH Y' Y h) (kap' Y x)))
+    (Pk : (Y : Ob) (x : W0.Ix (D.ob Y)) -> Id (UA.Q4 Y) (kap Y x) (kap' Y x)) {
+    module G1 = GUaGlue1.Glue[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, D, kap, kapnat] ;
+    module G2 = GUaGlue1.Glue[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, D, kap', kapnat'] ;
+    module TL = GL.TriL[D] ;
+    module CB = EC.ElCong[D, G1.cB, G2.cB, G1.cnatB, G2.cnatB, \ Y x -> apH (\ q -> q.2.1) (Pk Y x)] ;
+    module CA = EC.ElCong[D, G1.cF, G2.cF, G1.cnatF, G2.cnatF, \ Y x -> apH (\ q -> q.1) (Pk Y x)] ;
+
+    P : Id (GX.EqDat[D].Tri) (G1.B, (G1.A, G1.al)) (G2.B, (G2.A, G2.al)) =
+      TL.triExtPw G1.B G1.A G1.al G2.B G2.A G2.al CB.Po CB.H1 CA.Po CA.H1
+        (\ X w -> apH {W0.Ix (UU.fib0 X (kap' X w.1).1)} {GPR.TyL[D, G2.A].EI X} (\ z -> (w.1, z))
+           (transH (aOfq-move X (kap X w.1) (kap' X w.1) (Pk X w.1) (CA.Po X w.1) (symH (CB.Po X w.1)) w.2)
+             (apH (subst W0.V (\ z -> W0.Ix z) (UU.fib0 X (kap X w.1).1) (UU.fib0 X (kap' X w.1).1) (CA.Po X w.1))
+                (symH (fromE-pair D G1.A X w.1
+                   (G1.aOfq X (kap X w.1) (subst W0.V (\ z -> W0.Ix z) (UU.fib0 X (kap' X w.1).2.1) (UU.fib0 X (kap X w.1).2.1)
+                                              (symH (CB.Po X w.1)) w.2))))))) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- Yoneda: the canonical family over y Z glues to q's triple
+
+  module GYonQ (Z : Ob) (q : UA.Q4 Z) {
+    kq (W : Ob) (f : Hom W Z) : UA.Q4 W = UA.q4Act W Z (yH W Z f) q ;
+
+    kqnat (Y' Y : Ob) (h : Hom Y' Y) (f : Hom Y Z) : Id (UA.Q4 Y') (kq Y' (compH Y' Y Z f h)) (UA.q4Act Y' Y (yH Y' Y h) (kq Y f)) =
+      transH (apH (\ s -> UA.q4Act Y' Z s q) (yH-compH Y' Y Z f h)) (UA.q4-o Y' Y Z (yH Y Z f) (yH Y' Y h) q) ;
+
+    module G = GUaGlue1.Glue[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, yP Z, kq, kqnat] ;
+    module YB = EC.Yon[Z, q.2.1, G.cnatB] ;
+    module YA = EC.Yon[Z, q.1, G.cnatF] ;
+    module TL = GL.TriL[yP Z] ;
+    module TF = GPR.TyL[yP Z, q.1.1] ;
+
+    -- the local map at the canonical restriction along f, read at f id
+    aRes (X : Ob) (f : Hom X Z) (b0 : W0.Ix (q.2.1.1.tob X (compH X X Z f (idH X))))
+      : Id (TF.EI X) (compH X X Z f (idH X), G.aOfq X (kq X f) b0) (q.2.2.1.mE X (compH X X Z f (idH X), b0)) =
+      transH (apH {W0.Ix (q.1.1.tob X (compH X X Z f (idH X)))} {TF.EI X} (\ z -> (compH X X Z f (idH X), z))
+                (GPR.TyL[yP X, (kq X f).1.1].pr-inj X (idH X) (G.aOfq X (kq X f) b0)
+                   (TF.fromE X (compH X X Z f (idH X)) (q.2.2.1.mE X (compH X X Z f (idH X), b0)) (q.2.2.1.mpt X (compH X X Z f (idH X), b0)))
+                   (G.aOfq-E X (kq X f) b0)))
+             (TF.fromE-eq X (compH X X Z f (idH X)) (q.2.2.1.mE X (compH X X Z f (idH X), b0)) (q.2.2.1.mpt X (compH X X Z f (idH X), b0))) ;
+
+    -- moved along f id = f'
+    aMove (X : Ob) (f : Hom X Z) (f' : Hom X Z) (p : Id (Hom X Z) (compH X X Z f (idH X)) f') (b : W0.Ix (q.2.1.1.tob X f'))
+      : Id (TF.EI X) (q.2.2.1.mE X (f', b))
+           (f', subst W0.V (\ z -> W0.Ix z) (q.1.1.tob X (compH X X Z f (idH X))) (q.1.1.tob X f') (apH (q.1.1.tob X) p)
+                  (G.aOfq X (kq X f) (subst W0.V (\ z -> W0.Ix z) (q.2.1.1.tob X f') (q.2.1.1.tob X (compH X X Z f (idH X)))
+                                        (symH (apH (q.2.1.1.tob X) p)) b))) =
+      idJ (Hom X Z) (compH X X Z f (idH X))
+        (\ f2 p2 -> (b2 : W0.Ix (q.2.1.1.tob X f2))
+           -> Id (TF.EI X) (q.2.2.1.mE X (f2, b2))
+                 (f2, subst W0.V (\ z -> W0.Ix z) (q.1.1.tob X (compH X X Z f (idH X))) (q.1.1.tob X f2) (apH (q.1.1.tob X) p2)
+                        (G.aOfq X (kq X f) (subst W0.V (\ z -> W0.Ix z) (q.2.1.1.tob X f2) (q.2.1.1.tob X (compH X X Z f (idH X)))
+                                              (symH (apH (q.2.1.1.tob X) p2)) b2))))
+        (\ b2 -> symH (aRes X f b2))
+        f' p b ;
+
+    P : Id (GX.EqDat[yP Z].Tri) (G.B, (G.A, G.al)) (q.2.1.1, (q.1.1, q.2.2.1)) =
+      TL.triExtPw G.B G.A G.al q.2.1.1 q.1.1 q.2.2.1 YB.Po YB.H1 YA.Po YA.H1
+        (\ X w -> transH (aMove X w.1 w.1 (comp-idr X Z w.1) w.2)
+           (apH {W0.Ix (q.1.1.tob X (compH X X Z w.1 (idH X)))} {TF.EI X}
+              (\ z -> (w.1, subst W0.V (\ z' -> W0.Ix z') (q.1.1.tob X (compH X X Z w.1 (idH X))) (q.1.1.tob X w.1) (YA.Po X w.1) z))
+              (symH (fromE-pair (yP Z) G.A X w.1
+                 (G.aOfq X (kq X w.1) (subst W0.V (\ z' -> W0.Ix z') (q.2.1.1.tob X w.1) (q.2.1.1.tob X (compH X X Z w.1 (idH X)))
+                                         (symH (YB.Po X w.1)) w.2)))))) ;
+  } ;
+
+  opaque GSub.P ; opaque GCong.P ; opaque GYonQ.P ;
+} ;

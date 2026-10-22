@@ -1,0 +1,222 @@
+-- FibExt.seg: MODEL/Lv/FibExt.agda.  Extensionality for ESI-fibrant
+-- types.  An ESI-fibrant type over G is
+--     FibE G = (A : PTy G) * (c : Comp A) * ESIC c.
+-- Two of them whose types have the SAME objects part (on the nose) are
+-- equal as soon as
+--   * their actions agree pointwise, and
+--   * their composites agree, the boxes of the second type being read as
+--     boxes of the first one (boxTr: the same data, the proofs of
+--     naturality moved along the equality of the actions).
+-- Used for the presheaf laws of the universe, where substitution along
+-- representables is functorial on the objects part on the nose (the
+-- category laws of posets hold definitionally) but not on the action
+-- (which takes an equation as argument).
+--
+--   CompOp-ext    a composition is determined by its composites
+--   isProp-ESI    ESI is a proposition
+--   BoxTr         boxes of A' = new PTy[G, A.tob, h', ..] as boxes of A
+--   fibExt        the extensionality principle
+--
+-- Posets at a, presheaves at l.  Agda's anonymous module over G is the
+-- segment FX; its pattern match on Q : packOf A = q is an idJ.
+
+level a l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+open Axioms[l+].FunExtLemmas[fe @(l+)] ;
+module W0 = V[l] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, l] ;
+open PR.PS ;
+module BXm = Box[a, l] ;
+module ES = Esi[a, l] ;
+
+-- ESI-fibrant types
+FibE (G : PCtx) : U l+ = (A : PTy[G]) * ((c : BXm.Boxes[G, A].Comp) * ES.EsiDef[G, A].ESIC c) ;
+
+------------------------------------------------------------------------
+-- A composition is determined by its composites; ESI is a proposition
+
+module CompExt (G : PCtx) (A : PTy[G]) {
+  open PR.TyL[G, A] ;
+  module BX = BXm.Boxes[G, A] ;
+  module ED = ES.EsiDef[G, A] ;
+
+  CopTy (eS eT : El Iv) : U l = (X : Ob) (b : BX.Box[eS, X]) -> T X (G.act X (prodP X Iv) (lid X eT) b.brho) ;
+
+  CsTy (eS eT : El Iv) (k : CopTy eS eT) : U l =
+    (X : Ob) (b : BX.Box[eS, X]) (j : Fin b.br) (W : Ob) (phi : Hom W X)
+    (i : InQ W X (b.bs j).sQ (compH W X (prodP X Iv) (lid X eT) phi))
+    -> Id (EI W) (E.act W X phi (BX.topE eT X b.brho (k X b))) ((b.bs j).svE W (compH W X (prodP X Iv) (lid X eT) phi) i) ;
+
+  CuTy (eS eT : El Iv) (k : CopTy eS eT) : U l =
+    (Y X : Ob) (h : Hom Y X) (b : BX.Box[eS, X])
+    -> Id (EI Y) (E.act Y X h (BX.topE eT X b.brho (k X b)))
+                 (BX.topE eT Y (BX.restrict eS Y X h b).brho (k Y (BX.restrict eS Y X h b))) ;
+
+  -- the body of CsTy / CuTy, one argument at a time
+  CsI (eS eT : El Iv) (k : CopTy eS eT) (X : Ob) (b : BX.Box[eS, X]) (j : Fin b.br) (W : Ob) (phi : Hom W X)
+    (i : InQ W X (b.bs j).sQ (compH W X (prodP X Iv) (lid X eT) phi)) : U l =
+    Id (EI W) (E.act W X phi (BX.topE eT X b.brho (k X b))) ((b.bs j).svE W (compH W X (prodP X Iv) (lid X eT) phi) i) ;
+
+  isProp-Cs (eS eT : El Iv) (k : CopTy eS eT) : isProp (CsTy eS eT k) =
+    isProp-Pi Ob (\ X -> (b : BX.Box[eS, X]) (j : Fin b.br) (W : Ob) (phi : Hom W X)
+                         (i : InQ W X (b.bs j).sQ (compH W X (prodP X Iv) (lid X eT) phi)) -> CsI eS eT k X b j W phi i) (\ X ->
+    isProp-Pi (BX.Box[eS, X]) (\ b -> (j : Fin b.br) (W : Ob) (phi : Hom W X)
+                         (i : InQ W X (b.bs j).sQ (compH W X (prodP X Iv) (lid X eT) phi)) -> CsI eS eT k X b j W phi i) (\ b ->
+    isProp-Pi (Fin b.br) (\ j -> (W : Ob) (phi : Hom W X)
+                         (i : InQ W X (b.bs j).sQ (compH W X (prodP X Iv) (lid X eT) phi)) -> CsI eS eT k X b j W phi i) (\ j ->
+    isProp-Pi Ob (\ W -> (phi : Hom W X) (i : InQ W X (b.bs j).sQ (compH W X (prodP X Iv) (lid X eT) phi)) -> CsI eS eT k X b j W phi i) (\ W ->
+    isProp-Pi (Hom W X) (\ phi -> (i : InQ W X (b.bs j).sQ (compH W X (prodP X Iv) (lid X eT) phi)) -> CsI eS eT k X b j W phi i) (\ phi ->
+    isProp-Pi (InQ W X (b.bs j).sQ (compH W X (prodP X Iv) (lid X eT) phi)) (\ i -> CsI eS eT k X b j W phi i) (\ i ->
+      W0.isSetIx (E.ob W) (E.act W X phi (BX.topE eT X b.brho (k X b)))
+                          ((b.bs j).svE W (compH W X (prodP X Iv) (lid X eT) phi) i))))))) ;
+
+  CuI (eS eT : El Iv) (k : CopTy eS eT) (Y X : Ob) (h : Hom Y X) (b : BX.Box[eS, X]) : U l =
+    Id (EI Y) (E.act Y X h (BX.topE eT X b.brho (k X b)))
+              (BX.topE eT Y (BX.restrict eS Y X h b).brho (k Y (BX.restrict eS Y X h b))) ;
+
+  isProp-Cu (eS eT : El Iv) (k : CopTy eS eT) : isProp (CuTy eS eT k) =
+    isProp-Pi Ob (\ Y -> (X : Ob) (h : Hom Y X) (b : BX.Box[eS, X]) -> CuI eS eT k Y X h b) (\ Y ->
+    isProp-Pi Ob (\ X -> (h : Hom Y X) (b : BX.Box[eS, X]) -> CuI eS eT k Y X h b) (\ X ->
+    isProp-Pi (Hom Y X) (\ h -> (b : BX.Box[eS, X]) -> CuI eS eT k Y X h b) (\ h ->
+    isProp-Pi (BX.Box[eS, X]) (\ b -> CuI eS eT k Y X h b) (\ b ->
+      W0.isSetIx (E.ob Y) (E.act Y X h (BX.topE eT X b.brho (k X b)))
+                          (BX.topE eT Y (BX.restrict eS Y X h b).brho (k Y (BX.restrict eS Y X h b))))))) ;
+
+  cop-eq (eS eT : El Iv) (co co' : BX.CompOp[eS, eT]) (P : Id (CopTy eS eT) co.cop co'.cop) : Id (BX.CompOp[eS, eT]) co co' =
+    idJ (CopTy eS eT) co.cop
+      (\ k P2 -> (cs : CsTy eS eT k) (cu : CuTy eS eT k) -> Id (BX.CompOp[eS, eT]) co ((BX.mkCompOp eS eT k cs cu)))
+      (\ cs cu ->
+         trans (BX.CompOp[eS, eT]) co ((BX.mkCompOp eS eT co.cop cs co.cunif)) ((BX.mkCompOp eS eT co.cop cs cu))
+           (ap (CsTy eS eT co.cop) (BX.CompOp[eS, eT]) (\ z -> (BX.mkCompOp eS eT co.cop z co.cunif)) co.cside cs
+               (isProp-Cs eS eT co.cop co.cside cs))
+           (ap (CuTy eS eT co.cop) (BX.CompOp[eS, eT]) (\ z -> (BX.mkCompOp eS eT co.cop cs z)) co.cunif cu
+               (isProp-Cu eS eT co.cop co.cunif cu)))
+      co'.cop P co'.cside co'.cunif ;
+
+  CompOp-ext (eS eT : El Iv) (co co' : BX.CompOp[eS, eT])
+    (H : (X : Ob) (b : BX.Box[eS, X]) -> Id (EI X) (BX.topE eT X b.brho (co.cop X b)) (BX.topE eT X b.brho (co'.cop X b)))
+    : Id (BX.CompOp[eS, eT]) co co' =
+    cop-eq eS eT co co'
+      (funext Ob (\ X -> (b : BX.Box[eS, X]) -> T X (G.act X (prodP X Iv) (lid X eT) b.brho)) co.cop co'.cop (\ X ->
+         funext (BX.Box[eS, X]) (\ b -> T X (G.act X (prodP X Iv) (lid X eT) b.brho)) (co.cop X) (co'.cop X) (\ b ->
+         pr-inj X (G.act X (prodP X Iv) (lid X eT) b.brho) (co.cop X b) (co'.cop X b) (H X b)))) ;
+
+  EsiI (eS eT : El Iv) (co : BX.CompOp[eS, eT]) (X : Ob) (b b' : BX.Box[eS, X]) : U l =
+    Id (EI X) (BX.topE eT X b'.brho (co.cop X b')) (BX.topE eT X b.brho (co.cop X b)) ;
+
+  isProp-ESI (eS eT : El Iv) (co : BX.CompOp[eS, eT]) : isProp (ED.ESI eS eT co) =
+    isProp-Pi Ob (\ X -> (k : Nat) (b b' : BX.Box[eS, X]) -> ED.InsE[eS, X, k, b, b'] -> EsiI eS eT co X b b') (\ X ->
+    isProp-Pi Nat (\ k -> (b b' : BX.Box[eS, X]) -> ED.InsE[eS, X, k, b, b'] -> EsiI eS eT co X b b') (\ k ->
+    isProp-Pi (BX.Box[eS, X]) (\ b -> (b' : BX.Box[eS, X]) -> ED.InsE[eS, X, k, b, b'] -> EsiI eS eT co X b b') (\ b ->
+    isProp-Pi (BX.Box[eS, X]) (\ b' -> ED.InsE[eS, X, k, b, b'] -> EsiI eS eT co X b b') (\ b' ->
+    isProp-Pi (ED.InsE[eS, X, k, b, b']) (\ ins -> EsiI eS eT co X b b') (\ ins ->
+      W0.isSetIx (E.ob X) (BX.topE eT X b'.brho (co.cop X b')) (BX.topE eT X b.brho (co.cop X b))))))) ;
+
+  isProp-ESIC (c : BX.Comp) : isProp (ED.ESIC c) =
+    isProp-Sigma (ED.ESI e0 e1 c.1) (\ z -> ED.ESI e1 e0 c.2) (isProp-ESI e0 e1 c.1) (\ z -> isProp-ESI e1 e0 c.2) ;
+} ;
+
+------------------------------------------------------------------------
+-- Boxes of a type with the same objects part
+
+HtTy (G : PCtx) (A : PTy[G]) (h : TactTy G A.tob) : U l = PtEq G A.tob A.tact h ;
+
+module BoxTr (G : PCtx) (A : PTy[G]) (h' : TactTy G A.tob) (hi' : IdLaw G A.tob h') (ho' : OLaw G A.tob h')
+  (Ht : HtTy G A h') {
+
+  A' : PTy[G] = mkTy G A.tob h' hi' ho' ;
+
+  module BA = BXm.Boxes[G, A] ;
+  module BA' = BXm.Boxes[G, A'] ;
+  module TA = PR.TyL[G, A] ;
+  module TA' = PR.TyL[G, A'] ;
+
+  -- the actions of the total presheaves agree
+  actE (J I : Ob) (f : Hom J I) (w : TA.EI I) : Id (TA.EI J) (TA'.E.act J I f w) (TA.E.act J I f w) =
+    apH {W0.Ix (A.tob J (G.act J I f w.1))} {TA.EI J} (\ v -> (G.act J I f w.1, v))
+        (symH (Ht J I f w.1 (G.act J I f w.1) (refl (G.act J I f w.1)) w.2)) ;
+
+  sideTr (X : Ob) (rho : TA.Pt (prodP X Iv)) (s : BA'.Side[X, rho]) : BA.Side[X, rho] =
+    (BA.mkSide X rho s.sQ s.sv (\ W' W chi psi i i' -> transH (symH (actE W' W chi (G.act W (prodP X Iv) psi rho, s.sv W psi i))) (s.snat W' W chi psi i i'))) ;
+
+  boxTr (eS : El Iv) (X : Ob) (b : BA'.Box[eS, X]) : BA.Box[eS, X] =
+    (BA.mkBox eS X b.brho b.bu b.br (\ j -> sideTr X b.brho (b.bs j)) b.bcs (\ j W phi i -> transH (symH (actE W X phi (BA.lidE eS X b.brho b.bu))) (b.bcb j W phi i))) ;
+} ;
+
+------------------------------------------------------------------------
+-- The extensionality principle
+
+module FX (G : PCtx) {
+
+  Pack (o : TOb G) : U l = (h : TactTy G o) * (IdLaw G o h * OLaw G o h) ;
+
+  tyOf (o : TOb G) (q : Pack o) : PTy[G] = mkTy G o q.1 q.2.1 q.2.2 ;
+
+  packOf (A : PTy[G]) : Pack A.tob = (A.tact, (A.tact-id, A.tact-o)) ;
+
+  -- composites agree, boxes of the second type read as boxes of the first
+  CopAgree (A : PTy[G]) (q : Pack A.tob) (Ht : HtTy G A q.1)
+    (c : BXm.Boxes[G, A].Comp) (c' : BXm.Boxes[G, tyOf A.tob q].Comp) : U l =
+    ((X : Ob) (b : BXm.Boxes[G, tyOf A.tob q].Box[e0, X])
+      -> Id (PR.TyL[G, A].EI X)
+            (BXm.Boxes[G, A].topE e1 X b.brho (c.1.cop X (BoxTr[G, A, q.1, q.2.1, q.2.2, Ht].boxTr e0 X b)))
+            (BXm.Boxes[G, A].topE e1 X b.brho (c'.1.cop X b))) *
+    ((X : Ob) (b : BXm.Boxes[G, tyOf A.tob q].Box[e1, X])
+      -> Id (PR.TyL[G, A].EI X)
+            (BXm.Boxes[G, A].topE e0 X b.brho (c.2.cop X (BoxTr[G, A, q.1, q.2.1, q.2.2, Ht].boxTr e1 X b)))
+            (BXm.Boxes[G, A].topE e0 X b.brho (c'.2.cop X b))) ;
+
+  -- over the identity, boxTr does nothing
+  boxTr-id (A : PTy[G]) (Ht : HtTy G A A.tact) (eS : El Iv) (X : Ob) (b : BXm.Boxes[G, A].Box[eS, X])
+    : Id (BXm.Boxes[G, A].Box[eS, X]) (BoxTr[G, A, A.tact, A.tact-id, A.tact-o, Ht].boxTr eS X b) b =
+    BXm.Boxes[G, A].box-ext eS X b.brho b.brho b.bu b.bu b.br
+      (\ j -> BoxTr[G, A, A.tact, A.tact-id, A.tact-o, Ht].sideTr X b.brho (b.bs j)) b.bs
+      b.bcs b.bcs
+      (\ j W phi i -> transH (symH (BoxTr[G, A, A.tact, A.tact-id, A.tact-o, Ht].actE W X phi (BXm.Boxes[G, A].lidE eS X b.brho b.bu))) (b.bcb j W phi i))
+      b.bcb
+      (refl b.brho) (refl (BXm.Boxes[G, A].lidE eS X b.brho b.bu))
+      (\ j x -> refl ((b.bs j).sQ x))
+      (\ j W psi i i' -> apH (\ k -> (b.bs j).svE W psi k) (isProp-InQ W X (b.bs j).sQ psi i i')) ;
+
+  pairC (A : PTy[G]) (c c' : BXm.Boxes[G, A].Comp) (p : Id (BXm.Boxes[G, A].CompOp[e0, e1]) c.1 c'.1)
+    (q : Id (BXm.Boxes[G, A].CompOp[e1, e0]) c.2 c'.2) : Id (BXm.Boxes[G, A].Comp) c c' =
+    transH (apH {BXm.Boxes[G, A].CompOp[e0, e1]} {BXm.Boxes[G, A].Comp} (\ z -> (z, c.2)) p)
+           (apH {BXm.Boxes[G, A].CompOp[e1, e0]} {BXm.Boxes[G, A].Comp} (\ z -> (c'.1, z)) q) ;
+
+  core (A : PTy[G]) (c : BXm.Boxes[G, A].Comp) (ec : ES.EsiDef[G, A].ESIC c)
+    (q : Pack A.tob) (Q : Id (Pack A.tob) (packOf A) q) (Ht : HtTy G A q.1)
+    (c' : BXm.Boxes[G, tyOf A.tob q].Comp) (ec' : ES.EsiDef[G, tyOf A.tob q].ESIC c')
+    (H : CopAgree A q Ht c c')
+    : Id (FibE G) (A, (c, ec)) (tyOf A.tob q, (c', ec')) =
+    idJ (Pack A.tob) (packOf A)
+      (\ q2 Q2 -> (Ht2 : HtTy G A q2.1) (c2 : BXm.Boxes[G, tyOf A.tob q2].Comp) (ec2 : ES.EsiDef[G, tyOf A.tob q2].ESIC c2)
+         -> CopAgree A q2 Ht2 c c2 -> Id (FibE G) (A, (c, ec)) (tyOf A.tob q2, (c2, ec2)))
+      (\ Ht2 c2 ec2 H2 ->
+         apH {(cc : BXm.Boxes[G, A].Comp) * ES.EsiDef[G, A].ESIC cc} {FibE G} (\ cc -> (A, cc))
+           (Sigma-eq (BXm.Boxes[G, A].Comp) (\ cc -> ES.EsiDef[G, A].ESIC cc) c c2 ec ec2
+              (pairC A c c2
+                 (CompExt[G, A].CompOp-ext e0 e1 c.1 c2.1 (\ X b ->
+                    transH (apH (\ bb -> BXm.Boxes[G, A].topE e1 X bb.brho (c.1.cop X bb)) (symH (boxTr-id A Ht2 e0 X b))) (H2.1 X b)))
+                 (CompExt[G, A].CompOp-ext e1 e0 c.2 c2.2 (\ X b ->
+                    transH (apH (\ bb -> BXm.Boxes[G, A].topE e0 X bb.brho (c.2.cop X bb)) (symH (boxTr-id A Ht2 e1 X b))) (H2.2 X b))))
+              (CompExt[G, A].isProp-ESIC c2)))
+      q Q Ht c' ec' H ;
+
+  -- the principle
+  fibExt (A : PTy[G]) (c : BXm.Boxes[G, A].Comp) (ec : ES.EsiDef[G, A].ESIC c)
+    (h' : TactTy G A.tob) (hi' : IdLaw G A.tob h') (ho' : OLaw G A.tob h') (Ht : HtTy G A h')
+    (c' : BXm.Boxes[G, mkTy G A.tob h' hi' ho'].Comp) (ec' : ES.EsiDef[G, mkTy G A.tob h' hi' ho'].ESIC c')
+    (H : CopAgree A (h', (hi', ho')) Ht c c')
+    : Id (FibE G) (A, (c, ec)) (mkTy G A.tob h' hi' ho', (c', ec')) =
+    core A c ec (h', (hi', ho'))
+      (Sigma-eq (TactTy G A.tob) (\ h -> IdLaw G A.tob h * OLaw G A.tob h) A.tact h' (A.tact-id, A.tact-o) (hi', ho')
+         (tact-funext G A.tob A.tact h' Ht)
+         (isProp-Sigma (IdLaw G A.tob h') (\ z -> OLaw G A.tob h') (idLaw-prop G A.tob h') (\ z -> oLaw-prop G A.tob h')))
+      Ht c' ec' H ;
+} ;

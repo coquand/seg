@@ -1,0 +1,26 @@
+-- PosetExt.seg: Ext(alpha) as a fibrant type in line form for POSETS: the
+-- generic assembly (IvBase.FaU's GExtFib) at the poset instances of the
+-- connections (PosetConn.PCnB: fillers by line MkFill, GFibFill) and of
+-- forall of unions (Constr.PFaU).
+
+level a ;
+open Base ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module GP = BaseP.GCofib[a] ;
+open BaseP.GLine[a] ;
+
+module PExt (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (cA : BaseP.GFibE[a].FE[G, A].Comp) (eA : BaseP.GFibE[a].FE[G, A].ESIC cA)
+  (cB : BaseP.GFibE[a].FE[GP.CofL[G, psi].resCtx, B].Comp) (eB : BaseP.GFibE[a].FE[GP.CofL[G, psi].resCtx, B].ESIC cB)
+  (eal : BaseP.GEquiv[a].EquivOp GP.CofL[G, psi].resCtx B (subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR) al)
+  (keal : BaseP.GCofEsi[a].PartialsEsi[BaseP.GExt.ExtDef[G, A, psi].EA', BaseP.GEquiv[a].HFib[GP.CofL[G, psi].resCtx, B,
+            subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR, al].FibT].KESI eal) {
+  module FA = PosetConn[a].PCnB.GFibFill[a].FibFill[G, A, cA, eA] ;
+  module FB = PosetConn[a].PCnB.GFibFill[a].FibFill[GP.CofL[G, psi].resCtx, B, cB, eB] ;
+
+  extFib : BaseP.GFibE[a].FibEL G =
+    Constr[a].PFaU.GExtFib.ExtFib[G, A, psi, B, al, FA.k0, FA.k1, FB.k0, FB.k1, FA.k0e, FA.k1e, FB.k0e, FB.k1e, eal, keal].extFib ;
+} ;

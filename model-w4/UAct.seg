@@ -1,0 +1,185 @@
+-- UAct.seg: MODEL/Univ/UAct.agda.  The fibres of the universe and its
+-- action.
+--
+--   U0 X            ESI-fibrant types over y X
+--   uAct f          substitution along y f
+--   uAct-id         uAct (idH X) F = F
+--   uAct-o          uAct (f g) F = uAct g (uAct f F)
+--
+-- Substitution along ANY substitution s : y Y -> y X is uActS; uAct f is
+-- uActS (y f).  The two laws are proved in two steps:
+--   * for the substitutions idS and oS (y f) (y g), whose objects parts
+--     are those of the identity and of the iterated substitution ON THE
+--     NOSE: the actions agree by tact-irr; the composites agree because the
+--     boxes built by subComp are the same boxes (box-ext, applied to the
+--     projections of the two boxes); the conclusion is fibExt;
+--   * y (idH X) = idS and y (f g) = oS (y f) (y g) as substitutions
+--     (sub-ext, by the category laws comp-idl and comp-assoc).
+--
+-- Agda's anonymous modules are the segments UIdC and UOC.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FS = FibSub[a, a] ;
+module ESS = EsiSub[a, a] ;
+module FE = FibExt[a, a] ;
+open Yon[a] ;
+
+U0 (X : Ob) : U a+ = FE.FibE (yP X) ;
+
+-- substitution along a substitution of representables
+uActS (Y X : Ob) (s : PSub[yP Y, yP X]) (F : U0 X) : U0 Y =
+  (subTy (yP Y) (yP X) F.1 s,
+   (FS.subCompC (yP Y) (yP X) F.1 s F.2.1, ESS.esiSubC (yP Y) (yP X) F.1 s F.2.1 F.2.2)) ;
+
+uAct (Y X : Ob) (f : Hom Y X) (F : U0 X) : U0 Y = uActS Y X (yH Y X f) F ;
+
+-- y sends the identity to the identity substitution ...
+yH-idH (X : Ob) : Id (PSub[yP X, yP X]) (yH X X (idH X)) (idS (yP X)) =
+  sub-ext (yP X) (yP X) (yH X X (idH X)) (idS (yP X)) (\ I g -> comp-idl I X g) ;
+
+-- ... and a composite to the composite substitution
+yH-compH (Z Y X : Ob) (f : Hom Y X) (g : Hom Z Y)
+  : Id (PSub[yP Z, yP X]) (yH Z X (compH Z Y X f g)) (oS (yP Z) (yP Y) (yP X) (yH Y X f) (yH Z Y g)) =
+  sub-ext (yP Z) (yP X) (yH Z X (compH Z Y X f g)) (oS (yP Z) (yP Y) (yP X) (yH Y X f) (yH Z Y g))
+    (\ I x -> comp-assoc I Z Y X f g x) ;
+
+------------------------------------------------------------------------
+-- Identity
+
+module UId (X : Ob) (F : U0 X) {
+
+  A : PTy[yP X] = F.1 ;
+  c : BXm.Boxes[yP X, A].Comp = F.2.1 ;
+  e : ESS.ES.EsiDef[yP X, A].ESIC c = F.2.2 ;
+
+  s : PSub[yP X, yP X] = idS (yP X) ;
+
+  A' : PTy[yP X] = subTy (yP X) (yP X) A s ;
+
+  Ht : FE.HtTy (yP X) A A'.tact = \ J I f x y e1 a ->
+    tact-irr (yP X) A J I f x y e1 (ntEq (yP X) (yP X) s J I f x y e1) a ;
+
+  module BT = FE.BoxTr[yP X, A, A'.tact, A'.tact-id, A'.tact-o, Ht] ;
+
+  module UIdC (eS eT : El Iv) (co : BXm.Boxes[yP X, A].CompOp[eS, eT]) {
+    open FS.SubComp[yP X, yP X, A, s, eS, eT, co] ;
+
+    boxEq (Z : Ob) (b : BD.Box[eS, Z]) : Id (BG.Box[eS, Z]) (BT.boxTr eS Z b) MB[eS, Z, b].box =
+      BG.box-ext eS Z (BT.boxTr eS Z b).brho MB[eS, Z, b].box.brho (BT.boxTr eS Z b).bu MB[eS, Z, b].box.bu b.br
+        (BT.boxTr eS Z b).bs MB[eS, Z, b].box.bs (BT.boxTr eS Z b).bcs MB[eS, Z, b].box.bcs
+        (BT.boxTr eS Z b).bcb MB[eS, Z, b].box.bcb
+        (refl b.brho)
+        (symH (KG.fromE-eq Z (G.act Z (prodP Z Iv) (lid Z eS) MB[eS, Z, b].rho) MB[eS, Z, b].uE MB[eS, Z, b].upt))
+        (\ j x -> refl ((b.bs j).sQ x))
+        (\ j W psi i i' ->
+          transH (apH (\ k -> (b.bs j).svE W psi k) (isProp-InQ W Z (b.bs j).sQ psi i i'))
+                 (symH (MB[eS, Z, b].S-E j W psi i'))) ;
+
+    agree (Z : Ob) (b : BD.Box[eS, Z])
+      : Id (TG.EI Z) (BG.topE eT Z b.brho (co.cop Z (BT.boxTr eS Z b))) (BD.topE eT Z b.brho (subComp.cop Z b)) =
+      transH (apH (\ bb -> BG.topE eT Z bb.brho (co.cop Z bb)) (boxEq Z b)) (symH (copS-E Z b)) ;
+  } ;
+
+  uActS-id : Id (U0 X) (uActS X X s F) F =
+    symH (FE.FX[yP X].fibExt A c e A'.tact A'.tact-id A'.tact-o Ht
+            (FS.subCompC (yP X) (yP X) A s c) (ESS.esiSubC (yP X) (yP X) A s c e)
+            (UIdC[e0, e1, c.1].agree, UIdC[e1, e0, c.2].agree)) ;
+} ;
+
+uAct-id (X : Ob) (F : U0 X) : Id (U0 X) (uAct X X (idH X) F) F =
+  calc (U0 X) {
+    uActS X X (yH X X (idH X)) F
+      =< apH (\ s -> uActS X X s F) (yH-idH X) >
+    uActS X X (idS (yP X)) F
+      =< UId[X, F].uActS-id >
+    F } ;
+
+opaque uAct-id ;
+
+------------------------------------------------------------------------
+-- Composition
+
+module UO (Z Y X : Ob) (sf : PSub[yP Y, yP X]) (sg : PSub[yP Z, yP Y]) (F : U0 X) {
+
+  A : PTy[yP X] = F.1 ;
+  c : BXm.Boxes[yP X, A].Comp = F.2.1 ;
+  e : ESS.ES.EsiDef[yP X, A].ESIC c = F.2.2 ;
+
+
+  Af : PTy[yP Y] = subTy (yP Y) (yP X) A sf ;
+  A1 : PTy[yP Z] = subTy (yP Z) (yP X) A (oS (yP Z) (yP Y) (yP X) sf sg) ;
+  A2 : PTy[yP Z] = subTy (yP Z) (yP Y) Af sg ;
+
+  Ht : FE.HtTy (yP Z) A1 A2.tact = \ J I h x y e1 a ->
+    tact-irr (yP X) A J I h ((oS (yP Z) (yP Y) (yP X) sf sg).nt I x) ((oS (yP Z) (yP Y) (yP X) sf sg).nt J y) (ntEq (yP Z) (yP X) (oS (yP Z) (yP Y) (yP X) sf sg) J I h x y e1)
+      (ntEq (yP Y) (yP X) sf J I h (sg.nt I x) (sg.nt J y) (ntEq (yP Z) (yP Y) sg J I h x y e1)) a ;
+
+  module BT = FE.BoxTr[yP Z, A1, A2.tact, A2.tact-id, A2.tact-o, Ht] ;
+
+  module UOC (eS eT : El Iv) (co : BXm.Boxes[yP X, A].CompOp[eS, eT]) {
+    module S1 = FS.SubComp[yP Z, yP X, A, (oS (yP Z) (yP Y) (yP X) sf sg), eS, eT, co] ;
+    module Sf = FS.SubComp[yP Y, yP X, A, sf, eS, eT, co] ;
+    module S2 = FS.SubComp[yP Z, yP Y, Af, sg, eS, eT, Sf.subComp] ;
+
+    module BE (W : Ob) (b : S2.BD.Box[eS, W]) {
+      module M1 = S1.MB[eS, W, BT.boxTr eS W b] ;
+      module M2 = S2.MB[eS, W, b] ;
+      module Mf = Sf.MB[eS, W, M2.box] ;
+
+      boxEq : Id (S1.BG.Box[eS, W]) M1.box Mf.box =
+        S1.BG.box-ext eS W M1.box.brho Mf.box.brho M1.box.bu Mf.box.bu b.br M1.box.bs Mf.box.bs
+          M1.box.bcs Mf.box.bcs M1.box.bcb Mf.box.bcb
+          (refl M1.box.brho)
+          (transH (S1.KG.fromE-eq W ((yP X).act W (prodP W Iv) (lid W eS) M1.rho) M1.uE M1.upt)
+           (transH (apH (Sf.Ls W) (symH (S2.KG.fromE-eq W ((yP Y).act W (prodP W Iv) (lid W eS) M2.rho) M2.uE M2.upt)))
+                   (symH (Sf.KG.fromE-eq W ((yP X).act W (prodP W Iv) (lid W eS) Mf.rho) Mf.uE Mf.upt))))
+          (\ j x -> refl ((b.bs j).sQ x))
+          (\ j V psi i i' ->
+            transH (M1.S-E j V psi i)
+             (transH (apH (\ k -> Sf.Ls V (S2.Ls V ((b.bs j).svE V psi k))) (isProp-InQ V W (b.bs j).sQ psi i i'))
+              (transH (apH (Sf.Ls V) (symH (M2.S-E j V psi i')))
+                      (symH (Mf.S-E j V psi i'))))) ;
+
+      agree : Id (S1.TD.EI W) (S1.BD.topE eT W b.brho (S1.copS W (BT.boxTr eS W b))) (S2.BD.topE eT W b.brho (S2.copS W b)) =
+        S1.Ls-inj W (S1.BD.topE eT W b.brho (S1.copS W (BT.boxTr eS W b))) (S2.BD.topE eT W b.brho (S2.copS W b))
+          (refl ((yP Z).act W (prodP W Iv) (lid W eT) b.brho))
+          (transH (S1.copS-E W (BT.boxTr eS W b))
+           (transH (apH (\ bb -> S1.BG.topE eT W bb.brho (co.cop W bb)) boxEq)
+            (transH (symH (Sf.copS-E W M2.box))
+                    (apH (Sf.Ls W) (symH (S2.copS-E W b)))))) ;
+    } ;
+
+    agree (W : Ob) (b : S2.BD.Box[eS, W])
+      : Id (S1.TD.EI W) (S1.BD.topE eT W b.brho (S1.copS W (BT.boxTr eS W b))) (S2.BD.topE eT W b.brho (S2.copS W b)) =
+      BE[W, b].agree ;
+  } ;
+
+  uActS-o : Id (U0 Z) (uActS Z X (oS (yP Z) (yP Y) (yP X) sf sg) F) (uActS Z Y sg (uActS Y X sf F)) =
+    FE.FX[yP Z].fibExt A1 (FS.subCompC (yP Z) (yP X) A (oS (yP Z) (yP Y) (yP X) sf sg) c) (ESS.esiSubC (yP Z) (yP X) A (oS (yP Z) (yP Y) (yP X) sf sg) c e)
+      A2.tact A2.tact-id A2.tact-o Ht
+      (FS.subCompC (yP Z) (yP Y) Af sg (FS.subCompC (yP Y) (yP X) A sf c))
+      (ESS.esiSubC (yP Z) (yP Y) Af sg (FS.subCompC (yP Y) (yP X) A sf c) (ESS.esiSubC (yP Y) (yP X) A sf c e))
+      (UOC[e0, e1, c.1].agree, UOC[e1, e0, c.2].agree) ;
+} ;
+
+uAct-o (Z Y X : Ob) (f : Hom Y X) (g : Hom Z Y) (F : U0 X)
+  : Id (U0 Z) (uAct Z X (compH Z Y X f g) F) (uAct Z Y g (uAct Y X f F)) =
+  calc (U0 Z) {
+    uActS Z X (yH Z X (compH Z Y X f g)) F
+      =< apH (\ s -> uActS Z X s F) (yH-compH Z Y X f g) >
+    uActS Z X (oS (yP Z) (yP Y) (yP X) (yH Y X f) (yH Z Y g)) F
+      =< UO[Z, Y, X, yH Y X f, yH Z Y g, F].uActS-o >
+    uAct Z Y g (uAct Y X f F) } ;
+
+opaque uAct-o ;
+

@@ -1,0 +1,64 @@
+-- Assemble a principal row ideal from compatible cleared numerators.
+-- The cover for the generators and the cover clearing their
+-- divisibility equations may use different denominators.
+level l ; open Ring[l] ; open Presentations[l] ;
+module Over (A : CRing) {
+ open A ; open RL[A] ;
+ module S = FiniteIdeal[l].Sums[A] ;
+ module Algebra = AlgebraLinear[l].Over[A,A,RingHom[l].identity A] ;
+ module V = FiniteLinear[l].Over[A].In[Algebra.structure] ;
+ interchange : (n m : Nat) (v : Fin n -> Fin m -> R) ->
+  Id R (S.sum n (\ i -> S.sum m (v i))) (S.sum m (\ j -> S.sum n (\ i -> v i j))) = split {
+  zero -> \ m v -> sym (S.sum-zero m) ;
+  suc n | ih -> \ m v ->
+   trans (ap (add (S.sum m (v (inr tt)))) (ih m (\ i -> v (inl i))))
+    (sym (S.sum-add m (v (inr tt)) (\ j -> S.sum n (\ i -> v (inl i) j)))) } ;
+ module At (n : Nat) (y : Fin n -> R) (m : Nat) (s c t d h : Fin m -> R)
+  (cover : Id R (S.lin m c s) o)
+  (equation-cover : Id R (S.lin m d t) o)
+  (overlap : (i j : Fin m) -> Id R (mul (s i) (h j)) (mul (s j) (h i)))
+  (members : Fin m -> Fin n -> R)
+  (generated : (i : Fin m) -> Id R (S.lin n y (members i)) (h i))
+  (local-factors : Fin m -> Fin n -> R)
+  (divides : (i : Fin m) (j : Fin n) -> Id R (mul (t i) (y j)) (mul (h i) (local-factors i j))) {
+  module Glue = FiniteGluing[l].Over[A,Algebra.structure].At[m,s,c,cover].Compatible[h,overlap] ;
+  g : R = Glue.glued ;
+  formula : Id R g (S.lin m c h) = Algebra.lin-equation m c h ;
+  coefficients (j : Fin n) : R = S.sum m (\ i -> mul (c i) (members i j)) ;
+  member-equation : Id R (S.lin n y coefficients) g =
+   trans (S.sum-cong n
+     (\ j -> mul (y j) (S.sum m (\ i -> mul (c i) (members i j))))
+     (\ j -> S.sum m (\ i -> mul (y j) (mul (c i) (members i j))))
+     (\ j -> sym (S.sum-scale (y j) m (\ i -> mul (c i) (members i j)))))
+    (trans (interchange n m (\ j i -> mul (y j) (mul (c i) (members i j))))
+     (trans (S.sum-cong m
+       (\ i -> S.sum n (\ j -> mul (y j) (mul (c i) (members i j))))
+       (\ i -> mul (c i) (h i))
+       (\ i -> trans
+        (S.sum-cong n (\ j -> mul (y j) (mul (c i) (members i j)))
+         (\ j -> mul (c i) (mul (y j) (members i j)))
+         (\ j -> mul-swap (y j) (c i) (members i j)))
+        (trans (S.sum-scale (c i) n (\ j -> mul (y j) (members i j)))
+         (ap (mul (c i)) (generated i)))))
+      (sym formula))) ;
+  factors (j : Fin n) : R =
+   S.sum m (\ i -> mul (d i) (mul (s i) (local-factors i j))) ;
+  term (i : Fin m) (j : Fin n) :
+   Id R (mul g (mul (d i) (mul (s i) (local-factors i j)))) (mul (mul (d i) (t i)) (y j)) =
+   trans (mul-swap g (d i) (mul (s i) (local-factors i j)))
+    (trans (ap (mul (d i))
+      (trans (mulA g (s i) (local-factors i j))
+       (trans (ap (\ a -> mul a (local-factors i j)) (trans (mulC g (s i)) (Glue.restrict i)))
+        (sym (divides i j)))))
+     (mulA (d i) (t i) (y j))) ;
+  factor-equation (j : Fin n) : Id R (y j) (mul g (factors j)) =
+   sym (trans (sym (S.sum-scale g m (\ i -> mul (d i) (mul (s i) (local-factors i j)))))
+    (trans (S.sum-cong m
+      (\ i -> mul g (mul (d i) (mul (s i) (local-factors i j))))
+      (\ i -> mul (mul (d i) (t i)) (y j)) (\ i -> term i j))
+     (trans (S.sum-cong m (\ i -> mul (mul (d i) (t i)) (y j))
+       (\ i -> mul (y j) (mul (d i) (t i))) (\ i -> mulC (mul (d i) (t i)) (y j)))
+      (trans (S.sum-scale (y j) m (\ i -> mul (d i) (t i)))
+       (trans (ap (mul (y j)) equation-cover) (mulO (y j))))))) ;
+ } ;
+} ;

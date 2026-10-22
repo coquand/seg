@@ -1,0 +1,568 @@
+-- GTrans.seg: fibrancy is transferred between a path structure with the
+-- exponential law (P, C : PathConn[P]) and the family path object famPath
+-- (CYLINDER.md step 3).  A family goes to P by lam (psi), a line of P to a
+-- family by lev / levA.  Posets: posetConn carries the fibrancy of the box
+-- world (posetPath) to famPath and back.
+--
+--   ToFam[P, C, G, A, e, kP].fibAt : FibAt e at famPath from FibAt e at P
+
+level lv ;
+constraint a <= lv ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+open Axioms[lv+].FunExtLemmas[fe @(lv+)] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module PsiMap (P : PathStr) (C : PathConn[P]) (G : PCtx) (A : PTy[G]) (e : IPt) {
+  module TA = GPR.TyL[G, A] ;
+  module FG = GFam[lv].FC[G] ;
+  module FA = GFam[lv].FT[G, A] ;
+  module KP = EndKit[P, G, A, e] ;
+  module KF = EndKit[GFam[lv].famPath, G, A, e] ;
+  module LP = LevKit[P, C, G, A, e] ;
+  module LF = LevKit[GFam[lv].famPath, GFam[lv].famConn, G, A, e] ;
+
+  ----------------------------------------------------------------------
+  -- a family as a line of P
+
+  psi (X : Ob) (t : W0.Ix (FG.ob X)) : W0.Ix ((P.pth G).ob X) = C.lam G X t.1 t.2 ;
+
+  psi-lev (X : Ob) (t : W0.Ix (FG.ob X)) (W : Ob) (f : Hom W X) (i : Hom W Iv)
+    : Id (W0.Ix (G.ob W)) (C.lev G X (psi X t) W f i) (t.1 W f i) = C.lev-lam G X t.1 t.2 W f i ;
+
+  opaque psi ;
+
+  psi-act (Y X : Ob) (h : Hom Y X) (t : W0.Ix (FG.ob X))
+    : Id (W0.Ix ((P.pth G).ob Y)) ((P.pth G).act Y X h (psi X t)) (psi Y (FG.actF Y X h t)) =
+    C.lev-ext G Y ((P.pth G).act Y X h (psi X t)) (psi Y (FG.actF Y X h t)) (\ W f i ->
+      transH (C.lev-act G Y X h (psi X t) W f i)
+        (transH (psi-lev X t W (compH W Y X h f) i) (symH (psi-lev Y (FG.actF Y X h t) W f i)))) ;
+
+  -- the end at e
+  ev-psi (X : Ob) (t : W0.Ix (FG.ob X))
+    : Id (W0.Ix (G.ob X)) ((P.pev G e).nt X (psi X t)) (t.1 X (idH X) (ptH X e)) =
+    transH (C.lev-ev G e X (psi X t)) (psi-lev X t X (idH X) (ptH X e)) ;
+
+  -- on points over the end
+  tvN (X : Ob) (w : KF.TV.EI X) : KP.TV.EI X =
+    (psi X w.1, TA.coeT X (w.1.1 X (idH X) (ptH X e)) ((P.pev G e).nt X (psi X w.1)) (symH (ev-psi X w.1)) w.2) ;
+
+  tvN-E (X : Ob) (w : KF.TV.EI X) : Id (TA.EI X) (KP.endE X (tvN X w)) (KF.endE X w) =
+    symH (TA.pr-coe X (w.1.1 X (idH X) (ptH X e)) ((P.pev G e).nt X (psi X w.1)) (symH (ev-psi X w.1)) w.2) ;
+
+  tvN-act (Y X : Ob) (h : Hom Y X) (w : KF.TV.EI X) : Id (KP.TV.EI Y) (tvN Y (KF.TV.E.act Y X h w)) (KP.TV.E.act Y X h (tvN X w)) =
+    KP.tv-eq Y (tvN Y (KF.TV.E.act Y X h w)) (KP.TV.E.act Y X h (tvN X w)) (symH (psi-act Y X h w.1))
+      (transH (tvN-E Y (KF.TV.E.act Y X h w))
+        (transH (KF.endE-act Y X h w)
+          (transH (apH (TA.E.act Y X h) (symH (tvN-E X w))) (symH (KP.endE-act Y X h (tvN X w)))))) ;
+
+  tvS : PSub[KF.TV.E, KP.TV.E] = new PSub[KF.TV.E, KP.TV.E, tvN, tvN-act] ;
+
+  -- on elements of the fibres: the line of P with the same values
+  module TSN (W : Ob) (u : KF.TS.EI W) {
+    tp (W' : Ob) (f : Hom W' W) (i : Hom W' Iv)
+      : Id (W0.Ix (G.ob W')) (u.2.1.1.1 W' f i).1 (C.lev G W (psi W u.1.1) W' f i) =
+      transH (apH (\ q -> q.1 W' f i) u.2.1.2) (symH (psi-lev W u.1.1 W' f i)) ;
+
+    lineP : KP.TL.EI W = (psi W u.1.1, C.lamA G A W (psi W u.1.1) u.2.1.1.1 tp u.2.1.1.2) ;
+
+    lineP-lev (W' : Ob) (f : Hom W' W) (i : Hom W' Iv) : Id (TA.EI W') (C.levA G A W lineP W' f i) (u.2.1.1.1 W' f i) =
+      C.levA-lam G A W (psi W u.1.1) u.2.1.1.1 tp u.2.1.1.2 W' f i ;
+
+    qN : Id (TA.EI W) (KP.endE W ((P.pevA G A e).mE W lineP)) (KP.endE W (tvN W u.1)) =
+      calc (TA.EI W) {
+          KP.endE W ((P.pevA G A e).mE W lineP)
+        =< LP.endL-lev W lineP >
+          C.levA G A W lineP W (idH W) (ptH W e)
+        =< lineP-lev W (idH W) (ptH W e) >
+          u.2.1.1.1 W (idH W) (ptH W e)
+        =< symH (LF.endL-lev W (u.1.1, u.2.1)) >
+          KF.endE W ((GFam[lv].famPath.pevA G A e).mE W (u.1.1, u.2.1))
+        =< apH (KF.endE W) u.2.2 >
+          KF.endE W u.1
+        =< symH (tvN-E W u.1) >
+          KP.endE W (tvN W u.1) } ;
+
+    res : KP.TS.EI W = KP.mkTS W (tvN W u.1) lineP (refl (psi W u.1.1)) qN ;
+
+    res-lev (W' : Ob) (f : Hom W' W) (i : Hom W' Iv)
+      : Id (TA.EI W') (C.levA G A W (KP.lineL W res) W' f i) (u.2.1.1.1 W' f i) =
+      transH (LP.mkTS-lev W (tvN W u.1) lineP (refl (psi W u.1.1)) qN W' f i) (lineP-lev W' f i) ;
+  } ;
+
+  tsN (W : Ob) (u : KF.TS.EI W) : KP.TS.EI W = TSN[W, u].res ;
+
+  tsN-act (V W : Ob) (g : Hom V W) (u : KF.TS.EI W) : Id (KP.TS.EI V) (KP.TS.E.act V W g (tsN W u)) (tsN V (KF.TS.E.act V W g u)) =
+    LP.ts-ext V (KP.TS.E.act V W g (tsN W u)) (tsN V (KF.TS.E.act V W g u))
+      (transH (apH (KP.TV.E.act V W g) (KP.mkTS-pt W (tvN W u.1) TSN[W, u].lineP (refl (psi W u.1.1)) TSN[W, u].qN))
+        (transH (symH (tvN-act V W g u.1))
+          (symH (KP.mkTS-pt V (tvN V (KF.TS.E.act V W g u).1) TSN[V, KF.TS.E.act V W g u].lineP
+                   (refl (psi V (KF.TS.E.act V W g u).1.1)) TSN[V, KF.TS.E.act V W g u].qN))))
+      (\ V' g' j -> transH (LP.line-act V W g (tsN W u) V' g' j)
+                     (transH (TSN[W, u].res-lev V' (compH V' V W g g') j) (symH (TSN[V, KF.TS.E.act V W g u].res-lev V' g' j)))) ;
+
+  module MN = GCF.MapP[KF.TV.E, KP.TV.E, KF.SFm.SF, KP.SFm.SF, tvS, tsN,
+                       \ W u -> KP.mkTS-pt W (tvN W u.1) TSN[W, u].lineP (refl (psi W u.1.1)) TSN[W, u].qN, tsN-act] ;
+} ;
+
+module ToFam (P : PathStr) (C : PathConn[P]) (G : PCtx) (A : PTy[G]) (e : IPt) (kP : LineFibP[P, G, A].FibAt e) {
+  module M = PsiMap[P, C, G, A, e] ;
+  module TA = GPR.TyL[G, A] ;
+  module FG = GFam[lv].FC[G] ;
+  module FA = GFam[lv].FT[G, A] ;
+  module KP = EndKit[P, G, A, e] ;
+  module KF = EndKit[GFam[lv].famPath, G, A, e] ;
+  module LP = LevKit[P, C, G, A, e] ;
+  module LF = LevKit[GFam[lv].famPath, GFam[lv].famConn, G, A, e] ;
+
+  ----------------------------------------------------------------------
+  -- the filler of P, read as a family
+
+  module Fill (X : Ob) (w : KF.TV.EI X) (p : KF.PT.Partial[X, w]) {
+    -- the line of P filling the moved problem, read as a family in E
+    lf (W : Ob) (f : Hom W X) (i : Hom W Iv) : TA.EI W =
+      C.levA G A X (M.psi X w.1, (kP.kop X (M.tvN X w) (M.MN.mapP X w p)).1) W f i ;
+
+    lf-pt (W : Ob) (f : Hom W X) (i : Hom W Iv) : Id (W0.Ix (G.ob W)) (lf W f i).1 (w.1.1 W f i) =
+      transH (C.levA-pt G A X (M.psi X w.1, (kP.kop X (M.tvN X w) (M.MN.mapP X w p)).1) W f i) (M.psi-lev X w.1 W f i) ;
+
+    Lfam : W0.Ix (FA.FE.ob X) = (lf, C.levA-nat G A X (M.psi X w.1, (kP.kop X (M.tvN X w) (M.MN.mapP X w p)).1)) ;
+
+    L : W0.Ix (FA.tobF X w.1) = (Lfam, FG.fam-eq X (FA.piL X Lfam) w.1 lf-pt) ;
+
+    endF : Id (KF.TV.EI X) ((GFam[lv].famPath.pevA G A e).mE X (w.1, L)) w =
+      KF.tv-eq X ((GFam[lv].famPath.pevA G A e).mE X (w.1, L)) w (refl w.1)
+        (calc (TA.EI X) {
+            KF.endE X ((GFam[lv].famPath.pevA G A e).mE X (w.1, L))
+          =< LF.endL-lev X (w.1, L) >
+            lf X (idH X) (ptH X e)
+          =< symH (LP.endL-lev X (M.psi X w.1, (kP.kop X (M.tvN X w) (M.MN.mapP X w p)).1)) >
+            KP.endE X ((P.pevA G A e).mE X (M.psi X w.1, (kP.kop X (M.tvN X w) (M.MN.mapP X w p)).1))
+          =< apH (KP.endE X) (kP.kop X (M.tvN X w) (M.MN.mapP X w p)).2 >
+            KP.endE X (M.tvN X w)
+          =< M.tvN-E X w >
+            KF.endE X w }) ;
+
+    kop : KF.TS.T X w = (L, endF) ;
+  } ;
+
+  kside (X : Ob) (w : KF.TV.EI X) (p : KF.PT.Partial[X, w]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (h : Lands W X (p.ps l).pQ f)
+    : Id (KF.TS.EI W) (KF.TS.E.act W X f (w, Fill[X, w, p].kop)) ((p.ps l).pv W f h) =
+    LF.ts-ext W (KF.TS.E.act W X f (w, Fill[X, w, p].kop)) ((p.ps l).pv W f h) (symH ((p.ps l).ppt W f h))
+      (\ V g j ->
+        calc (TA.EI V) {
+            GFam[lv].famConn.levA G A W (KF.lineL W (KF.TS.E.act W X f (w, Fill[X, w, p].kop))) V g j
+          =< LF.line-act W X f (w, Fill[X, w, p].kop) V g j >
+            C.levA G A X (M.psi X w.1, (kP.kop X (M.tvN X w) (M.MN.mapP X w p)).1) V (compH V W X f g) j
+          =< symH (LP.line-act W X f (M.tvN X w, kP.kop X (M.tvN X w) (M.MN.mapP X w p)) V g j) >
+            C.levA G A W (KP.lineL W (KP.TS.E.act W X f (M.tvN X w, kP.kop X (M.tvN X w) (M.MN.mapP X w p)))) V g j
+          =< apH (\ z -> C.levA G A W (KP.lineL W z) V g j)
+                 (transH (kP.kside X (M.tvN X w) (M.MN.mapP X w p) l W f h) (M.MN.mapS-pv X w (p.ps l) W f h)) >
+            C.levA G A W (KP.lineL W (M.tsN W ((p.ps l).pv W f h))) V g j
+          =< M.TSN[W, (p.ps l).pv W f h].res-lev V g j >
+            GFam[lv].famConn.levA G A W (KF.lineL W ((p.ps l).pv W f h)) V g j }) ;
+
+  kunif (Y X : Ob) (h : Hom Y X) (w : KF.TV.EI X) (p : KF.PT.Partial[X, w])
+    : Id (KF.TS.EI Y) (KF.TS.E.act Y X h (w, Fill[X, w, p].kop))
+                      (KF.TV.E.act Y X h w, Fill[Y, KF.TV.E.act Y X h w, KF.PT.restrictP Y X h w p].kop) =
+    LF.ts-ext Y (KF.TS.E.act Y X h (w, Fill[X, w, p].kop))
+      (KF.TV.E.act Y X h w, Fill[Y, KF.TV.E.act Y X h w, KF.PT.restrictP Y X h w p].kop) (refl (KF.TV.E.act Y X h w))
+      (\ V g j ->
+        calc (TA.EI V) {
+            GFam[lv].famConn.levA G A Y (KF.lineL Y (KF.TS.E.act Y X h (w, Fill[X, w, p].kop))) V g j
+          =< LF.line-act Y X h (w, Fill[X, w, p].kop) V g j >
+            C.levA G A X (M.psi X w.1, (kP.kop X (M.tvN X w) (M.MN.mapP X w p)).1) V (compH V Y X h g) j
+          =< symH (LP.line-act Y X h (M.tvN X w, kP.kop X (M.tvN X w) (M.MN.mapP X w p)) V g j) >
+            C.levA G A Y (KP.lineL Y (KP.TS.E.act Y X h (M.tvN X w, kP.kop X (M.tvN X w) (M.MN.mapP X w p)))) V g j
+          =< apH (\ z -> C.levA G A Y (KP.lineL Y z) V g j)
+                 (transH (kP.kunif Y X h (M.tvN X w) (M.MN.mapP X w p))
+                   (KP.PT.kop-cong kP Y (KP.TV.E.act Y X h (M.tvN X w)) (M.tvN Y (KF.TV.E.act Y X h w)) (symH (M.tvN-act Y X h w))
+                      (KP.PT.restrictP Y X h (M.tvN X w) (M.MN.mapP X w p)) (M.MN.mapP Y (KF.TV.E.act Y X h w) (KF.PT.restrictP Y X h w p))
+                      (M.MN.mapP-restr Y X h w p))) >
+            C.levA G A Y (KP.lineL Y (M.tvN Y (KF.TV.E.act Y X h w), kP.kop Y (M.tvN Y (KF.TV.E.act Y X h w)) (M.MN.mapP Y (KF.TV.E.act Y X h w) (KF.PT.restrictP Y X h w p)))) V g j
+          =< refl (C.levA G A Y (M.psi Y (KF.TV.E.act Y X h w).1, (kP.kop Y (M.tvN Y (KF.TV.E.act Y X h w)) (M.MN.mapP Y (KF.TV.E.act Y X h w) (KF.PT.restrictP Y X h w p))).1) V g j) >
+            GFam[lv].famConn.levA G A Y (KF.lineL Y (KF.TV.E.act Y X h w, Fill[Y, KF.TV.E.act Y X h w, KF.PT.restrictP Y X h w p].kop)) V g j }) ;
+
+  fibAt : LineFibP[GFam[lv].famPath, G, A].FibAt e =
+    new KF.PT.ContrOp[\ X w p -> Fill[X, w, p].kop, kside, kunif] ;
+
+  -- ESI is transferred
+  module MI = GCofEsi[lv].MapIns[KF.TV.E, KP.TV.E, KF.SFm.SF, KP.SFm.SF, M.tvS, M.tsN,
+                       \ W u -> KP.mkTS-pt W (M.tvN W u.1) M.TSN[W, u].lineP (refl (M.psi W u.1.1)) M.TSN[W, u].qN, M.tsN-act] ;
+
+  kesi (ke : GCofEsi[lv].PartialsEsi[KP.TV.E, KP.SFm.SF].KESI kP) : GCofEsi[lv].PartialsEsi[KF.TV.E, KF.SFm.SF].KESI fibAt =
+    \ X w k p p' ins ->
+      KF.SFm.sf-eq X w Fill[X, w, p'].kop Fill[X, w, p].kop
+        (FA.tob-eq X w.1 Fill[X, w, p'].L Fill[X, w, p].L
+          (FA.FE.fam-eq X Fill[X, w, p'].Lfam Fill[X, w, p].Lfam (\ W f i ->
+             apH (\ u -> C.levA G A X (M.psi X w.1, u.1) W f i) (ke X (M.tvN X w) k (M.MN.mapP X w p) (M.MN.mapP X w p') (MI.mapIns X w k p p' ins))))) ;
+} ;
+
+------------------------------------------------------------------------
+-- FibAt e at P from FibAt e at famPath
+
+module PhiMap (P : PathStr) (C : PathConn[P]) (G : PCtx) (A : PTy[G]) (e : IPt) {
+  module TA = GPR.TyL[G, A] ;
+  module FG = GFam[lv].FC[G] ;
+  module FA = GFam[lv].FT[G, A] ;
+  module KP = EndKit[P, G, A, e] ;
+  module KF = EndKit[GFam[lv].famPath, G, A, e] ;
+  module LP = LevKit[P, C, G, A, e] ;
+  module LF = LevKit[GFam[lv].famPath, GFam[lv].famConn, G, A, e] ;
+
+  -- a line of P as a family
+  phi (X : Ob) (x : W0.Ix ((P.pth G).ob X)) : W0.Ix (FG.ob X) = (C.lev G X x, C.lev-nat G X x) ;
+
+  phi-act (Y X : Ob) (h : Hom Y X) (x : W0.Ix ((P.pth G).ob X))
+    : Id (W0.Ix (FG.ob Y)) (phi Y ((P.pth G).act Y X h x)) (FG.actF Y X h (phi X x)) =
+    FG.fam-eq Y (phi Y ((P.pth G).act Y X h x)) (FG.actF Y X h (phi X x)) (\ W f i -> C.lev-act G Y X h x W f i) ;
+
+  tvN (X : Ob) (w : KP.TV.EI X) : KF.TV.EI X =
+    (phi X w.1, TA.coeT X ((P.pev G e).nt X w.1) (C.lev G X w.1 X (idH X) (ptH X e)) (C.lev-ev G e X w.1) w.2) ;
+
+  tvN-E (X : Ob) (w : KP.TV.EI X) : Id (TA.EI X) (KF.endE X (tvN X w)) (KP.endE X w) =
+    symH (TA.pr-coe X ((P.pev G e).nt X w.1) (C.lev G X w.1 X (idH X) (ptH X e)) (C.lev-ev G e X w.1) w.2) ;
+
+  tvN-act (Y X : Ob) (h : Hom Y X) (w : KP.TV.EI X) : Id (KF.TV.EI Y) (tvN Y (KP.TV.E.act Y X h w)) (KF.TV.E.act Y X h (tvN X w)) =
+    KF.tv-eq Y (tvN Y (KP.TV.E.act Y X h w)) (KF.TV.E.act Y X h (tvN X w)) (phi-act Y X h w.1)
+      (transH (tvN-E Y (KP.TV.E.act Y X h w))
+        (transH (KP.endE-act Y X h w)
+          (transH (apH (TA.E.act Y X h) (symH (tvN-E X w))) (symH (KF.endE-act Y X h (tvN X w)))))) ;
+
+  tvS : PSub[KP.TV.E, KF.TV.E] = new PSub[KP.TV.E, KF.TV.E, tvN, tvN-act] ;
+
+  -- on elements of the fibres: the family of values of the line
+  module TSN (W : Ob) (u : KP.TS.EI W) {
+    fam : W0.Ix (FA.FE.ob W) = (C.levA G A W (KP.lineL W u), C.levA-nat G A W (KP.lineL W u)) ;
+
+    lineF : KF.TL.EI W = (phi W u.1.1, (fam, FG.fam-eq W (FA.piL W fam) (phi W u.1.1) (\ W' f i -> C.levA-pt G A W (KP.lineL W u) W' f i))) ;
+
+    qN : Id (TA.EI W) (KF.endE W ((GFam[lv].famPath.pevA G A e).mE W lineF)) (KF.endE W (tvN W u.1)) =
+      calc (TA.EI W) {
+          KF.endE W ((GFam[lv].famPath.pevA G A e).mE W lineF)
+        =< LF.endL-lev W lineF >
+          C.levA G A W (KP.lineL W u) W (idH W) (ptH W e)
+        =< symH (LP.endL-lev W (KP.lineL W u)) >
+          KP.endE W ((P.pevA G A e).mE W (KP.lineL W u))
+        =< apH (KP.endE W) u.2.2 >
+          KP.endE W u.1
+        =< symH (tvN-E W u.1) >
+          KF.endE W (tvN W u.1) } ;
+
+    res : KF.TS.EI W = KF.mkTS W (tvN W u.1) lineF (refl (phi W u.1.1)) qN ;
+
+    res-lev (W' : Ob) (f : Hom W' W) (i : Hom W' Iv)
+      : Id (TA.EI W') (GFam[lv].famConn.levA G A W (KF.lineL W res) W' f i) (C.levA G A W (KP.lineL W u) W' f i) =
+      LF.mkTS-lev W (tvN W u.1) lineF (refl (phi W u.1.1)) qN W' f i ;
+  } ;
+
+  tsN (W : Ob) (u : KP.TS.EI W) : KF.TS.EI W = TSN[W, u].res ;
+
+  tsN-act (V W : Ob) (g : Hom V W) (u : KP.TS.EI W) : Id (KF.TS.EI V) (KF.TS.E.act V W g (tsN W u)) (tsN V (KP.TS.E.act V W g u)) =
+    LF.ts-ext V (KF.TS.E.act V W g (tsN W u)) (tsN V (KP.TS.E.act V W g u))
+      (transH (apH (KF.TV.E.act V W g) (KF.mkTS-pt W (tvN W u.1) TSN[W, u].lineF (refl (phi W u.1.1)) TSN[W, u].qN))
+        (transH (symH (tvN-act V W g u.1))
+          (symH (KF.mkTS-pt V (tvN V (KP.TS.E.act V W g u).1) TSN[V, KP.TS.E.act V W g u].lineF
+                   (refl (phi V (KP.TS.E.act V W g u).1.1)) TSN[V, KP.TS.E.act V W g u].qN))))
+      (\ V' g' j -> transH (LF.line-act V W g (tsN W u) V' g' j)
+                     (transH (TSN[W, u].res-lev V' (compH V' V W g g') j)
+                       (transH (symH (LP.line-act V W g u V' g' j)) (symH (TSN[V, KP.TS.E.act V W g u].res-lev V' g' j))))) ;
+
+  module MN = GCF.MapP[KP.TV.E, KF.TV.E, KP.SFm.SF, KF.SFm.SF, tvS, tsN,
+                       \ W u -> KF.mkTS-pt W (tvN W u.1) TSN[W, u].lineF (refl (phi W u.1.1)) TSN[W, u].qN, tsN-act] ;
+} ;
+
+module FromFam (P : PathStr) (C : PathConn[P]) (G : PCtx) (A : PTy[G]) (e : IPt) (kF : LineFibP[GFam[lv].famPath, G, A].FibAt e) {
+  module M = PhiMap[P, C, G, A, e] ;
+  module TA = GPR.TyL[G, A] ;
+  module FG = GFam[lv].FC[G] ;
+  module FA = GFam[lv].FT[G, A] ;
+  module KP = EndKit[P, G, A, e] ;
+  module KF = EndKit[GFam[lv].famPath, G, A, e] ;
+  module LP = LevKit[P, C, G, A, e] ;
+  module LF = LevKit[GFam[lv].famPath, GFam[lv].famConn, G, A, e] ;
+
+  ----------------------------------------------------------------------
+  -- the family filler, as a line of P (lamA)
+
+  module Fill (X : Ob) (w : KP.TV.EI X) (p : KP.PT.Partial[X, w]) {
+    fL : W0.Ix (FA.tobF X (M.phi X w.1)) = (kF.kop X (M.tvN X w) (M.MN.mapP X w p)).1 ;
+
+    tp (W : Ob) (f : Hom W X) (i : Hom W Iv) : Id (W0.Ix (G.ob W)) (fL.1.1 W f i).1 (C.lev G X w.1 W f i) =
+      apH (\ q -> q.1 W f i) fL.2 ;
+
+    l : W0.Ix ((P.pthTy G A).tob X w.1) = C.lamA G A X w.1 fL.1.1 tp fL.1.2 ;
+
+    l-lev (W : Ob) (f : Hom W X) (i : Hom W Iv) : Id (TA.EI W) (C.levA G A X (w.1, l) W f i) (fL.1.1 W f i) =
+      C.levA-lam G A X w.1 fL.1.1 tp fL.1.2 W f i ;
+
+    endP : Id (KP.TV.EI X) ((P.pevA G A e).mE X (w.1, l)) w =
+      KP.tv-eq X ((P.pevA G A e).mE X (w.1, l)) w ((P.pevA G A e).mpt X (w.1, l))
+        (calc (TA.EI X) {
+            KP.endE X ((P.pevA G A e).mE X (w.1, l))
+          =< LP.endL-lev X (w.1, l) >
+            C.levA G A X (w.1, l) X (idH X) (ptH X e)
+          =< l-lev X (idH X) (ptH X e) >
+            fL.1.1 X (idH X) (ptH X e)
+          =< symH (LF.endL-lev X (M.phi X w.1, fL)) >
+            KF.endE X ((GFam[lv].famPath.pevA G A e).mE X (M.phi X w.1, fL))
+          =< apH (KF.endE X) (kF.kop X (M.tvN X w) (M.MN.mapP X w p)).2 >
+            KF.endE X (M.tvN X w)
+          =< M.tvN-E X w >
+            KP.endE X w }) ;
+
+    kop : KP.TS.T X w = (l, endP) ;
+  } ;
+
+  kside (X : Ob) (w : KP.TV.EI X) (p : KP.PT.Partial[X, w]) (j : Fin p.pr) (W : Ob) (f : Hom W X) (h : Lands W X (p.ps j).pQ f)
+    : Id (KP.TS.EI W) (KP.TS.E.act W X f (w, Fill[X, w, p].kop)) ((p.ps j).pv W f h) =
+    LP.ts-ext W (KP.TS.E.act W X f (w, Fill[X, w, p].kop)) ((p.ps j).pv W f h) (symH ((p.ps j).ppt W f h))
+      (\ V g i ->
+        calc (TA.EI V) {
+            C.levA G A W (KP.lineL W (KP.TS.E.act W X f (w, Fill[X, w, p].kop))) V g i
+          =< LP.line-act W X f (w, Fill[X, w, p].kop) V g i >
+            C.levA G A X (w.1, Fill[X, w, p].l) V (compH V W X f g) i
+          =< Fill[X, w, p].l-lev V (compH V W X f g) i >
+            (kF.kop X (M.tvN X w) (M.MN.mapP X w p)).1.1.1 V (compH V W X f g) i
+          =< symH (LF.line-act W X f (M.tvN X w, kF.kop X (M.tvN X w) (M.MN.mapP X w p)) V g i) >
+            GFam[lv].famConn.levA G A W (KF.lineL W (KF.TS.E.act W X f (M.tvN X w, kF.kop X (M.tvN X w) (M.MN.mapP X w p)))) V g i
+          =< apH (\ z -> GFam[lv].famConn.levA G A W (KF.lineL W z) V g i)
+                 (transH (kF.kside X (M.tvN X w) (M.MN.mapP X w p) j W f h) (M.MN.mapS-pv X w (p.ps j) W f h)) >
+            GFam[lv].famConn.levA G A W (KF.lineL W (M.tsN W ((p.ps j).pv W f h))) V g i
+          =< M.TSN[W, (p.ps j).pv W f h].res-lev V g i >
+            C.levA G A W (KP.lineL W ((p.ps j).pv W f h)) V g i }) ;
+
+  kunif (Y X : Ob) (h : Hom Y X) (w : KP.TV.EI X) (p : KP.PT.Partial[X, w])
+    : Id (KP.TS.EI Y) (KP.TS.E.act Y X h (w, Fill[X, w, p].kop))
+                      (KP.TV.E.act Y X h w, Fill[Y, KP.TV.E.act Y X h w, KP.PT.restrictP Y X h w p].kop) =
+    LP.ts-ext Y (KP.TS.E.act Y X h (w, Fill[X, w, p].kop))
+      (KP.TV.E.act Y X h w, Fill[Y, KP.TV.E.act Y X h w, KP.PT.restrictP Y X h w p].kop) (refl (KP.TV.E.act Y X h w))
+      (\ V g i ->
+        calc (TA.EI V) {
+            C.levA G A Y (KP.lineL Y (KP.TS.E.act Y X h (w, Fill[X, w, p].kop))) V g i
+          =< LP.line-act Y X h (w, Fill[X, w, p].kop) V g i >
+            C.levA G A X (w.1, Fill[X, w, p].l) V (compH V Y X h g) i
+          =< Fill[X, w, p].l-lev V (compH V Y X h g) i >
+            (kF.kop X (M.tvN X w) (M.MN.mapP X w p)).1.1.1 V (compH V Y X h g) i
+          =< symH (LF.line-act Y X h (M.tvN X w, kF.kop X (M.tvN X w) (M.MN.mapP X w p)) V g i) >
+            GFam[lv].famConn.levA G A Y (KF.lineL Y (KF.TS.E.act Y X h (M.tvN X w, kF.kop X (M.tvN X w) (M.MN.mapP X w p)))) V g i
+          =< apH (\ z -> GFam[lv].famConn.levA G A Y (KF.lineL Y z) V g i)
+                 (transH (kF.kunif Y X h (M.tvN X w) (M.MN.mapP X w p))
+                   (KF.PT.kop-cong kF Y (KF.TV.E.act Y X h (M.tvN X w)) (M.tvN Y (KP.TV.E.act Y X h w)) (symH (M.tvN-act Y X h w))
+                      (KF.PT.restrictP Y X h (M.tvN X w) (M.MN.mapP X w p)) (M.MN.mapP Y (KP.TV.E.act Y X h w) (KP.PT.restrictP Y X h w p))
+                      (M.MN.mapP-restr Y X h w p))) >
+            (kF.kop Y (M.tvN Y (KP.TV.E.act Y X h w)) (M.MN.mapP Y (KP.TV.E.act Y X h w) (KP.PT.restrictP Y X h w p))).1.1.1 V g i
+          =< symH (Fill[Y, KP.TV.E.act Y X h w, KP.PT.restrictP Y X h w p].l-lev V g i) >
+            C.levA G A Y (KP.lineL Y (KP.TV.E.act Y X h w, Fill[Y, KP.TV.E.act Y X h w, KP.PT.restrictP Y X h w p].kop)) V g i }) ;
+
+  fibAt : LineFibP[P, G, A].FibAt e = new KP.PT.ContrOp[\ X w p -> Fill[X, w, p].kop, kside, kunif] ;
+
+  -- ESI is transferred
+  module MI = GCofEsi[lv].MapIns[KP.TV.E, KF.TV.E, KP.SFm.SF, KF.SFm.SF, M.tvS, M.tsN,
+                       \ W u -> KF.mkTS-pt W (M.tvN W u.1) M.TSN[W, u].lineF (refl (M.phi W u.1.1)) M.TSN[W, u].qN, M.tsN-act] ;
+
+  kesi (ke : GCofEsi[lv].PartialsEsi[KF.TV.E, KF.SFm.SF].KESI kF) : GCofEsi[lv].PartialsEsi[KP.TV.E, KP.SFm.SF].KESI fibAt =
+    \ X w k p p' ins ->
+      KP.SFm.sf-eq X w Fill[X, w, p'].kop Fill[X, w, p].kop
+        (KP.TL.pr-inj X w.1 Fill[X, w, p'].l Fill[X, w, p].l
+          (C.levA-ext G A X (w.1, Fill[X, w, p'].l) (w.1, Fill[X, w, p].l) (\ W f i ->
+             transH (Fill[X, w, p'].l-lev W f i)
+               (transH (apH (\ u -> u.1.1.1 W f i) (ke X (M.tvN X w) k (M.MN.mapP X w p) (M.MN.mapP X w p') (MI.mapIns X w k p p' ins)))
+                       (symH (Fill[X, w, p].l-lev W f i)))))) ;
+} ;
+
+------------------------------------------------------------------------
+-- CompAt e e' at famPath from CompAt e e' at P
+
+module ToFamC (P : PathStr) (C : PathConn[P]) (G : PCtx) (A : PTy[G]) (e e' : IPt) (cS : CompAtP[P, G, A, e, e'].CompAt) {
+  module M = PsiMap[P, C, G, A, e] ;
+  module TA = GPR.TyL[G, A] ;
+  module CS = CompAtP[P, G, A, e, e'] ;
+  module CT = CompAtP[GFam[lv].famPath, G, A, e, e'] ;
+  module KS' = EndKit[P, G, A, e'] ;
+  module KT' = EndKit[GFam[lv].famPath, G, A, e'] ;
+  module LS' = LevKit[P, C, G, A, e'] ;
+  module LT' = LevKit[GFam[lv].famPath, GFam[lv].famConn, G, A, e'] ;
+
+  -- the end e' of the moved line
+  evE (X : Ob) (w : CT.TV.EI X) : Id (W0.Ix (G.ob X)) ((P.pev G e').nt X (M.tvN X w).1) ((GFam[lv].famPath.pev G e').nt X w.1) =
+    transH (C.lev-ev G e' X (M.psi X w.1)) (M.psi-lev X w.1 X (idH X) (ptH X e')) ;
+
+  cop (X : Ob) (w : CT.TV.EI X) (p : CT.PT.Partial[X, w]) : CT.TV'.T X w.1 =
+    TA.coeT X ((P.pev G e').nt X (M.tvN X w).1) ((GFam[lv].famPath.pev G e').nt X w.1) (evE X w)
+      (cS.cop X (M.tvN X w) (M.MN.mapP X w p)) ;
+
+  cop-E (X : Ob) (w : CT.TV.EI X) (p : CT.PT.Partial[X, w])
+    : Id (TA.EI X) (KT'.endE X (w.1, cop X w p)) (KS'.endE X ((M.tvN X w).1, cS.cop X (M.tvN X w) (M.MN.mapP X w p))) =
+    symH (TA.pr-coe X ((P.pev G e').nt X (M.tvN X w).1) ((GFam[lv].famPath.pev G e').nt X w.1) (evE X w)
+            (cS.cop X (M.tvN X w) (M.MN.mapP X w p))) ;
+
+  cside (X : Ob) (w : CT.TV.EI X) (p : CT.PT.Partial[X, w]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (h : Lands W X (p.ps l).pQ f)
+    : Id (CT.TV'.EI W) (CT.TV'.E.act W X f (w.1, cop X w p)) (CT.endL W ((p.ps l).pv W f h)) =
+    KT'.tv-eq W (CT.TV'.E.act W X f (w.1, cop X w p)) (CT.endL W ((p.ps l).pv W f h)) (symH (apH (\ z -> z.1) ((p.ps l).ppt W f h)))
+      (calc (TA.EI W) {
+          KT'.endE W (CT.TV'.E.act W X f (w.1, cop X w p))
+        =< KT'.endE-act W X f (w.1, cop X w p) >
+          TA.E.act W X f (KT'.endE X (w.1, cop X w p))
+        =< apH (TA.E.act W X f) (cop-E X w p) >
+          TA.E.act W X f (KS'.endE X ((M.tvN X w).1, cS.cop X (M.tvN X w) (M.MN.mapP X w p)))
+        =< symH (KS'.endE-act W X f ((M.tvN X w).1, cS.cop X (M.tvN X w) (M.MN.mapP X w p))) >
+          KS'.endE W (CS.TV'.E.act W X f ((M.tvN X w).1, cS.cop X (M.tvN X w) (M.MN.mapP X w p)))
+        =< apH (KS'.endE W) (transH (cS.cside X (M.tvN X w) (M.MN.mapP X w p) l W f h)
+                                    (apH (CS.endL W) (M.MN.mapS-pv X w (p.ps l) W f h))) >
+          KS'.endE W (CS.endL W (M.tsN W ((p.ps l).pv W f h)))
+        =< LS'.endL-lev W (CS.EK.lineL W (M.tsN W ((p.ps l).pv W f h))) >
+          C.levA G A W (CS.EK.lineL W (M.tsN W ((p.ps l).pv W f h))) W (idH W) (ptH W e')
+        =< M.TSN[W, (p.ps l).pv W f h].res-lev W (idH W) (ptH W e') >
+          GFam[lv].famConn.levA G A W (CT.EK.lineL W ((p.ps l).pv W f h)) W (idH W) (ptH W e')
+        =< symH (LT'.endL-lev W (CT.EK.lineL W ((p.ps l).pv W f h))) >
+          KT'.endE W (CT.endL W ((p.ps l).pv W f h)) }) ;
+
+  cunif (Y X : Ob) (h : Hom Y X) (w : CT.TV.EI X) (p : CT.PT.Partial[X, w])
+    : Id (CT.TV'.EI Y) (CT.TV'.E.act Y X h (w.1, cop X w p)) ((CT.TV.E.act Y X h w).1, cop Y (CT.TV.E.act Y X h w) (CT.PT.restrictP Y X h w p)) =
+    KT'.tv-eq Y (CT.TV'.E.act Y X h (w.1, cop X w p)) ((CT.TV.E.act Y X h w).1, cop Y (CT.TV.E.act Y X h w) (CT.PT.restrictP Y X h w p))
+      (refl (CT.TV.E.act Y X h w).1)
+      (calc (TA.EI Y) {
+          KT'.endE Y (CT.TV'.E.act Y X h (w.1, cop X w p))
+        =< KT'.endE-act Y X h (w.1, cop X w p) >
+          TA.E.act Y X h (KT'.endE X (w.1, cop X w p))
+        =< apH (TA.E.act Y X h) (cop-E X w p) >
+          TA.E.act Y X h (KS'.endE X ((M.tvN X w).1, cS.cop X (M.tvN X w) (M.MN.mapP X w p)))
+        =< symH (KS'.endE-act Y X h ((M.tvN X w).1, cS.cop X (M.tvN X w) (M.MN.mapP X w p))) >
+          KS'.endE Y (CS.TV'.E.act Y X h ((M.tvN X w).1, cS.cop X (M.tvN X w) (M.MN.mapP X w p)))
+        =< apH (KS'.endE Y)
+             (transH (cS.cunif Y X h (M.tvN X w) (M.MN.mapP X w p))
+               (CS.cop-cong cS Y (CS.TV.E.act Y X h (M.tvN X w)) (M.tvN Y (CT.TV.E.act Y X h w)) (symH (M.tvN-act Y X h w))
+                  (CS.PT.restrictP Y X h (M.tvN X w) (M.MN.mapP X w p)) (M.MN.mapP Y (CT.TV.E.act Y X h w) (CT.PT.restrictP Y X h w p))
+                  (M.MN.mapP-restr Y X h w p))) >
+          KS'.endE Y ((M.tvN Y (CT.TV.E.act Y X h w)).1, cS.cop Y (M.tvN Y (CT.TV.E.act Y X h w)) (M.MN.mapP Y (CT.TV.E.act Y X h w) (CT.PT.restrictP Y X h w p)))
+        =< symH (cop-E Y (CT.TV.E.act Y X h w) (CT.PT.restrictP Y X h w p)) >
+          KT'.endE Y ((CT.TV.E.act Y X h w).1, cop Y (CT.TV.E.act Y X h w) (CT.PT.restrictP Y X h w p)) }) ;
+
+  compAt : CT.CompAt = new CT.CompAt[cop, cside, cunif] ;
+
+  module MI = GCofEsi[lv].MapIns[CT.TV.E, CS.TV.E, CT.SFm.SF, CS.SFm.SF, M.tvS, M.tsN, \ W u -> CS.EK.mkTS-pt W (M.tvN W u.1) M.TSN[W, u].lineP (refl (M.psi W u.1.1)) M.TSN[W, u].qN, M.tsN-act] ;
+
+  cesi (ce : CS.CESI cS) : CT.CESI compAt = \ X w k p p' ins ->
+    apH (\ c -> TA.coeT X ((P.pev G e').nt X (M.tvN X w).1) ((GFam[lv].famPath.pev G e').nt X w.1) (evE X w) c)
+      (ce X (M.tvN X w) k (M.MN.mapP X w p) (M.MN.mapP X w p') (MI.mapIns X w k p p' ins)) ;
+} ;
+
+------------------------------------------------------------------------
+-- CompAt e e' at P from CompAt e e' at famPath
+
+module FromFamC (P : PathStr) (C : PathConn[P]) (G : PCtx) (A : PTy[G]) (e e' : IPt) (cS : CompAtP[GFam[lv].famPath, G, A, e, e'].CompAt) {
+  module M = PhiMap[P, C, G, A, e] ;
+  module TA = GPR.TyL[G, A] ;
+  module CS = CompAtP[GFam[lv].famPath, G, A, e, e'] ;
+  module CT = CompAtP[P, G, A, e, e'] ;
+  module KS' = EndKit[GFam[lv].famPath, G, A, e'] ;
+  module KT' = EndKit[P, G, A, e'] ;
+  module LS' = LevKit[GFam[lv].famPath, GFam[lv].famConn, G, A, e'] ;
+  module LT' = LevKit[P, C, G, A, e'] ;
+
+  -- the end e' of the moved line
+  evE (X : Ob) (w : CT.TV.EI X) : Id (W0.Ix (G.ob X)) ((GFam[lv].famPath.pev G e').nt X (M.tvN X w).1) ((P.pev G e').nt X w.1) =
+    symH (C.lev-ev G e' X w.1) ;
+
+  cop (X : Ob) (w : CT.TV.EI X) (p : CT.PT.Partial[X, w]) : CT.TV'.T X w.1 =
+    TA.coeT X ((GFam[lv].famPath.pev G e').nt X (M.tvN X w).1) ((P.pev G e').nt X w.1) (evE X w)
+      (cS.cop X (M.tvN X w) (M.MN.mapP X w p)) ;
+
+  cop-E (X : Ob) (w : CT.TV.EI X) (p : CT.PT.Partial[X, w])
+    : Id (TA.EI X) (KT'.endE X (w.1, cop X w p)) (KS'.endE X ((M.tvN X w).1, cS.cop X (M.tvN X w) (M.MN.mapP X w p))) =
+    symH (TA.pr-coe X ((GFam[lv].famPath.pev G e').nt X (M.tvN X w).1) ((P.pev G e').nt X w.1) (evE X w)
+            (cS.cop X (M.tvN X w) (M.MN.mapP X w p))) ;
+
+  cside (X : Ob) (w : CT.TV.EI X) (p : CT.PT.Partial[X, w]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (h : Lands W X (p.ps l).pQ f)
+    : Id (CT.TV'.EI W) (CT.TV'.E.act W X f (w.1, cop X w p)) (CT.endL W ((p.ps l).pv W f h)) =
+    KT'.tv-eq W (CT.TV'.E.act W X f (w.1, cop X w p)) (CT.endL W ((p.ps l).pv W f h)) (symH (transH ((P.pevA G A e').mpt W (CT.EK.lineL W ((p.ps l).pv W f h))) (apH (\ z -> z.1) ((p.ps l).ppt W f h))))
+      (calc (TA.EI W) {
+          KT'.endE W (CT.TV'.E.act W X f (w.1, cop X w p))
+        =< KT'.endE-act W X f (w.1, cop X w p) >
+          TA.E.act W X f (KT'.endE X (w.1, cop X w p))
+        =< apH (TA.E.act W X f) (cop-E X w p) >
+          TA.E.act W X f (KS'.endE X ((M.tvN X w).1, cS.cop X (M.tvN X w) (M.MN.mapP X w p)))
+        =< symH (KS'.endE-act W X f ((M.tvN X w).1, cS.cop X (M.tvN X w) (M.MN.mapP X w p))) >
+          KS'.endE W (CS.TV'.E.act W X f ((M.tvN X w).1, cS.cop X (M.tvN X w) (M.MN.mapP X w p)))
+        =< apH (KS'.endE W) (transH (cS.cside X (M.tvN X w) (M.MN.mapP X w p) l W f h)
+                                    (apH (CS.endL W) (M.MN.mapS-pv X w (p.ps l) W f h))) >
+          KS'.endE W (CS.endL W (M.tsN W ((p.ps l).pv W f h)))
+        =< LS'.endL-lev W (CS.EK.lineL W (M.tsN W ((p.ps l).pv W f h))) >
+          GFam[lv].famConn.levA G A W (CS.EK.lineL W (M.tsN W ((p.ps l).pv W f h))) W (idH W) (ptH W e')
+        =< M.TSN[W, (p.ps l).pv W f h].res-lev W (idH W) (ptH W e') >
+          C.levA G A W (CT.EK.lineL W ((p.ps l).pv W f h)) W (idH W) (ptH W e')
+        =< symH (LT'.endL-lev W (CT.EK.lineL W ((p.ps l).pv W f h))) >
+          KT'.endE W (CT.endL W ((p.ps l).pv W f h)) }) ;
+
+  cunif (Y X : Ob) (h : Hom Y X) (w : CT.TV.EI X) (p : CT.PT.Partial[X, w])
+    : Id (CT.TV'.EI Y) (CT.TV'.E.act Y X h (w.1, cop X w p)) ((CT.TV.E.act Y X h w).1, cop Y (CT.TV.E.act Y X h w) (CT.PT.restrictP Y X h w p)) =
+    KT'.tv-eq Y (CT.TV'.E.act Y X h (w.1, cop X w p)) ((CT.TV.E.act Y X h w).1, cop Y (CT.TV.E.act Y X h w) (CT.PT.restrictP Y X h w p))
+      (refl (CT.TV.E.act Y X h w).1)
+      (calc (TA.EI Y) {
+          KT'.endE Y (CT.TV'.E.act Y X h (w.1, cop X w p))
+        =< KT'.endE-act Y X h (w.1, cop X w p) >
+          TA.E.act Y X h (KT'.endE X (w.1, cop X w p))
+        =< apH (TA.E.act Y X h) (cop-E X w p) >
+          TA.E.act Y X h (KS'.endE X ((M.tvN X w).1, cS.cop X (M.tvN X w) (M.MN.mapP X w p)))
+        =< symH (KS'.endE-act Y X h ((M.tvN X w).1, cS.cop X (M.tvN X w) (M.MN.mapP X w p))) >
+          KS'.endE Y (CS.TV'.E.act Y X h ((M.tvN X w).1, cS.cop X (M.tvN X w) (M.MN.mapP X w p)))
+        =< apH (KS'.endE Y)
+             (transH (cS.cunif Y X h (M.tvN X w) (M.MN.mapP X w p))
+               (CS.cop-cong cS Y (CS.TV.E.act Y X h (M.tvN X w)) (M.tvN Y (CT.TV.E.act Y X h w)) (symH (M.tvN-act Y X h w))
+                  (CS.PT.restrictP Y X h (M.tvN X w) (M.MN.mapP X w p)) (M.MN.mapP Y (CT.TV.E.act Y X h w) (CT.PT.restrictP Y X h w p))
+                  (M.MN.mapP-restr Y X h w p))) >
+          KS'.endE Y ((M.tvN Y (CT.TV.E.act Y X h w)).1, cS.cop Y (M.tvN Y (CT.TV.E.act Y X h w)) (M.MN.mapP Y (CT.TV.E.act Y X h w) (CT.PT.restrictP Y X h w p)))
+        =< symH (cop-E Y (CT.TV.E.act Y X h w) (CT.PT.restrictP Y X h w p)) >
+          KT'.endE Y ((CT.TV.E.act Y X h w).1, cop Y (CT.TV.E.act Y X h w) (CT.PT.restrictP Y X h w p)) }) ;
+
+  compAt : CT.CompAt = new CT.CompAt[cop, cside, cunif] ;
+
+  module MI = GCofEsi[lv].MapIns[CT.TV.E, CS.TV.E, CT.SFm.SF, CS.SFm.SF, M.tvS, M.tsN, \ W u -> CS.EK.mkTS-pt W (M.tvN W u.1) M.TSN[W, u].lineF (refl (M.phi W u.1.1)) M.TSN[W, u].qN, M.tsN-act] ;
+
+  cesi (ce : CS.CESI cS) : CT.CESI compAt = \ X w k p p' ins ->
+    apH (\ c -> TA.coeT X ((GFam[lv].famPath.pev G e').nt X (M.tvN X w).1) ((P.pev G e').nt X w.1) (evE X w) c)
+      (ce X (M.tvN X w) k (M.MN.mapP X w p) (M.MN.mapP X w p') (MI.mapIns X w k p p' ins)) ;
+} ;
+
+------------------------------------------------------------------------
+-- the round trip: a composition at P, moved to the family path object and
+-- back, has the same composites (the exponential law lam o lev = id)
+
+module RoundC (P : PathStr) (C : PathConn[P]) (G : PCtx) (A : PTy[G]) (e e' : IPt) (cS : CompAtP[P, G, A, e, e'].CompAt) {
+  module T = ToFamC[P, C, G, A, e, e', cS] ;
+  module F = FromFamC[P, C, G, A, e, e', T.compAt] ;
+  module Ps = T.M ;
+  module Ph = F.M ;
+  module CS = CompAtP[P, G, A, e, e'] ;
+  module TA = GPR.TyL[G, A] ;
+
+  tvRT (X : Ob) (x : CS.TV.EI X) : Id (CS.TV.EI X) (Ps.tvN X (Ph.tvN X x)) x =
+    Ps.KP.tv-eq X (Ps.tvN X (Ph.tvN X x)) x
+      (C.lev-ext G X (Ps.psi X (Ph.phi X x.1)) x.1 (\ W f i -> Ps.psi-lev X (Ph.phi X x.1) W f i))
+      (transH (Ps.tvN-E X (Ph.tvN X x)) (Ph.tvN-E X x)) ;
+
+  tsRT (W : Ob) (u : CS.TS.EI W) : Id (CS.TS.EI W) (Ps.tsN W (Ph.tsN W u)) u =
+    Ps.LP.ts-ext W (Ps.tsN W (Ph.tsN W u)) u
+      (transH (Ps.KP.mkTS-pt W (Ps.tvN W (Ph.tsN W u).1) Ps.TSN[W, Ph.tsN W u].lineP (refl (Ps.psi W (Ph.tsN W u).1.1)) Ps.TSN[W, Ph.tsN W u].qN)
+        (transH (apH (Ps.tvN W) (Ph.KF.mkTS-pt W (Ph.tvN W u.1) Ph.TSN[W, u].lineF (refl (Ph.phi W u.1.1)) Ph.TSN[W, u].qN))
+          (tvRT W u.1)))
+      (\ V g j -> transH (Ps.TSN[W, Ph.tsN W u].res-lev V g j) (Ph.TSN[W, u].res-lev V g j)) ;
+
+  rt (X : Ob) (x : CS.TV.EI X) (p : CS.PT.Partial[X, x]) : Id (CS.TV'.T X x.1) (F.cop X x p) (cS.cop X x p) =
+    TA.pr-inj X ((P.pev G e').nt X x.1) (F.cop X x p) (cS.cop X x p)
+      (transH (F.cop-E X x p)
+        (transH (T.cop-E X (Ph.tvN X x) (Ph.MN.mapP X x p))
+          (apH (T.KS'.endE X)
+            (CS.cop-cong cS X (Ps.tvN X (Ph.tvN X x)) x (tvRT X x) (Ps.MN.mapP X (Ph.tvN X x) (Ph.MN.mapP X x p)) p
+              (CS.PT.partExtH X (Ps.tvN X (Ph.tvN X x)) x (tvRT X x) (Ps.MN.mapP X (Ph.tvN X x) (Ph.MN.mapP X x p)) p
+                 (refl p.pr) (\ l -> refl (p.ps l).pQ)
+                 (\ l W f i i' -> transH (Ps.MN.mapS-pv X (Ph.tvN X x) (Ph.MN.mapS X x (p.ps l)) W f i)
+                                    (transH (apH (Ps.tsN W) (Ph.MN.mapS-pv X x (p.ps l) W f i))
+                                      (transH (tsRT W ((p.ps l).pv W f i)) (CS.PT.pv-irr X x (p.ps l) W f i i'))))))))) ;
+} ;

@@ -1,0 +1,189 @@
+-- GExtNat6.seg (inside IvBase.FaU, any base): Theorem 7 along a
+-- substitution, step B5 (the composite, GExtComp3), as GExtComp4.Un's
+-- second half with h replaced by the transfer along (s , Phi).
+--   cfib-mv  a constant fibre element moves to a constant fibre element
+--   vEeq     the extension of the joined partial fibre element moves
+--            (ONE congruence: extEqS + kop-cong of extEquiv)
+--   copS     the composite of alpha[s], read through Phi, is the
+--            composite of the moved problem
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+
+module N6 (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D'])
+  (fullS : (X : Ob) (d : W0.Ix (D'.ob X)) -> Id Bool (GP.CofL[D', psi'].full X d) (GP.CofL[G, psi].full X (s.nt X d)))
+  (eS eT : IPt)
+  (kAS : LineFibP[GFam[a].famPath, G, A].FibAt eS)
+  (kBS : LineFibP[GFam[a].famPath, GP.CofL[G, psi].resCtx, B].FibAt eS)
+  (kAS' : LineFibP[GFam[a].famPath, D', subTy D' G A s].FibAt eS)
+  (kBS' : LineFibP[GFam[a].famPath, GP.CofL[D', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].psi'].resCtx,
+                   GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].B'].FibAt eS)
+  (kA1 : LineFibP[GFam[a].famPath, G, A].FibAt e1)
+  (kA1' : LineFibP[GFam[a].famPath, D', subTy D' G A s].FibAt e1)
+  (eal : GEquiv[a].EquivOp GP.CofL[G, psi].resCtx B (subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR) al)
+  (eal' : GEquiv[a].EquivOp GP.CofL[D', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].psi'].resCtx
+            GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].B' GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].ED'.A'
+            GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].al')
+  (kAe : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, eS].TV.E, EndKit[GFam[a].famPath, G, A, eS].SFm.SF].KESI kAS)
+  (kA1e : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, e1].TV.E, EndKit[GFam[a].famPath, G, A, e1].SFm.SF].KESI kA1)
+  (keal : GCofEsi[a].PartialsEsi[GExt.ExtDef[G, A, psi].EA', GEquiv[a].HFib[GP.CofL[G, psi].resCtx, B,
+            subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR, al].FibT].KESI eal) {
+  module N2 = GExtNat2.N2[G, A, psi, B, al, D', s, psi', fullS, eS, kAS, kBS, kAS', kBS', kAe] ;
+  module N3 = GExtNat3.N3[G, A, psi, B, al, D', s, psi', fullS] ;
+  module EM = N3.EM ;
+  module ES = N3.ES ;
+  module PS = N3.PS ;
+  module FMX = N3.FMX ;
+  module FMA = N3.FMA ;
+  module E4 = GExtEquiv4.ExtEq4[G, A, psi, B, al, kA1, eal, kA1e, keal] ;
+  module C3 = GExtComp3.C3[G, A, psi, B, al, eS, eT, kAS, kBS, kA1, eal] ;
+  module C3' = GExtComp3.C3[D', ES.A', ES.psi', ES.B', ES.al', eS, eT, kAS', kBS', kA1', eal'] ;
+
+  -- a constant fibre element moves
+  cfib-mv (V : Ob) (wf : FMX.HD.TA.EI V) (el : PS.TX'.EI V) (eq : Id (FMX.HD.TA.EI V) wf (EM.E4'.extE V el))
+    (eqM : Id (FMX.HG.TA.EI V) (FMX.PhA V wf) (EM.E4.extE V (PS.PhiE V el)))
+    : Id (FMX.HG.TF.EI V) (FMX.mvF V (C3'.cfib V wf el eq)) (C3.cfib V (FMX.PhA V wf) (PS.PhiE V el) eqM) =
+    FMX.HG.fibE-eq V (FMX.mvF V (C3'.cfib V wf el eq)) (C3.cfib V (FMX.PhA V wf) (PS.PhiE V el) eqM) (FMX.mvF-pt V (C3'.cfib V wf el eq))
+      (transH (FMX.mvF-B V (C3'.cfib V wf el eq))
+        (transH (apH (PS.PhiE V) (C3'.cfib-B V wf el eq)) (symH (C3.cfib-B V (FMX.PhA V wf) (PS.PhiE V el) eqM))))
+      (\ W g j -> transH (FMX.mvF-L V (C3'.cfib V wf el eq) W g j) ((liftP D' G A s).nt-nat W V g wf)) ;
+
+  eqMv (V : Ob) (wf : FMX.HD.TA.EI V) (el : PS.TX'.EI V) (eq : Id (FMX.HD.TA.EI V) wf (EM.E4'.extE V el))
+    : Id (FMX.HG.TA.EI V) (FMX.PhA V wf) (EM.E4.extE V (PS.PhiE V el)) =
+    transH (apH (FMX.PhA V) eq) (symH (EM.extPhi V el)) ;
+
+  opaque cfib-mv ;
+
+  module Sx (HB : N2.N1.HBTy) (HA : N2.HATy) (Hd : N2.HdTy) (XS : FMX.HTy C3'.E3.extEquiv C3.E3.extEquiv)
+    (X : Ob) (x' : N2.C1'.KX.TV.EI X) (p' : N2.C1'.KX.PT.Partial[X, x']) {
+    module S2 = N2.Sx[HB, HA, Hd, X, x', p'] ;
+    module CX' = C3'.Cop[X, x', p'] ;
+    module CX = C3.Cop[X, S2.xM, S2.pM] ;
+
+    w1eq : Id (FMX.HG.TA.EI X) (FMX.PhA X CX'.w1) CX.w1 = S2.FAv-S X (idH X) (ptH X eT) ;
+
+    wfEq (V : Ob) (f : Hom V X) : Id (FMX.HG.TA.EI V) (FMX.PhA V (FMX.HD.TA.E.act V X f CX'.w1)) (FMX.HG.TA.E.act V X f CX.w1) =
+      transH ((liftP D' G A s).nt-nat V X f CX'.w1) (apH (FMX.HG.TA.E.act V X f) w1eq) ;
+
+    -- the end at eT of a side moves
+    el1S (l : Fin p'.pr) (V : Ob) (f : Hom V X) (i i' : Lands V X (p'.ps l).pQ f)
+      : Id (PS.TX.EI V) (PS.PhiE V (CX'.el1 l V f i)) (CX.el1 l V f i') =
+      transH (apH (\ u -> PS.PhiE V (N2.C1'.lvX V u V (idH V) (ptH V eT))) (N2.C1'.KX.PT.pv-irr X x' (p'.ps l) V f i i'))
+             (symH (N2.TXM.TSN[V, (p'.ps l).pv V f i'].res-lev V (idH V) (ptH V eT))) ;
+
+    -- the top of the B-filler moves
+    el2S (d' : Fin (forallUn ES.CL'.r)) (d : Fin (forallUn ES.CL.r)) (V : Ob) (f : Hom V X) (i : Lands V X (S2.PX'.dl d') f) (i' : Lands V X (S2.PX.dl d) f)
+      : Id (PS.TX.EI V) (PS.PhiE V (CX'.el2 d' V f i)) (CX.el2 d V f i') =
+      transH (PS.PhiB V (CX'.tB d' V f i)) (apH (PS.E3.fromB V) (S2.fbS d' d V f i i' V (idH V) (ptH V eT))) ;
+
+    -- the sides of the joined partial fibre element move
+    evL (l : Fin p'.pr) (V : Ob) (f : Hom V X) (i : Lands V X (CX'.S1 l).pQ f) (i' : Lands V X (CX.S1 l).pQ f)
+      : Id (FMX.HG.TF.EI V) (FMX.mvF V ((CX'.S1 l).pv V f i)) ((CX.S1 l).pv V f i') =
+      transH (cfib-mv V (FMX.HD.TA.E.act V X f CX'.w1) (CX'.el1 l V f i) (CX'.eq1 l V f i)
+                (eqMv V (FMX.HD.TA.E.act V X f CX'.w1) (CX'.el1 l V f i) (CX'.eq1 l V f i)))
+        (C3.cfib-eq V (FMX.PhA V (FMX.HD.TA.E.act V X f CX'.w1)) (FMX.HG.TA.E.act V X f CX.w1) (wfEq V f)
+           (PS.PhiE V (CX'.el1 l V f i)) (CX.el1 l V f i') (el1S l V f i i')
+           (eqMv V (FMX.HD.TA.E.act V X f CX'.w1) (CX'.el1 l V f i) (CX'.eq1 l V f i)) (CX.eq1 l V f i')) ;
+
+    evR (d' : Fin (forallUn ES.CL'.r)) (d : Fin (forallUn ES.CL.r)) (V : Ob) (f : Hom V X) (i : Lands V X (CX'.S2 d').pQ f) (i' : Lands V X (CX.S2 d).pQ f)
+      : Id (FMX.HG.TF.EI V) (FMX.mvF V ((CX'.S2 d').pv V f i)) ((CX.S2 d).pv V f i') =
+      transH (cfib-mv V (FMX.HD.TA.E.act V X f CX'.w1) (CX'.el2 d' V f i) (CX'.eq2 d' V f i)
+                (eqMv V (FMX.HD.TA.E.act V X f CX'.w1) (CX'.el2 d' V f i) (CX'.eq2 d' V f i)))
+        (C3.cfib-eq V (FMX.PhA V (FMX.HD.TA.E.act V X f CX'.w1)) (FMX.HG.TA.E.act V X f CX.w1) (wfEq V f)
+           (PS.PhiE V (CX'.el2 d' V f i)) (CX.el2 d V f i') (el2S d' d V f i i')
+           (eqMv V (FMX.HD.TA.E.act V X f CX'.w1) (CX'.el2 d' V f i) (CX'.eq2 d' V f i)) (CX.eq2 d V f i')) ;
+
+    -- the joined partial fibre element, moved: a Join over G of the moved sides
+    S1m (l : Fin p'.pr) : C3.PX.PSide[X, FMX.PhA X CX'.w1] = FMX.mside X CX'.w1 (CX'.S1 l) ;
+    S2m (d' : Fin (forallUn ES.CL'.r)) : C3.PX.PSide[X, FMX.PhA X CX'.w1] = FMX.mside X CX'.w1 (CX'.S2 d') ;
+
+    c11m : C3.PX.PCsTy X (FMX.PhA X CX'.w1) p'.pr S1m = \ l l2 W f i i' -> apH (FMX.mvF W) (CX'.c11 l l2 W f i i') ;
+
+    c12m (l : Fin p'.pr) (d' : Fin (forallUn ES.CL'.r)) (W : Ob) (f : Hom W X) (i : Lands W X (S1m l).pQ f) (i' : Lands W X (S2m d').pQ f)
+      : Id (FMX.HG.TF.EI W) ((S1m l).pv W f i) ((S2m d').pv W f i') = apH (FMX.mvF W) (CX'.c12 l d' W f i i') ;
+
+    c22m : C3.PX.PCsTy X (FMX.PhA X CX'.w1) (forallUn ES.CL'.r) S2m = \ d' d2 W f i i' -> apH (FMX.mvF W) (CX'.c22 d' d2 W f i i') ;
+
+    module Jm = C3.PX.Join[X, FMX.PhA X CX'.w1, p'.pr, forallUn ES.CL'.r, S1m, S2m, c11m, c12m, c22m] ;
+
+    mAt : (sd : Plus (Fin p'.pr) (Fin (forallUn ES.CL'.r)))
+      -> Id (C3.PX.PSide[X, FMX.PhA X CX'.w1]) (FMX.mside X CX'.w1 (CX'.J2.sideAt sd)) (Jm.sideAt sd) = split {
+      inl l -> refl (S1m l) ;
+      inr d' -> refl (S2m d') } ;
+
+    pvSide (s1 s2 : C3.PX.PSide[X, FMX.PhA X CX'.w1]) (E : Id (C3.PX.PSide[X, FMX.PhA X CX'.w1]) s1 s2)
+      : C3.PX.PvEq X s1.pQ s2.pQ s1.pv s2.pv =
+      idJ (C3.PX.PSide[X, FMX.PhA X CX'.w1]) s1 (\ s3 E3 -> C3.PX.PvEq X s1.pQ s3.pQ s1.pv s3.pv)
+        (\ W f i i' -> C3.PX.pv-irr X (FMX.PhA X CX'.w1) s1 W f i i') s2 E ;
+
+    mpJ : Id (C3.PX.Partial[X, FMX.PhA X CX'.w1]) (FMX.mapP X CX'.w1 CX'.J2.part) Jm.part =
+      C3.PX.partExtH X (FMX.PhA X CX'.w1) (FMX.PhA X CX'.w1) (refl (FMX.PhA X CX'.w1)) (FMX.mapP X CX'.w1 CX'.J2.part) Jm.part (refl (plus p'.pr (forallUn ES.CL'.r)))
+        (\ l -> apH (\ z -> z.pQ) (mAt (splitF p'.pr (forallUn ES.CL'.r) l)))
+        (\ l -> pvSide (FMX.mside X CX'.w1 (CX'.J2.part.ps l)) (Jm.part.ps l) (mAt (splitF p'.pr (forallUn ES.CL'.r) l))) ;
+
+    module JE = GCofEsi2[a].PartialsEsi2[FMX.HG.EA, FMX.HG.FibT] ;
+
+    vCase : GensIns X (forallUn ES.CL.r) S2.PX.dl (forallUn ES.CL'.r) S2.PX'.dl
+      -> Id (FMX.HG.TF.EI X) (FMX.PhA X CX'.w1, C3.E3.extEquiv.kop X (FMX.PhA X CX'.w1) Jm.part) (CX.w1, C3.E3.extEquiv.kop X CX.w1 CX.J2.part) = split {
+      inl w -> C3.PX.kop-cong C3.E3.extEquiv X (FMX.PhA X CX'.w1) CX.w1 w1eq Jm.part CX.J2.part
+        (JE.JE[X, CX.w1, FMX.PhA X CX'.w1, w1eq, p'.pr, forallUn ES.CL.r, CX.S1, CX.S2, CX.c11, CX.c12, CX.c22,
+               S1m, c11m, \ l -> refl (p'.ps l).pQ, evL].joinEq2 (forallUn ES.CL'.r) (symH w.1)
+           S2m c12m c22m
+           (\ m m' Pm -> S2.eQRm m m' m.1 Pm (\ h' -> w.2 m.1 m.2 h'))
+           (\ m m' Pm V f i i' -> evR m' m V f i i')) ;
+      inr w -> JE.PE.kesiH C3.E3.extEquiv E4.extEquiv-kesi X CX.w1 (FMX.PhA X CX'.w1) w1eq (plus p'.pr w.1) CX.J2.part Jm.part
+        (JE.joinIns2 X CX.w1 (FMX.PhA X CX'.w1) w.1 p'.pr (forallUn ES.CL.r) w.2.1 CX.S1 CX.S2 CX.c11 CX.c12 CX.c22
+           S1m c11m (\ l -> refl (p'.ps l).pQ) evL (forallUn ES.CL'.r) (symH w.2.2.1)
+           S2m c12m c22m
+           (\ m' Pm -> transH (apH S2.PX'.dl (fin-eq (forallUn ES.CL'.r) m' (S2.finAt (forallUn ES.CL'.r) m' w.1 Pm) Pm))
+                               (w.2.2.2.1 (S2.finAt (forallUn ES.CL'.r) m' w.1 Pm).2))
+           (\ m m' Pm -> S2.eQRm m m' (skipN w.1 m.1) Pm (\ h' -> w.2.2.2.2 m.1 m.2 h'))
+           (\ m m' Pm V f i i' -> evR m' m V f i i')) } ;
+
+    -- the congruence of B5
+    vEeq : Id (FMX.HG.TF.EI X) (FMX.mvF X CX'.vE) CX.vE =
+      transH (XS X CX'.w1 CX'.J2.part)
+        (transH (apH {C3.PX.Partial[X, FMX.PhA X CX'.w1]} {FMX.HG.TF.EI X} (\ q -> (FMX.PhA X CX'.w1, C3.E3.extEquiv.kop X (FMX.PhA X CX'.w1) q)) mpJ)
+                (vCase (Hd X x' p'))) ;
+
+    copS : Id (PS.TX.EI X) (PS.PhiE X (x'.1.1 X (idH X) (ptH X eT), CX'.cop)) (S2.xM.1.1 X (idH X) (ptH X eT), CX.cop) =
+      transH (apH (PS.PhiE X) CX'.cop-E)
+        (transH (symH (FMX.mvF-B X CX'.vE)) (transH (apH (FMX.HG.fibB X) vEeq) (symH CX.cop-E))) ;
+
+    opaque el1S ; opaque el2S ; opaque evL ; opaque evR ; opaque mpJ ; opaque vEeq ; opaque copS ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- the result of B5: the composition of Ext(alpha[s]) is the composition
+  -- of Ext(alpha) transferred along (s , Phi)
+
+  module C4 = GExtComp4.C4[G, A, psi, B, al, eS, eT, kAS, kBS, kA1, eal] ;
+  module C4' = GExtComp4.C4[D', ES.A', ES.psi', ES.B', ES.al', eS, eT, kAS', kBS', kA1', eal'] ;
+  module TrX = GTransfer[a, a, a].Tr[D', PS.E2'.ExtT, G, PS.E2.ExtT, s.nt, \ V W g d -> s.nt-nat V W g d,
+      EM.phX, EM.psX, EM.phps, EM.psph, EM.AS.PhiNat, eS, eT, C4.extCompAt] ;
+
+  copEq (HB : N2.N1.HBTy) (HA : N2.HATy) (Hd : N2.HdTy) (XS : FMX.HTy C3'.E3.extEquiv C3.E3.extEquiv)
+    (X : Ob) (x' : N2.C1'.KX.TV.EI X) (p' : N2.C1'.KX.PT.Partial[X, x'])
+    : Id (W0.Ix (PS.E2'.extOb X (x'.1.1 X (idH X) (ptH X eT)))) (C4'.extCompAt.cop X x' p') (TrX.cop X x' p') =
+    transH (symH (EM.psph X (x'.1.1 X (idH X) (ptH X eT)) (C4'.extCompAt.cop X x' p')))
+      (apH (EM.psX X (x'.1.1 X (idH X) (ptH X eT)))
+        (PS.TX.pr-inj X (s.nt X (x'.1.1 X (idH X) (ptH X eT)))
+           (EM.phX X (x'.1.1 X (idH X) (ptH X eT)) (C4'.extCompAt.cop X x' p')) (C4.extCompAt.cop X (N2.TXM.tvN X x') (N2.TXM.mapP X x' p'))
+           Sx[HB, HA, Hd, XS, X, x', p'].copS)) ;
+
+  compS (HB : N2.N1.HBTy) (HA : N2.HATy) (Hd : N2.HdTy) (XS : FMX.HTy C3'.E3.extEquiv C3.E3.extEquiv)
+    : Id (C3'.CC.CompAt) C4'.extCompAt TrX.compAt =
+    C3'.CC.CompAt-ext C4'.extCompAt TrX.compAt (copEq HB HA Hd XS) ;
+
+  opaque copEq ;
+} ;

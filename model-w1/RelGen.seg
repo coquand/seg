@@ -1,0 +1,52 @@
+-- RelGen.seg: MODEL/Univ/RelGen.agda.  The relations of UnivOp.RelG for
+-- arbitrary maps of total presheaves (no Po/presentation data): over
+-- sR : D' -> D, with mBE : E_B' -> E_B and mAE : E_A' -> E_A (only their
+-- values are used),
+--   FRel   related fibre elements of al' and al
+--   PRel   related partial elements
+--   H3Ty   mA (al' w) = al (mB w)
+--   H4Ty   the equivalence structures send related partials to related
+--          elements
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module CF = Cofib[a] ;
+open CF ;
+open Equiv[a] ;
+
+module RG (D' D : PCtx) (sR : PSub[D', D]) (B' A' : PTy[D']) (B A : PTy[D]) (al' : PMap[D', B', A']) (al : PMap[D, B, A])
+  (mBE : (W : Ob) -> PR.TyL[D', B'].EI W -> PR.TyL[D, B].EI W)
+  (mAE : (W : Ob) -> PR.TyL[D', A'].EI W -> PR.TyL[D, A].EI W) {
+  module F' = FibTy[D', B', A', al'] ;
+  module F = FibTy[D, B, A, al] ;
+  module P' = CF.Partials[F'.EA, F'.FibT] ;
+  module P = CF.Partials[F.EA, F.FibT] ;
+
+  FRel (V : Ob) (v' : F'.TF.EI V) (v : F.TF.EI V) : U a =
+    Id (F.TA.EI V) v.1 (mAE V v'.1)
+    * (Id (F.TB.EI V) (F.fibB V v) (mBE V (F'.fibB V v'))
+       * Id (F.TA.EI (prodP V Iv)) (F.fibP V v) (mAE (prodP V Iv) (F'.fibP V v'))) ;
+
+  PRel (X0 : Ob) (w' : F'.TA.EI X0) (p' : P'.Partial[X0, w']) (p : P.Partial[X0, mAE X0 w']) : U a =
+    (e : Id Nat p'.pr p.pr)
+    * (((l : Fin p'.pr) (t : Tree) -> Id Bool ((p'.ps l).pQ t) ((p.ps (subst Nat (\ n -> Fin n) p'.pr p.pr e l)).pQ t))
+       * ((l : Fin p'.pr) (W : Ob) (f : Hom W X0) (i : Lands W X0 (p'.ps l).pQ f)
+          (i' : Lands W X0 (p.ps (subst Nat (\ n -> Fin n) p'.pr p.pr e l)).pQ f)
+          -> FRel W ((p'.ps l).pv W f i) ((p.ps (subst Nat (\ n -> Fin n) p'.pr p.pr e l)).pv W f i'))) ;
+
+  H3Ty : U a = (W : Ob) (w : PR.TyL[D', B'].EI W) -> Id (F.TA.EI W) (mAE W (al'.mE W w)) (al.mE W (mBE W w)) ;
+
+  H4Ty (e' : EquivOp D' B' A' al') (e : EquivOp D B A al) : U a =
+    (X0 : Ob) (w' : F'.TA.EI X0) (p' : P'.Partial[X0, w']) (p : P.Partial[X0, mAE X0 w'])
+    -> PRel X0 w' p' p -> FRel X0 (w', e'.kop X0 w' p') (mAE X0 w', e.kop X0 (mAE X0 w') p) ;
+} ;

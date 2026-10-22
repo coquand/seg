@@ -1,0 +1,170 @@
+-- GYonCon.seg (inside IvBase, any base): contractibility structures glue
+-- along the Yoneda maps of the points (step G3 of the univalence plan;
+-- used to glue the equivalence structures of the sides of a partial
+-- element of the univalence type).
+--
+-- C a type over E.  For each point w of E at Z, sigma_w = yPt E Z w :
+-- y Z -> E.  Given a contractibility structure K w on C[sigma_w] for every
+-- point, coherent along h : Z' -> Z (Coh: the extension of K (w h) at f is
+-- that of K w at h f, of the partial element moved by MvH), C has one:
+--   pull    a partial element of C at w is one of C[sigma_w] at id
+--   kop     K w's extension at id, read in E_C
+-- kside from K w's kside, kunif from K w's kunif and Coh.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+module GCF = GCofib[a] ;
+module GCE = GCofEsi[a] ;
+
+-- partial elements of C[sigma_(w h)] moved to C[sigma_w] along y h
+module MvH (E : PCtx) (C : PTy[E]) (Z Z' : Ob) (h : Hom Z' Z) (w : W0.Ix (E.ob Z)) {
+  module S1 = GCF.SubE[yP Z', E, yPt E Z' (E.act Z' Z h w), C] ;
+  module S0 = GCF.SubE[yP Z, E, yPt E Z w, C] ;
+  module TC = GPR.TyL[E, C] ;
+
+  mV (V : Ob) (v : S1.TS.EI V) : S0.TS.EI V =
+    (compH V Z' Z h v.1,
+     TC.coeT V (E.act V Z' v.1 (E.act Z' Z h w)) (E.act V Z (compH V Z' Z h v.1) w) (symH (E.act-o V Z' Z h v.1 w)) v.2) ;
+
+  -- read in E_C, mV does nothing
+  mV-E (V : Ob) (v : S1.TS.EI V) : Id (TC.EI V) (S0.mV V (mV V v)) (S1.mV V v) =
+    symH (TC.pr-coe V (E.act V Z' v.1 (E.act Z' Z h w)) (E.act V Z (compH V Z' Z h v.1) w) (symH (E.act-o V Z' Z h v.1 w)) v.2) ;
+
+  mnat (Q V : Ob) (g : Hom Q V) (v : S1.TS.EI V) : Id (S0.TS.EI Q) (S0.TS.E.act Q V g (mV V v)) (mV Q (S1.TS.E.act Q V g v)) =
+    S0.mV-inj Q (S0.TS.E.act Q V g (mV V v)) (mV Q (S1.TS.E.act Q V g v)) (comp-assoc Q V Z' Z h v.1 g)
+      (transH (S0.mV-nat Q V g (mV V v))
+        (transH (apH (TC.E.act Q V g) (mV-E V v))
+          (transH (symH (S1.mV-nat Q V g v)) (symH (mV-E Q (S1.TS.E.act Q V g v)))))) ;
+
+  opaque mV-E ; opaque mnat ;
+
+  module M = GCF.MapP[yP Z', yP Z, subTy (yP Z') E C (yPt E Z' (E.act Z' Z h w)), subTy (yP Z) E C (yPt E Z w),
+                      yH Z' Z h, mV, \ V v -> refl (compH V Z' Z h v.1), mnat] ;
+} ;
+
+module YonCon (E : PCtx) (C : PTy[E])
+  (K : (Z : Ob) (w : W0.Ix (E.ob Z)) -> GCF.Partials[yP Z, subTy (yP Z) E C (yPt E Z w)].ContrOp)
+  (coh : (Z Z' : Ob) (h : Hom Z' Z) (w : W0.Ix (E.ob Z)) (V : Ob) (f : Hom V Z')
+     (p : GCF.Partials[yP Z', subTy (yP Z') E C (yPt E Z' (E.act Z' Z h w))].Partial[V, f])
+     -> Id (GPR.TyL[E, C].EI V)
+           (MvH[E, C, Z, Z', h, w].S1.mV V (f, (K Z' (E.act Z' Z h w)).kop V f p))
+           (MvH[E, C, Z, Z', h, w].S0.mV V (compH V Z' Z h f,
+              (K Z w).kop V (compH V Z' Z h f) (MvH[E, C, Z, Z', h, w].M.mapP V f p)))) {
+  module TC = GPR.TyL[E, C] ;
+  module P = GCF.Partials[E, C] ;
+
+  module Pl (Z : Ob) (w : W0.Ix (E.ob Z)) {
+    module S = GCF.SubE[yP Z, E, yPt E Z w, C] ;
+    module PS = GCF.Partials[yP Z, subTy (yP Z) E C (yPt E Z w)] ;
+
+    pv (s : P.PSide[Z, w]) (W : Ob) (f : Hom W Z) (i : Lands W Z s.pQ f) : S.TS.EI W =
+      (f, TC.fromE W (E.act W Z f w) (s.pv W f i) (s.ppt W f i)) ;
+
+    pv-E (s : P.PSide[Z, w]) (W : Ob) (f : Hom W Z) (i : Lands W Z s.pQ f) : Id (TC.EI W) (S.mV W (pv s W f i)) (s.pv W f i) =
+      TC.fromE-eq W (E.act W Z f w) (s.pv W f i) (s.ppt W f i) ;
+
+    pside (s : P.PSide[Z, w]) : PS.PSide[Z, idH Z] =
+      new PS.PSide[Z, idH Z, s.pQ, pv s,
+        \ W f i -> symH (comp-idl W Z f),
+        \ W' W chi f i i' ->
+          S.mV-inj W' (S.TS.E.act W' W chi (pv s W f i)) (pv s W' (compH W' W Z f chi) i') (refl (compH W' W Z f chi))
+            (transH (S.mV-nat W' W chi (pv s W f i))
+              (transH (apH (TC.E.act W' W chi) (pv-E s W f i))
+                (transH (s.pnat W' W chi f i i') (symH (pv-E s W' (compH W' W Z f chi) i')))))] ;
+
+    pull (p : P.Partial[Z, w]) : PS.Partial[Z, idH Z] =
+      new PS.Partial[Z, idH Z, p.pr, \ l -> pside (p.ps l),
+        \ l j W f i i' -> S.mV-inj W (pv (p.ps l) W f i) (pv (p.ps j) W f i') (refl f)
+           (transH (pv-E (p.ps l) W f i) (transH (p.pcs l j W f i i') (symH (pv-E (p.ps j) W f i'))))] ;
+
+    -- the extension at id, read in E_C
+    kE (p : P.Partial[Z, w]) : TC.EI Z = S.mV Z (idH Z, (K Z w).kop Z (idH Z) (pull p)) ;
+
+    kop (p : P.Partial[Z, w]) : TC.T Z w = TC.fromE Z w (kE p) (E.act-id Z w) ;
+
+    kop-E (p : P.Partial[Z, w]) : Id (TC.EI Z) (w, kop p) (kE p) = TC.fromE-eq Z w (kE p) (E.act-id Z w) ;
+  } ;
+
+  kop (Z : Ob) (w : W0.Ix (E.ob Z)) (p : P.Partial[Z, w]) : TC.T Z w = Pl[Z, w].kop p ;
+
+  kside (Z : Ob) (w : W0.Ix (E.ob Z)) (p : P.Partial[Z, w]) (l : Fin p.pr) (W : Ob) (f : Hom W Z) (i : Lands W Z (p.ps l).pQ f)
+    : Id (TC.EI W) (TC.E.act W Z f (w, kop Z w p)) ((p.ps l).pv W f i) =
+    calc (TC.EI W) {
+        TC.E.act W Z f (w, kop Z w p)
+      =< apH (TC.E.act W Z f) (Pl[Z, w].kop-E p) >
+        TC.E.act W Z f (Pl[Z, w].S.mV Z (idH Z, (K Z w).kop Z (idH Z) (Pl[Z, w].pull p)))
+      =< symH (Pl[Z, w].S.mV-nat W Z f (idH Z, (K Z w).kop Z (idH Z) (Pl[Z, w].pull p))) >
+        Pl[Z, w].S.mV W (Pl[Z, w].S.TS.E.act W Z f (idH Z, (K Z w).kop Z (idH Z) (Pl[Z, w].pull p)))
+      =< apH (Pl[Z, w].S.mV W) ((K Z w).kside Z (idH Z) (Pl[Z, w].pull p) l W f i) >
+        Pl[Z, w].S.mV W (Pl[Z, w].pv (p.ps l) W f i)
+      =< Pl[Z, w].pv-E (p.ps l) W f i >
+        (p.ps l).pv W f i } ;
+
+  module Un (Y Z : Ob) (h : Hom Y Z) (w : W0.Ix (E.ob Z)) (p : P.Partial[Z, w]) {
+    module MH = MvH[E, C, Z, Y, h, w] ;
+    module S = Pl[Z, w].S ;
+    module PS = Pl[Z, w].PS ;
+    wh : W0.Ix (E.ob Y) = E.act Y Z h w ;
+
+    -- the two partial elements of C[sigma_w] at h
+    q1 : PS.Partial[Y, compH Y Z Z (idH Z) h] = PS.restrictP Y Z h (idH Z) (Pl[Z, w].pull p) ;
+    q2 : PS.Partial[Y, compH Y Y Z h (idH Y)] = MH.M.mapP Y (idH Y) (Pl[Y, wh].pull (P.restrictP Y Z h w p)) ;
+
+    hh : Id (Hom Y Z) (compH Y Z Z (idH Z) h) (compH Y Y Z h (idH Y)) = transH (comp-idl Y Z h) (symH (comp-idr Y Z h)) ;
+
+    R : Id (PS.Partial[Y, compH Y Y Z h (idH Y)])
+           (subst (Hom Y Z) (\ z -> PS.Partial[Y, z]) (compH Y Z Z (idH Z) h) (compH Y Y Z h (idH Y)) hh q1) q2 =
+      PS.partExtH Y (compH Y Z Z (idH Z) h) (compH Y Y Z h (idH Y)) hh q1 q2 (refl p.pr) (\ l -> refl (pre Y Z h (p.ps l).pQ))
+        (\ l W g i i' -> S.mV-inj W (Pl[Z, w].pv (p.ps l) W (compH W Y Z h g) (lands-pre W Y Z h (p.ps l).pQ g i))
+             (MH.mV W (Pl[Y, wh].pv (P.RestrictP[Y, Z, h, w].rside (p.ps l)) W g i'))
+             (refl (compH W Y Z h g))
+             (transH (Pl[Z, w].pv-E (p.ps l) W (compH W Y Z h g) (lands-pre W Y Z h (p.ps l).pQ g i))
+               (transH (P.pv-irr Z w (p.ps l) W (compH W Y Z h g) (lands-pre W Y Z h (p.ps l).pQ g i) (lands-pre W Y Z h (p.ps l).pQ g i'))
+                 (symH (transH (MH.mV-E W (Pl[Y, wh].pv (P.RestrictP[Y, Z, h, w].rside (p.ps l)) W g i'))
+                                (Pl[Y, wh].pv-E (P.RestrictP[Y, Z, h, w].rside (p.ps l)) W g i')))))) ;
+
+    kunif : Id (TC.EI Y) (TC.E.act Y Z h (w, kop Z w p)) (wh, kop Y wh (P.restrictP Y Z h w p)) =
+      calc (TC.EI Y) {
+          TC.E.act Y Z h (w, kop Z w p)
+        =< apH (TC.E.act Y Z h) (Pl[Z, w].kop-E p) >
+          TC.E.act Y Z h (S.mV Z (idH Z, (K Z w).kop Z (idH Z) (Pl[Z, w].pull p)))
+        =< symH (S.mV-nat Y Z h (idH Z, (K Z w).kop Z (idH Z) (Pl[Z, w].pull p))) >
+          S.mV Y (S.TS.E.act Y Z h (idH Z, (K Z w).kop Z (idH Z) (Pl[Z, w].pull p)))
+        =< apH (S.mV Y) ((K Z w).kunif Y Z h (idH Z) (Pl[Z, w].pull p)) >
+          S.mV Y (compH Y Z Z (idH Z) h, (K Z w).kop Y (compH Y Z Z (idH Z) h) q1)
+        =< apH (S.mV Y) (PS.kop-cong (K Z w) Y (compH Y Z Z (idH Z) h) (compH Y Y Z h (idH Y)) hh q1 q2 R) >
+          S.mV Y (compH Y Y Z h (idH Y), (K Z w).kop Y (compH Y Y Z h (idH Y)) q2)
+        =< symH (coh Z Y h w Y (idH Y) (Pl[Y, wh].pull (P.restrictP Y Z h w p))) >
+          MH.S1.mV Y (idH Y, (K Y wh).kop Y (idH Y) (Pl[Y, wh].pull (P.restrictP Y Z h w p)))
+        =< symH (Pl[Y, wh].kop-E (P.restrictP Y Z h w p)) >
+          (wh, kop Y wh (P.restrictP Y Z h w p)) } ;
+  } ;
+
+  contr : P.ContrOp = new P.ContrOp[kop, kside, \ Y Z h w p -> Un[Y, Z, h, w, p].kunif] ;
+
+  -- empty-side invariance, from that of the K w
+  module PE = GCE.PartialsEsi[E, C] ;
+
+  pullIns (Z : Ob) (w : W0.Ix (E.ob Z)) (n : Nat) (p p' : P.Partial[Z, w]) (ins : PE.InsP[Z, w, n, p, p'])
+    : GCE.PartialsEsi[yP Z, subTy (yP Z) E C (yPt E Z w)].InsP[Z, idH Z, n, Pl[Z, w].pull p, Pl[Z, w].pull p'] =
+    new GCE.PartialsEsi[yP Z, subTy (yP Z) E C (yPt E Z w)].InsP[Z, idH Z, n, Pl[Z, w].pull p, Pl[Z, w].pull p',
+      ins.insp-r, ins.insp-k, ins.insp-e, ins.insp-Q,
+      \ k hk hk' W f i i' -> Pl[Z, w].S.mV-inj W (Pl[Z, w].pv (p'.ps (Arith[a].skipN n k, hk')) W f i) (Pl[Z, w].pv (p.ps (k, hk)) W f i')
+         (refl f)
+         (transH (Pl[Z, w].pv-E (p'.ps (Arith[a].skipN n k, hk')) W f i)
+           (transH (ins.insp-v k hk hk' W f i i') (symH (Pl[Z, w].pv-E (p.ps (k, hk)) W f i'))))] ;
+
+  esi (ke : (Z : Ob) (w : W0.Ix (E.ob Z)) -> GCE.PartialsEsi[yP Z, subTy (yP Z) E C (yPt E Z w)].KESI (K Z w)) : PE.KESI contr =
+    \ Z w n p p' ins ->
+      TC.pr-inj Z w (kop Z w p') (kop Z w p)
+        (transH (Pl[Z, w].kop-E p')
+          (transH (apH (\ z -> Pl[Z, w].S.mV Z (idH Z, z)) (ke Z w Z (idH Z) n (Pl[Z, w].pull p) (Pl[Z, w].pull p') (pullIns Z w n p p' ins)))
+                  (symH (Pl[Z, w].kop-E p)))) ;
+} ;

@@ -1,0 +1,115 @@
+-- BCK.seg: MODEL/Univ/BCK.agda.  Base change of the transport
+-- construction, part 4: the transport map and its equivalence structure
+-- are natural (RelGen, maps of BCB):
+--   trH3   mA (tr' w) = tr (mB w)
+--   trH4'  kop' and kop send related partials to related fibre elements
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module CN = Conn[a] ;
+open CN ;
+open Cofib[a] ; open GP ;
+open Transp[a] ;
+
+module BCK (D' D : PCtx) (sR : PSub[D', D]) (L' L : PCtx) (sg : PSub[L', L]) (S : PTy[L])
+  (ln' : (W : Ob) -> W0.Ix (D'.ob W) -> W0.Ix (L'.ob (prodP W Iv)))
+  (lnat' : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D'.ob W))
+          -> Id (W0.Ix (L'.ob (prodP W' Iv))) (L'.act (prodP W' Iv) (prodP W Iv) (cylH W' W g) (ln' W x)) (ln' W' (D'.act W' W g x)))
+  (ln : (W : Ob) -> W0.Ix (D.ob W) -> W0.Ix (L.ob (prodP W Iv)))
+  (lnat : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D.ob W))
+          -> Id (W0.Ix (L.ob (prodP W' Iv))) (L.act (prodP W' Iv) (prodP W Iv) (cylH W' W g) (ln W x)) (ln W' (D.act W' W g x)))
+  (lnEq : (W : Ob) (x : W0.Ix (D'.ob W)) -> Id (W0.Ix (L.ob (prodP W Iv))) (sg.nt (prodP W Iv) (ln' W x)) (ln W (sR.nt W x)))
+  (d : Bool) (fS : FibM.FillDef[L, S].FillOp[src d]) (f0 : FibM.FillDef[L, S].FillOp[e0]) (fT : FibM.FillDef[L, S].FillOp[tgt d])
+  (fS' : FibM.FillDef[L', subTy L' L S sg].FillOp[src d]) (f0' : FibM.FillDef[L', subTy L' L S sg].FillOp[e0])
+  (fT' : FibM.FillDef[L', subTy L' L S sg].FillOp[tgt d])
+  (okS : LBSub[a].LBS[L', L, sg, S, src d].LBF[fS, fS'].FillSubOK)
+  (ok0 : LBSub[a].LBS[L', L, sg, S, e0].LBF[f0, f0'].FillSubOK)
+  (okT : LBSub[a].LBS[L', L, sg, S, tgt d].LBF[fT, fT'].FillSubOK) {
+  module BB = BCB[a].BCB[D', D, sR, L', L, sg, S, ln', lnat', ln, lnat, lnEq, d, fS, f0, fT, fS', f0', fT', okS, ok0, okT] ;
+  module BP = BCP[a].BCP[D', D, sR, L', L, sg, S, ln', lnat', ln, lnat, lnEq, d, fS, f0, fT, fS', f0', fT', okS, ok0, okT] ;
+  module B0 = BB.B0 ;
+  module PTp = BB.PTp ;
+  module PTB = BB.PTB ;
+  module UTp = BB.UTp ;
+  module UTB = BB.UTB ;
+  module PTEq = TranspEquiv[a].TEq[D', L', subTy L' L S sg, ln', lnat', d, fS', f0', fT'] ;
+  module UTEq = TranspEquiv[a].TEq[D, L, S, ln, lnat, d, fS, f0, fT] ;
+
+  s : El Iv = src d ;
+  t : El Iv = tgt d ;
+
+  module K (PoB : BB.PoBTy) (PoA : BB.PoATy) {
+    module M = BB.MB[PoB, PoA] ;
+
+    trH3 : M.R.H3Ty = \ W w ->
+      UTp.SEt.Ls-inj W (M.mAE W (PTp.trE W w)) (UTp.trE W (M.mBE W w)) (refl (sR.nt W w.1))
+        (transH (M.LsA W (PTp.trE W w))
+         (transH (B0.trS-bc W w.1 (PTp.SEs.Ls W w) (refl (PTp.en s W w.1)) (B0.enEq s W w.1))
+                 (apH (UTp.ES.act W (prodP W Iv) (lid W t))
+                    (UTp.uF-cong W (sR.nt W w.1) (sR.nt W w.1) (refl (sR.nt W w.1))
+                       (B0.Ls W (PTp.SEs.Ls W w)) (UTp.SEs.Ls W (M.mBE W w))
+                       (B0.enEq s W w.1) (refl (UTp.en s W (sR.nt W w.1))) (symH (M.LsB W w)))))) ;
+
+    opaque trH3 ;
+
+    module KK (X0 : Ob) (w' : PTp.SEt.TD.EI X0) (p' : PTB.PX.Partial[X0, w']) (p : UTB.PX.Partial[X0, M.mAE X0 w'])
+      (r : M.R.PRel X0 w' p' p) {
+      w : UTp.SEt.TD.EI X0 = M.mAE X0 w' ;
+
+      bEq : Id (UTEq.FTr.TB.EI X0) (UTEq.bE X0 w p) (M.mBE X0 (PTEq.bE X0 w' p')) =
+        UTp.SEs.Ls-inj X0 (UTEq.bE X0 w p) (M.mBE X0 (PTEq.bE X0 w' p')) (refl (sR.nt X0 w'.1))
+          (transH (symH (M.bnew-bc X0 w' p' p r)) (symH (M.LsB X0 (PTEq.bE X0 w' p')))) ;
+
+      pEq : Id (UTEq.FTr.TA.EI (prodP X0 Iv)) (UTEq.pE X0 w p) (M.mAE (prodP X0 Iv) (PTEq.pE X0 w' p')) =
+        UTp.SEt.Ls-inj (prodP X0 Iv) (UTEq.pE X0 w p) (M.mAE (prodP X0 Iv) (PTEq.pE X0 w' p'))
+          (symH (sR.nt-nat (prodP X0 Iv) X0 (pX X0) w'.1))
+          (transH (symH (BP.MP[PoB, PoA, X0, w', p', p, r].pnew-bc)) (symH (M.LsA (prodP X0 Iv) (PTEq.pE X0 w' p')))) ;
+
+      fibBk : Id (UTEq.FTr.TB.EI X0) (UTEq.FTr.fibB X0 (w, UTEq.kop X0 w p)) (UTEq.bE X0 w p) =
+        transH (apH (UTEq.FTr.fibB X0) (UTEq.kop-E X0 w p))
+               (UTEq.FTr.mkFibE-B X0 w (UTEq.bE X0 w p) (UTEq.pE X0 w p) (refl w.1) (refl (UTEq.pE X0 w p).1) (UTEq.q0E X0 w p) (UTEq.q1E X0 w p)) ;
+
+      fibBk' : Id (PTEq.FTr.TB.EI X0) (PTEq.FTr.fibB X0 (w', PTEq.kop X0 w' p')) (PTEq.bE X0 w' p') =
+        transH (apH (PTEq.FTr.fibB X0) (PTEq.kop-E X0 w' p'))
+               (PTEq.FTr.mkFibE-B X0 w' (PTEq.bE X0 w' p') (PTEq.pE X0 w' p') (refl w'.1) (refl (PTEq.pE X0 w' p').1) (PTEq.q0E X0 w' p') (PTEq.q1E X0 w' p')) ;
+
+      fibPk : Id (UTEq.FTr.TA.EI (prodP X0 Iv)) (UTEq.FTr.fibP X0 (w, UTEq.kop X0 w p)) (UTEq.pE X0 w p) =
+        transH (apH (UTEq.FTr.fibP X0) (UTEq.kop-E X0 w p))
+               (UTEq.FTr.mkFibE-P X0 w (UTEq.bE X0 w p) (UTEq.pE X0 w p) (refl w.1) (refl (UTEq.pE X0 w p).1) (UTEq.q0E X0 w p) (UTEq.q1E X0 w p)) ;
+
+      fibPk' : Id (PTEq.FTr.TA.EI (prodP X0 Iv)) (PTEq.FTr.fibP X0 (w', PTEq.kop X0 w' p')) (PTEq.pE X0 w' p') =
+        transH (apH (PTEq.FTr.fibP X0) (PTEq.kop-E X0 w' p'))
+               (PTEq.FTr.mkFibE-P X0 w' (PTEq.bE X0 w' p') (PTEq.pE X0 w' p') (refl w'.1) (refl (PTEq.pE X0 w' p').1) (PTEq.q0E X0 w' p') (PTEq.q1E X0 w' p')) ;
+
+      kRel : M.R.FRel X0 (w', PTEq.kop X0 w' p') (w, UTEq.kop X0 w p) =
+        (refl w,
+         (transH fibBk (transH bEq (apH (M.mBE X0) (symH fibBk'))),
+          transH fibPk (transH pEq (apH (M.mAE (prodP X0 Iv)) (symH fibPk'))))) ;
+
+      opaque bEq ; opaque pEq ; opaque fibBk ; opaque fibBk' ; opaque fibPk ; opaque fibPk' ; opaque kRel ;
+    } ;
+
+    trH4' (X0 : Ob) (w' : PTp.SEt.TD.EI X0) (p' : PTB.PX.Partial[X0, w']) (p : UTB.PX.Partial[X0, M.mAE X0 w'])
+      (r : M.R.PRel X0 w' p' p) : M.R.FRel X0 (w', PTEq.kop X0 w' p') (M.mAE X0 w', UTEq.kop X0 (M.mAE X0 w') p) =
+      KK[X0, w', p', p, r].kRel ;
+  } ;
+
+  -- aliases for users
+  PPart (X0 : Ob) (w : PTp.SEt.TD.EI X0) : U a = PTB.PX.Partial[X0, w] ;
+  UPart (X0 : Ob) (w : UTp.SEt.TD.EI X0) : U a = UTB.PX.Partial[X0, w] ;
+} ;

@@ -1,0 +1,195 @@
+-- ElFam.seg: MODEL/Univ/ElFam.agda.  El of a natural family of fibrant
+-- types over ANY context of level a.
+--
+-- Data: D : PCtx, Fm W x : U0 W for x in D(W), natural up to an equation
+-- in U0:   nat : uAct g (Fm W x) = Fm W' (x g).
+-- ElT : PTy D has fibre fib0 W (Fm W x) (the fibre of Fm W x at the
+-- identity), acting by EGen's tactG along nat.  Unlike EGen (where the
+-- point IS the fibrant type), the fibres are related to those of the
+-- family only through nat, so every comparison goes through
+--     iota W : E_ElT(W) -> E_EGen(W),   (x , t) |-> (Fm W x , t)
+-- (natural, injective over equal points), and a box b of ElT over X is
+-- translated into a box TBox b of EGen over X at the line
+-- Fm (X*[1]) (brho b), the values moved along nat (kappa).  The composite
+-- of b is the composite of TBox b in EGen (compEGen), read back along nat;
+-- cside, cunif and ESI come from those of EGen (cunif: TBox commutes with
+-- restriction, the lines being related by nat, which box-ext accepts).
+--
+--   ElT, ElComp, ElEsi, ElFib : FibE D
+--
+-- ElAct is locked right after its defining equation ElAct-def; the laws
+-- ElId, ElOL and the naturality of iota use only ElAct-def.
+-- Where-blocks are the segments TR and ESF.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module W0 = V[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module ES0 = Esi[a, a] ;
+module FE = FibExt[a, a] ;
+module CN = Conn[a] ;
+open BaseP.GYon[a] ;
+open UnivCtx[a].PU ;
+open EGenComp[a] ;
+module EG3 = EGenComp3[a] ;
+module GEs = EGenEsi[a] ;
+
+------------------------------------------------------------------------
+-- Transport of fibre elements along equations in U0
+
+coeU (W : Ob) (F F' : U0 W) (e : Id (U0 W) F F') (t : W0.Ix (fib0 W F)) : W0.Ix (fib0 W F') =
+  subst (U0 W) (\ G' -> W0.Ix (fib0 W G')) F F' e t ;
+
+coeE (W : Ob) (F F' : U0 W) (e : Id (U0 W) F F') (t : W0.Ix (fib0 W F)) : Id (EU W) (F', coeU W F F' e t) (F, t) =
+  idJ (U0 W) F (\ F2 e2 -> Id (EU W) (F2, coeU W F F2 e2 t) (F, t)) (refl (F, t)) F' e ;
+
+tactGE (J I : Ob) (f : Hom J I) (F : U0 I) (F' : U0 J) (e : Id (U0 J) (uAct J I f F) F') (z : W0.Ix (fib0 I F))
+  : Id (EU J) (F', tactG J I f F F' e z) (uAct J I f F, tactG J I f F (uAct J I f F) (refl (uAct J I f F)) z) =
+  idJ (U0 J) (uAct J I f F)
+    (\ F2 e2 -> Id (EU J) (F2, tactG J I f F F2 e2 z) (uAct J I f F, tactG J I f F (uAct J I f F) (refl (uAct J I f F)) z))
+    (refl (uAct J I f F, tactG J I f F (uAct J I f F) (refl (uAct J I f F)) z)) F' e ;
+
+------------------------------------------------------------------------
+-- The type
+
+module ElF (D : PCtx) (Fm : (W : Ob) -> W0.Ix (D.ob W) -> U0 W)
+  (nat : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D.ob W)) -> Id (U0 W') (uAct W' W g (Fm W x)) (Fm W' (D.act W' W g x))) {
+
+  ElO (W : Ob) (x : W0.Ix (D.ob W)) : W0.V = fib0 W (Fm W x) ;
+
+  natE (J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) (y : W0.Ix (D.ob J)) (e : Id (W0.Ix (D.ob J)) (D.act J I f x) y)
+    : Id (U0 J) (uAct J I f (Fm I x)) (Fm J y) = transH (nat J I f x) (apH (Fm J) e) ;
+
+  ElAct : TactTy D ElO = \ J I f x y e z -> tactG J I f (Fm I x) (Fm J y) (natE J I f x y e) z ;
+
+  -- ElAct is EGen's action, transported along nat
+  ElAct-def (J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) (y : W0.Ix (D.ob J)) (e : Id (W0.Ix (D.ob J)) (D.act J I f x) y)
+    (z : W0.Ix (ElO I x)) : Id (W0.Ix (ElO J y)) (ElAct J I f x y e z) (tactG J I f (Fm I x) (Fm J y) (natE J I f x y e) z) =
+    refl (ElAct J I f x y e z) ;
+
+  opaque ElAct ; opaque ElAct-def ;
+
+  -- the identity law: that of EGen (tidG)
+  ElId : IdLaw D ElO ElAct = \ I x e z ->
+    calc (W0.Ix (ElO I x)) {
+        ElAct I I (idH I) x x e z
+      =< ElAct-def I I (idH I) x x e z >
+        tactG I I (idH I) (Fm I x) (Fm I x) (natE I I (idH I) x x e) z
+      =< tidG I (Fm I x) (natE I I (idH I) x x e) z >
+        z } ;
+
+  -- the composition law: that of EGen (toG)
+  ElOL : OLaw D ElO ElAct = \ K J I f g x y z e1 e2 e3 t ->
+    calc (W0.Ix (ElO K z)) {
+        ElAct K I (compH K J I f g) x z e3 t
+      =< ElAct-def K I (compH K J I f g) x z e3 t >
+        tactG K I (compH K J I f g) (Fm I x) (Fm K z) (natE K I (compH K J I f g) x z e3) t
+      =< toG K J I f g (Fm I x) (Fm J y) (Fm K z) (natE J I f x y e1) (natE K J g y z e2) (natE K I (compH K J I f g) x z e3) t >
+        tactG K J g (Fm J y) (Fm K z) (natE K J g y z e2) (tactG J I f (Fm I x) (Fm J y) (natE J I f x y e1) t)
+      =< symH (ElAct-def K J g y z e2 (tactG J I f (Fm I x) (Fm J y) (natE J I f x y e1) t)) >
+        ElAct K J g y z e2 (tactG J I f (Fm I x) (Fm J y) (natE J I f x y e1) t)
+      =< apH (ElAct K J g y z e2) (symH (ElAct-def J I f x y e1 t)) >
+        ElAct K J g y z e2 (ElAct J I f x y e1 t) } ;
+
+  ElT : PTy[D] = (mkTy D ElO ElAct ElId ElOL) ;
+
+  module TE = PR.TyL[D, ElT] ;
+  module BE = BXm.Boxes[D, ElT] ;
+
+  ----------------------------------------------------------------------
+  -- iota : E_ElT -> E_EGen
+
+  iota (W : Ob) (w : TE.EI W) : EU W = (Fm W w.1, w.2) ;
+
+  -- iota is natural: on the second component it is ElAct-def, then tactGE
+  iotaAct (W' W : Ob) (chi : Hom W' W) (w : TE.EI W) : Id (EU W') (iota W' (TE.E.act W' W chi w)) (TU.E.act W' W chi (iota W w)) =
+    calc (EU W') {
+        iota W' (TE.E.act W' W chi w)
+      =< apH {W0.Ix (ElO W' (D.act W' W chi w.1))} {EU W'} (\ t -> (Fm W' (D.act W' W chi w.1), t))
+           (ElAct-def W' W chi w.1 (D.act W' W chi w.1) (refl (D.act W' W chi w.1)) w.2) >
+        (Fm W' (D.act W' W chi w.1),
+         tactG W' W chi (Fm W w.1) (Fm W' (D.act W' W chi w.1)) (natE W' W chi w.1 (D.act W' W chi w.1) (refl (D.act W' W chi w.1))) w.2)
+      =< tactGE W' W chi (Fm W w.1) (Fm W' (D.act W' W chi w.1)) (natE W' W chi w.1 (D.act W' W chi w.1) (refl (D.act W' W chi w.1))) w.2 >
+        TU.E.act W' W chi (iota W w) } ;
+
+  iotaInj (W : Ob) (w w' : TE.EI W) (P : Id (W0.Ix (D.ob W)) w.1 w'.1) (Q : Id (EU W) (iota W w) (iota W w')) : Id (TE.EI W) w w' =
+    idJ (W0.Ix (D.ob W)) w.1
+      (\ x2 P2 -> (t2 : W0.Ix (ElO W x2)) -> Id (EU W) (iota W w) (iota W (x2, t2)) -> Id (TE.EI W) w (x2, t2))
+      (\ t2 Q2 -> apH {W0.Ix (ElO W w.1)} {TE.EI W} (\ v -> (w.1, v))
+         (transH (symH (loopV (fib0 W (Fm W w.1))
+                             (ap (U0 W) W0.V (fib0 W) (Fm W w.1) (Fm W w.1) (ap (EU W) (U0 W) (\ z -> z.1) (iota W w) (iota W (w.1, t2)) Q2)) w.2))
+                 (sndE W (Fm W w.1) (Fm W w.1) w.2 t2 Q2)))
+      w'.1 P w'.2 Q ;
+
+  opaque ElId ; opaque ElOL ; opaque iotaAct ; opaque iotaInj ;
+
+  ----------------------------------------------------------------------
+  -- A box of ElT as a box of EGen
+
+  -- The line of the box lives over X * [1], written BE.XI X: the very
+  -- object of the box types (BU.SnTy, BU.CbTy), so that comparing a
+  -- composite  compH W' W (BE.XI X) psi chi  with theirs is by name.
+  module TB (eS : El Iv) (X : Ob) (b : BE.Box[eS, X]) {
+    rho : W0.Ix (D.ob (BE.XI X)) = b.brho ;
+
+    F : U0 (BE.XI X) = Fm (BE.XI X) rho ;
+
+    kappa (W : Ob) (psi : Hom W (BE.XI X)) (v : W0.Ix (fib0 W (Fm W (D.act W (BE.XI X) psi rho)))) : W0.Ix (fib0 W (uAct W (BE.XI X) psi F)) =
+      coeU W (Fm W (D.act W (BE.XI X) psi rho)) (uAct W (BE.XI X) psi F) (symH (nat W (BE.XI X) psi rho)) v ;
+
+    ik (W : Ob) (psi : Hom W (BE.XI X)) (v : W0.Ix (fib0 W (Fm W (D.act W (BE.XI X) psi rho))))
+      : Id (EU W) (iota W (D.act W (BE.XI X) psi rho, v)) (uAct W (BE.XI X) psi F, kappa W psi v) =
+      symH (coeE W (Fm W (D.act W (BE.XI X) psi rho)) (uAct W (BE.XI X) psi F) (symH (nat W (BE.XI X) psi rho)) v) ;
+
+    uU : W0.Ix (fib0 X (uAct X (BE.XI X) (lid X eS) F)) = kappa X (lid X eS) b.bu ;
+
+    svU (j : Arith[a].Fin b.br) (W : Ob) (psi : Hom W (BE.XI X)) (i : InQ W X (b.bs j).sQ psi) : W0.Ix (fib0 W (uAct W (BE.XI X) psi F)) =
+      kappa W psi ((b.bs j).sv W psi i) ;
+
+    snatU (j : Arith[a].Fin b.br) : BU.SnTy X F (b.bs j).sQ (svU j) = \ W' W chi psi i i' ->
+      calc (EU W') {
+          TU.E.act W' W chi (uAct W (BE.XI X) psi F, svU j W psi i)
+        =< apH (TU.E.act W' W chi) (symH (ik W psi ((b.bs j).sv W psi i))) >
+          TU.E.act W' W chi (iota W ((b.bs j).svE W psi i))
+        =< symH (iotaAct W' W chi ((b.bs j).svE W psi i)) >
+          iota W' (TE.E.act W' W chi ((b.bs j).svE W psi i))
+        =< apH (iota W') ((b.bs j).snat W' W chi psi i i') >
+          iota W' ((b.bs j).svE W' (compH W' W (BE.XI X) psi chi) i')
+        =< ik W' (compH W' W (BE.XI X) psi chi) ((b.bs j).sv W' (compH W' W (BE.XI X) psi chi) i') >
+          (uAct W' (BE.XI X) (compH W' W (BE.XI X) psi chi) F, svU j W' (compH W' W (BE.XI X) psi chi) i') } ;
+
+    opaque snatU ;
+
+    sideU (j : Arith[a].Fin b.br) : BU.Side[X, F] = (BU.mkSide X F ((b.bs j).sQ) (svU j) (snatU j)) ;
+
+    csU : BU.CsTy X F b.br sideU = \ j k W psi i i' -> apH (kappa W psi) (b.bcs j k W psi i i') ;
+
+    cbU : BU.CbTy eS X F uU b.br sideU = \ j W phi i ->
+      calc (EU W) {
+          TU.E.act W X phi (uAct X (BE.XI X) (lid X eS) F, uU)
+        =< apH (TU.E.act W X phi) (symH (ik X (lid X eS) b.bu)) >
+          TU.E.act W X phi (iota X (BE.lidE eS X rho b.bu))
+        =< symH (iotaAct W X phi (BE.lidE eS X rho b.bu)) >
+          iota W (TE.E.act W X phi (BE.lidE eS X rho b.bu))
+        =< apH (iota W) (b.bcb j W phi i) >
+          iota W ((b.bs j).svE W (compH W X (BE.XI X) (lid X eS) phi) i)
+        =< ik W (compH W X (BE.XI X) (lid X eS) phi) ((b.bs j).sv W (compH W X (BE.XI X) (lid X eS) phi) i) >
+          (uAct W (BE.XI X) (compH W X (BE.XI X) (lid X eS) phi) F, svU j W (compH W X (BE.XI X) (lid X eS) phi) i) } ;
+
+    opaque csU ; opaque cbU ;
+
+    box : BU.Box[eS, X] = (BU.mkBox eS X F uU b.br sideU csU cbU) ;
+  } ;
+
+  TBox (eS : El Iv) (X : Ob) (b : BE.Box[eS, X]) : BU.Box[eS, X] = TB[eS, X, b].box ;
+
+} ;

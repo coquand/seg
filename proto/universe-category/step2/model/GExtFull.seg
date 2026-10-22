@@ -1,0 +1,234 @@
+-- GExtFull.seg (inside IvBase, any base): Ext over a cofibration that is
+-- full everywhere.  With sec : G -> G|psi (rho |-> (rho , full)):
+--   tyFull   Ext(alpha) = B[sec]                       (codes extOb-B)
+--   triFull  (Ext , A , ext) = (B[sec] , A' , al[sec])  as triples, A' the
+--            restriction of A along inclR o sec (the same codes)
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+
+-- transport back and forth along a path of codes
+subst-sym-r (v w : W0.V) (P : Id W0.V v w) (b : W0.Ix w)
+  : Id (W0.Ix w) (subst W0.V (\ z -> W0.Ix z) v w P (subst W0.V (\ z -> W0.Ix z) w v (symH P) b)) b =
+  idJ W0.V v (\ w2 P2 -> (b2 : W0.Ix w2) -> Id (W0.Ix w2) (subst W0.V (\ z -> W0.Ix z) v w2 P2 (subst W0.V (\ z -> W0.Ix z) w2 v (symH P2) b2)) b2)
+    (\ b2 -> refl b2) w P b ;
+
+opaque subst-sym-r ;
+
+module ExtFull (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (fl : (X : Ob) (rho : W0.Ix (G.ob X)) -> IsT (GP.CofL[G, psi].full X rho)) {
+  module CL = GP.CofL[G, psi] ;
+  module E2 = GExt2[a].ExtB2[G, A, psi, B, al] ;
+  module E3 = GExt3[a].ExtB3[G, A, psi, B, al] ;
+  module E4 = GExt4[a].ExtB4[G, A, psi, B, al] ;
+  module ED = GExt[a].ExtDef[G, A, psi] ;
+  module TX = PR.TyL[G, E2.ExtT] ;
+  module TB = PR.TyL[CL.resCtx, B] ;
+  module TA = PR.TyL[G, A] ;
+
+  sec : PSub[G, CL.resCtx] =
+    new PSub[G, CL.resCtx, \ X rho -> (rho, fl X rho),
+      \ Y X h rho -> CL.res-eq Y (G.act Y X h rho, fl Y (G.act Y X h rho)) (CL.resCtx.act Y X h (rho, fl X rho)) (refl (G.act Y X h rho))] ;
+
+  BF : PTy[G] = subTy G CL.resCtx B sec ;
+  AF : PTy[G] = subTy G CL.resCtx (subTy CL.resCtx G A CL.inclR) sec ;
+
+  module SM = GEquivSub[a].SubMap[G, CL.resCtx, sec, B, subTy CL.resCtx G A CL.inclR, al] ;
+
+  PoB (I : Ob) (x : W0.Ix (G.ob I)) : Id W0.V (E2.ExtT.tob I x) (BF.tob I x) = E3.extOb-B I x (fl I x) ;
+
+  H1B (J I : Ob) (f : Hom J I) (x : W0.Ix (G.ob I)) (y : W0.Ix (G.ob J)) (e : Id (W0.Ix (G.ob J)) (G.act J I f x) y)
+    (a0 : W0.Ix (E2.ExtT.tob I x))
+    : Id (W0.Ix (BF.tob J y)) (subst W0.V (\ z -> W0.Ix z) (E2.ExtT.tob J y) (BF.tob J y) (PoB J y) (E2.ExtT.tact J I f x y e a0))
+                              (BF.tact J I f x y e (subst W0.V (\ z -> W0.Ix z) (E2.ExtT.tob I x) (BF.tob I x) (PoB I x) a0)) =
+    TB.pr-inj J (sec.nt J y) (subst W0.V (\ z -> W0.Ix z) (E2.ExtT.tob J y) (BF.tob J y) (PoB J y) (E2.ExtT.tact J I f x y e a0))
+                             (BF.tact J I f x y e (subst W0.V (\ z -> W0.Ix z) (E2.ExtT.tob I x) (BF.tob I x) (PoB I x) a0))
+      (calc (TB.EI J) {
+          (sec.nt J y, subst W0.V (\ z -> W0.Ix z) (E2.ExtT.tob J y) (BF.tob J y) (PoB J y) (E2.ExtT.tact J I f x y e a0))
+        =< apH {TB.T J (sec.nt J y)} {TB.EI J} (\ v -> (sec.nt J y, v)) (E3.extOb-B-sub J y (fl J y) (E2.ExtT.tact J I f x y e a0)) >
+          E3.toB J (y, E2.ExtT.tact J I f x y e a0) (fl J y)
+        =< E3.toB-cong J (y, E2.ExtT.tact J I f x y e a0) (TX.E.act J I f (x, a0)) (symH (TX.pr-tact J I f x y e a0)) (fl J y) (fl J (G.act J I f x)) >
+          E3.toB J (TX.E.act J I f (x, a0)) (fl J (G.act J I f x))
+        =< E3.toB-act J I f (x, a0) (fl I x) (fl J (G.act J I f x)) >
+          TB.E.act J I f (E3.toB I (x, a0) (fl I x))
+        =< TB.pr-tact J I f (sec.nt I x) (sec.nt J y) (ntEq G CL.resCtx sec J I f x y e) (E3.toB I (x, a0) (fl I x)).2 >
+          (sec.nt J y, B.tact J I f (sec.nt I x) (sec.nt J y) (ntEq G CL.resCtx sec J I f x y e) (E3.toB I (x, a0) (fl I x)).2)
+        =< apH {TB.T I (sec.nt I x)} {TB.EI J} (\ v -> (sec.nt J y, B.tact J I f (sec.nt I x) (sec.nt J y) (ntEq G CL.resCtx sec J I f x y e) v))
+             (symH (E3.extOb-B-sub I x (fl I x) a0)) >
+          (sec.nt J y, BF.tact J I f x y e (subst W0.V (\ z -> W0.Ix z) (E2.ExtT.tob I x) (BF.tob I x) (PoB I x) a0)) }) ;
+
+  tyFull : Id (PTy[G]) E2.ExtT BF = GEqLaws[a].TyEqPw[G, E2.ExtT, BF, PoB, H1B].tyEq ;
+
+  -- an element of B over sec, read in Ext
+  fromBs (X : Ob) (rho : W0.Ix (G.ob X)) (b : W0.Ix (BF.tob X rho))
+    : Id (TX.EI X) (rho, subst W0.V (\ z -> W0.Ix z) (BF.tob X rho) (E2.ExtT.tob X rho) (symH (PoB X rho)) b) (E3.fromB X (sec.nt X rho, b)) =
+    transH (symH (E3.fromB-toB X (rho, subst W0.V (\ z -> W0.Ix z) (BF.tob X rho) (E2.ExtT.tob X rho) (symH (PoB X rho)) b) (fl X rho)))
+      (apH (E3.fromB X)
+         (apH {TB.T X (sec.nt X rho)} {TB.EI X} (\ v -> (sec.nt X rho, v))
+            (transH (symH (E3.extOb-B-sub X rho (fl X rho) (subst W0.V (\ z -> W0.Ix z) (BF.tob X rho) (E2.ExtT.tob X rho) (symH (PoB X rho)) b)))
+                    (subst-sym-r (E2.ExtT.tob X rho) (BF.tob X rho) (PoB X rho) b)))) ;
+
+  Hm (X : Ob) (w : PR.TyL[G, BF].EI X)
+    : Id (PR.TyL[G, AF].EI X) (SM.subMap.mE X w)
+         (w.1, subst W0.V (\ z -> W0.Ix z) (A.tob X w.1) (AF.tob X w.1) (refl (A.tob X w.1))
+                 (TA.fromE X w.1 (E4.extMap.mE X (w.1, subst W0.V (\ z -> W0.Ix z) (BF.tob X w.1) (E2.ExtT.tob X w.1) (symH (PoB X w.1)) w.2))
+                    (E4.extMap.mpt X (w.1, subst W0.V (\ z -> W0.Ix z) (BF.tob X w.1) (E2.ExtT.tob X w.1) (symH (PoB X w.1)) w.2)))) =
+    apH {W0.Ix (A.tob X w.1)} {PR.TyL[G, AF].EI X} (\ v -> (w.1, v))
+      (TA.pr-inj X w.1 (SM.subMap.mE X w).2
+         (TA.fromE X w.1 (E4.extMap.mE X (w.1, subst W0.V (\ z -> W0.Ix z) (BF.tob X w.1) (E2.ExtT.tob X w.1) (symH (PoB X w.1)) w.2))
+            (E4.extMap.mpt X (w.1, subst W0.V (\ z -> W0.Ix z) (BF.tob X w.1) (E2.ExtT.tob X w.1) (symH (PoB X w.1)) w.2)))
+         (calc (TA.EI X) {
+             (w.1, (SM.subMap.mE X w).2)
+           =< apH (ED.toEA X) (SM.mE-V X w) >
+             ED.toEA X (al.mE X (sec.nt X w.1, w.2))
+           =< symH (E4.extE-B X (sec.nt X w.1, w.2)) >
+             E4.extE X (E3.fromB X (sec.nt X w.1, w.2))
+           =< apH (E4.extE X) (symH (fromBs X w.1 w.2)) >
+             E4.extE X (w.1, subst W0.V (\ z -> W0.Ix z) (BF.tob X w.1) (E2.ExtT.tob X w.1) (symH (PoB X w.1)) w.2)
+           =< symH (TA.fromE-eq X w.1 (E4.extMap.mE X (w.1, subst W0.V (\ z -> W0.Ix z) (BF.tob X w.1) (E2.ExtT.tob X w.1) (symH (PoB X w.1)) w.2))
+                     (E4.extMap.mpt X (w.1, subst W0.V (\ z -> W0.Ix z) (BF.tob X w.1) (E2.ExtT.tob X w.1) (symH (PoB X w.1)) w.2))) >
+             (w.1, TA.fromE X w.1 (E4.extMap.mE X (w.1, subst W0.V (\ z -> W0.Ix z) (BF.tob X w.1) (E2.ExtT.tob X w.1) (symH (PoB X w.1)) w.2))
+                    (E4.extMap.mpt X (w.1, subst W0.V (\ z -> W0.Ix z) (BF.tob X w.1) (E2.ExtT.tob X w.1) (symH (PoB X w.1)) w.2))) })) ;
+
+  triFull : Id (GEqExt[a].EqDat[G].Tri) (E2.ExtT, (A, E4.extMap)) (BF, (AF, SM.subMap)) =
+    GEqLaws[a].TriL[G].triExtPw E2.ExtT A E4.extMap BF AF SM.subMap PoB H1B
+      (\ I x -> refl (A.tob I x))
+      (\ J I f x y e a0 -> tact-irr G A J I f x y e _ a0)
+      Hm ;
+
+  opaque H1B ; opaque tyFull ; opaque fromBs ; opaque Hm ; opaque triFull ;
+
+  ----------------------------------------------------------------------
+  -- the equivalence: at a full point, extEquiv's extension is eal's,
+  -- translated (fromFA)
+
+  module EqF (kA : LineFibP[GFam[a].famPath, G, A].FibAt e1)
+    (eal : GEquiv[a].EquivOp CL.resCtx B (subTy CL.resCtx G A CL.inclR) al)
+    (kAe : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, e1].TV.E, EndKit[GFam[a].famPath, G, A, e1].SFm.SF].KESI kA)
+    (keal : GCofEsi[a].PartialsEsi[ED.EA', GEquiv[a].HFib[CL.resCtx, B, subTy CL.resCtx G A CL.inclR, al].FibT].KESI eal) {
+    module E1 = GExtEquiv[a].ExtEq[G, A, psi, B, al, kA, eal] ;
+    module EE3 = GExtEquiv3[a].ExtEq3[G, A, psi, B, al, kA, eal] ;
+
+    module At (X : Ob) (w : TA.EI X) (p : E1.PX.Partial[X, w]) {
+      module T = GExtEquiv2[a].ExtEq2[G, A, psi, B, al, kA, eal].Th[X, w, p] ;
+      q : IsT (CL.full X w.1) = fl X w.1 ;
+      qi : IsT (CL.full X (G.act X X (idH X) w.1)) = fl X (G.act X X (idH X) w.1) ;
+      kk : (k : Fin CL.r) * Lands X X (CL.Q X w.1 k) (idH X) = CL.full-id X w.1 q ;
+
+      thE : Id (E1.FA.TF.EI X) (T.th X (idH X) qi) (E1.kE X w q p) =
+        E1.kE-cong X (ED.EA.act X X (idH X) w) w (ED.EA.act-id X w) qi q
+          (E1.PX.restrictP X X (idH X) w p) p (E1.PX.restrictP-id X w p) ;
+
+      thE' : Id (E1.FA.TF.EI X) (T.th X (idH X) (T.qOf X (idH X) kk.1 kk.2)) (E1.kE X w q p) =
+        transH (T.th-cong X (idH X) (T.qOf X (idH X) kk.1 kk.2) qi) thE ;
+
+      Bpart : Id (TX.EI X) (E1.FX.fibB X T.v0) (E1.FX.fibB X (E1.fromFA X (E1.kE X w q p))) =
+        transH T.gb-E
+          (transH (E4.glue-B X w.1 T.u q qi)
+            (transH (apH (E3.fromB X) (T.u-b X (idH X) qi))
+              (transH (apH (\ z -> E3.fromB X (E1.FA.fibB X z)) thE)
+                      (symH (E1.fromFA-B X (E1.kE X w q p)))))) ;
+
+      Lpart (W : Ob) (f : Hom W X) (i : Hom W Iv) : Id (TA.EI W) (E1.FX.fibL X T.v0 W f i) (E1.FX.fibL X (E1.fromFA X (E1.kE X w q p)) W f i) =
+        transH (T.Fv-eq W f (compH W X X (idH X) f) i i (symH (comp-idl W X f)) (refl i))
+          (transH (T.F-S2 kk.1 X (idH X) kk.2 W f i)
+            (transH (apH (\ z -> ED.toEA W (E1.FA.fibL X z W f i)) thE')
+                    (symH (E1.fromFA-L X (E1.kE X w q p) W f i)))) ;
+
+      extEqFull : Id (E1.FX.TF.EI X) (w, EE3.extEquiv.kop X w p) (E1.fromFA X (E1.kE X w q p)) =
+        E1.FX.fibE-eq X (w, EE3.extEquiv.kop X w p) (E1.fromFA X (E1.kE X w q p))
+          (symH (E1.fromFA-pt X (E1.kE X w q p))) Bpart Lpart ;
+    } ;
+
+    opaque At.extEqFull ;
+
+    ------------------------------------------------------------------
+    -- along triFull, extEquiv is eal substituted along sec (EqSub)
+
+    module EE4 = GExtEquiv4[a].ExtEq4[G, A, psi, B, al, kA, eal, kAe, keal] ;
+    module ES = GEquivSub2[a].EqSub[G, CL.resCtx, sec, B, subTy CL.resCtx G A CL.inclR, al, eal] ;
+    module FI = ES.FI ;
+    module GXD = GEqExt[a].EqDat[G] ;
+
+    t : GXD.Tri = (E2.ExtT, (A, E4.extMap)) ;
+    t2 : GXD.Tri = (BF, (AF, SM.subMap)) ;
+
+    PsiEq (X : Ob) (w : TA.EI X) : Id (TA.EI X) (GXD.Psi t t2 triFull X w) w =
+      transH (GXD.Psi-tob t t2 triFull X w) (GXD.substLoop X A.tob (apH (\ u -> u.2.1.tob) (symH triFull)) w) ;
+
+    PsiBEq (X : Ob) (w : PR.TyL[G, BF].EI X) : Id (TX.EI X) (GXD.PsiB t t2 triFull X w) (E3.fromB X (sec.nt X w.1, w.2)) =
+      transH (GXD.PsiB-tob t t2 triFull X w)
+        (transH (GEqLaws[a].TriL[G].substEIo X BF.tob E2.ExtT.tob (apH (\ u -> u.1.tob) (symH triFull)) w)
+          (transH (apH {W0.Ix (E2.ExtT.tob X w.1)} {TX.EI X} (\ v -> (w.1, v))
+                     (GEqLaws[a].TriL[G].substPw X w.1 BF.tob E2.ExtT.tob (apH (\ u -> u.1.tob) (symH triFull)) (symH (PoB X w.1)) w.2))
+                  (fromBs X w.1 w.2))) ;
+
+    -- a fibre element of al[sec], lifted, is its move read in al
+    sideEq (V : Ob) (v : FI.HD.TF.EI V) (q' : IsT (CL.full V (GXD.PhiF t t2 triFull V v).1.1))
+      : Id (E1.FA.TF.EI V) (FI.sG V v) (E1.toFA V (GXD.PhiF t t2 triFull V v) q') =
+      E1.FA.fibE-eq V (FI.sG V v) (E1.toFA V (GXD.PhiF t t2 triFull V v) q')
+        (ED.toEA-inj V (FI.sG V v).1 (E1.toFA V (GXD.PhiF t t2 triFull V v) q').1
+           (symH (transH (E1.toFA-pt V (GXD.PhiF t t2 triFull V v) q')
+                   (transH (GXD.PhiF-pt t t2 triFull V v) (PsiEq V v.1)))))
+        (symH (transH (E1.toFA-B V (GXD.PhiF t t2 triFull V v) q')
+                (transH (E3.toB-cong V (E1.FX.fibB V (GXD.PhiF t t2 triFull V v)) (E3.fromB V (sec.nt V v.1.1, v.2.1))
+                           (transH (GXD.PhiF-B t t2 triFull V v) (PsiBEq V (FI.HD.fibB V v))) q' (sec.nt V v.1.1).2)
+                        (E3.toB-fromB V (sec.nt V v.1.1, v.2.1)))))
+        (\ W f i -> ED.toEA-inj W (E1.FA.fibL V (FI.sG V v) W f i) (E1.FA.fibL V (E1.toFA V (GXD.PhiF t t2 triFull V v) q') W f i)
+           (symH (transH (E1.toFA-L V (GXD.PhiF t t2 triFull V v) q' W f i)
+                   (transH (GXD.PhiF-L t t2 triFull V v W f i) (PsiEq W (FI.HD.fibL V v W f i)))))) ;
+
+    module HY (X : Ob) (w : TA.EI X) (p : GCofib[a].Partials[FI.HD.EA, FI.HD.FibT].Partial[X, w]) {
+      pM : E1.PX.Partial[X, GXD.Psi t t2 triFull X w] = GXD.mvP t t2 triFull X w p ;
+      q : IsT (CL.full X (GXD.Psi t t2 triFull X w).1) = fl X (GXD.Psi t t2 triFull X w).1 ;
+      y : E1.FA.TF.EI X = (FI.ls.nt X w, eal.kop X (FI.ls.nt X w) (ES.qP X w p)) ;
+
+      Pt : Id (E1.FA.TA.EI X) (FI.ls.nt X w) (E1.wq X (GXD.Psi t t2 triFull X w) q) =
+        ED.toEA-inj X (FI.ls.nt X w) (E1.wq X (GXD.Psi t t2 triFull X w) q) (symH (PsiEq X w)) ;
+
+      R : Id (E1.PA.Partial[X, E1.wq X (GXD.Psi t t2 triFull X w) q])
+             (subst (E1.FA.TA.EI X) (\ z -> E1.PA.Partial[X, z]) (FI.ls.nt X w) (E1.wq X (GXD.Psi t t2 triFull X w) q) Pt (ES.qP X w p))
+             (E1.Tr[X, GXD.Psi t t2 triFull X w, q].TrP pM) =
+        E1.PA.partExtH X (FI.ls.nt X w) (E1.wq X (GXD.Psi t t2 triFull X w) q) Pt (ES.qP X w p) (E1.Tr[X, GXD.Psi t t2 triFull X w, q].TrP pM)
+          (refl p.pr) (\ l -> refl (p.ps l).pQ)
+          (\ l V g i i' -> transH (apH (FI.sG V) (GCofib[a].Partials[FI.HD.EA, FI.HD.FibT].pv-irr X w (p.ps l) V g i i'))
+             (sideEq V ((p.ps l).pv V g i') (E1.Tr[X, GXD.Psi t t2 triFull X w, q].qv (pM.ps l) V g i'))) ;
+
+      KC : Id (E1.FA.TF.EI X) y (E1.kE X (GXD.Psi t t2 triFull X w) q pM) =
+        E1.PA.kop-cong eal X (FI.ls.nt X w) (E1.wq X (GXD.Psi t t2 triFull X w) q) Pt (ES.qP X w p)
+          (E1.Tr[X, GXD.Psi t t2 triFull X w, q].TrP pM) R ;
+
+      H0 : Id (E1.FX.TF.EI X) (GXD.PhiF t t2 triFull X (w, ES.eqSub.kop X w p)) (E1.fromFA X y) =
+        E1.FX.fibE-eq X (GXD.PhiF t t2 triFull X (w, ES.eqSub.kop X w p)) (E1.fromFA X y)
+          (transH (GXD.PhiF-pt t t2 triFull X (w, ES.eqSub.kop X w p)) (transH (PsiEq X w) (symH (E1.fromFA-pt X y))))
+          (transH (GXD.PhiF-B t t2 triFull X (w, ES.eqSub.kop X w p))
+            (transH (PsiBEq X (FI.HD.fibB X (w, ES.eqSub.kop X w p)))
+              (transH (apH (E3.fromB X) (ES.kopB X w p)) (symH (E1.fromFA-B X y)))))
+          (\ W f i -> transH (GXD.PhiF-L t t2 triFull X (w, ES.eqSub.kop X w p) W f i)
+             (transH (PsiEq W (FI.HD.fibL X (w, ES.eqSub.kop X w p) W f i))
+               (transH (apH (ED.toEA W) (ES.kopL X w p W f i)) (symH (E1.fromFA-L X y W f i))))) ;
+
+      hyp : Id (E1.FX.TF.EI X) (GXD.PhiF t t2 triFull X (w, ES.eqSub.kop X w p))
+                               (GXD.Psi t t2 triFull X w, EE3.extEquiv.kop X (GXD.Psi t t2 triFull X w) pM) =
+        transH H0 (transH (apH (E1.fromFA X) KC) (symH (At[X, GXD.Psi t t2 triFull X w, pM].extEqFull))) ;
+    } ;
+
+    -- the result
+    eqFull : Id ((u : GXD.Tri) * GXD.EqOn u) (t, (EE3.extEquiv, EE4.extEquiv-kesi))
+                (t2, (ES.eqSub, GEquivSub3[a].EqSubEsi[G, CL.resCtx, sec, B, subTy CL.resCtx G A CL.inclR, al, eal, keal].eqSubEsi)) =
+      GXD.ext t t2 triFull (EE3.extEquiv, EE4.extEquiv-kesi)
+        (ES.eqSub, GEquivSub3[a].EqSubEsi[G, CL.resCtx, sec, B, subTy CL.resCtx G A CL.inclR, al, eal, keal].eqSubEsi)
+        (\ X w p -> HY[X, w, p].hyp) ;
+
+    opaque PsiEq ; opaque PsiBEq ; opaque sideEq ; opaque eqFull ;
+  } ;
+} ;

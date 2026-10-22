@@ -1,0 +1,164 @@
+-- ExtComp2N.seg: MODEL/Poset/ExtComp2.agda, second half (split for the
+-- 10 s rule).  Naturality of the values vA / vD of the fibre partial
+-- element (vA-nat, vD-nat) and their compatibilities (cAA, cDD, cAD).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module CN = Conn[a] ;
+open CN ;
+open VCode[a] ;
+module CF = Cofib[a] ;
+open CF ;
+open Equiv[a] ;
+open ExtKit[a] ;
+open ExtComp1E[a] ;
+
+module C2N (G : PCtx) (A : PTy[G]) (psi : CF.Cof[G]) (B : PTy[CF.CofL[G, psi].resCtx])
+  (al : PMap[CF.CofL[G, psi].resCtx, B, subTy CF.CofL[G, psi].resCtx G A CF.CofL[G, psi].inclR]) (d : Bool)
+  (fAS : FibM.FillDef[G, A].FillOp[src d]) (fBS : FibM.FillDef[CF.CofL[G, psi].resCtx, B].FillOp[src d])
+  (eal : EquivOp CF.CofL[G, psi].resCtx B (subTy CF.CofL[G, psi].resCtx G A CF.CofL[G, psi].inclR) al) {
+  open CF.CofL[G, psi] ;
+  open Ext[a].ExtDef[G, A, psi] ;
+  open ExtB[B, al] ;
+  open Ext3[a].ExtB3[G, A, psi, B, al] ;
+  open Ext4[a].ExtB4[G, A, psi, B, al] ;
+  open ExtComp1[a].C1[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp1E[a].C1E[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp2[a].C2[G, A, psi, B, al, d, fAS, fBS, eal] ;
+
+  constFib-act' (V' V : Ob) (chi : Hom V' V) (x : TA'.EI V) (bE : TB.EI V) (pt : Id (W0.Ix (G'.ob V)) bE.1 x.1)
+    (e : Id (TA'.EI V) (al.mE V bE) x) (x' : TA'.EI V') (Px : Id (TA'.EI V') (EA'.act V' V chi x) x')
+    (bE' : TB.EI V') (pt' : Id (W0.Ix (G'.ob V')) bE'.1 x'.1) (e' : Id (TA'.EI V') (al.mE V' bE') x')
+    (P : Id (TB.EI V') (EB.act V' V chi bE) bE')
+    : Id (FA.TF.EI V') (EFA.act V' V chi (constFib V x bE pt e)) (constFib V' x' bE' pt' e') =
+    idJ (TA'.EI V') (EA'.act V' V chi x)
+      (\ x2 P2 -> (bE2 : TB.EI V') (pt2 : Id (W0.Ix (G'.ob V')) bE2.1 x2.1) (e2 : Id (TA'.EI V') (al.mE V' bE2) x2)
+         -> Id (TB.EI V') (EB.act V' V chi bE) bE2 -> Id (FA.TF.EI V') (EFA.act V' V chi (constFib V x bE pt e)) (constFib V' x2 bE2 pt2 e2))
+      (\ bE2 pt2 e2 P2 -> constFib-act V' V chi x bE pt e bE2 pt2 e2 P2)
+      x' Px bE' pt' e' P ;
+
+  bA-nat (X : Ob) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c))) (l : Fin c.br) (V' V : Ob) (chi : Hom V' V)
+    (g : Hom V X) (i : Lands V X (c.bs l).sQ g) (i' : Lands V' X (c.bs l).sQ (compH V' V X g chi))
+    : Id (TB.EI V') (EB.act V' V chi (bA X c q l V g i)) (bA X c q l V' (compH V' V X g chi) i') =
+    fromB-inj V' (EB.act V' V chi (bA X c q l V g i)) (bA X c q l V' (compH V' V X g chi) i')
+      (trans (TX.EI V') (fromB V' (EB.act V' V chi (bA X c q l V g i))) (EX.act V' V chi (fromB V (bA X c q l V g i)))
+                        (fromB V' (bA X c q l V' (compH V' V X g chi) i'))
+        (symH (actX-B V' V chi (bA X c q l V g i)))
+        (trans (TX.EI V') (EX.act V' V chi (fromB V (bA X c q l V g i))) (EX.act V' V chi (sA X c l V g i))
+                          (fromB V' (bA X c q l V' (compH V' V X g chi) i'))
+           (ap (TX.EI V) (TX.EI V') (EX.act V' V chi) (fromB V (bA X c q l V g i)) (sA X c l V g i)
+              (fromB-toB V (sA X c l V g i) (qA X c q V g)))
+           (trans (TX.EI V') (EX.act V' V chi (sA X c l V g i)) (sA X c l V' (compH V' V X g chi) i')
+                             (fromB V' (bA X c q l V' (compH V' V X g chi) i'))
+              (sA-nat X c l V' V chi g i i')
+              (symH (fromB-toB V' (sA X c l V' (compH V' V X g chi) i') (qA X c q V' (compH V' V X g chi))))))) ;
+
+  bD-nat (X : Ob) (c : BX.Box[eS, X]) (k : Fin r) (V' V : Ob) (chi : Hom V' V)
+    (g : Hom V X) (i : Lands V X (nrm X (dQ X c.brho k)) g) (i' : Lands V' X (nrm X (dQ X c.brho k)) (compH V' V X g chi))
+    : Id (TB.EI V') (EB.act V' V chi (bD X c k V g i)) (bD X c k V' (compH V' V X g chi) i') =
+    trans (TB.EI V') (EB.act V' V chi (bD X c k V g i))
+                     (topB V' (BX.restrict eS V' V chi (BX.restrict eS V X g c))
+                        (full-act (prodP V' Iv) (prodP V Iv) (cylH V' V chi) (BX.restrict eS V X g c).brho (pfull V X g c k i)))
+                     (bD X c k V' (compH V' V X g chi) i')
+      (topB-nat V' V chi (BX.restrict eS V X g c) (pfull V X g c k i)
+         (full-act (prodP V' Iv) (prodP V Iv) (cylH V' V chi) (BX.restrict eS V X g c).brho (pfull V X g c k i)))
+      (ap (TB.EI (prodP V' Iv)) (TB.EI V') (EB.act V' (prodP V' Iv) (lid V' eT))
+         (FBE V' (BX.restrict eS V' V chi (BX.restrict eS V X g c))
+            (full-act (prodP V' Iv) (prodP V Iv) (cylH V' V chi) (BX.restrict eS V X g c).brho (pfull V X g c k i)))
+         (FBE V' (BX.restrict eS V' X (compH V' V X g chi) c) (pfull V' X (compH V' V X g chi) c k i'))
+         (FBE-cong V' (BX.restrict eS V' V chi (BX.restrict eS V X g c)) (BX.restrict eS V' X (compH V' V X g chi) c)
+            (BX.restrict-o eS V' V X chi g c)
+            (full-act (prodP V' Iv) (prodP V Iv) (cylH V' V chi) (BX.restrict eS V X g c).brho (pfull V X g c k i))
+            (pfull V' X (compH V' V X g chi) c k i'))) ;
+
+  opaque constFib-act' ; opaque bA-nat ; opaque bD-nat ;
+
+  vA-nat (X : Ob) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c))) (l : Fin c.br) (V' V : Ob) (chi : Hom V' V)
+    (g : Hom V X) (i : Lands V X (c.bs l).sQ g) (i' : Lands V' X (c.bs l).sQ (compH V' V X g chi))
+    : Id (FA.TF.EI V') (EFA.act V' V chi (vA X c q l V g i)) (vA X c q l V' (compH V' V X g chi) i') =
+    constFib-act' V' V chi (xg X c q V g) (bA X c q l V g i) (ptA X c q l V g i) (eA X c q l V g i)
+      (xg X c q V' (compH V' V X g chi)) (symH (EA'.act-o V' V X g chi (wq X c q)))
+      (bA X c q l V' (compH V' V X g chi) i') (ptA X c q l V' (compH V' V X g chi) i') (eA X c q l V' (compH V' V X g chi) i')
+      (bA-nat X c q l V' V chi g i i') ;
+
+  vD-nat (X : Ob) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c))) (k : Fin r) (V' V : Ob) (chi : Hom V' V)
+    (g : Hom V X) (i : Lands V X (nrm X (dQ X c.brho k)) g) (i' : Lands V' X (nrm X (dQ X c.brho k)) (compH V' V X g chi))
+    : Id (FA.TF.EI V') (EFA.act V' V chi (vD X c q k V g i)) (vD X c q k V' (compH V' V X g chi) i') =
+    constFib-act' V' V chi (xg X c q V g) (bD X c k V g i) (ptD X c q k V g i) (eD X c q k V g i)
+      (xg X c q V' (compH V' V X g chi)) (symH (EA'.act-o V' V X g chi (wq X c q)))
+      (bD X c k V' (compH V' V X g chi) i') (ptD X c q k V' (compH V' V X g chi) i') (eD X c q k V' (compH V' V X g chi) i')
+      (bD-nat X c k V' V chi g i i') ;
+
+  ----------------------------------------------------------------------
+  -- Compatibility of the values
+
+  cAA (X : Ob) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c))) (l l' : Fin c.br) (V : Ob) (g : Hom V X)
+    (i : Lands V X (c.bs l).sQ g) (i' : Lands V X (c.bs l').sQ g) : Id (FA.TF.EI V) (vA X c q l V g i) (vA X c q l' V g i') =
+    constFib-eq V (xg X c q V g) (xg X c q V g) (bA X c q l V g i) (bA X c q l' V g i')
+      (ptA X c q l V g i) (eA X c q l V g i) (ptA X c q l' V g i') (eA X c q l' V g i') (refl (xg X c q V g))
+      (ap (TX.T V (G.act V (prodP X Iv) (compH V X (prodP X Iv) (lid X eT) g) c.brho)) (TB.EI V)
+         (\ z -> toB V (G.act V (prodP X Iv) (compH V X (prodP X Iv) (lid X eT) g) c.brho, z) (qA X c q V g))
+         ((c.bs l).sv V (compH V X (prodP X Iv) (lid X eT) g) (lands-inQ-lid V X (c.bs l).sQ eT g i))
+         ((c.bs l').sv V (compH V X (prodP X Iv) (lid X eT) g) (lands-inQ-lid V X (c.bs l').sQ eT g i'))
+         (c.bcs l l' V (compH V X (prodP X Iv) (lid X eT) g) (lands-inQ-lid V X (c.bs l).sQ eT g i) (lands-inQ-lid V X (c.bs l').sQ eT g i'))) ;
+
+  cDD (X : Ob) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c))) (k k' : Fin r) (V : Ob) (g : Hom V X)
+    (i : Lands V X (nrm X (dQ X c.brho k)) g) (i' : Lands V X (nrm X (dQ X c.brho k')) g)
+    : Id (FA.TF.EI V) (vD X c q k V g i) (vD X c q k' V g i') =
+    constFib-eq V (xg X c q V g) (xg X c q V g) (bD X c k V g i) (bD X c k' V g i')
+      (ptD X c q k V g i) (eD X c q k V g i) (ptD X c q k' V g i') (eD X c q k' V g i') (refl (xg X c q V g))
+      (ap (TB.EI (prodP V Iv)) (TB.EI V) (EB.act V (prodP V Iv) (lid V eT))
+         (FBE V (BX.restrict eS V X g c) (pfull V X g c k i)) (FBE V (BX.restrict eS V X g c) (pfull V X g c k' i'))
+         (FBE-cong V (BX.restrict eS V X g c) (BX.restrict eS V X g c) (refl (BX.restrict eS V X g c)) (pfull V X g c k i) (pfull V X g c k' i'))) ;
+
+  module AD (X : Ob) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c))) (l : Fin c.br) (k : Fin r) (V : Ob)
+    (g : Hom V X) (i : Lands V X (c.bs l).sQ g) (i' : Lands V X (nrm X (dQ X c.brho k)) g) {
+    -- g lands in Q, so the identity lands in g^* Q, and so does its lid
+    iQ : InQ V V (pre V X g (c.bs l).sQ) (compH V V (prodP V Iv) (lid V eT) (idH V)) =
+      lands-inQ-lid V V (pre V X g (c.bs l).sQ) eT (idH V) (lands-pre-id V X (c.bs l).sQ g i) ;
+
+    y0 : TX.EI V = fromB V (bD X c k V g i') ;
+    y1 : TX.EI V = fromB V (EB.act V V (idH V) (bD X c k V g i')) ;
+    y2 : TX.EI V = ((BX.restrict eS V X g c).bs l).svE V (compH V V (prodP V Iv) (lid V eT) (idH V)) iQ ;
+    y3 : TX.EI V = (c.bs l).svE V (compH V (prodP V Iv) (prodP X Iv) (cylH V X g) (compH V V (prodP V Iv) (lid V eT) (idH V)))
+                     (inQ-cyl V V X g (c.bs l).sQ (compH V V (prodP V Iv) (lid V eT) (idH V)) iQ) ;
+    y4 : TX.EI V = sA X c l V g i ;
+
+    e : Id (TX.EI V) y0 y4 =
+      trans (TX.EI V) y0 y1 y4 (ap (TB.EI V) (TX.EI V) (fromB V) (bD X c k V g i') (EB.act V V (idH V) (bD X c k V g i'))
+                                  (symH (EB.act-id V (bD X c k V g i'))))
+       (trans (TX.EI V) y1 y2 y4 (topB-side V (BX.restrict eS V X g c) (pfull V X g c k i') l V (idH V) iQ)
+        (trans (TX.EI V) y2 y3 y4 (BX.Restrict[eS, V, X, g].rsvE c.brho (c.bs l) V (compH V V (prodP V Iv) (lid V eT) (idH V)) iQ)
+           ((c.bs l).pw V (compH V (prodP V Iv) (prodP X Iv) (cylH V X g) (compH V V (prodP V Iv) (lid V eT) (idH V)))
+              (compH V X (prodP X Iv) (lid X eT) g)
+              (\ s -> transH (apH (\ k -> (app V (prodP X Iv) (compH V (prodP V Iv) (prodP X Iv) (cylH V X g) k) s).1)
+                                  (comp-idr V (prodP V Iv) (lid V eT)))
+                             (symH (pw-lid V X g eT s)))
+              (inQ-cyl V V X g (c.bs l).sQ (compH V V (prodP V Iv) (lid V eT) (idH V)) iQ) (lands-inQ-lid V X (c.bs l).sQ eT g i)))) ;
+
+    res : Id (FA.TF.EI V) (vA X c q l V g i) (vD X c q k V g i') =
+      constFib-eq V (xg X c q V g) (xg X c q V g) (bA X c q l V g i) (bD X c k V g i')
+        (ptA X c q l V g i) (eA X c q l V g i) (ptD X c q k V g i') (eD X c q k V g i') (refl (xg X c q V g))
+        (fromB-inj V (bA X c q l V g i) (bD X c k V g i')
+          (trans (TX.EI V) (fromB V (bA X c q l V g i)) y4 y0 (fromB-toB V (sA X c l V g i) (qA X c q V g)) (symH e))) ;
+  } ;
+
+  cAD (X : Ob) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c))) (l : Fin c.br) (k : Fin r) (V : Ob)
+    (g : Hom V X) (i : Lands V X (c.bs l).sQ g) (i' : Lands V X (nrm X (dQ X c.brho k)) g)
+    : Id (FA.TF.EI V) (vA X c q l V g i) (vD X c q k V g i') = AD[X, c, q, l, k, V, g, i, i'].res ;
+
+  opaque cAA ; opaque cDD ; opaque cAD ;
+} ;

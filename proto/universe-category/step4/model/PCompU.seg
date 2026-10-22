@@ -1,0 +1,28 @@
+-- PCompU.seg: the poset universe U_L is fibrant (G7 at posets): the
+-- compositions of U_L (in any context G) from univalence, GCompU5.CU at the
+-- poset connections (PCnB) and PUaOp.ua.  With the KESI of ua (U6,
+-- GUaOp10) it is a FibEL (GCompU5.FibU).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosS[a] ; open PSB ;
+module BaseP = PosS[a].PSB ;
+module UL = BaseP.GUnivL.UL ;
+module PU = PUaOp[a] ;
+
+module CU (d : Bool) (G : BaseP.GPre[a+].PS.PCtx) {
+  module C = PosS[a].PSCn.GCompU5.CU[BaseP.GUnivL.ClL, BaseP.GUnivL.clSubL, BaseP.GUnivL.clSub-idL, BaseP.GUnivL.clSub-oL,
+    \ X A -> BaseP.GUnivL.encClL (BaseP.GYon[a].yP X) A, PU.cE, PU.eE, PU.ua, d, G] ;
+
+  -- composition in U_L, from tgt d to src d
+  compAt : C.CA.CompAt = C.compAt ;
+} ;
+
+-- U_L is fibrant, in any context (with the KESI of ua)
+fibU (G : BaseP.GPre[a+].PS.PCtx) : BaseP.GFibE[a+].FibEL G =
+  PosS[a].PSCn.GCompU5.FibU[BaseP.GUnivL.ClL, BaseP.GUnivL.clSubL, BaseP.GUnivL.clSub-idL, BaseP.GUnivL.clSub-oL,
+    \ X A -> BaseP.GUnivL.encClL (BaseP.GYon[a].yP X) A, PU.cE, PU.eE, PU.ua, PU.uaKesi, G].fibU ;

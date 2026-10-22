@@ -1,0 +1,117 @@
+-- ExtEsi3.seg: MODEL/Poset/ExtEsi3.agda.  ESI of Theorem 7's composite,
+-- part 3: the final line box (an empty side inserted in its first family:
+-- LBIns.FE-ins with FESI of fA1), a0, and the composite (ext-det: point,
+-- ext through a0, and the full restrictions through theta, ExtEsi2.th-ins
+-- along restrictions).
+--   esi3 : ESI of the composition cop3 (one direction d)
+-- Agda's C3/C4 + D pair is ONE segment E3; its anonymous module over
+-- (X k c c' ins) is the segment EI3.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module ES = Esi[a, a] ;
+module EF = EsiFill[a, a] ;
+open Conn[a] ;
+module CF = Cofib[a] ;
+open CF ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open BaseP.GCofEsi[a] ;
+open ExtKit[a] ;
+open EsiSplit[a] ;
+open ExtEsiBox[a] ;
+
+module E3 (G : PCtx) (A : PTy[G]) (psi : CF.GP.Cof[G]) (B : PTy[CF.GP.CofL[G, psi].resCtx])
+  (al : PMap[CF.GP.CofL[G, psi].resCtx, B, subTy CF.GP.CofL[G, psi].resCtx G A CF.GP.CofL[G, psi].inclR]) (d : Bool)
+  (fAS : FibM.FillDef[G, A].FillOp[src d]) (fBS : FibM.FillDef[CF.GP.CofL[G, psi].resCtx, B].FillOp[src d])
+  (eal : EquivOp CF.GP.CofL[G, psi].resCtx B (subTy CF.GP.CofL[G, psi].resCtx G A CF.GP.CofL[G, psi].inclR) al)
+  (fA1 : FibM.FillDef[G, A].FillOp[e1])
+  (fesiA : EF.FesiDef[G, A].FESI (src d) fAS) (fesiB : EF.FesiDef[CF.GP.CofL[G, psi].resCtx, B].FESI (src d) fBS)
+  (fesiA1 : EF.FesiDef[G, A].FESI e1 fA1)
+  (kesi : PartialsEsi[extP CF.GP.CofL[G, psi].resCtx (subTy CF.GP.CofL[G, psi].resCtx G A CF.GP.CofL[G, psi].inclR),
+                      FibTy[CF.GP.CofL[G, psi].resCtx, B, subTy CF.GP.CofL[G, psi].resCtx G A CF.GP.CofL[G, psi].inclR, al].FibT].KESI eal) {
+  open CF.GP.CofL[G, psi] ;
+  open BaseP.GExt.ExtDef[G, A, psi] ;
+  open ExtB[B, al] ;
+  open BaseP.GExt2.ExtB2[G, A, psi, B, al] ;
+  open BaseP.GExt3.ExtB3[G, A, psi, B, al] ;
+  open BaseP.GExt4.ExtB4[G, A, psi, B, al] ;
+  open ExtComp1[a].C1[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp1E[a].C1E[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp1b[a].C1b[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp2[a].C2[G, A, psi, B, al, d, fAS, fBS, eal] ;
+  open ExtComp2T[a].C2T[G, A, psi, B, al, d, fAS, fBS, eal] ;
+  open ExtComp3[a].C3[G, A, psi, B, al, d, fAS, fBS, eal, fA1] ;
+  open ExtComp4[a].C4[G, A, psi, B, al, d, fAS, fBS, eal, fA1] ;
+
+  module E1i = ExtEsi1[a].E1[G, A, psi, B, al, d, fAS, fBS, fesiA, fesiB] ;
+  module E2i = ExtEsi2[a].E2[G, A, psi, B, al, d, fAS, fBS, eal, fesiA, fesiB, kesi] ;
+  module BXe = BXm.Boxes[G, ExtT] ;
+  module EX' = ES.EsiDef[G, ExtT] ;
+  module FS = FinSide[G, ExtT] ;
+  module LBI = LBIns[G, A, fA1, fesiA1] ;
+  module FTy = FibTy[resCtx, B, subTy resCtx G A inclR, al] ;
+
+  -- theta along f, for the two boxes
+  thF-ins (X : Ob) (k : Nat) (c c' : BXe.Box[src d, X]) (ins : EX'.InsE[src d, X, k, c, c']) (W : Ob) (f : Hom W X)
+    (q : IsT (full W (G.act W X f (rho1 X c)))) (q' : IsT (full W (G.act W X f (rho1 X c'))))
+    : Id (FTy.TF.EI W) (thF W X f c' q') (thF W X f c q) =
+    E2i.EI2[W, k, BXe.restrict (src d) W X f c, BXe.restrict (src d) W X f c',
+            EsiRes[a, a].EsiRes[G, ExtT].insRes (src d) W X f k c c' ins].EQ[qR W X f c q, qR W X f c' q'].th-ins ;
+
+  opaque thF-ins ;
+
+  module EI3 (X : Ob) (k : Nat) (c c' : BXe.Box[src d, X]) (ins : EX'.InsE[src d, X, k, c, c']) {
+    module F = Fin3[X, c] ;
+    module F' = Fin3[X, c'] ;
+    module E2x = E2i.EI2[X, k, c, c', ins] ;
+
+    F-ins : Id (TA.EI (prodP X Iv)) F'.F F.F =
+      LBI.LBI[X, rho1 X c, rho1 X c', c.br, c'.br, r, k, ins.ins-k, F.LD, F'.LD, ins.ins-r, E2x.rho1-ins,
+              E1i.a1E-ins X k c c' ins,
+              \ m' P0 -> transH (FS.sQ-fin X c'.brho c'.br c'.bs m' (k, finAt c'.br m' k P0) P0)
+                                         (ins.ins-e (finAt c'.br m' k P0)),
+              \ m m' P0 -> transH (FS.sQ-fin X c'.brho c'.br c'.bs m' (skipN k m.1, finAt c'.br m' (skipN k m.1) P0) P0)
+                                           (ins.ins-Q m.1 m.2 (finAt c'.br m' (skipN k m.1) P0)),
+              \ j -> apH {W0.Ix (G.ob X)} {Subset X} (\ z -> (Q X z j)) E2x.rho1-ins,
+              \ m m' P0 W f i i' -> apH {TA.EI X} {TA.EI (prodP W Iv)} (EA.act (prodP W Iv) X (compH (prodP W Iv) W X f (pX W)))
+                                        (E1i.a1E-ins X k c c' ins),
+              \ j W f i i' -> apH {FTy.TF.EI W} {TA.EI (prodP W Iv)} (\ z -> toEA (prodP W Iv) (FTy.fibP W z))
+                                 (thF-ins X k c c' ins W f (F.qOf W f j i') (F'.qOf W f j i))].FE-ins ;
+
+    a0E-ins : Id (TA.EI X) F'.a0E F.a0E = apH {TA.EI (prodP X Iv)} {TA.EI X} (EA.act X (prodP X Iv) (lid X e0)) F-ins ;
+
+    q1 (V : Ob) (g : Hom V X) (q : IsT (full V (G.act V X g L[X, c'].out.1))) : IsT (full V (G.act V X g (rho1 X c'))) =
+      full-eq V (G.act V X g L[X, c'].out.1) (G.act V X g (rho1 X c')) (apH (G.act V X g) L[X, c'].out-pt) q ;
+
+    q2 (V : Ob) (g : Hom V X) (q : IsT (full V (G.act V X g L[X, c'].out.1))) : IsT (full V (G.act V X g (rho1 X c))) =
+      full-eq V (G.act V X g (rho1 X c')) (G.act V X g (rho1 X c)) (apH (G.act V X g) E2x.rho1-ins) (q1 V g q) ;
+
+    out-ins : Id (TX.EI X) L[X, c'].out L[X, c].out =
+      ext-det X L[X, c'].out L[X, c].out
+        (transH {W0.Ix (G.ob X)} L[X, c'].out-pt (transH {W0.Ix (G.ob X)} E2x.rho1-ins (symH {W0.Ix (G.ob X)} L[X, c].out-pt)))
+        (transH {TA.EI X} F'.u-ext (transH {TA.EI X} a0E-ins (symH {TA.EI X} F.u-ext)))
+        (\ V g q -> transH {TX.EI V} (L[X, c'].out-full V g (q1 V g q))
+                     (transH {TX.EI V} (apH {FTy.TF.EI V} {TX.EI V} (\ z -> fromB V (FTy.fibB V z)) (thF-ins X k c c' ins V g (q2 V g q) (q1 V g q)))
+                             (symH {TX.EI V} (L[X, c].out-full V g (q2 V g q))))) ;
+
+    esi3 : Id (TX.EI X) (BXe.topE (tgt d) X c'.brho (cop3 X c')) (BXe.topE (tgt d) X c.brho (cop3 X c)) =
+      transH {TX.EI X} (cop3-E X c') (transH {TX.EI X} out-ins (symH {TX.EI X} (cop3-E X c))) ;
+
+    opaque F-ins ; opaque a0E-ins ; opaque out-ins ; opaque esi3 ;
+  } ;
+} ;

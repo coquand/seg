@@ -1,0 +1,476 @@
+--- core-pre-records/CCof.seg
++++ core/CCof.seg
+@@ -16,7 +16,7 @@
+ module GPR = GPre[l] ;
+ open GPR.PS ;
+ 
+-module Cof (G : PCtx) {
++record Cof (G : PCtx) {
+   cQ (X : Ob) (rho : W0.Ix (G.ob X)) : Phi X ;
+   -- the sieves are natural: restricting rho is taking inverse images
+   cnat (Y X : Ob) (h : Hom Y X) (rho : W0.Ix (G.ob X)) : Id (Phi Y) (cQ Y (G.act Y X h rho)) (pre Y X h (cQ X rho)) ;
+--- core-pre-records/CDGlue.seg
++++ core/CDGlue.seg
+@@ -46,7 +46,7 @@
+   open DB.GPre[lz].TyL[G, A] ;
+   module GL = DB.GPre[lz].PshL[G] ;
+ 
+-  module PLine (S : DPS.PrS N) {
++  record PLine (S : DPS.PrS N) {
+     v (W : Nat) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv) (s : IsT (S.1 W f j)) : EI W ;
+     vpt (W : Nat) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv) (s : IsT (S.1 W f j)) : Id (Pt W) (v W f j s).1 (gt W f j) ;
+     vnat (V W : Nat) (g : Hom (lin V) (lin W)) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv) (s : IsT (S.1 W f j))
+--- core-pre-records/CDSmallCl.seg
++++ core/CDSmallCl.seg
+@@ -98,7 +98,8 @@
+           (FSB.hd-eq i (al'.nt (DCl.hOb i) rho) (hdL i rho v pp pnA) (hdR i rho v pp pnB) (refl (hdR i rho v pp pnB).1)) ;
+ 
+     res : Id ((T : PS.PTy[D']) * CL.Cl D' T) (T1, CL.clSub D' D t (DB.CSmall.xsub D UB.GDr XS.SA al) (smallCl D al)) (T2, smallCl D' al') =
+-      FX.isOpExt (CL.clSub D' D t (DB.CSmall.xsub D UB.GDr XS.SA al) (smallCl D al)) q Ht (smallCl D' al') H ;
++      DB.COp[a].OpExtE[DCl.HIx, DCl.hOk, DCl.hOb, DCl.hS, D'].isOpExt T1
++        (CL.clSub D' D t (DB.CSmall.xsub D UB.GDr XS.SA al) (smallCl D al)) q Ht (smallCl D' al') H ;
+   } ;
+ 
+   smallCl-sub (D D' : PS.PCtx) (al : DB.CSmall.XSub[D, UB.GDr]) (t : PS.PSub[D', D])
+--- core-pre-records/CEnc.seg
++++ core/CEnc.seg
+@@ -63,10 +63,12 @@
+ 
+   sideInj (X : Ob) (x : TC.Pt X) (s s' : PP.Side[X, x]) (P : Id (SideD X) (sideD X x s) (sideD X x s'))
+     : Id (PP.Side[X, x]) s s' =
+-    idJ (SideD X) (s.pQ, s.pv)
++    transH
++    (idJ (SideD X) (s.pQ, s.pv)
+       (\ w Q -> (pp : PP.PptTy X x w.1 w.2) (pn : PP.PnTy X w.1 w.2) -> Id (PP.Side[X, x]) s ((PP.mkSide X x w.1 w.2 pp pn)))
+       (\ pp pn -> PP.side-ext X x s ((PP.mkSide X x s.pQ s.pv pp pn)) (refl s.pQ) (\ W f i i' -> PP.pv-irr X x s W f i i'))
+-      (s'.pQ, s'.pv) P s'.ppt s'.pnat ;
++      (s'.pQ, s'.pv) P s'.ppt s'.pnat)
++    (symH (PP.side-eta X x s')) ;
+ 
+   encSide (X : Ob) (x : TC.Pt X) : Enc (PP.Side[X, x]) =
+     encInj (PP.Side[X, x]) (SideD X) (sideD X x) (sideInj X x) (encSig (Phi X) (\ q -> PP.PvTy X q) (encPhi X) (encPv X)) ;
+@@ -102,9 +104,10 @@
+ pmap-ext (G : PCtx) (B A : PTy[G]) (al al2 : CPartial[a].PMap[G, B, A])
+   (q : (X : Ob) (w : GPR.TyL[G, B].EI X) -> Id (GPR.TyL[G, A].EI X) (al.mE X w) (al2.mE X w))
+   : Id (CPartial[a].PMap[G, B, A]) al al2 =
+-  idJ (METy G B A) al.mE
++  transH (CPartial[a].pmap-eta G B A al) (transH
++  (idJ (METy G B A) al.mE
+     (\ m2 P2 -> (mp2 : MptTy G B A m2) (mn2 : MnatTy G B A m2)
+-       -> Id (CPartial[a].PMap[G, B, A]) al ((CPartial[a].mkPMap G B A m2 mp2 mn2)))
++       -> Id (CPartial[a].PMap[G, B, A]) (CPartial[a].mkPMap G B A al.mE al.mpt al.mnat) ((CPartial[a].mkPMap G B A m2 mp2 mn2)))
+     (\ mp2 mn2 ->
+        transH (apH {MptTy G B A al.mE} {CPartial[a].PMap[G, B, A]} (\ z -> (CPartial[a].mkPMap G B A al.mE z al.mnat))
+                  (isProp-Mpt G B A al.mE al.mpt mp2))
+@@ -112,7 +115,8 @@
+                  (isProp-Mnat G B A al.mE al.mnat mn2)))
+     al2.mE (funext Ob (\ X -> GPR.TyL[G, B].EI X -> GPR.TyL[G, A].EI X) al.mE al2.mE (\ X ->
+               funext (GPR.TyL[G, B].EI X) (\ w -> GPR.TyL[G, A].EI X) (al.mE X) (al2.mE X) (\ w -> q X w)))
+-    al2.mpt al2.mnat ;
++    al2.mpt al2.mnat)
++  (symH (CPartial[a].pmap-eta G B A al2))) ;
+ 
+ opaque pmap-ext ;
+ 
+--- core-pre-records/CExt.seg
++++ core/CExt.seg
+@@ -50,7 +50,7 @@
+ mkPV (c : W0.V) : W0.V =
+   W0.mkV (W0.Ix c) (W0.ev c) (\ u u' P -> W0.emb-inj (W0.Ix c) (W0.elt c.1) (W0.embV c) u u' P) ;
+ 
+-module LD (X : Ob) {
++record LD (X : Ob) {
+   aV : W0.V ;
+   fl (W : Ob) (f : Hom W X) : Bool ;
+   bV (W : Ob) (f : Hom W X) (q : IsT (fl W f)) : W0.V ;
+--- core-pre-records/CFibExt.seg
++++ core/CFibExt.seg
+@@ -31,15 +31,23 @@
+     CCart[l, l].Cart[G, tyOf A q, G, A, \ W x -> x, \ V W g x -> refl (G.act V W g x),
+       \ W v -> v, \ W v -> refl v.1, mn, \ W v v' P Q -> Q, \ X x u -> u, \ X x u -> refl (x, u)].moveFib c ;
+ 
+-  base (A : PTy[G]) (c : CLine[l].Lines[G, A].Fib) (mn : NatTy A (packOf A))
+-    : Id ((B : PTy[G]) * CLine[l].Lines[G, B].Fib) (A, c) (A, moveK A (packOf A) mn c) =
+-    apH {CLine[l].Lines[G, A].Fib} {(B : PTy[G]) * CLine[l].Lines[G, B].Fib} (\ z -> (A, z)) (CCartLaws[l].CI[G, A, mn].idFib c) ;
++  -- at an A built with new, tyOf A (packOf A) is A itself (records have no
++  -- definitional eta), so core is proved by the eliminator of PTy
++  base (o : TOb G) (h : TactTy G o) (hi : IdLaw G o h) (ho : OLaw G o h)
++    (c : CLine[l].Lines[G, mkTy G o h hi ho].Fib) (mn : NatTy (mkTy G o h hi ho) (packOf (mkTy G o h hi ho)))
++    : Id ((B : PTy[G]) * CLine[l].Lines[G, B].Fib) (mkTy G o h hi ho, c)
++         (mkTy G o h hi ho, moveK (mkTy G o h hi ho) (packOf (mkTy G o h hi ho)) mn c) =
++    apH {CLine[l].Lines[G, mkTy G o h hi ho].Fib} {(B : PTy[G]) * CLine[l].Lines[G, B].Fib}
++      (\ z -> (mkTy G o h hi ho, z)) (CCartLaws[l].CI[G, mkTy G o h hi ho, mn].idFib c) ;
+ 
+-  core (A : PTy[G]) (c : CLine[l].Lines[G, A].Fib) (q : Pack A.tob) (Q : Id (Pack A.tob) (packOf A) q) (mn : NatTy A q)
+-    : Id ((B : PTy[G]) * CLine[l].Lines[G, B].Fib) (A, c) (tyOf A q, moveK A q mn c) =
+-    idJ (Pack A.tob) (packOf A)
+-      (\ q2 Q2 -> (mn2 : NatTy A q2) -> Id ((B : PTy[G]) * CLine[l].Lines[G, B].Fib) (A, c) (tyOf A q2, moveK A q2 mn2 c))
+-      (\ mn2 -> base A c mn2) q Q mn ;
++  core : (A : PTy[G]) (c : CLine[l].Lines[G, A].Fib) (q : Pack A.tob) (Q : Id (Pack A.tob) (packOf A) q) (mn : NatTy A q)
++    -> Id ((B : PTy[G]) * CLine[l].Lines[G, B].Fib) (A, c) (tyOf A q, moveK A q mn c) =
++    split { PTy o h hi ho -> \ c q Q mn ->
++      idJ (Pack o) (packOf (mkTy G o h hi ho))
++        (\ q2 Q2 -> (mn2 : NatTy (mkTy G o h hi ho) q2)
++           -> Id ((B : PTy[G]) * CLine[l].Lines[G, B].Fib) (mkTy G o h hi ho, c)
++                 (tyOf (mkTy G o h hi ho) q2, moveK (mkTy G o h hi ho) q2 mn2 c))
++        (\ mn2 -> base o h hi ho c mn2) q Q mn } ;
+ 
+   -- the principle
+   fibExt (A : PTy[G]) (c : CLine[l].Lines[G, A].Fib) (q : Pack A.tob) (Ht : PtEq G A.tob A.tact q.1) (mn : NatTy A q)
+--- core-pre-records/CHtpyOps.seg
++++ core/CHtpyOps.seg
+@@ -23,7 +23,7 @@
+ module GPR = GPre[l] ;
+ open GPR.PS ;
+ 
+-module NMap (G : PCtx) (A B : PTy[G]) {
++record NMap (G : PCtx) (A B : PTy[G]) {
+   nfun (I : Ob) (x : W0.Ix (G.ob I)) (a0 : W0.Ix (A.tob I x)) : W0.Ix (B.tob I x) ;
+   nnat (J I : Ob) (f : Hom J I) (x : W0.Ix (G.ob I)) (y : W0.Ix (G.ob J)) (e : Id (W0.Ix (G.ob J)) (G.act J I f x) y)
+     (a0 : W0.Ix (A.tob I x)) : Id (W0.Ix (B.tob J y)) (B.tact J I f x y e (nfun I x a0)) (nfun J y (A.tact J I f x y e a0)) ;
+@@ -424,7 +424,7 @@
+ ------------------------------------------------------------------------
+ -- homotopy equivalences
+ 
+-module HEq (G : PCtx) (A B : PTy[G]) (f : NMap[G, A, B]) {
++record HEq (G : PCtx) (A B : PTy[G]) (f : NMap[G, A, B]) {
+   inv : NMap[G, B, A] ;
+   hl : PEl[extP G A, HT[G, A, A, compN G A B A f inv, idN G A].PT.PathP] ;
+   hr : PEl[extP G B, HT[G, B, B, compN G B A B inv f, idN G B].PT.PathP] ;
+--- core-pre-records/CId.seg
++++ core/CId.seg
+@@ -63,7 +63,7 @@
+ -- for Q and a natural family F f of sieves for f landing in Q, the sieve of
+ -- the f in Q with F f total
+ 
+-module DConj {
++record DConj {
+   dconj (X : Ob) (Q : Phi X) (F : (W : Ob) (f : Hom W X) -> Lands W X Q f -> Phi W)
+     (Fn : (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Lands W X Q f) (i' : Lands V X Q (compH V W X f g))
+           -> Id (Phi V) (pre V W g (F W f i)) (F V (compH V W X f g) i')) : Phi X ;
+--- core-pre-records/CLocD.seg
++++ core/CLocD.seg
+@@ -41,7 +41,7 @@
+ piH (J X : Ob) (B : Hom J X -> W.V) : W.V = VL.PiS (Hom J X) (VL.encIx (homV J X)) (VL.encIx-inj (homV J X)) B ;
+ piE (X : Ob) (B : El X -> W.V) : W.V = VL.PiS (El X) (VL.encIx (elV X)) (VL.encIx-inj (elV X)) B ;
+ 
+-module NatMap (G : PCtx) (A B : PTy[G]) {
++record NatMap (G : PCtx) (A B : PTy[G]) {
+   nfun (I : Ob) (x : W.Ix (G.ob I)) (a0 : W.Ix (A.tob I x)) : W.Ix (B.tob I x) ;
+   nnat (J I : Ob) (f : Hom J I) (x : W.Ix (G.ob I)) (y : W.Ix (G.ob J)) (e : Id (W.Ix (G.ob J)) (G.act J I f x) y)
+     (a0 : W.Ix (A.tob I x)) : Id (W.Ix (B.tob J y)) (B.tact J I f x y e (nfun I x a0)) (nfun J y (A.tact J I f x y e a0)) ;
+--- core-pre-records/COp.seg
++++ core/COp.seg
+@@ -90,19 +90,37 @@
+     apH {F.Op} {(A' : PTy[G]) * OpS[I, ok, ob, S, G, A'].Op} (\ z -> (A, z))
+       (F.op-ext c c' (\ i o rho h -> H i o rho h.1 h.2.1 h.2.2 h.2.2)) ;
+ 
+-  core (c : F.Op) (q : Pack) (Q : Id Pack packOf q) (c' : OpS[I, ok, ob, S, G, B q].Op) (H : Agree q c c')
+-    : Id ((A' : PTy[G]) * OpS[I, ok, ob, S, G, A'].Op) (A, c) (B q, c') =
+-    idJ Pack packOf (\ q2 Q2 -> (c2 : OpS[I, ok, ob, S, G, B q2].Op) -> Agree q2 c c2
+-                       -> Id ((A' : PTy[G]) * OpS[I, ok, ob, S, G, A'].Op) (A, c) (B q2, c2))
+-      (base c) q Q c' H ;
++  opaque base ;
++} ;
+ 
+-  isOpExt (c : F.Op) (q : Pack) (Ht : PtEq G A.tob A.tact q.1) (c' : OpS[I, ok, ob, S, G, B q].Op) (H : Agree q c c')
+-    : Id ((A' : PTy[G]) * OpS[I, ok, ob, S, G, A'].Op) (A, c) (B q, c') =
+-    core c q
++-- The extensionality of OpExt, for every A.  The base case of the J below
++-- needs  B packOf = A , which holds definitionally only for an A built with
++-- new (records have no definitional eta), so the statement is proved for
++-- every A by the eliminator of PTy.
++module OpExtE (I : U a) (ok : I -> U a) (ob : I -> Ob) (S : (i : I) -> Phi (ob i)) (G : PCtx) {
++  CoreTy (A : PTy[G]) : U l+ =
++    (c : OpS[I, ok, ob, S, G, A].Op) (q : OpExt[I, ok, ob, S, G, A].Pack)
++    (Q : Id (OpExt[I, ok, ob, S, G, A].Pack) (OpExt[I, ok, ob, S, G, A].packOf) q)
++    (c' : OpS[I, ok, ob, S, G, OpExt[I, ok, ob, S, G, A].B q].Op) (H : OpExt[I, ok, ob, S, G, A].Agree q c c')
++    -> Id ((A' : PTy[G]) * OpS[I, ok, ob, S, G, A'].Op) (A, c) (OpExt[I, ok, ob, S, G, A].B q, c') ;
++
++  core : (A : PTy[G]) -> CoreTy A = split { PTy o h hi ho -> \ c q Q c' H ->
++    idJ (OpExt[I, ok, ob, S, G, mkTy G o h hi ho].Pack) (OpExt[I, ok, ob, S, G, mkTy G o h hi ho].packOf)
++      (\ q2 Q2 -> (c2 : OpS[I, ok, ob, S, G, OpExt[I, ok, ob, S, G, mkTy G o h hi ho].B q2].Op)
++                  -> OpExt[I, ok, ob, S, G, mkTy G o h hi ho].Agree q2 c c2
++                  -> Id ((A' : PTy[G]) * OpS[I, ok, ob, S, G, A'].Op) (mkTy G o h hi ho, c)
++                        (OpExt[I, ok, ob, S, G, mkTy G o h hi ho].B q2, c2))
++      (OpExt[I, ok, ob, S, G, mkTy G o h hi ho].base c) q Q c' H } ;
++
++  isOpExt (A : PTy[G]) (c : OpS[I, ok, ob, S, G, A].Op) (q : OpExt[I, ok, ob, S, G, A].Pack)
++    (Ht : PtEq G A.tob A.tact q.1) (c' : OpS[I, ok, ob, S, G, OpExt[I, ok, ob, S, G, A].B q].Op)
++    (H : OpExt[I, ok, ob, S, G, A].Agree q c c')
++    : Id ((A' : PTy[G]) * OpS[I, ok, ob, S, G, A'].Op) (A, c) (OpExt[I, ok, ob, S, G, A].B q, c') =
++    core A c q
+       (Sigma-eq (TactTy G A.tob) (\ h -> IdLaw G A.tob h * OLaw G A.tob h) A.tact q.1 (A.tact-id, A.tact-o) q.2
+          (tact-funext G A.tob A.tact q.1 Ht)
+          (isProp-Sigma (IdLaw G A.tob q.1) (\ z -> OLaw G A.tob q.1) (idLaw-prop G A.tob q.1) (\ z -> oLaw-prop G A.tob q.1)))
+       c' H ;
+ 
+-  opaque base ; opaque core ; opaque isOpExt ;
++  opaque core ; opaque isOpExt ;
+ } ;
+--- core-pre-records/COpCl.seg
++++ core/COpCl.seg
+@@ -31,7 +31,7 @@
+ 
+   clSub-id (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     : Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c) =
+-    COp[a].OpExt[I, ok, ob, S, G, A].isOpExt c
++    COp[a].OpExtE[I, ok, ob, S, G].isOpExt A c
+       ((subTy G G A (idS G)).tact, ((subTy G G A (idS G)).tact-id, (subTy G G A (idS G)).tact-o))
+       (\ J I0 f x y e x' -> tact-irr G A J I0 f x y e (ntEq G G (idS G) J I0 f x y e) x')
+       (clSub G G (idS G) A c)
+@@ -42,7 +42,7 @@
+   clSub-o (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     : Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                    (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)) =
+-    COp[a].OpExt[I, ok, ob, S, T, subTy T G A (oS T D G s s')].isOpExt (clSub T G (oS T D G s s') A c)
++    COp[a].OpExtE[I, ok, ob, S, T].isOpExt (subTy T G A (oS T D G s s')) (clSub T G (oS T D G s s') A c)
+       ((subTy T D (subTy D G A s) s').tact, ((subTy T D (subTy D G A s) s').tact-id, (subTy T D (subTy D G A s) s').tact-o))
+       (\ J I0 f x y e x' -> tact-irr G A J I0 f (s.nt I0 (s'.nt I0 x)) (s.nt J (s'.nt J y)) (ntEq T G (oS T D G s s') J I0 f x y e)
+                               (ntEq D G s J I0 f (s'.nt I0 x) (s'.nt J y) (ntEq T D s' J I0 f x y e)) x')
+--- core-pre-records/CPartial.seg
++++ core/CPartial.seg
+@@ -28,7 +28,7 @@
+ ------------------------------------------------------------------------
+ -- maps of types over a context
+ 
+-module PMap (D : PCtx) (B A : PTy[D]) {
++record PMap (D : PCtx) (B A : PTy[D]) {
+   mE (X : Ob) (w : W0.Ix ((extP D B).ob X)) : W0.Ix ((extP D A).ob X) ;
+   mpt (X : Ob) (w : W0.Ix ((extP D B).ob X)) : Id (W0.Ix (D.ob X)) (mE X w).1 w.1 ;
+   mnat (Y X : Ob) (h : Hom Y X) (w : W0.Ix ((extP D B).ob X))
+@@ -41,6 +41,10 @@
+   (mnat : (Y X : Ob) (h : Hom Y X) (w : W0.Ix ((extP D B).ob X))
+           -> Id (W0.Ix ((extP D A).ob Y)) (mE Y ((extP D B).act Y X h w)) ((extP D A).act Y X h (mE X w)))
+   : PMap[D, B, A] = new PMap[D, B, A, mE, mpt, mnat] ;
++
++-- eta for PMap, in Id (no eta by conversion for records)
++pmap-eta (D : PCtx) (B A : PTy[D]) : (al : PMap[D, B, A]) -> Id (PMap[D, B, A]) al (mkPMap D B A al.mE al.mpt al.mnat) =
++  split { PMap m p n -> refl (mkPMap D B A m p n) } ;
+ 
+ pmap-id (D : PCtx) (B : PTy[D]) : PMap[D, B, B] =
+   new PMap[D, B, B, \ X w -> w, \ X w -> refl w.1, \ Y X h w -> refl ((extP D B).act Y X h w)] ;
+@@ -61,7 +65,7 @@
+     -> Id (EI W') (E.act W' W chi (v W f i)) (v W' (compH W' W X f chi) i') ;
+ 
+   -- a partial element: one sieve, a section of C over it, lying over x
+-  module Side (X : Ob) (x : Pt X) {
++  record Side (X : Ob) (x : Pt X) {
+     pQ : Phi X ;
+     pv : PvTy X pQ ;
+     ppt : PptTy X x pQ pv ;
+@@ -74,7 +78,7 @@
+ 
+   -- eta for sides, in Id (by the eliminator)
+   side-eta (X : Ob) (x : Pt X) : (s : Side[X, x]) -> Id (Side[X, x]) s (mkSide X x s.pQ s.pv s.ppt s.pnat) =
+-    split { Side X0 x0 q v p n -> refl (mkSide X x q v p n) } ;
++    split { Side q v p n -> refl (mkSide X x q v p n) } ;
+ 
+   -- a side does not depend on the proof that the map lands, nor on the
+   -- presentation of the map
+@@ -207,7 +211,7 @@
+   module TT = GPR.TyL[D, T] ;
+   module PS' = Partials[D, S] ;
+ 
+-  module RC {
++  record RC {
+     kop (X : Ob) (x : TS.Pt X) (s : PS'.Side[X, x]) : TT.T X x ;
+     -- the extension agrees with m on the side's sieve
+     kside (X : Ob) (x : TS.Pt X) (s : PS'.Side[X, x]) (W : Ob) (f : Hom W X) (i : Lands W X s.pQ f)
+--- core-pre-records/CSmall.seg
++++ core/CSmall.seg
+@@ -26,7 +26,7 @@
+ 
+ smallC (v : W0.V) : V1.V = V1.mkV (W0.Ix v) (smallF v) (smallInj v) ;
+ 
+-module SPTy (G : L1.PCtx) {
++record SPTy (G : L1.PCtx) {
+   tob (I : Ob) (x : V1.Ix (G.ob I)) : W0.V ;
+   tact (J I : Ob) (f : Hom J I) (x : V1.Ix (G.ob I)) (y : V1.Ix (G.ob J))
+     (e : Id (V1.Ix (G.ob J)) (G.act J I f x) y) (a0 : W0.Ix (tob I x)) : W0.Ix (tob J y) ;
+@@ -42,7 +42,7 @@
+ -- a small type read at level a+ (the same fibres and action)
+ up (G : L1.PCtx) (A : SPTy[G]) : L1.PTy[G] = new L1.PTy[G, \ I x -> smallC (A.tob I x), A.tact, A.tact-id, A.tact-o] ;
+ 
+-module XSub (D : PCtx) (G : L1.PCtx) {
++record XSub (D : PCtx) (G : L1.PCtx) {
+   nt (I : Ob) (x : W0.Ix (D.ob I)) : V1.Ix (G.ob I) ;
+   nt-nat (J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) : Id (V1.Ix (G.ob J)) (nt J (D.act J I f x)) (G.act J I f (nt I x)) ;
+ } ;
+@@ -133,15 +133,21 @@
+ mkXSub (D : PCtx) (G : L1.PCtx) (n : (I : Ob) -> W0.Ix (D.ob I) -> V1.Ix (G.ob I)) (nn : XNat D G n) : XSub[D, G] =
+   new XSub[D, G, n, nn] ;
+ 
++-- eta for XSub, in Id (no eta by conversion for records)
++xsub-eta (D : PCtx) (G : L1.PCtx) : (s : XSub[D, G]) -> Id (XSub[D, G]) s (mkXSub D G s.nt s.nt-nat) =
++  split { XSub n k -> refl (mkXSub D G n k) } ;
++
+ xs-ext (D : PCtx) (G : L1.PCtx) (s s' : XSub[D, G]) (P : (I : Ob) (x : W0.Ix (D.ob I)) -> Id (V1.Ix (G.ob I)) (s.nt I x) (s'.nt I x))
+   : Id (XSub[D, G]) s s' =
+-  idJ ((I : Ob) -> W0.Ix (D.ob I) -> V1.Ix (G.ob I)) s.nt
+-    (\ n2 P2 -> (nn2 : XNat D G n2) -> Id (XSub[D, G]) s ((mkXSub D G n2 nn2)))
++  transH (xsub-eta D G s) (transH
++  (idJ ((I : Ob) -> W0.Ix (D.ob I) -> V1.Ix (G.ob I)) s.nt
++    (\ n2 P2 -> (nn2 : XNat D G n2) -> Id (XSub[D, G]) (mkXSub D G s.nt s.nt-nat) ((mkXSub D G n2 nn2)))
+     (\ nn2 -> apH {XNat D G s.nt} {XSub[D, G]} (\ z -> (mkXSub D G s.nt z)) (isProp-XNat D G s.nt s.nt-nat nn2))
+     s'.nt
+     (Axioms[a+].FunExtLemmas[fe @(a+)].funext Ob (\ I -> W0.Ix (D.ob I) -> V1.Ix (G.ob I)) s.nt s'.nt (\ I ->
+        Axioms[a+].FunExtLemmas[fe @(a+)].funext (W0.Ix (D.ob I)) (\ x -> V1.Ix (G.ob I)) (s.nt I) (s'.nt I) (\ x -> P I x)))
+-    s'.nt-nat ;
++    s'.nt-nat)
++  (symH (xsub-eta D G s'))) ;
+ 
+ tact-move (G : L1.PCtx) (A : SPTy[G]) (J I : Ob) (f : Hom J I) (x : V1.Ix (G.ob I)) (y y' : V1.Ix (G.ob J))
+   (e : Id (V1.Ix (G.ob J)) (G.act J I f x) y) (e' : Id (V1.Ix (G.ob J)) (G.act J I f x) y') (p : Id (V1.Ix (G.ob J)) y y')
+--- core-pre-records/CUniv.seg
++++ core/CUniv.seg
+@@ -82,10 +82,13 @@
+             encPi0 (W0.Ix (o I x)) (\ z -> W0.Ix (o J y)) (encIx0 (o I x)) (\ z -> encIx0 (o J y))))))))) ;
+ 
+       tyInj (A A' : PTy[G]) (P : Id TyD (tyD A) (tyD A')) : Id (PTy[G]) A A' =
+-        idJ TyD (tyD A)
+-          (\ w Q -> (hi : IdLaw G w.1 w.2) (ho : OLaw G w.1 w.2) -> Id (PTy[G]) A ((mkTy G w.1 w.2 hi ho)))
++        transH (pty-eta G A) (transH
++        (idJ TyD (tyD A)
++          (\ w Q -> (hi : IdLaw G w.1 w.2) (ho : OLaw G w.1 w.2)
++                    -> Id (PTy[G]) (mkTy G A.tob A.tact A.tact-id A.tact-o) ((mkTy G w.1 w.2 hi ho)))
+           (\ hi ho -> ty-ext G A.tob A.tact A.tact A.tact-id hi A.tact-o ho (\ J I f x y e z -> refl (A.tact J I f x y e z)))
+-          (tyD A') P A'.tact-id A'.tact-o ;
++          (tyD A') P A'.tact-id A'.tact-o)
++        (symH (pty-eta G A'))) ;
+ 
+       encTy : Enc (PTy[G]) = encInj (PTy[G]) TyD tyD tyInj encTyD ;
+   } ;
+--- core-pre-records/CwF.seg
++++ core/CwF.seg
+@@ -14,7 +14,7 @@
+ 
+ open Base ;
+ 
+-module CwF (l : Level) {
++record CwF (l : Level) {
+   open Prelude[l] ;
+ 
+   -- contexts and substitutions
+@@ -156,7 +156,7 @@
+   open Prelude[l] ;
+   open C ;
+ 
+-  module UnitStr {
++  record UnitStr {
+     Unit (G : Ctx) : Ty G ;
+     Unit-nat (D G : Ctx) (s : Sub D G) : Id (Ty D) (subT D G (Unit G) s) (Unit D) ;
+     Unit-iso (G : Ctx) : Iso (El G (Unit G)) Top ;
+@@ -167,7 +167,7 @@
+            ((Unit-iso D).inv t) ;
+   } ;
+ 
+-  module ZeroStr {
++  record ZeroStr {
+     Zero (G : Ctx) : Ty G ;
+     Zero-nat (D G : Ctx) (s : Sub D G) : Id (Ty D) (subT D G (Zero G) s) (Zero D) ;
+     Zero-elim (G : Ctx) (A : Ty (ext G (Zero G))) : El (ext G (Zero G)) A ;
+@@ -182,7 +182,7 @@
+            (subt (ext D (Zero D)) (ext G (Zero G)) A (Zero-elim G A) (up D G s)) ;
+   } ;
+ 
+-  module TwoStr {
++  record TwoStr {
+     Two (G : Ctx) : Ty G ;
+     Two-nat (D G : Ctx) (s : Sub D G) : Id (Ty D) (subT D G (Two G) s) (Two D) ;
+     Btrue (G : Ctx) : El G (Two G) ;
+@@ -219,7 +219,7 @@
+            (subt (ext D (Two D)) (ext G (Two G)) A (Two-elim G A tf) (up D G s)) ;
+   } ;
+ 
+-  module SigStr {
++  record SigStr {
+     Sig (G : Ctx) (A : Ty G) (B : Ty (ext G A)) : Ty G ;
+     Sig-nat (D G : Ctx) (A : Ty G) (B : Ty (ext G A)) (s : Sub D G)
+       : Id (Ty D) (subT D G (Sig G A B) s)
+@@ -264,7 +264,7 @@
+                      (coerce D G A B a s) (subt D G (subT G (ext G A) B (sec G A a)) b s))) ;
+   } ;
+ 
+-  module PiStr {
++  record PiStr {
+     Pi (G : Ctx) (A : Ty G) (B : Ty (ext G A)) : Ty G ;
+     Pi-nat (D G : Ctx) (A : Ty G) (B : Ty (ext G A)) (s : Sub D G)
+       : Id (Ty D) (subT D G (Pi G A B) s)
+@@ -280,7 +280,7 @@
+               (subt (ext D (subT D G A s)) (ext G A) B f (lift D G A s))) ;
+   } ;
+ 
+-  module IdStr {
++  record IdStr {
+     IdT (G : Ctx) (A : Ty G) (a b : El G A) : Ty G ;
+     IdT-nat (D G : Ctx) (A : Ty G) (a b : El G A) (s : Sub D G)
+       : Id (Ty D) (subT D G (IdT G A a b) s)
+--- core-pre-records/Presheaf.seg
++++ core/Presheaf.seg
+@@ -33,7 +33,7 @@
+   ----------------------------------------------------------------------
+   -- The four sorts
+ 
+-  module PCtx {
++  record PCtx {
+     ob     : Ob -> W.V ;
+     act (J I : Ob) (f : Hom J I) (x : W.Ix (ob I)) : W.Ix (ob J) ;
+     act-id (I : Ob) (x : W.Ix (ob I)) : Id (W.Ix (ob I)) (act I I (idC I) x) x ;
+@@ -71,13 +71,13 @@
+     (J I : Ob) (f : Hom J I) (x : W.Ix (G.ob I)) (y : W.Ix (G.ob J))
+     (e : Id (W.Ix (G.ob J)) (G.act J I f x) y) -> Id (W.Ix (o J y)) (h J I f x y e (n I x)) (n J y) ;
+ 
+-  module PSub (D G : PCtx) {
++  record PSub (D G : PCtx) {
+     nt (I : Ob) (x : W.Ix (D.ob I)) : W.Ix (G.ob I) ;
+     nt-nat (J I : Ob) (f : Hom J I) (x : W.Ix (D.ob I))
+       : Id (W.Ix (G.ob J)) (nt J (D.act J I f x)) (G.act J I f (nt I x)) ;
+   } ;
+ 
+-  module PTy (G : PCtx) {
++  record PTy (G : PCtx) {
+     tob (I : Ob) (x : W.Ix (G.ob I)) : W.V ;
+     tact (J I : Ob) (f : Hom J I) (x : W.Ix (G.ob I)) (y : W.Ix (G.ob J))
+       (e : Id (W.Ix (G.ob J)) (G.act J I f x) y) (a : W.Ix (tob I x)) : W.Ix (tob J y) ;
+@@ -95,9 +95,9 @@
+ 
+   -- eta for presheaf types, in Id (no eta by conversion for records)
+   pty-eta (G : PCtx) : (A : PTy[G]) -> Id (PTy[G]) A (mkTy G A.tob A.tact A.tact-id A.tact-o) =
+-    split { PTy G0 o h hi ho -> refl (mkTy G o h hi ho) } ;
++    split { PTy o h hi ho -> refl (mkTy G o h hi ho) } ;
+ 
+-  module PEl (G : PCtx) (A : PTy[G]) {
++  record PEl (G : PCtx) (A : PTy[G]) {
+     eob (I : Ob) (x : W.Ix (G.ob I)) : W.Ix (A.tob I x) ;
+     enat (J I : Ob) (f : Hom J I) (x : W.Ix (G.ob I)) (y : W.Ix (G.ob J))
+       (e : Id (W.Ix (G.ob J)) (G.act J I f x) y)
+@@ -228,7 +228,7 @@
+   mkPSub (D G : PCtx) (n : NT D G) (nn : NatLaw D G n) : PSub[D, G] = new PSub[D, G, n, nn] ;
+ 
+   psub-eta (D G : PCtx) : (s : PSub[D, G]) -> Id (PSub[D, G]) s (mkPSub D G s.nt s.nt-nat) =
+-    split { PSub D0 G0 n k -> refl (mkPSub D G n k) } ;
++    split { PSub n k -> refl (mkPSub D G n k) } ;
+ 
+   sub-ext (D G : PCtx) (s t : PSub[D, G])
+     (h : (I : Ob) (x : W.Ix (D.ob I)) -> Id (W.Ix (G.ob I)) (s.nt I x) (t.nt I x))
+@@ -301,7 +301,7 @@
+   mkPEl (G : PCtx) (A : PTy[G]) (n : EOb G A.tob) (nn : ElNat G A.tob A.tact n) : PEl[G, A] = new PEl[G, A, n, nn] ;
+ 
+   pel-eta (G : PCtx) (A : PTy[G]) : (s : PEl[G, A]) -> Id (PEl[G, A]) s (mkPEl G A s.eob s.enat) =
+-    split { PEl G0 A0 n k -> refl (mkPEl G A n k) } ;
++    split { PEl n k -> refl (mkPEl G A n k) } ;
+ 
+   el-ext (G : PCtx) (A : PTy[G]) (s t : PEl[G, A])
+     (h : (I : Ob) (x : W.Ix (G.ob I)) -> Id (W.Ix (A.tob I x)) (s.eob I x) (t.eob I x))
+--- core-pre-records/SmallCat.seg
++++ core/SmallCat.seg
+@@ -18,7 +18,7 @@
+   Hom (J I : Objs[obV].Ob) : U k = W.Ix (homV J I) ;
+ } ;
+ 
+-module SmallCat {
++record SmallCat {
+   obV  : W.V ;
+   homV : Objs[obV].Ob -> Objs[obV].Ob -> W.V ;
+ 

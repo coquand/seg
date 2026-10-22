@@ -1,0 +1,174 @@
+-- Rank-one affine Horrocks (Appendix 1), assembled.
+-- 1. Run the formal gcd tree on the row ideal, starting from f^k.
+-- 2. At each leaf, Lemma 7.6 gives a monic generator; clear its denominators.
+-- 3. Compare every two leaves over the product of their monoids.
+-- 4. Make the numerators compatible, glue them with two partitions of
+--    unity, and descend the principal row ideal to a factorisation.
+level l ; open Ring[l] ; open Presentations[l] ;
+module Over (A : CRing) (setA : Prelude[l].isSet A.R) {
+ module Tr = Truncation[l] ;
+ module B = PolynomialRing[l].Extension[A,setA] ;
+ module H = HorrocksInterface[l].Over[A,setA] ;
+ module Mat = RankOneProjector[l].Over[B.ring] ;
+ module SB = FiniteIdeal[l].Sums[B.ring] ;
+ module SA = FiniteIdeal[l].Sums[A] ;
+ module PB = AffinePowers[l].Over[B.ring] ;
+ module T = FormalMonoidTree[l].Over[A,setA] ;
+ module Ar = MonoidNodeArrows[l].Over[A,setA] ;
+ module Trees = FormalTreeCover[l].Over[A,setA] ;
+ module MC = FormalMonoidCover[l].Over[A,setA] ;
+ module Reps = PolynomialRepresentatives[l].Over[A,setA] ;
+ module ConstantSums = StandardOpens[l].SumMap[A,B.ring,B.inclusion] ;
+ -- The monoid inverted at a node.
+ Monoid (state : T.State) : A.R -> U l = Ar.At[state].N.Loc.S.Witness ;
+ module Given (lower : List A.R) (power : Nat) (n : Nat) (e : Mat.Size[n].Matrix)
+  (ys : Fin n -> List A.R) (x : Fin n -> B.Carrier)
+  (xy : (i j : Fin n) -> Id B.Carrier (B.mulQ (x i) (B.include (ys j)))
+   (B.mulQ (PB.power (H.monic lower) power) (e i j)))
+  (contraction : Id B.Carrier (SB.lin n (\ i -> B.include (ys i)) x) (PB.power (H.monic lower) power)) {
+  F : B.Carrier = PB.power (H.monic lower) power ;
+  yB (i : Fin n) : B.Carrier = B.include (ys i) ;
+  module Gcd = FormalGcd[l].Over[A,setA,n,ys] ;
+  module Leaf (state : T.State) {
+   module N = Ar.At[state].N ;
+   module LC = LeafClearing[l].Over[A,setA,n,ys,N.Loc.S.Witness,N.Loc.S.unit,N.Loc.S.multiply] ;
+   module Cert = LC.Certified[lower,power,e,x,xy,contraction] ;
+   module Rw = Gcd.Row.At[state] ;
+   module SD = FiniteIdeal[l].Sums[Rw.B.ring] ;
+   module LMG = LocalMonicGenerator[l].Over[Rw.C,Rw.setC,state.1,N.Finite.gs] ;
+   module FromGood (g : Gcd.Good state) {
+    module WithCertificate (c : Rw.Row.Witness (Rw.H.monic g.1)) {
+     equation : Id Rw.B.Carrier (SD.lin n Rw.y c.1) (Rw.H.monic g.1) =
+      sym (trans c.2 (RL[Rw.B.ring].zl (SD.lin n Rw.y c.1))) ;
+     module Local = LMG.At[Rw.radical,LC.Change.coefficients lower,power,n,
+      Cert.Moved.entries,Cert.wC,g.1,c.1,g.2.2.1,equation].Reduction[g.2.2.2] ;
+     result : Tr.Trunc[LC.LocalPrincipal].carrier =
+      Tr.Trunc[Local.Factors].induction @l
+       (\ z -> Tr.Trunc[LC.LocalPrincipal].carrier) (\ z -> Tr.Trunc[LC.LocalPrincipal].proposition)
+       (\ f -> Tr.Trunc[LC.LocalPrincipal].inc (g.1,c.1,f.1,equation,f.2))
+       Local.factors ;
+    } ;
+    local : Tr.Trunc[LC.LocalPrincipal].carrier =
+     Tr.Trunc[Rw.Row.Witness (Rw.H.monic g.1)].induction @l
+      (\ z -> Tr.Trunc[LC.LocalPrincipal].carrier) (\ z -> Tr.Trunc[LC.LocalPrincipal].proposition)
+      (\ c -> WithCertificate[c].result) g.2.1 ;
+    cleared : Tr.Trunc[LC.Cleared].carrier =
+     Tr.Trunc[LC.LocalPrincipal].induction @l
+      (\ z -> Tr.Trunc[LC.Cleared].carrier) (\ z -> Tr.Trunc[LC.Cleared].proposition)
+      LC.clear local ;
+   } ;
+  } ;
+  Cleared (state : T.State) : U l = Leaf[state].LC.Cleared ;
+  module Cover = Trees.For[Cleared] ;
+  step (state : T.State) (g : Gcd.Good state) : Cover.Cover state =
+   Tr.Trunc[Cleared state].induction @l
+    (\ z -> Cover.Cover state) (\ z -> Tr.Trunc[Cover.Witness state].proposition)
+    (\ c -> Cover.immediate state c) Leaf[state].FromGood[g].cleared ;
+  module Chain = Trees.Bind[Gcd.Good,Cleared,step] ;
+  module Root = Leaf[T.root] ;
+  start : Gcd.Cover.Cover T.root =
+   Gcd.compute T.root (Root.LC.Change.coefficients Root.Cert.mp.1) Root.Cert.monic-member ;
+  covered : Cover.Cover T.root = Chain.bind T.root start ;
+  module Descent = CertificateDescent[l].Over[B.ring].At[n,e,F,
+   MonicRegular[l].Over[A,setA].At[lower].power-regular power,(x,yB,xy,contraction)] ;
+  -- sum_i w_i s_i = 1 in A gives sum_i c_i s_i = 1 for the constants in A[X].
+  constant-cover (m : Nat) (fs w : Fin m -> A.R) (h : Id A.R (SA.lin m fs w) A.o) :
+   Id B.Carrier (SB.lin m (\ i -> B.constant (w i)) (\ i -> B.constant (fs i))) B.oneQ =
+   trans (SB.sum-cong m (\ i -> B.mulQ (B.constant (w i)) (B.constant (fs i)))
+     (\ i -> B.mulQ (B.constant (fs i)) (B.constant (w i))) (\ i -> B.mul-comm (B.constant (w i)) (B.constant (fs i))))
+    (trans (sym (ConstantSums.combination m fs w)) (ap B.constant h)) ;
+  module Assemble (tree : T.Tree) (leaves : Cover.Leaves tree T.root) {
+   module TL = TreeLeaves[l].Over[A,setA,Cleared] ;
+   m : Nat = MC.count tree ;
+   st (i : Fin m) : T.State = (TL.points tree T.root leaves i).1 ;
+   cl (i : Fin m) : Cleared (st i) = (TL.points tree T.root leaves i).2 ;
+   d (i : Fin m) : A.R = (cl i).2.1 ;
+   p (i : Fin m) : B.Carrier = SB.lin n yB (cl i).2.2.2.1 ;
+   tau (i : Fin m) : A.R = (cl i).2.2.2.2.2.1 ;
+   bb (i : Fin m) (j : Fin n) : B.Carrier = (cl i).2.2.2.2.2.2.2.1 j ;
+   unit (i : Fin m) : Monoid (st i) A.o = Ar.At[st i].N.Loc.S.unit ;
+   multiply (i : Fin m) : (a b : A.R) -> Monoid (st i) a -> Monoid (st i) b -> Monoid (st i) (A.mul a b) =
+    Ar.At[st i].N.Loc.S.multiply ;
+   module Pair (i j : Fin m) {
+    module O = LeafOverlap[l].Over[A,setA,n,ys,Monoid (st i),unit i,multiply i,Monoid (st j),unit j,multiply j] ;
+    Data : U l = O.Compatible (d i) (d j) (p i) (p j) ;
+    compatible : Tr.Trunc[Data].carrier = O.Compare[cl i,cl j].result ;
+   } ;
+   Overlaps : U l = (i j : Fin m) -> Pair[i,j].Data ;
+   overlaps : Tr.Trunc[Overlaps].carrier =
+    AffineFinite[l].choice m (\ i -> (j : Fin m) -> Pair[i,j].Data)
+     (\ i -> AffineFinite[l].choice m (\ j -> Pair[i,j].Data) (\ j -> Pair[i,j].compatible)) ;
+   module Glue (ov : Overlaps) {
+    u (i j : Fin m) : A.R = (ov i j).1 ;
+    v (i j : Fin m) : A.R = (ov i j).2.1 ;
+    module CN = CompatibleNumerators[l].Over[A,B.ring,B.inclusion,m,d,tau,p,u,v,
+     \ i j -> (ov i j).2.2.2.2] ;
+    r-member (i : Fin m) : Monoid (st i) (CN.r i) =
+     CN.P.member (Monoid (st i)) (unit i) (multiply i) m (\ k -> A.mul (u i k) (v k i))
+      (\ k -> multiply i (u i k) (v k i) (ov i k).2.2.1 (ov k i).2.2.2.1) ;
+    s-member (i : Fin m) : Monoid (st i) (CN.s i) =
+     multiply i (d i) (CN.r i) (cl i).2.2.1 (r-member i) ;
+    t-member (i : Fin m) : Monoid (st i) (CN.t i) =
+     multiply i (CN.r i) (tau i) (r-member i) (cl i).2.2.2.2.2.2.1 ;
+    module P1 = TL.Partition[tree,leaves,CN.s,s-member] ;
+    module P2 = TL.Partition[tree,leaves,CN.t,t-member] ;
+    members (i : Fin m) (j : Fin n) : B.Carrier = B.mulQ (B.constant (CN.r i)) ((cl i).2.2.2.1 j) ;
+    generated (i : Fin m) : Id B.Carrier (SB.lin n yB (members i)) (CN.h i) =
+     SB.lin-scale n yB (cl i).2.2.2.1 (B.constant (CN.r i)) ;
+    divides (i : Fin m) (j : Fin n) :
+     Id B.Carrier (B.mulQ (B.constant (CN.t i)) (yB j)) (B.mulQ (CN.h i) (bb i j)) =
+     CN.divides i (yB j) (bb i j) ((cl i).2.2.2.2.2.2.2.2 j) ;
+    module Final (c1 : P1.Coordinates) (c2 : P2.Coordinates) {
+     module G = PrincipalRowGluing[l].Over[B.ring].At[n,yB,m,
+      \ i -> B.constant (CN.s i),\ i -> B.constant (c1.1 i),
+      \ i -> B.constant (CN.t i),\ i -> B.constant (c2.1 i),CN.h,
+      constant-cover m CN.s c1.1 c1.2,constant-cover m CN.t c2.1 c2.2,
+      \ i j -> CN.Pair[i,j].overlap,members,generated,bb,divides] ;
+     factors : Mat.Size[n].Factors e =
+      Descent.descend (G.g,G.factors,G.coefficients,G.factor-equation,G.member-equation) ;
+    } ;
+    free : Mat.Size[n].Free e =
+     Tr.Trunc[P1.Coordinates].induction @l
+      (\ z -> Mat.Size[n].Free e) (\ z -> Tr.Trunc[Mat.Size[n].Factors e].proposition)
+      (\ c1 -> Tr.Trunc[P2.Coordinates].induction @l
+       (\ z -> Mat.Size[n].Free e) (\ z -> Tr.Trunc[Mat.Size[n].Factors e].proposition)
+       (\ c2 -> Tr.Trunc[Mat.Size[n].Factors e].inc Final[c1,c2].factors) P2.partition)
+      P1.partition ;
+   } ;
+   free : Mat.Size[n].Free e =
+    Tr.Trunc[Overlaps].induction @l
+     (\ z -> Mat.Size[n].Free e) (\ z -> Tr.Trunc[Mat.Size[n].Factors e].proposition)
+     (\ ov -> Glue[ov].free) overlaps ;
+  } ;
+  free : Mat.Size[n].Free e =
+   Tr.Trunc[Cover.Witness T.root].induction @l
+    (\ z -> Mat.Size[n].Free e) (\ z -> Tr.Trunc[Mat.Size[n].Factors e].proposition)
+    (\ w -> Assemble[w.1,w.2].free) covered ;
+ } ;
+ -- Replace the row vector by chosen coefficient lists.
+ module FromCertificate (lower : List A.R) (n : Nat) (e : Mat.Size[n].Matrix)
+  (w : Mat.Size[n].LocalFactors e (H.monic lower)) {
+  power : Nat = w.1 ;
+  F : B.Carrier = PB.power (H.monic lower) power ;
+  x : Mat.Size[n].Vector = w.2.1 ;
+  module Chosen (reps : (i : Fin n) -> Reps.Witness (w.2.2.1 i)) {
+   ys (i : Fin n) : List A.R = (reps i).1 ;
+   xy (i j : Fin n) : Id B.Carrier (B.mulQ (x i) (B.include (ys j))) (B.mulQ F (e i j)) =
+    trans (ap (B.mulQ (x i)) (reps j).2) (w.2.2.2.1 i j) ;
+   contraction : Id B.Carrier (SB.lin n (\ i -> B.include (ys i)) x) F =
+    trans (SB.sum-cong n (\ i -> B.mulQ (B.include (ys i)) (x i)) (\ i -> B.mulQ (w.2.2.1 i) (x i))
+      (\ i -> ap (\ c -> B.mulQ c (x i)) (reps i).2))
+     w.2.2.2.2 ;
+   free : Mat.Size[n].Free e = Given[lower,power,n,e,ys,x,xy,contraction].free ;
+  } ;
+  free : Mat.Size[n].Free e =
+   Tr.Trunc[(i : Fin n) -> Reps.Witness (w.2.2.1 i)].induction @l
+    (\ z -> Mat.Size[n].Free e) (\ z -> Tr.Trunc[Mat.Size[n].Factors e].proposition)
+    (\ reps -> Chosen[reps].free)
+    (AffineFinite[l].choice n (\ i -> Reps.Witness (w.2.2.1 i)) (\ i -> Reps.choose (w.2.2.1 i))) ;
+ } ;
+ horrocks : H.Horrocks = \ lower n e local ->
+  Tr.Trunc[Mat.Size[n].LocalFactors e.entry (H.monic lower)].induction @l
+   (\ z -> Mat.Size[n].Free e.entry) (\ z -> Tr.Trunc[Mat.Size[n].Factors e.entry].proposition)
+   (\ w -> FromCertificate[lower,n,e.entry,w].free) local ;
+} ;

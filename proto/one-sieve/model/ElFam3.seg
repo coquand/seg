@@ -1,0 +1,98 @@
+-- ElFam3.seg: MODEL/Univ/ElFam.agda, continued: the composition of ElT.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module W0 = V[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module ES0 = Esi[a, a] ;
+module FE = FibExt[a, a] ;
+module CN = Conn[a] ;
+open BaseP.GYon ;
+open UnivCtx[a].PU ;
+open EGenComp[a] ;
+module EG3 = EGenComp3[a] ;
+module GEs = EGenEsi[a] ;
+open ElFam[a] ;
+
+
+module ElF3 (D : PCtx) (Fm : (W : Ob) -> W0.Ix (D.ob W) -> U0 W)
+  (nat : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D.ob W)) -> Id (U0 W') (uAct W' W g (Fm W x)) (Fm W' (D.act W' W g x))) {
+  open ElF[D, Fm, nat] ;
+  ----------------------------------------------------------------------
+  -- Composition
+
+  module CF (d : Bool) {
+    -- the end points are those of EGen's composition GC[d], by name
+    open GC[d] ;
+
+    copF (X : Ob) (b : BE.Box[eS, X]) : TE.T X (D.act X (BE.XI X) (lid X eT) b.brho) =
+      coeU X (uAct X (BE.XI X) (lid X eT) (Fm (BE.XI X) b.brho)) (Fm X (D.act X (BE.XI X) (lid X eT) b.brho))
+        (nat X (BE.XI X) (lid X eT) b.brho) (GC[d].copG X (TBox eS X b)) ;
+
+    itop (X : Ob) (b : BE.Box[eS, X])
+      : Id (EU X) (iota X (BE.topE eT X b.brho (copF X b))) (BU.topE eT X TB[eS, X, b].F (GC[d].copG X (TBox eS X b))) =
+      coeE X (uAct X (BE.XI X) (lid X eT) (Fm (BE.XI X) b.brho)) (Fm X (D.act X (BE.XI X) (lid X eT) b.brho))
+        (nat X (BE.XI X) (lid X eT) b.brho) (GC[d].copG X (TBox eS X b)) ;
+
+    opaque copF ; opaque itop ;
+
+    -- the side of the composite: iota is natural, the composite of TBox b
+    -- (an EGen composite) agrees with the sides of TBox b (csideG), whose
+    -- values are those of b moved along nat (ik).  The sides of TBox b are
+    -- read at  compH W X (prodP X Iv) (lid X eT) phi , as csideG states them.
+    csideF (X : Ob) (b : BE.Box[eS, X]) (j : Arith[a].Fin b.br) (W : Ob) (phi : Hom W X)
+      (i : InQ W X (b.bs j).sQ (compH W X (BE.XI X) (lid X eT) phi))
+      : Id (TE.EI W) (TE.E.act W X phi (BE.topE eT X b.brho (copF X b))) ((b.bs j).svE W (compH W X (BE.XI X) (lid X eT) phi) i) =
+      iotaInj W (TE.E.act W X phi (BE.topE eT X b.brho (copF X b))) ((b.bs j).svE W (compH W X (BE.XI X) (lid X eT) phi) i)
+        (symH (D.act-o W X (BE.XI X) (lid X eT) phi b.brho))
+        (calc (EU W) {
+            iota W (TE.E.act W X phi (BE.topE eT X b.brho (copF X b)))
+          =< iotaAct W X phi (BE.topE eT X b.brho (copF X b)) >
+            TU.E.act W X phi (iota X (BE.topE eT X b.brho (copF X b)))
+          =< apH (TU.E.act W X phi) (itop X b) >
+            TU.E.act W X phi (BU.topE eT X TB[eS, X, b].F (GC[d].copG X (TBox eS X b)))
+          =< GC[d].csideG X (TBox eS X b) j W phi i >
+            ((TBox eS X b).bs j).svE W (compH W X (prodP X Iv) (lid X eT) phi) i
+          =< symH (TB[eS, X, b].ik W (compH W X (prodP X Iv) (lid X eT) phi)
+                    ((b.bs j).sv W (compH W X (prodP X Iv) (lid X eT) phi) i)) >
+            iota W ((b.bs j).svE W (compH W X (BE.XI X) (lid X eT) phi) i) }) ;
+
+    -- uniformity: iota is natural, the composite of TBox b is uniform
+    -- (cunifG), and TBox commutes with restriction (TBox-restr)
+    cunifF (Y X : Ob) (h : Hom Y X) (b : BE.Box[eS, X])
+      : Id (TE.EI Y) (TE.E.act Y X h (BE.topE eT X b.brho (copF X b)))
+                     (BE.topE eT Y (BE.restrict eS Y X h b).brho (copF Y (BE.restrict eS Y X h b))) =
+      iotaInj Y (TE.E.act Y X h (BE.topE eT X b.brho (copF X b)))
+                (BE.topE eT Y (BE.restrict eS Y X h b).brho (copF Y (BE.restrict eS Y X h b)))
+        (BE.Restrict[eT, Y, X, h].eqL b.brho)
+        (calc (EU Y) {
+            iota Y (TE.E.act Y X h (BE.topE eT X b.brho (copF X b)))
+          =< iotaAct Y X h (BE.topE eT X b.brho (copF X b)) >
+            TU.E.act Y X h (iota X (BE.topE eT X b.brho (copF X b)))
+          =< apH (TU.E.act Y X h) (itop X b) >
+            TU.E.act Y X h (BU.topE eT X TB[eS, X, b].F (GC[d].copG X (TBox eS X b)))
+          =< EG3.GV[d].cunifG Y X h (TBox eS X b) >
+            BU.topE eT Y (BU.restrict eS Y X h (TBox eS X b)).brho (GC[d].copG Y (BU.restrict eS Y X h (TBox eS X b)))
+          =< apH (\ bb -> BU.topE eT Y bb.brho (GC[d].copG Y bb)) (ElFam2[a].ElF2[D, Fm, nat].TBox-restr eS Y X h b) >
+            BU.topE eT Y (TBox eS Y (BE.restrict eS Y X h b)).brho (GC[d].copG Y (TBox eS Y (BE.restrict eS Y X h b)))
+          =< symH (itop Y (BE.restrict eS Y X h b)) >
+            iota Y (BE.topE eT Y (BE.restrict eS Y X h b).brho (copF Y (BE.restrict eS Y X h b))) }) ;
+
+    opaque csideF ; opaque cunifF ;
+
+    compF : BE.CompOp[eS, eT] = (BE.mkCompOp eS eT copF csideF cunifF) ;
+
+  } ;
+
+  ElComp : BE.Comp = (CF[true].compF, CF[false].compF) ;
+
+} ;

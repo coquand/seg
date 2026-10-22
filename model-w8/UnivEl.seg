@@ -1,0 +1,27 @@
+-- UnivEl.seg: MODEL/Univ/El.agda (renamed: a file module El would shadow
+-- the type El of elements of a poset).  El a = EGen along a, for an element a of
+-- the universe over G: an ESI-fibrant type (ElFib).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+module L1 = PreL[a, a+].PS ;
+module FS1 = FibSub[a, a+] ;
+module ES1 = EsiSub[a, a+] ;
+module FE1 = FibExt[a, a+] ;
+open UAct[a] ;
+open UnivCtx[a] ;
+open EGenComp3[a] ;
+open EGenEsi[a] ;
+
+-- an element of the universe, as a map into UCtx
+toU (G : L1.PCtx) (u : L1.PEl[G, UTy G]) : L1.PSub[G, UCtx] =
+  new L1.PSub[G, UCtx, u.eob, \ J I f x -> symH (u.enat J I f x (G.act J I f x) (refl (G.act J I f x)))] ;
+
+ElTy (G : L1.PCtx) (u : L1.PEl[G, UTy G]) : L1.PTy[G] = L1.subTy G UCtx EGen (toU G u) ;
+
+-- El a as an ESI-fibrant type
+ElFib (G : L1.PCtx) (u : L1.PEl[G, UTy G]) : FE1.FibE G =
+  (ElTy G u, (FS1.subCompC G UCtx EGen (toU G u) compEGen, ES1.esiSubC G UCtx EGen (toU G u) compEGen esiEGen)) ;

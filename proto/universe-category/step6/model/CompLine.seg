@@ -1,0 +1,240 @@
+-- CompLine.seg: for posets, box composition (Box.CompOp e e') and
+-- composition in line form (FibTriv.CompAtP for posetPath) are equivalent
+-- (CYLINDER.md, plan step 2).
+--
+--   ToCompAt co    a partial line is a box (FibTrivFib.PBox.ToBox); its
+--                  composite is the composite of the box; uniformity by
+--                  PBox.BoxR.boxEq
+--   ToCompOp ca    a box is a partial line (FibTrivFill.FTC.BP); the box
+--                  composite is the line composite; uniformity by FTC.BPR
+--                  (the partial line of the restricted box is the
+--                  restricted partial line) and CA.cop-cong
+--
+-- Elements over the ends are compared in the total presheaf of A
+-- (endE: (z.1 , z.2) |-> (z.1 (lid e') , z.2)), through tv-eq.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module CF = Cofib[a] ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open FibTriv[a] ;
+open FibTrivFill[a] ;
+open FibTrivFib[a] ;
+
+module CompLine (G : PCtx) (A : PTy[G]) (e e' : El Iv) {
+  open FTC[G, A, e] ;
+  module CA = CompAtP[posetPath, G, A, e, e'] ;
+  module EV' = PosetEv[G, A, e'] ;
+  module PB = PBox[G, A, e] ;
+
+  -- an element over the end e', in the total presheaf of A
+  endE (W : Ob) (z : CA.TV'.EI W) : TA.EI W = (G.act W (BX.XI W) (lid W e') z.1, z.2) ;
+
+  tv-eq (W : Ob) (z z' : CA.TV'.EI W) (P : Id (W0.Ix ((posetPath.pth G).ob W)) z.1 z'.1)
+    (Q : Id (TA.EI W) (endE W z) (endE W z')) : Id (CA.TV'.EI W) z z' =
+    idJ (W0.Ix ((posetPath.pth G).ob W)) z.1
+      (\ w2 P2 -> (a2 : CA.TV'.T W w2) -> Id (TA.EI W) (endE W z) (endE W (w2, a2)) -> Id (CA.TV'.EI W) z (w2, a2))
+      (\ a2 Q2 -> apH {CA.TV'.T W z.1} {CA.TV'.EI W} (\ v -> (z.1, v))
+                    (TA.pr-inj W (G.act W (BX.XI W) (lid W e') z.1) z.2 a2 Q2))
+      z'.1 P z'.2 Q ;
+
+  -- the action, read through endE
+  endE-act (Y X : Ob) (h : Hom Y X) (z : CA.TV'.EI X) : Id (TA.EI Y) (endE Y (CA.TV'.E.act Y X h z)) (TA.E.act Y X h (endE X z)) =
+    symH (TA.pr-tact Y X h (G.act X (prodP X Iv) (lid X e') z.1) (G.act Y (prodP Y Iv) (lid Y e') (PO.PC.giAct Y X h z.1))
+            (ntEq PO.PC.GI G (PO.PC.ev e') Y X h z.1 (PO.PC.giAct Y X h z.1) (refl (PO.PC.giAct Y X h z.1))) z.2) ;
+
+  -- the end at e' of a partial line, in the total presheaf of A
+  endL-E (W : Ob) (u : TS.EI W) : Id (TA.EI W) (endE W (CA.endL W u)) (TA.E.act W (prodP W Iv) (lid W e') (lineE W u)) =
+    EV'.endT-E W u.1.1 u.2.1 ;
+
+  ----------------------------------------------------------------------
+  -- box composition gives composition in line form
+
+  module ToCompAt (co : BX.CompOp[e, e']) {
+    cop (X : Ob) (x : TV.EI X) (p : PT.Partial[X, x]) : CA.TV'.T X x.1 = co.cop X PB.ToBox[X, x, p].b ;
+
+    module CS (X : Ob) (x : TV.EI X) (p : PT.Partial[X, x]) (l : Arith[a].Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f) {
+      iL : InQ W X (p.ps l).pQ (compH W X (BX.XI X) (lid X e') f) = lands-inQ-lid W X (p.ps l).pQ e' f i ;
+
+      Q : Id (TA.EI W) (endE W (CA.TV'.E.act W X f (x.1, cop X x p))) (endE W (CA.endL W ((p.ps l).pv W f i))) =
+        calc (TA.EI W) {
+            endE W (CA.TV'.E.act W X f (x.1, cop X x p))
+          =< endE-act W X f (x.1, cop X x p) >
+            TA.E.act W X f (BX.topE e' X x.1 (cop X x p))
+          =< co.cside X PB.ToBox[X, x, p].b l W f iL >
+            (PB.ToBox[X, x, p].SD[l].side).svE W (compH W X (BX.XI X) (lid X e') f) iL
+          =< PB.ToBox[X, x, p].SD[l].side-E W (compH W X (BX.XI X) (lid X e') f) iL >
+            TA.E.act W (prodP W Iv) (cylEv W X (compH W X (prodP X Iv) (lid X e') f))
+              (lineE W ((p.ps l).pv W (PB.ToBox[X, x, p].SD[l].fOf W (compH W X (prodP X Iv) (lid X e') f)) iL))
+          =< TA.PE.actEq W (prodP W Iv) _ _ (cylEv-lid W X e' f)
+               (lineE W ((p.ps l).pv W (PB.ToBox[X, x, p].SD[l].fOf W (compH W X (prodP X Iv) (lid X e') f)) iL)) >
+            TA.E.act W (prodP W Iv) (lid W e')
+              (lineE W ((p.ps l).pv W (PB.ToBox[X, x, p].SD[l].fOf W (compH W X (prodP X Iv) (lid X e') f)) iL))
+          =< apH (\ u -> TA.E.act W (prodP W Iv) (lid W e') (lineE W u))
+                 (PT.pv-hom X x (p.ps l) W _ f (pX-lid-comp W X e' f) iL i) >
+            TA.E.act W (prodP W Iv) (lid W e') (lineE W ((p.ps l).pv W f i))
+          =< symH (endL-E W ((p.ps l).pv W f i)) >
+            endE W (CA.endL W ((p.ps l).pv W f i)) } ;
+
+      res : Id (CA.TV'.EI W) (CA.TV'.E.act W X f (x.1, cop X x p)) (CA.endL W ((p.ps l).pv W f i)) =
+        tv-eq W (CA.TV'.E.act W X f (x.1, cop X x p)) (CA.endL W ((p.ps l).pv W f i))
+          (symH (apH (\ w -> w.1) ((p.ps l).ppt W f i))) Q ;
+    } ;
+
+    module CU (Y X : Ob) (h : Hom Y X) (x : TV.EI X) (p : PT.Partial[X, x]) {
+      s1 : Id (TA.EI Y) (endE Y (CA.TV'.E.act Y X h (x.1, cop X x p))) (TA.E.act Y X h (BX.topE e' X x.1 (cop X x p))) =
+        endE-act Y X h (x.1, cop X x p) ;
+      s2 : Id (TA.EI Y) (TA.E.act Y X h (BX.topE e' X x.1 (cop X x p)))
+             (BX.topE e' Y (BX.restrict e Y X h PB.ToBox[X, x, p].b).brho (co.cop Y (BX.restrict e Y X h PB.ToBox[X, x, p].b))) =
+        co.cunif Y X h PB.ToBox[X, x, p].b ;
+      bE : Id (BX.Box[e, Y]) (BX.restrict e Y X h PB.ToBox[X, x, p].b) PB.ToBox[Y, TV.E.act Y X h x, PT.restrictP Y X h x p].b =
+        PB.BoxR[Y, X, h, x, p].boxEq ;
+      s3 : Id (TA.EI Y) (BX.topE e' Y (BX.restrict e Y X h PB.ToBox[X, x, p].b).brho (co.cop Y (BX.restrict e Y X h PB.ToBox[X, x, p].b)))
+             (BX.topE e' Y (TV.E.act Y X h x).1 (cop Y (TV.E.act Y X h x) (PT.restrictP Y X h x p))) =
+        apH {BX.Box[e, Y]} {TA.EI Y} (\ c -> BX.topE e' Y c.brho (co.cop Y c))
+          {BX.restrict e Y X h PB.ToBox[X, x, p].b} {PB.ToBox[Y, TV.E.act Y X h x, PT.restrictP Y X h x p].b} bE ;
+      q23 : Id (TA.EI Y) (TA.E.act Y X h (BX.topE e' X x.1 (cop X x p)))
+             (BX.topE e' Y (TV.E.act Y X h x).1 (cop Y (TV.E.act Y X h x) (PT.restrictP Y X h x p))) =
+        transH {TA.EI Y} {TA.E.act Y X h (BX.topE e' X x.1 (cop X x p))}
+          {BX.topE e' Y (BX.restrict e Y X h PB.ToBox[X, x, p].b).brho (co.cop Y (BX.restrict e Y X h PB.ToBox[X, x, p].b))}
+          {BX.topE e' Y (TV.E.act Y X h x).1 (cop Y (TV.E.act Y X h x) (PT.restrictP Y X h x p))} s2 s3 ;
+      Q : Id (TA.EI Y) (endE Y (CA.TV'.E.act Y X h (x.1, cop X x p)))
+                       (endE Y ((TV.E.act Y X h x).1, cop Y (TV.E.act Y X h x) (PT.restrictP Y X h x p))) =
+        transH {TA.EI Y} {endE Y (CA.TV'.E.act Y X h (x.1, cop X x p))} {TA.E.act Y X h (BX.topE e' X x.1 (cop X x p))}
+          {BX.topE e' Y (TV.E.act Y X h x).1 (cop Y (TV.E.act Y X h x) (PT.restrictP Y X h x p))} s1 q23 ;
+      res : Id (CA.TV'.EI Y) (CA.TV'.E.act Y X h (x.1, cop X x p)) ((TV.E.act Y X h x).1, cop Y (TV.E.act Y X h x) (PT.restrictP Y X h x p)) =
+        tv-eq Y (CA.TV'.E.act Y X h (x.1, cop X x p)) ((TV.E.act Y X h x).1, cop Y (TV.E.act Y X h x) (PT.restrictP Y X h x p))
+          (refl (PO.PC.giAct Y X h x.1)) Q ;
+    } ;
+
+    ca : CA.CompAt = new CA.CompAt[cop, \ X x p l W f i -> CS[X, x, p, l, W, f, i].res, \ Y X h x p -> CU[Y, X, h, x, p].res] ;
+
+    -- ESI: an inserted empty side in a partial line is one in its box
+    module ES0 = Esi[a, a].EsiDef[G, A] ;
+
+    insB (X : Ob) (x : TV.EI X) (k : Nat) (p p' : PT.Partial[X, x]) (ins : CA.PEs.InsP[X, x, k, p, p'])
+      : ES0.InsE[e, X, k, PB.ToBox[X, x, p].b, PB.ToBox[X, x, p'].b] =
+      new ES0.InsE[e, X, k, PB.ToBox[X, x, p].b, PB.ToBox[X, x, p'].b, ins.insp-r, ins.insp-k, refl x.1,
+        refl (BX.lidE e X x.1 x.2), \ hk -> ins.insp-e hk, \ n h h' -> ins.insp-Q n h h',
+        \ n h h' W psi i i' ->
+          transH (PB.ToBox[X, x, p'].SD[(Arith[a].skipN k n, h')].side-E W psi i)
+            (transH (apH (\ u -> TA.E.act W (prodP W Iv) (cylEv W X psi) (lineE W u))
+                         (ins.insp-v n h h' W (compH W (prodP X Iv) X (pX X) psi) i i'))
+                    (symH (PB.ToBox[X, x, p].SD[(n, h)].side-E W psi i')))] ;
+
+    cesi (es : ES0.ESI e e' co) : CA.CESI ca = \ X x k p p' ins ->
+      TA.pr-inj X (G.act X (prodP X Iv) (lid X e') x.1) (cop X x p') (cop X x p)
+        (es X k PB.ToBox[X, x, p].b PB.ToBox[X, x, p'].b (insB X x k p p' ins)) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- composition in line form gives box composition
+
+  -- a box, read as a partial line and back, is the same box
+  module BpRT (X : Ob) (b : BX.Box[e, X]) {
+    module TB = PB.ToBox[X, BP[X, b].x, BP[X, b].p] ;
+
+    sideRT (j : Arith[a].Fin b.br) (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X (b.bs j).sQ psi) (i' : InQ W X (b.bs j).sQ psi)
+      : Id (TA.EI W) ((TB.SD[j].side).svE W psi i) ((b.bs j).svE W psi i') =
+      calc (TA.EI W) {
+          (TB.SD[j].side).svE W psi i
+        =< TB.SD[j].side-E W psi i >
+          TA.E.act W (prodP W Iv) (cylEv W X psi) (lineE W (BP[X, b].SL[j].pv W (compH W (prodP X Iv) X (pX X) psi) i))
+        =< apH (TA.E.act W (prodP W Iv) (cylEv W X psi)) (BP[X, b].SL[j].pv-line W (compH W (prodP X Iv) X (pX X) psi) i) >
+          TA.E.act W (prodP W Iv) (cylEv W X psi)
+            ((b.bs j).svE (prodP W Iv) (cylH W X (compH W (prodP X Iv) X (pX X) psi)) (BP[X, b].SL[j].inC W (compH W (prodP X Iv) X (pX X) psi) i))
+        =< (b.bs j).snat W (prodP W Iv) (cylEv W X psi) (cylH W X (compH W (prodP X Iv) X (pX X) psi))
+             (BP[X, b].SL[j].inC W (compH W (prodP X Iv) X (pX X) psi) i)
+             (inQ-eq W X (b.bs j).sQ psi CylEvm[W, X, psi].R CylEvm[W, X, psi].res i') >
+          (b.bs j).svE W CylEvm[W, X, psi].R (inQ-eq W X (b.bs j).sQ psi CylEvm[W, X, psi].R CylEvm[W, X, psi].res i')
+        =< BX.svE-eq X b.brho (b.bs j) W CylEvm[W, X, psi].R psi (sym (Hom W (prodP X Iv)) psi CylEvm[W, X, psi].R CylEvm[W, X, psi].res)
+             (inQ-eq W X (b.bs j).sQ psi CylEvm[W, X, psi].R CylEvm[W, X, psi].res i') i' >
+          (b.bs j).svE W psi i' } ;
+
+    res : Id (BX.Box[e, X]) TB.b b =
+      BX.box-ext e X b.brho b.brho b.bu b.bu b.br (\ l -> TB.SD[l].side) b.bs TB.cs b.bcs TB.cb b.bcb
+        (refl b.brho) (refl (BX.lidE e X b.brho b.bu)) (\ j -> refl (b.bs j).sQ) sideRT ;
+  } ;
+
+  bpRT (X : Ob) (b : BX.Box[e, X]) : Id (BX.Box[e, X]) PB.ToBox[X, BP[X, b].x, BP[X, b].p].b b = BpRT[X, b].res ;
+
+  module ToCompOp (ca : CA.CompAt) {
+    cop (X : Ob) (b : BX.Box[e, X]) : BX.LidT e' X b.brho = ca.cop X BP[X, b].x BP[X, b].p ;
+
+    cside (X : Ob) (b : BX.Box[e, X]) (j : Arith[a].Fin b.br) (W : Ob) (phi : Hom W X)
+      (i : InQ W X (b.bs j).sQ (compH W X (BX.XI X) (lid X e') phi))
+      : Id (TA.EI W) (TA.E.act W X phi (BX.topE e' X b.brho (cop X b))) ((b.bs j).svE W (compH W X (BX.XI X) (lid X e') phi) i) =
+      calc (TA.EI W) {
+          TA.E.act W X phi (BX.topE e' X b.brho (cop X b))
+        =< symH (endE-act W X phi (b.brho, cop X b)) >
+          endE W (CA.TV'.E.act W X phi (b.brho, cop X b))
+        =< apH (endE W) (ca.cside X BP[X, b].x BP[X, b].p j W phi (inQ-lid-lands W X (b.bs j).sQ e' phi i)) >
+          endE W (CA.endL W (BP[X, b].SL[j].pv W phi (inQ-lid-lands W X (b.bs j).sQ e' phi i)))
+        =< endL-E W (BP[X, b].SL[j].pv W phi (inQ-lid-lands W X (b.bs j).sQ e' phi i)) >
+          TA.E.act W (prodP W Iv) (lid W e') (lineE W (BP[X, b].SL[j].pv W phi (inQ-lid-lands W X (b.bs j).sQ e' phi i)))
+        =< apH (TA.E.act W (prodP W Iv) (lid W e')) (BP[X, b].SL[j].pv-line W phi (inQ-lid-lands W X (b.bs j).sQ e' phi i)) >
+          TA.E.act W (prodP W Iv) (lid W e')
+            ((b.bs j).svE (prodP W Iv) (cylH W X phi) (BP[X, b].SL[j].inC W phi (inQ-lid-lands W X (b.bs j).sQ e' phi i)))
+        =< (b.bs j).snat W (prodP W Iv) (lid W e') (cylH W X phi) (BP[X, b].SL[j].inC W phi (inQ-lid-lands W X (b.bs j).sQ e' phi i))
+             (inQ-eq W X (b.bs j).sQ (compH W X (BX.XI X) (lid X e') phi)
+                (compH W (prodP W Iv) (prodP X Iv) (cylH W X phi) (lid W e')) (symH (cyl-lid W X phi e')) i) >
+          (b.bs j).svE W (compH W (prodP W Iv) (prodP X Iv) (cylH W X phi) (lid W e'))
+            (inQ-eq W X (b.bs j).sQ (compH W X (BX.XI X) (lid X e') phi)
+               (compH W (prodP W Iv) (prodP X Iv) (cylH W X phi) (lid W e')) (symH (cyl-lid W X phi e')) i)
+        =< BX.svE-eq X b.brho (b.bs j) W _ _ (cyl-lid W X phi e')
+             (inQ-eq W X (b.bs j).sQ (compH W X (BX.XI X) (lid X e') phi)
+                (compH W (prodP W Iv) (prodP X Iv) (cylH W X phi) (lid W e')) (symH (cyl-lid W X phi e')) i) i >
+          (b.bs j).svE W (compH W X (BX.XI X) (lid X e') phi) i } ;
+
+    cunif (Y X : Ob) (h : Hom Y X) (b : BX.Box[e, X])
+      : Id (TA.EI Y) (TA.E.act Y X h (BX.topE e' X b.brho (cop X b)))
+                     (BX.topE e' Y (BX.restrict e Y X h b).brho (cop Y (BX.restrict e Y X h b))) =
+      transH (symH (endE-act Y X h (b.brho, cop X b)))
+        (apH (endE Y)
+          (transH (ca.cunif Y X h BP[X, b].x BP[X, b].p)
+                  (CA.cop-cong ca Y BPR[Y, X, h, b].x1 BP[Y, BX.restrict e Y X h b].x BPR[Y, X, h, b].P
+                     (PT.restrictP Y X h BP[X, b].x BP[X, b].p) BP[Y, BX.restrict e Y X h b].p BPR[Y, X, h, b].Rp))) ;
+
+    co : BX.CompOp[e, e'] = new BX.CompOp[e, e', cop, cside, cunif] ;
+
+    -- ESI: an inserted empty side in a box is one in its partial line
+    module ES1 = Esi[a, a].EsiDef[G, A] ;
+
+    module EI (X : Ob) (k : Nat) (b b' : BX.Box[e, X]) (ins : ES1.InsE[e, X, k, b, b']) {
+      Px : Id (TV.EI X) BP[X, b'].x BP[X, b].x = CA.EK.tv-eq X BP[X, b'].x BP[X, b].x ins.ins-rho ins.ins-lid ;
+
+      insv (n : Nat) (h : IsT (ltb n b.br)) (h' : IsT (ltb (Arith[a].skipN k n) b'.br)) (W : Ob) (f : Hom W X)
+        (i : Lands W X (b'.bs (Arith[a].skipN k n, h')).sQ f) (i' : Lands W X (b.bs (n, h)).sQ f)
+        : Id (TS.EI W) (BP[X, b'].SL[(Arith[a].skipN k n, h')].pv W f i) (BP[X, b].SL[(n, h)].pv W f i') =
+        ts-eq W (BP[X, b'].SL[(Arith[a].skipN k n, h')].pv W f i) (BP[X, b].SL[(n, h)].pv W f i')
+          (transH (BP[X, b'].SL[(Arith[a].skipN k n, h')].pv-pt W f i)
+            (transH (apH (TV.E.act W X f) Px) (symH (BP[X, b].SL[(n, h)].pv-pt W f i'))))
+          (transH (BP[X, b'].SL[(Arith[a].skipN k n, h')].pv-line W f i)
+            (transH (ins.ins-v n h h' (prodP W Iv) (cylH W X f)
+                       (BP[X, b'].SL[(Arith[a].skipN k n, h')].inC W f i) (BP[X, b].SL[(n, h)].inC W f i'))
+                    (symH (BP[X, b].SL[(n, h)].pv-line W f i')))) ;
+
+      insH : CA.PEs.InsPH[X, BP[X, b].x, BP[X, b'].x, k, BP[X, b].p, BP[X, b'].p] =
+        new CA.PEs.InsPH[X, BP[X, b].x, BP[X, b'].x, k, BP[X, b].p, BP[X, b'].p, ins.ins-r, ins.ins-k,
+                         \ hk -> ins.ins-e hk, \ n h h' -> ins.ins-Q n h h', \ n h h' W f i i' -> insv n h h' W f i i'] ;
+    } ;
+
+    esi (ce : CA.CESI ca) : ES1.ESI e e' co = \ X k b b' ins ->
+      apH (endE X) (CA.cesiH ca ce X BP[X, b].x BP[X, b'].x EI[X, k, b, b', ins].Px k BP[X, b].p BP[X, b'].p EI[X, k, b, b', ins].insH) ;
+  } ;
+} ;

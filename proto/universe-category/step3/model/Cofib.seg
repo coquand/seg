@@ -1,0 +1,98 @@
+-- Cofib.seg: MODEL/Poset/Cof.agda (renamed: a file module Cof would shadow
+-- the segment type Cof).  Cofibrations and partial elements ([S] section
+-- 1, sumcoll2 3.3/3.5), at the poset base.
+--
+-- The generic notions live in IvBase's GCofib (one home), here GP:
+--   GP.Cof[G]        a cofibration over G: cr generators cQ X rho l : Phi X,
+--                    natural in rho; its extent is the union of their sieves
+--   GP.CofL.full     rho is in the extent (id lands in some generator);
+--                    GP.full-same: it depends only on the sieve
+--   GP.CofL.resCtx   the sub-presheaf G|psi, with inclR : G|psi -> G
+--   GP.Partials D C  partial elements, restriction, ContrOp
+-- (anyF / fin-eq / finTop / finWk: Arith.)  What stays here is poset-only:
+--   lands-pw         lands along pointwise equal maps
+--   CofD.dQ          forall along the cylinder X * [1] -> X (allIv), used
+--                    by the box form of Theorem 7
+--
+-- Agda's where-block is the segment CofD.FD.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+open VCode[a] ;
+
+------------------------------------------------------------------------
+-- Maps landing in a subset (Lands, lands-comp, lands-pre, pre-lands: Constr)
+
+-- along pointwise equal maps
+lands-pw (W X : Ob) (Q : Subset X) (f g : Hom W X) (p : PW W X f g) (i : Lands W X Q f) : Lands W X Q g =
+  lands-eq W X Q f g (hom-eq W X f g p) i ;
+
+-- (deciding "every point of X is in Q", allIn: Constr)
+
+------------------------------------------------------------------------
+-- Partial elements and cofibrations over a context: the generic ones
+-- (IvBase GCofib: Partials, ContrOp, Cof, CofL, full-same) at the poset base
+
+module GP = BaseP.GCofib[a] ;
+
+------------------------------------------------------------------------
+-- forall along the cylinder X * [1] -> X (posets: the product of the base)
+
+module CofD (G : PCtx) (psi : GP.Cof[G]) {
+  open GP.CofL[G, psi] ;
+
+  -- x is in dQ iff (x , 0) and (x , 1) are
+  dQ (X : Ob) (rho : W0.Ix (G.ob (prodP X Iv))) (l : Fin r) : Subset X = allIv X (Q (prodP X Iv) rho l) ;
+
+  lands-dQ (W X : Ob) (f : Hom W X) (rho : W0.Ix (G.ob (prodP X Iv))) (l : Fin r) (i : Lands W X (dQ X rho l) f)
+    : Lands (prodP W Iv) (prodP X Iv) (Q (prodP X Iv) rho l) (cylH W X f) = lands-all W X (Q (prodP X Iv) rho l) f i ;
+
+  dQ-full (W X : Ob) (f : Hom W X) (rho : W0.Ix (G.ob (prodP X Iv))) (l : Fin r) (i : Lands W X (dQ X rho l) f)
+    : IsT (full (prodP W Iv) (G.act (prodP W Iv) (prodP X Iv) (cylH W X f) rho)) =
+    lands-full (prodP W Iv) (prodP X Iv) (cylH W X f) rho l (lands-dQ W X f rho l i) ;
+
+  module FD (W X : Ob) (f : Hom W X) (rho : W0.Ix (G.ob (prodP X Iv)))
+    (p : IsT (full (prodP W Iv) (G.act (prodP W Iv) (prodP X Iv) (cylH W X f) rho))) {
+    w : (l : Fin r) * Lands (prodP W Iv) (prodP X Iv) (Q (prodP X Iv) rho l) (cylH W X f) =
+      full-lands (prodP W Iv) (prodP X Iv) (cylH W X f) rho p ;
+
+    res : (l : Fin r) * Lands W X (dQ X rho l) f = (w.1, all-lands W X (Q (prodP X Iv) rho w.1) f w.2) ;
+  } ;
+
+  full-dQ (W X : Ob) (f : Hom W X) (rho : W0.Ix (G.ob (prodP X Iv)))
+    (p : IsT (full (prodP W Iv) (G.act (prodP W Iv) (prodP X Iv) (cylH W X f) rho))) : (l : Fin r) * Lands W X (dQ X rho l) f =
+    FD[W, X, f, rho, p].res ;
+
+  cnD (Y X : Ob) (h : Hom Y X) (rho : W0.Ix (G.ob (prodP X Iv))) (l : Fin r) (s : El Y) (n : Nat) (e : IsT (leb n (suc zero)))
+    : Id Bool (Q (prodP Y Iv) (G.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) rho) l (ivPt Y s n e))
+              (Q (prodP X Iv) rho l (ivPt X (app Y X h s) n e)) =
+    transH (subset-at (prodP Y Iv) _ _ (psi.cnat (prodP Y Iv) (prodP X Iv) (cylH Y X h) rho l) (ivPt Y s n e))
+           (apH (Q (prodP X Iv) rho l)
+              (el-eq (prodP X Iv) (app (prodP Y Iv) (prodP X Iv) (cylH Y X h) (ivPt Y s n e)) (ivPt X (app Y X h s) n e)
+                 (cyl-pt Y X h s n (ivPt Y s n e).2))) ;
+
+  dQ-nat-pt (Y X : Ob) (h : Hom Y X) (rho : W0.Ix (G.ob (prodP X Iv))) (l : Fin r) (s : El Y)
+    : Id Bool (dQ Y (G.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) rho) l s) (dQ X rho l (app Y X h s)) =
+    transH (apH (\ b -> and b (Q (prodP Y Iv) (G.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) rho) l (ivPt Y s (suc zero) (refl true))))
+                (cnD Y X h rho l s zero (refl true)))
+           (apH (and (Q (prodP X Iv) rho l (ivPt X (app Y X h s) zero (refl true)))) (cnD Y X h rho l s (suc zero) (refl true))) ;
+
+  -- dQ is natural
+  dQ-nat (Y X : Ob) (h : Hom Y X) (rho : W0.Ix (G.ob (prodP X Iv))) (l : Fin r)
+    : Id (Subset Y) (dQ Y (G.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) rho) l) (pre Y X h (dQ X rho l)) =
+    subset-ext Y (dQ Y (G.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) rho) l) (pre Y X h (dQ X rho l)) (dQ-nat-pt Y X h rho l) ;
+} ;

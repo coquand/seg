@@ -1,0 +1,312 @@
+-- CLocD.seg (L9): the operation D (localisation.tex §3), ported from
+-- seg/model D.seg onto the poset instance of core (module names only, plus
+-- the associativity law).  For A a type over G, an element u of DA at
+-- (X , x) is a family
+--
+--   u n f  in  A([n] , f^* x)       for f : [n] -> X
+--
+-- with  u(f) g = u(f g)  for g : [m] -> [n] strictly monotone (Compat).
+-- The family and the condition are V-small, so DA is a type.  Equations
+-- between u(f) g and u(f g), which live in different fibres, are stated in
+-- the total presheaf E = G.A (TyL).
+--
+--   facesGen      it is enough to check Compat on the face maps
+--   etaN, muN     eta : A -> DA, mu : DDA -> DA, natural
+--   DN            the action of D on maps of types
+--   Laws          D a . mu = mu . DD a,  mu . eta_DA = id,  mu . D eta_A = id,
+--                 mu . D mu = mu . mu_D   (strict, equalities of codes)
+
+level a l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+open Axioms[l+].FunExtLemmas[fe @(l+)] ;
+module W = V[l] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open CPosC[a] ;
+open CSimp[a] ;
+module PB = CPosInst[a].PB ;
+module PR = PB.GPre[l] ;
+module VL = VLift[a, l] ;
+open PR.PS ;
+
+------------------------------------------------------------------------
+-- Maps of types over a context
+
+-- Pi codes of level l over the hom sets and the points of a poset
+piH (J X : Ob) (B : Hom J X -> W.V) : W.V = VL.PiS (Hom J X) (VL.encIx (homV J X)) (VL.encIx-inj (homV J X)) B ;
+piE (X : Ob) (B : El X -> W.V) : W.V = VL.PiS (El X) (VL.encIx (elV X)) (VL.encIx-inj (elV X)) B ;
+
+module NatMap (G : PCtx) (A B : PTy[G]) {
+  nfun (I : Ob) (x : W.Ix (G.ob I)) (a : W.Ix (A.tob I x)) : W.Ix (B.tob I x) ;
+  nnat (J I : Ob) (f : Hom J I) (x : W.Ix (G.ob I)) (y : W.Ix (G.ob J)) (e : Id (W.Ix (G.ob J)) (G.act J I f x) y)
+    (a : W.Ix (A.tob I x)) : Id (W.Ix (B.tob J y)) (B.tact J I f x y e (nfun I x a)) (nfun J y (A.tact J I f x y e a)) ;
+} ;
+
+------------------------------------------------------------------------
+-- The type DA
+
+module DT (G : PCtx) (A : PTy[G]) {
+  open PR.TyL[G, A] ;
+
+  Fam (X : Ob) (x : Pt X) : U l = (n : Nat) (f : Hom (lin n) X) -> T (lin n) (G.act (lin n) X f x) ;
+
+  rd (X : Ob) (x : Pt X) (u : Fam X x) (n : Nat) (f : Hom (lin n) X) : EI (lin n) = (G.act (lin n) X f x, u n f) ;
+
+  Compat (X : Ob) (x : Pt X) (u : Fam X x) : U l =
+    (m n : Nat) (g : Hom (lin m) (lin n)) -> Strict (lin m) (lin n) g -> (f : Hom (lin n) X)
+    -> Id (EI (lin m)) (E.act (lin m) (lin n) g (rd X x u n f)) (rd X x u m (compH (lin m) (lin n) X f g)) ;
+
+  famV (X : Ob) (x : Pt X) : W.V =
+    W.PiV W.natV (\ n -> piH (lin n) X (\ f -> A.tob (lin n) (G.act (lin n) X f x))) ;
+
+  strictV (m n : Nat) (g : Hom (lin m) (lin n)) : W.V =
+    piE (lin m) (\ s -> piE (lin m) (\ t -> W.PiV (W.IsTV (lt (lin m) s.1 t.1)) (\ h ->
+      W.IsTV (lt (lin n) (app (lin m) (lin n) g s).1 (app (lin m) (lin n) g t).1)))) ;
+
+  compatV (X : Ob) (x : Pt X) (u : Fam X x) : W.V =
+    W.PiV W.natV (\ m -> W.PiV W.natV (\ n -> piH (lin m) (lin n) (\ g -> W.PiV (strictV m n g) (\ h ->
+      piH (lin n) X (\ f ->
+        W.IdV (E.ob (lin m)) (E.act (lin m) (lin n) g (rd X x u n f)) (rd X x u m (compH (lin m) (lin n) X f g))))))) ;
+
+  dob (X : Ob) (x : Pt X) : W.V = W.SigV (famV X x) (compatV X x) ;
+
+  DEl (X : Ob) (x : Pt X) : U l = W.Ix (dob X x) ;
+
+  isProp-Compat (X : Ob) (x : Pt X) (u : Fam X x) : isProp (Compat X x u) =
+    isProp-Pi Nat (\ m -> (n : Nat) (g : Hom (lin m) (lin n)) -> Strict (lin m) (lin n) g -> (f : Hom (lin n) X)
+      -> Id (EI (lin m)) (E.act (lin m) (lin n) g (rd X x u n f)) (rd X x u m (compH (lin m) (lin n) X f g))) (\ m ->
+    isProp-Pi Nat (\ n -> (g : Hom (lin m) (lin n)) -> Strict (lin m) (lin n) g -> (f : Hom (lin n) X)
+      -> Id (EI (lin m)) (E.act (lin m) (lin n) g (rd X x u n f)) (rd X x u m (compH (lin m) (lin n) X f g))) (\ n ->
+    isProp-Pi (Hom (lin m) (lin n)) (\ g -> Strict (lin m) (lin n) g -> (f : Hom (lin n) X)
+      -> Id (EI (lin m)) (E.act (lin m) (lin n) g (rd X x u n f)) (rd X x u m (compH (lin m) (lin n) X f g))) (\ g ->
+    isProp-Pi (Strict (lin m) (lin n) g) (\ h -> (f : Hom (lin n) X)
+      -> Id (EI (lin m)) (E.act (lin m) (lin n) g (rd X x u n f)) (rd X x u m (compH (lin m) (lin n) X f g))) (\ h ->
+    isProp-Pi (Hom (lin n) X) (\ f
+      -> Id (EI (lin m)) (E.act (lin m) (lin n) g (rd X x u n f)) (rd X x u m (compH (lin m) (lin n) X f g))) (\ f ->
+      W.isSetIx (E.ob (lin m)) _ _))))) ;
+
+  -- elements of DA are determined by their reading in E
+  Dext (X : Ob) (x : Pt X) (u v : DEl X x)
+    (h : (n : Nat) (f : Hom (lin n) X) -> Id (EI (lin n)) (rd X x u.1 n f) (rd X x v.1 n f)) : Id (DEl X x) u v =
+    Sigma-eq (Fam X x) (\ w -> Compat X x w) u.1 v.1 u.2 v.2
+      (funext Nat (\ n -> (f : Hom (lin n) X) -> T (lin n) (G.act (lin n) X f x)) u.1 v.1 (\ n ->
+         funext (Hom (lin n) X) (\ f -> T (lin n) (G.act (lin n) X f x)) (u.1 n) (v.1 n) (\ f ->
+           pr-inj (lin n) _ (u.1 n f) (v.1 n f) (h n f))))
+      (isProp-Compat X x v.1) ;
+
+  ----------------------------------------------------------------------
+  -- The action
+
+  module Act (Y X : Ob) (h : Hom Y X) (x : Pt X) (y : Pt Y) (e : Id (Pt Y) (G.act Y X h x) y) {
+
+    eqh (n : Nat) (f : Hom (lin n) Y)
+      : Id (Pt (lin n)) (G.act (lin n) X (compH (lin n) Y X h f) x) (G.act (lin n) Y f y) =
+      transH (G.act-o (lin n) Y X h f x) (apH (G.act (lin n) Y f) e) ;
+
+    dfam (u : Fam X x) : Fam Y y = \ n f -> coeT (lin n) _ _ (eqh n f) (u n (compH (lin n) Y X h f)) ;
+
+    rd-dfam (u : Fam X x) (n : Nat) (f : Hom (lin n) Y)
+      : Id (EI (lin n)) (rd Y y (dfam u) n f) (rd X x u n (compH (lin n) Y X h f)) =
+      symH (pr-coe (lin n) _ _ (eqh n f) (u n (compH (lin n) Y X h f))) ;
+
+    -- (h^* u)(f) g = u(h f) g = u((h f) g) = u(h (f g)) = (h^* u)(f g)
+    dcompat (u : Fam X x) (c : Compat X x u) : Compat Y y (dfam u) = \ m n g s f ->
+      calc (EI (lin m)) {
+          E.act (lin m) (lin n) g (rd Y y (dfam u) n f)
+        =< apH (E.act (lin m) (lin n) g) (rd-dfam u n f) >
+          E.act (lin m) (lin n) g (rd X x u n (compH (lin n) Y X h f))
+        =< c m n g s (compH (lin n) Y X h f) >
+          rd X x u m (compH (lin m) (lin n) X (compH (lin n) Y X h f) g)
+        =< apH (\ k -> rd X x u m k) (comp-assoc (lin m) (lin n) Y X h f g) >
+          rd X x u m (compH (lin m) Y X h (compH (lin m) (lin n) Y f g))
+        =< symH (rd-dfam u m (compH (lin m) (lin n) Y f g)) >
+          rd Y y (dfam u) m (compH (lin m) (lin n) Y f g) } ;
+
+    dact (u : DEl X x) : DEl Y y = (dfam u.1, dcompat u.1 u.2) ;
+  } ;
+
+  dtact (J I : Ob) (f : Hom J I) (x : Pt I) (y : Pt J) (e : Id (Pt J) (G.act J I f x) y) (u : DEl I x) : DEl J y =
+    Act[J, I, f, x, y, e].dact u ;
+
+  rd-dtact (J I : Ob) (f : Hom J I) (x : Pt I) (y : Pt J) (e : Id (Pt J) (G.act J I f x) y)
+    (u : DEl I x) (n : Nat) (k : Hom (lin n) J)
+    : Id (EI (lin n)) (rd J y (dtact J I f x y e u).1 n k) (rd I x u.1 n (compH (lin n) J I f k)) =
+    Act[J, I, f, x, y, e].rd-dfam u.1 n k ;
+
+  dtact-id (I : Ob) (x : Pt I) (e : Id (Pt I) (G.act I I (idH I) x) x) (u : DEl I x)
+    : Id (DEl I x) (dtact I I (idH I) x x e u) u =
+    Dext I x (dtact I I (idH I) x x e u) u (\ n k ->
+      transH (rd-dtact I I (idH I) x x e u n k) (apH (\ k1 -> rd I x u.1 n k1) (comp-idl (lin n) I k))) ;
+
+  dtact-o (K J I : Ob) (f : Hom J I) (g : Hom K J) (x : Pt I) (y : Pt J) (z : Pt K)
+    (e1 : Id (Pt J) (G.act J I f x) y) (e2 : Id (Pt K) (G.act K J g y) z)
+    (e3 : Id (Pt K) (G.act K I (compH K J I f g) x) z) (u : DEl I x)
+    : Id (DEl K z) (dtact K I (compH K J I f g) x z e3 u) (dtact K J g y z e2 (dtact J I f x y e1 u)) =
+    Dext K z _ _ (\ n k ->
+      transH (rd-dtact K I (compH K J I f g) x z e3 u n k)
+      (transH (apH (\ k1 -> rd I x u.1 n k1) (comp-assoc (lin n) K J I f g k))
+             (symH (transH (rd-dtact K J g y z e2 (dtact J I f x y e1 u) n k)
+                           (rd-dtact J I f x y e1 u n (compH (lin n) K J g k)))))) ;
+
+  opaque dtact-id ; opaque dtact-o ;
+
+  DA : PTy[G] = (mkTy G dob dtact dtact-id dtact-o) ;
+
+  ----------------------------------------------------------------------
+  -- Reading an equation of DA-pairs pointwise
+
+  ED : PCtx = extP G DA ;
+
+  evalE (Z : Ob) (z z' : Pt Z) (w : DEl Z z) (w' : DEl Z z') (Q : Id (W.Ix (ED.ob Z)) (z, w) (z', w'))
+    (n : Nat) (c : Hom (lin n) Z) : Id (EI (lin n)) (rd Z z w.1 n c) (rd Z z' w'.1 n c) =
+    apH (\ p -> rd Z p.1 p.2.1 n c) Q ;
+
+  ----------------------------------------------------------------------
+  -- Compatibility on the faces suffices
+
+  FaceCompat (X : Ob) (x : Pt X) (u : Fam X x) : U l =
+    (n : Nat) (f : Hom (lin (suc n)) X) (y : Nat) -> IsT (leb y (suc n))
+    -> Id (EI (lin n)) (E.act (lin n) (lin (suc n)) (dl n y) (rd X x u (suc n) f))
+                       (rd X x u n (compH (lin n) (lin (suc n)) X f (dl n y))) ;
+
+  -- (CFacesGen.SG for the restriction of E to Delta)
+  module FacesGen (X : Ob) (x : Pt X) (u : Fam X x) (fc : FaceCompat X x u) {
+    module S = CFacesGen[a, l].SG[CLocRestr[a, l].R[E].iG, X, rd X x u, fc] ;
+    facesGen : Compat X x u = \ m n g s f -> S.fg n m g s f ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- eta : A -> DA,  (eta a)(f) = a f
+
+  etaF (I : Ob) (x : Pt I) (a : T I x) : DEl I x =
+    (\ n f -> A.tact (lin n) I f x (G.act (lin n) I f x) (refl (G.act (lin n) I f x)) a,
+     \ m n g s f -> PE.actC (lin m) (lin n) I f g (x, a)) ;
+
+  eta-nat (J I : Ob) (h : Hom J I) (x : Pt I) (y : Pt J) (e : Id (Pt J) (G.act J I h x) y) (a : T I x)
+    : Id (DEl J y) (dtact J I h x y e (etaF I x a)) (etaF J y (A.tact J I h x y e a)) =
+    Dext J y _ _ (\ n f ->
+      transH (rd-dtact J I h x y e (etaF I x a) n f)
+             (transH (symH (PE.actC (lin n) J I h f (x, a))) (apH (E.act (lin n) J f) (pr-tact J I h x y e a)))) ;
+
+  opaque eta-nat ;
+
+  etaN : NatMap[G, A, DA] = new NatMap[G, A, DA, etaF, eta-nat] ;
+} ;
+
+------------------------------------------------------------------------
+-- mu : DDA -> DA,  (mu v)(f) = v(f)(id)
+
+module Mu (G : PCtx) (A : PTy[G]) {
+  open PR.TyL[G, A] ;
+  open DT[G, A] ;
+  module D2 = DT[G, DA] ;
+
+  mf (I : Ob) (x : Pt I) (v : D2.DEl I x) : Fam I x = \ n f ->
+    coeT (lin n) _ _ (G.act-id (lin n) (G.act (lin n) I f x)) ((v.1 n f).1 n (idH (lin n))) ;
+
+  rd-mu (I : Ob) (x : Pt I) (v : D2.DEl I x) (n : Nat) (f : Hom (lin n) I)
+    : Id (EI (lin n)) (rd I x (mf I x v) n f) (rd (lin n) (G.act (lin n) I f x) (v.1 n f).1 n (idH (lin n))) =
+    symH (pr-coe (lin n) _ _ (G.act-id (lin n) (G.act (lin n) I f x)) ((v.1 n f).1 n (idH (lin n)))) ;
+
+  mc (I : Ob) (x : Pt I) (v : D2.DEl I x) : Compat I x (mf I x v) = \ m n g s f ->
+    transH (apH (E.act (lin m) (lin n) g) (rd-mu I x v n f))
+     (transH ((v.1 n f).2 m n g s (idH (lin n)))
+      (transH (apH (\ k -> rd (lin n) (G.act (lin n) I f x) (v.1 n f).1 m k)
+                   (transH (comp-idl (lin m) (lin n) g) (symH (comp-idr (lin m) (lin n) g))))
+      (transH (symH (rd-dtact (lin m) (lin n) g (G.act (lin n) I f x) (G.act (lin m) (lin n) g (G.act (lin n) I f x)) (refl (G.act (lin m) (lin n) g (G.act (lin n) I f x))) (v.1 n f) m (idH (lin m))))
+       (transH (evalE (lin m) _ _ _ _ (v.2 m n g s f) m (idH (lin m)))
+               (symH (rd-mu I x v m (compH (lin m) (lin n) I f g))))))) ;
+
+  muF (I : Ob) (x : Pt I) (v : D2.DEl I x) : DEl I x = (mf I x v, mc I x v) ;
+
+  mu-nat (J I : Ob) (h : Hom J I) (x : Pt I) (y : Pt J) (e : Id (Pt J) (G.act J I h x) y) (v : D2.DEl I x)
+    : Id (DEl J y) (dtact J I h x y e (muF I x v)) (muF J y (D2.dtact J I h x y e v)) =
+    Dext J y _ _ (\ n f ->
+      transH (rd-dtact J I h x y e (muF I x v) n f)
+       (transH (rd-mu I x v n (compH (lin n) J I h f))
+        (transH (evalE (lin n) _ _ _ _
+                   (PR.TyL[G, DA].pr-coe (lin n) _ _ (D2.Act[J, I, h, x, y, e].eqh n f) (v.1 n (compH (lin n) J I h f)))
+                   n (idH (lin n)))
+                (symH (rd-mu J y (D2.dtact J I h x y e v) n f))))) ;
+
+  opaque mu-nat ;
+
+  muN : NatMap[G, D2.DA, DA] = new NatMap[G, D2.DA, DA, muF, mu-nat] ;
+} ;
+
+------------------------------------------------------------------------
+-- The action of D on maps of types
+
+module DMap (G : PCtx) (A B : PTy[G]) (al : NatMap[G, A, B]) {
+  module TA = PR.TyL[G, A] ;
+  module TB = PR.TyL[G, B] ;
+  module DA' = DT[G, A] ;
+  module DB' = DT[G, B] ;
+
+  -- al read on the total presheaves
+  alE (Z : Ob) (w : TA.EI Z) : TB.EI Z = (w.1, al.nfun Z w.1 w.2) ;
+
+  alE-act (J I : Ob) (f : Hom J I) (w : TA.EI I) : Id (TB.EI J) (alE J (TA.E.act J I f w)) (TB.E.act J I f (alE I w)) =
+    apH {W.Ix (B.tob J (G.act J I f w.1))} (\ v -> (G.act J I f w.1, v)) (symH (al.nnat J I f w.1 (G.act J I f w.1) (refl (G.act J I f w.1)) w.2)) ;
+
+  DF (I : Ob) (x : W.Ix (G.ob I)) (u : DA'.DEl I x) : DB'.DEl I x =
+    (\ n f -> al.nfun (lin n) _ (u.1 n f),
+     \ m n g s f -> transH (symH (alE-act (lin m) (lin n) g (DA'.rd I x u.1 n f))) (apH (alE (lin m)) (u.2 m n g s f))) ;
+
+  DF-nat (J I : Ob) (h : Hom J I) (x : W.Ix (G.ob I)) (y : W.Ix (G.ob J)) (e : Id (W.Ix (G.ob J)) (G.act J I h x) y)
+    (u : DA'.DEl I x) : Id (DB'.DEl J y) (DB'.dtact J I h x y e (DF I x u)) (DF J y (DA'.dtact J I h x y e u)) =
+    DB'.Dext J y _ _ (\ n f ->
+      transH (DB'.rd-dtact J I h x y e (DF I x u) n f) (apH (alE (lin n)) (symH (DA'.rd-dtact J I h x y e u n f)))) ;
+
+  opaque DF-nat ;
+
+  DN : NatMap[G, DA'.DA, DB'.DA] = new NatMap[G, DA'.DA, DB'.DA, DF, DF-nat] ;
+} ;
+
+------------------------------------------------------------------------
+-- The strict laws of [S] section 3
+
+module Laws (G : PCtx) (A : PTy[G]) {
+  open PR.TyL[G, A] ;
+  open DT[G, A] ;
+  module D2 = DT[G, DA] ;
+  module MA = Mu[G, A] ;
+
+  -- mu . eta_DA = id
+  mu-eta (I : Ob) (x : Pt I) (u : DEl I x) : Id (DEl I x) (MA.muF I x (D2.etaF I x u)) u =
+    Dext I x _ u (\ n f -> transH (MA.rd-mu I x (D2.etaF I x u) n f)
+                              (transH (rd-dtact (lin n) I f x (G.act (lin n) I f x) (refl (G.act (lin n) I f x)) u n (idH (lin n)))
+                                      (apH (\ k -> rd I x u.1 n k) (comp-idr (lin n) I f)))) ;
+
+  -- mu . D eta_A = id
+  mu-Deta (I : Ob) (x : Pt I) (u : DEl I x) : Id (DEl I x) (MA.muF I x (DMap[G, A, DA, etaN].DF I x u)) u =
+    Dext I x _ u (\ n f -> transH (MA.rd-mu I x (DMap[G, A, DA, etaN].DF I x u) n f) (E.act-id (lin n) (rd I x u.1 n f))) ;
+
+  -- mu . D mu = mu . mu_D
+  module D3 = DT[G, D2.DA] ;
+  module M3 = Mu[G, DA] ;
+  module DMm = DMap[G, D2.DA, DA, MA.muN] ;
+
+  mu-assoc (I : Ob) (x : Pt I) (w : D3.DEl I x)
+    : Id (DEl I x) (MA.muF I x (DMm.DF I x w)) (MA.muF I x (M3.muF I x w)) =
+    Dext I x _ _ (\ n f ->
+      transH (MA.rd-mu I x (DMm.DF I x w) n f)
+        (transH (MA.rd-mu (lin n) (G.act (lin n) I f x) (w.1 n f) n (idH (lin n)))
+          (symH (transH (MA.rd-mu I x (M3.muF I x w) n f)
+                        (evalE (lin n) _ _ _ _ (M3.rd-mu I x w n f) n (idH (lin n))))))) ;
+
+  -- D al . mu = mu . DD al   (Agda's  module _ (B) (al))
+  module DMu (B : PTy[G]) (al : NatMap[G, A, B]) {
+    module MB = Mu[G, B] ;
+    module DAB = DMap[G, A, B, al] ;
+    module DDAB = DMap[G, DA, DT[G, B].DA, DAB.DN] ;
+
+    D-mu (I : Ob) (x : Pt I) (v : D2.DEl I x) : Id (DAB.DB'.DEl I x) (DAB.DF I x (MA.muF I x v)) (MB.muF I x (DDAB.DF I x v)) =
+      DAB.DB'.Dext I x _ _ (\ n f -> transH (apH (DAB.alE (lin n)) (MA.rd-mu I x v n f)) (symH (MB.rd-mu I x (DDAB.DF I x v) n f))) ;
+  } ;
+} ;

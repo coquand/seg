@@ -1,0 +1,238 @@
+-- FillComp.seg: MODEL/Poset/FillComp.agda.  Lemma 2.1 of [S]:
+-- horn(G , A) -> comp(G , DA)  (from the lower lid to the upper lid).
+--
+-- For an open box b over X and f : [n] -> X, the upper lid at f is the
+-- chain Q_0 = [n] * 1 of the filling of the box restricted along f.
+-- Everything else is the functoriality of restriction (restrict-o):
+--
+--   * it is in DA: the face of the filling at f is the filling at the face
+--     of f (Cross.qF), and faces suffice (facesGen);
+--   * it agrees with each side: if f lands in Q_l the filling is read off
+--     the side l (Stage.fullQ);
+--   * it is uniform: restricting along h then f is restricting along h f,
+--     so the two fillings are literally the same.
+--
+-- As in smodel-proofs, the horn filling of A needs no uniformity: it is
+-- only ever used on the prisms [n] * [1].  Agda's where-block of `side` is
+-- the segment SideAt.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module DD = D[a] ;
+open FillBase[a] ;
+
+module FCo (G : PCtx) (A : PTy[G]) (horn : Box[a, a].Horns[G, A].HornOp) {
+  open PR.TyL[G, A] ;
+  open DD.DT[G, A] ;
+  module FBm = FB[G, A] ;
+  open FBm ;
+  open FBm.RC ;
+  module FSm = FillStage[a].FS[G, A, horn] ;
+  open FSm ;
+
+  XI (X : Ob) : Ob = prodP X Iv ;
+
+  rr (Y X : Ob) (f : Hom Y X) (b : BX.Box[e0, X]) : BX.Box[e0, Y] = BX.restrict e0 Y X f b ;
+
+  -- the context of the upper lid
+  x1 (X : Ob) (b : BX.Box[e0, X]) : Pt X = G.act X (XI X) (lid X e1) b.brho ;
+
+  ----------------------------------------------------------------------
+  -- The upper lid
+
+  ix0 (n : Nat) : IxK zero (suc n) = (suc n, refl (suc n)) ;
+
+  -- Q_0 of the filling of the box restricted along f
+  topQ (X : Ob) (b : BX.Box[e0, X]) (n : Nat) (f : Hom (lin n) X) : EI (lin n) =
+    (ctxQ n (rr (lin n) X f b) zero, (build n).Q (rr (lin n) X f b) zero (ix0 n)) ;
+
+  -- Q_0 is the upper lid
+  pw-top (n : Nat) (X : Ob) (f : Hom (lin n) X)
+    : PW (lin n) (XI X) (compH (lin n) (PrN n) (XI X) (cylH (lin n) X f) (qmap n zero))
+                        (compH (lin n) X (XI X) (lid X e1) f) =
+    pwl n (XI X) (compH (lin n) (PrN n) (XI X) (cylH (lin n) X f) (qmap n zero)) (compH (lin n) X (XI X) (lid X e1) f)
+      -- Q_0 sends i to (i, 1), so both maps send i to (f i, 1)
+      (\ i h -> calc Tree {
+          (app (lin n) (XI X) (compH (lin n) (PrN n) (XI X) (cylH (lin n) X f) (qmap n zero)) (leaf i, h)).1
+        =< app-compH1 (lin n) (PrN n) (XI X) (cylH (lin n) X f) (qmap n zero) (leaf i, h) >
+          (app (PrN n) (XI X) (cylH (lin n) X f) (app (lin n) (PrN n) (qmap n zero) (leaf i, h))).1
+        =< app-cylH1 (lin n) X f (app (lin n) (PrN n) (qmap n zero) (leaf i, h)) >
+          node (app (lin n) X f (p1 (lin n) Iv (app (lin n) (PrN n) (qmap n zero) (leaf i, h)))).1
+               (p2 (lin n) Iv (app (lin n) (PrN n) (qmap n zero) (leaf i, h))).1
+        =< apH (\ z -> node (app (lin n) X f z).1 (leaf (suc zero)))
+               (el-eq (lin n) (leaf i, and-l (leb i n) (leb (suc zero) (suc zero)) (and-i (leb i n) (leb (suc zero) (suc zero)) h (refl true)))
+                      (leaf i, h) (refl (leaf i))) >
+          node (app (lin n) X f (leaf i, h)).1 e1.1
+        =< symH (app-lid1 X e1 (app (lin n) X f (leaf i, h))) >
+          (app X (XI X) (lid X e1) (app (lin n) X f (leaf i, h))).1
+        =< symH (app-compH1 (lin n) X (XI X) (lid X e1) f (leaf i, h)) >
+          (app (lin n) (XI X) (compH (lin n) X (XI X) (lid X e1) f) (leaf i, h)).1 }) ;
+
+  eqTop (X : Ob) (rho : Pt (XI X)) (n : Nat) (f : Hom (lin n) X)
+    : Id (Pt (lin n)) (G.act (lin n) (PrN n) (qmap n zero) (G.act (PrN n) (XI X) (cylH (lin n) X f) rho))
+                      (G.act (lin n) X f (G.act X (XI X) (lid X e1) rho)) =
+    GL.actSq (lin n) (PrN n) X (XI X) (cylH (lin n) X f) (qmap n zero) (lid X e1) f (hom-eq (lin n) (XI X) (compH (lin n) (PrN n) (XI X) (cylH (lin n) X f) (qmap n zero)) (compH (lin n) X (XI X) (lid X e1) f) (pw-top n X f)) rho ;
+
+  ufam (X : Ob) (b : BX.Box[e0, X]) : Fam X (x1 X b) = \ n f ->
+    coeT (lin n) _ _ (eqTop X b.brho n f) ((build n).Q (rr (lin n) X f b) zero (ix0 n)) ;
+
+  rd-u (X : Ob) (b : BX.Box[e0, X]) (n : Nat) (f : Hom (lin n) X)
+    : Id (EI (lin n)) (rd X (x1 X b) (ufam X b) n f) (topQ X b n f) =
+    symH (pr-coe (lin n) _ _ (eqTop X b.brho n f) ((build n).Q (rr (lin n) X f b) zero (ix0 n))) ;
+
+  -- the filling only depends on the box
+  topQ-box (n : Nat) (b1 b2 : BoxL n) (e : Id (BoxL n) b1 b2)
+    : Id (EI (lin n)) (ctxQ n b1 zero, (build n).Q b1 zero (ix0 n)) (ctxQ n b2 zero, (build n).Q b2 zero (ix0 n)) =
+    apH (\ b0 -> (ctxQ n b0 zero, (build n).Q b0 zero (ix0 n))) e ;
+
+  ----------------------------------------------------------------------
+  -- It is an element of DA
+
+  ixq (n y : Nat) : IxK (qface y zero) (suc n) = substH (\ k -> IxK k (suc n)) (symH (qface-zero y)) (ix0 n) ;
+
+  qaux (n : Nat) (bb : BoxL n) (k : Nat) (e : Id Nat k zero) (ix : IxK k (suc n))
+    : Id (EI (lin n)) (ctxQ n bb k, (build n).Q bb k ix) (ctxQ n bb zero, (build n).Q bb zero (ix0 n)) =
+    idJR Nat zero
+      (\ k1 e1 -> (ix1 : IxK k1 (suc n)) -> Id (EI (lin n)) (ctxQ n bb k1, (build n).Q bb k1 ix1) (ctxQ n bb zero, (build n).Q bb zero (ix0 n)))
+      (\ ix1 -> apH (\ i -> (ctxQ n bb zero, (build n).Q bb zero i)) (isProp-IxK zero (suc n) ix1 (ix0 n))) k e ix ;
+
+  ufc (X : Ob) (b : BX.Box[e0, X]) : FaceCompat X (x1 X b) (ufam X b) = \ n f y hy ->
+    transH (apH (E.act (lin n) (lin (suc n)) (dl n y)) (rd-u X b (suc n) f))
+     (transH ((cross n).qF (rr (lin (suc n)) X f b) zero y hy (ix0 (suc n)) (ixq n y))
+      (transH (qaux n (rB n y (rr (lin (suc n)) X f b)) (qface y zero) (qface-zero y) (ixq n y))
+       (transH (topQ-box n _ _ (BX.restrict-o e0 (lin n) (lin (suc n)) X (dl n y) f b))
+               (symH (rd-u X b n (compH (lin n) (lin (suc n)) X f (dl n y))))))) ;
+
+  utop (X : Ob) (b : BX.Box[e0, X]) : DEl X (x1 X b) =
+    (ufam X b, FacesGen[X, x1 X b, ufam X b, ufc X b].facesGen) ;
+
+  ----------------------------------------------------------------------
+  -- Equality of DA elements in the total presheaf
+
+  DEext (Z : Ob) (z z' : Pt Z) (w : DEl Z z) (w' : DEl Z z') (e : Id (Pt Z) z z')
+    (h : (m : Nat) (c : Hom (lin m) Z) -> Id (EI (lin m)) (rd Z z w.1 m c) (rd Z z' w'.1 m c))
+    : Id (W0.Ix (ED.ob Z)) (z, w) (z', w') =
+    idJ (Pt Z) z
+      (\ z2 e2 -> (w2 : DEl Z z2) -> ((m : Nat) (c : Hom (lin m) Z) -> Id (EI (lin m)) (rd Z z w.1 m c) (rd Z z2 w2.1 m c))
+         -> Id (W0.Ix (ED.ob Z)) (z, w) (z2, w2))
+      (\ w2 h2 -> apH {DEl Z z} (\ v -> (z, v)) (Dext Z z w w2 h2)) z' e w' h ;
+
+  ----------------------------------------------------------------------
+  -- Uniformity
+
+  unif (Y X : Ob) (h : Hom Y X) (b : BX.Box[e0, X])
+    : Id (W0.Ix (ED.ob Y)) (ED.act Y X h (BX.topE e1 X b.brho (utop X b)))
+                          (BX.topE e1 Y (rr Y X h b).brho (utop Y (rr Y X h b))) =
+    DEext Y (G.act Y X h (x1 X b)) (x1 Y (rr Y X h b))
+      (dtact Y X h (x1 X b) (G.act Y X h (x1 X b)) (refl (G.act Y X h (x1 X b))) (utop X b)) (utop Y (rr Y X h b))
+      (GL.actSq Y X (XI Y) (XI X) (lid X e1) h (cylH Y X h) (lid Y e1) (hom-eq Y (XI X) (compH Y X (XI X) (lid X e1) h) (compH Y (XI Y) (XI X) (cylH Y X h) (lid Y e1)) (pw-lid Y X h e1)) b.brho)
+      (\ m c ->
+        transH (rd-dtact Y X h (x1 X b) (G.act Y X h (x1 X b)) (refl (G.act Y X h (x1 X b))) (utop X b) m c)
+         (transH (rd-u X b m (compH (lin m) Y X h c))
+          (transH (topQ-box m _ _ (symH {BoxL m} (BX.restrict-o e0 (lin m) Y X c h b)))
+                  (symH (rd-u Y (rr Y X h b) m c))))) ;
+
+  ----------------------------------------------------------------------
+  -- Agreement with the sides
+
+  module SideAt (X : Ob) (b : BX.Box[e0, X]) (l : Fin b.br) (W : Ob) (phi : Hom W X)
+                (i : InQ W X (b.bs l).sQ (compH W X (XI X) (lid X e1) phi)) {
+    s : BX.Side[X, b.brho] = b.bs l ;
+    lphi : Hom W (XI X) = compH W X (XI X) (lid X e1) phi ;
+
+    g (m : Nat) (c : Hom (lin m) W) : Hom (lin m) X = compH (lin m) W X phi c ;
+    bb (m : Nat) (c : Hom (lin m) W) : BoxL m = rr (lin m) X (g m c) b ;
+
+    -- phi lands in the side l, hence so does phi c
+    -- phi lands in sQ (i), hence so does phi c
+    inS (m : Nat) (c : Hom (lin m) W) : Lands (lin m) X s.sQ (g m c) =
+      lands-comp (lin m) W X s.sQ phi c (inQ-lid-lands W X s.sQ e1 phi i) ;
+
+    -- id lands in the inverse image of sQ along g m c, since g m c lands in sQ
+    hl (m : Nat) (c : Hom (lin m) W) : IsT (allS (lin m) ((bb m c).bs l).sQ) =
+      allS-complete (lin m) (pre (lin m) X (g m c) s.sQ)
+        (pre-lands (lin m) (lin m) X (g m c) s.sQ (idH (lin m))
+           (lands-eq (lin m) X s.sQ (g m c) (compH (lin m) (lin m) X (g m c) (idH (lin m)))
+              (symH (comp-idr (lin m) X (g m c))) (inS m c))) ;
+
+    cg (m : Nat) (c : Hom (lin m) W) : Hom (PrN m) (XI X) = cylH (lin m) X (g m c) ;
+
+    iF (m : Nat) (c : Hom (lin m) W) : InQ (PrN m) (lin m) (pre (lin m) X (g m c) s.sQ) (idH (PrN m)) =
+      fullInQ m (pre (lin m) X (g m c) s.sQ) (hl m c) (PrN m) (idH (PrN m)) ;
+
+    iG (m : Nat) (c : Hom (lin m) W) : InQ (PrN m) X s.sQ (cg m c) =
+      substH (\ k -> InQ (PrN m) X s.sQ k) (comp-idr (PrN m) (XI X) (cg m c))
+             (inQ-cyl (PrN m) (lin m) X (g m c) s.sQ (idH (PrN m)) (iF m c)) ;
+
+    iQ (m : Nat) (c : Hom (lin m) W) : InQ (lin m) X s.sQ (compH (lin m) (PrN m) (XI X) (cg m c) (qmap m zero)) =
+      inQ-comp (lin m) (PrN m) X s.sQ (cg m c) (qmap m zero) (iG m c) ;
+
+    iC (m : Nat) (c : Hom (lin m) W) : InQ (lin m) X s.sQ (compH (lin m) W (XI X) lphi c) =
+      inQ-comp (lin m) W X s.sQ lphi c i ;
+
+    xW : Pt W = G.act W X phi (x1 X b) ;
+    xL : Pt W = G.act W (XI X) lphi b.brho ;
+
+    -- read at c, both sides are the side l at (lid phi) c:  the filling of the box restricted
+    -- along phi c is read off its full side l (fullQ), which is s at cyl_(phi c) Q_0 = (lid phi) c
+    ptw (m : Nat) (c : Hom (lin m) W)
+      : Id (EI (lin m)) (rd W xW (dtact W X phi (x1 X b) xW (refl xW) (utop X b)).1 m c) (rd W xL (s.sv W lphi i).1 m c) =
+      -- (phi^* utop)(c) = utop(phi c) = Q_0 of the filling along phi c
+      transH (rd-dtact W X phi (x1 X b) xW (refl xW) (utop X b) m c)
+       (transH (rd-u X b m (g m c))
+        -- the full side l determines the filling
+        (transH ((build m).fullQ (bb m c) (l, hl m c) zero (ix0 m))
+         -- the restricted side at the identity is s at cyl_(phi c) o id = cyl_(phi c)
+         (transH (evalE (PrN m) _ _ _ _
+                    (BX.Restrict[e0, lin m, X, g m c].rsvE b.brho s (PrN m) (idH (PrN m)) (iF m c)) m (qmap m zero))
+          (transH (evalE (PrN m) _ _ _ _
+                     (BX.svE-eq X b.brho s (PrN m) _ _ (comp-idr (PrN m) (XI X) (cg m c))
+                        (inQ-cyl (PrN m) (lin m) X (g m c) s.sQ (idH (PrN m)) (iF m c)) (iG m c)) m (qmap m zero))
+          -- read at Q_0 = Q_0 o id, i.e. restricted along Q_0
+          (transH (apH (\ k -> rd (PrN m) (G.act (PrN m) (XI X) (cg m c) b.brho) (s.sv (PrN m) (cg m c) (iG m c)).1 m k)
+                       (symH (comp-idr (lin m) (PrN m) (qmap m zero))))
+          (transH (symH (rd-dtact (lin m) (PrN m) (qmap m zero) (G.act (PrN m) (XI X) (cg m c) b.brho)
+                           (G.act (lin m) (PrN m) (qmap m zero) (G.act (PrN m) (XI X) (cg m c) b.brho))
+                           (refl (G.act (lin m) (PrN m) (qmap m zero) (G.act (PrN m) (XI X) (cg m c) b.brho)))
+                           (s.sv (PrN m) (cg m c) (iG m c)) m (idH (lin m))))
+           -- naturality of s: this is s at cyl_(phi c) Q_0
+           (transH (evalE (lin m) _ _ _ _ (s.snat (lin m) (PrN m) (qmap m zero) (cg m c) (iG m c) (iQ m c)) m (idH (lin m)))
+            -- cyl_(phi c) Q_0 = lid (phi c) = (lid phi) c
+            (transH (evalE (lin m) _ _ _ _
+                       (BX.svE-eq X b.brho s (lin m) _ _
+                          (transH (hom-eq (lin m) (XI X) _ _ (pw-top m X (g m c)))
+                                  (symH (comp-assoc (lin m) W X (XI X) (lid X e1) phi c)))
+                          (iQ m c) (iC m c)) m (idH (lin m)))
+             -- naturality of s backwards: s at (lid phi) c is c^* of s at lid phi, read at id
+             (transH (symH (evalE (lin m) _ _ _ _ (s.snat (lin m) W c lphi i (iC m c)) m (idH (lin m))))
+              (transH (rd-dtact (lin m) W c xL (G.act (lin m) W c xL) (refl (G.act (lin m) W c xL)) (s.sv W lphi i) m (idH (lin m)))
+                      (apH (\ k -> rd W xL (s.sv W lphi i).1 m k) (comp-idr (lin m) W c)))))))))))) ;
+
+    side : Id (W0.Ix (ED.ob W)) (ED.act W X phi (BX.topE e1 X b.brho (utop X b))) (xL, s.sv W lphi i) =
+      DEext W xW xL (dtact W X phi (x1 X b) xW (refl xW) (utop X b)) (s.sv W lphi i)
+        (GL.actC W X (XI X) (lid X e1) phi b.brho) ptw ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- Lemma 2.1:  horn(G , A) -> comp(G , DA), from 0 to 1
+
+  compD : BX.CompOp[e0, e1] =
+    (BX.mkCompOp e0 e1 utop (\ X b l W phi i -> SideAt[X, b, l, W, phi, i].side) unif) ;
+} ;
+
+-- the statement, as a function
+lemma21 (G : PCtx) (A : PTy[G]) (horn : Box[a, a].Horns[G, A].HornOp)
+  : Box[a, a].Boxes[G, DD.DT[G, A].DA].CompOp[e0, e1] = FCo[G, A, horn].compD ;

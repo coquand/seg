@@ -1,0 +1,145 @@
+-- GEqLaws2.seg (inside IvBase, any base): the composition law of
+-- substitution of equivalence data (step G2):
+--
+--   eqD-o   (t , e)[s o s'] = (t , e)[s][s']
+--
+-- As eqD-id (GEqLaws): EqDat.ext along the path of triples given by
+-- triExt.  Both extensions read eal's extension at the same point of
+-- E_A (s (s' x) on the nose) of two moved partial elements, moved once
+-- along s o s' (ES0) or twice, along s' then s (ES2, ES1); their sides
+-- carry the same point, B part and lines (fibE-eq).
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+module GCF = GCofib[lv] ;
+module GSB2 = GEquivSub2[lv] ;
+module GX = GEqExt[lv] ;
+module GL = GEqLaws[lv] ;
+
+module LawO (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (t : GX.EqDat[G].Tri) (e : GX.EqDat[G].EqOn t) {
+  module ED = GX.EqDat[T] ;
+  module TL = GL.TriL[T] ;
+  B : PTy[G] = t.1 ;
+  A : PTy[G] = t.2.1 ;
+  al : PMap[G, B, A] = t.2.2 ;
+  ss : PSub[T, G] = oS T D G s s' ;
+
+  module ES0 = GSB2.EqSub[T, G, ss, B, A, al, e.1] ;
+  module ES1 = GSB2.EqSub[D, G, s, B, A, al, e.1] ;
+  module ES2 = GSB2.EqSub[T, D, s', ES1.B', ES1.A', ES1.al', ES1.eqSub] ;
+
+  tL : ED.Tri = (GL.eqDSub T G ss t e).1 ;
+  eL : ED.EqOn tL = (GL.eqDSub T G ss t e).2 ;
+  tR : ED.Tri = (GL.eqDSub T D s' (GL.eqDSub D G s t e).1 (GL.eqDSub D G s t e).2).1 ;
+  eR : ED.EqOn tR = (GL.eqDSub T D s' (GL.eqDSub D G s t e).1 (GL.eqDSub D G s t e).2).2 ;
+
+  BL : PTy[T] = ES0.B' ;
+  AL : PTy[T] = ES0.A' ;
+  BR : PTy[T] = ES2.B' ;
+  AR : PTy[T] = ES2.A' ;
+
+  QB : Id (PTy[T]) BL BR =
+    ty-ext2 T BL BR (refl BL.tob)
+      (\ J I f x y q b -> tact-irr G B J I f (s.nt I (s'.nt I x)) (s.nt J (s'.nt J y))
+                            (ntEq T G ss J I f x y q) (ntEq D G s J I f (s'.nt I x) (s'.nt J y) (ntEq T D s' J I f x y q)) b) ;
+
+  QA : Id (PTy[T]) AL AR =
+    ty-ext2 T AL AR (refl AL.tob)
+      (\ J I f x y q b -> tact-irr G A J I f (s.nt I (s'.nt I x)) (s.nt J (s'.nt J y))
+                            (ntEq T G ss J I f x y q) (ntEq D G s J I f (s'.nt I x) (s'.nt J y) (ntEq T D s' J I f x y q)) b) ;
+
+  trA (X : Ob) (w : GPR.TyL[T, AL].EI X) : Id (GPR.TyL[T, AL].EI X) (TL.trE X AL AR QA w) w =
+    TL.trE-tob X AL AR QA (refl AL.tob) w ;
+
+  trB (X : Ob) (w : GPR.TyL[T, BL].EI X) : Id (GPR.TyL[T, BL].EI X) (TL.trE X BR BL (symH QB) w) w =
+    TL.trE-tob X BR BL (symH QB) (refl BL.tob) w ;
+
+  -- the maps agree, read in A over G
+  mEq (X : Ob) (w : GPR.TyL[T, BL].EI X) : Id (GPR.TyL[T, AL].EI X) (ES2.al'.mE X w) (ES0.al'.mE X w) =
+    ES0.SA.mV-inj X (ES2.al'.mE X w) (ES0.al'.mE X w) (refl w.1)
+      (transH (apH (ES1.SA.mV X) (ES2.SM.mE-V X w))
+        (transH (ES1.SM.mE-V X (ES2.SB.mV X w)) (symH (ES0.SM.mE-V X w)))) ;
+
+  P : Id ED.Tri tL tR =
+    TL.triExt BL AL ES0.al' BR AR ES2.al' QB QA
+      (\ X w -> transH (mEq X w)
+                  (symH (transH (trA X (ES0.al'.mE X (TL.trE X BR BL (symH QB) w))) (apH (ES0.al'.mE X) (trB X w))))) ;
+
+  psiId (X : Ob) (w : GPR.TyL[T, AL].EI X) : Id (GPR.TyL[T, AL].EI X) (ED.Psi tL tR P X w) w =
+    transH (ED.Psi-tob tL tR P X w) (ED.substLoop X AL.tob (apH (\ u -> u.2.1.tob) (symH P)) w) ;
+
+  psiBId (X : Ob) (w : GPR.TyL[T, BL].EI X) : Id (GPR.TyL[T, BL].EI X) (ED.PsiB tL tR P X w) w =
+    transH (ED.PsiB-tob tL tR P X w) (ED.substLoop X BL.tob (apH (\ u -> u.1.tob) (symH P)) w) ;
+
+  -- a fibre element of the right data, moved twice (s'2 then s'1) or by
+  -- PhiF and then once (s'0): the same element of the fibre of al
+  E1 (W : Ob) (v : ES2.HD.TF.EI W)
+    : Id (ES0.HG.TF.EI W) (ES1.CS.SC.mV W (ES1.s' W (ES2.CS.SC.mV W (ES2.s' W v))))
+                          (ES0.CS.SC.mV W (ES0.s' W (ED.PhiF tL tR P W v))) =
+    ES0.HG.fibE-eq W (ES1.CS.SC.mV W (ES1.s' W (ES2.CS.SC.mV W (ES2.s' W v))))
+      (ES0.CS.SC.mV W (ES0.s' W (ED.PhiF tL tR P W v)))
+      (apH (ES0.ls.nt W) (symH (transH (ED.PhiF-pt tL tR P W v) (psiId W v.1))))
+      (apH (ES0.SB.mV W) (symH (transH (ED.PhiF-B tL tR P W v) (psiBId W (ES2.HD.fibB W v)))))
+      (\ W' f i -> apH (ES0.SA.mV W') (symH (transH (ED.PhiF-L tL tR P W v W' f i) (psiId W' (ES2.HD.fibL W v W' f i))))) ;
+
+  module Hy (X : Ob) (w : GPR.TyL[T, AL].EI X) (p : GCF.Partials[ES2.HD.EA, ES2.HD.FibT].Partial[X, w]) {
+    -- the two partial elements of the fibres of al
+    q2 : GCF.Partials[ES0.HG.EA, ES0.HG.FibT].Partial[X, ES0.ls.nt X w] = ES1.qP X (ES2.ls.nt X w) (ES2.qP X w p) ;
+    q0 : GCF.Partials[ES0.HG.EA, ES0.HG.FibT].Partial[X, ES0.ls.nt X (ED.Psi tL tR P X w)] =
+      ES0.qP X (ED.Psi tL tR P X w) (ED.mvP tL tR P X w p) ;
+
+    R : Id (GCF.Partials[ES0.HG.EA, ES0.HG.FibT].Partial[X, ES0.ls.nt X (ED.Psi tL tR P X w)])
+           (subst (GPR.TyL[G, A].EI X) (\ z -> GCF.Partials[ES0.HG.EA, ES0.HG.FibT].Partial[X, z])
+                  (ES0.ls.nt X w) (ES0.ls.nt X (ED.Psi tL tR P X w)) (apH (ES0.ls.nt X) (symH (psiId X w))) q2)
+           q0 =
+      GCF.Partials[ES0.HG.EA, ES0.HG.FibT].partExtH X (ES0.ls.nt X w) (ES0.ls.nt X (ED.Psi tL tR P X w))
+        (apH (ES0.ls.nt X) (symH (psiId X w))) q2 q0
+        (refl p.pr) (\ l -> refl (p.ps l).pQ)
+        (\ l W f i i' -> transH (E1 W ((p.ps l).pv W f i))
+                           (apH (\ z -> ES0.CS.SC.mV W (ES0.s' W (ED.PhiF tL tR P W z)))
+                                (GCF.Partials[ES2.HD.EA, ES2.HD.FibT].pv-irr X w (p.ps l) W f i i'))) ;
+
+    K : Id (ES0.HG.TF.EI X) (ES0.ls.nt X w, e.1.kop X (ES0.ls.nt X w) q2)
+                            (ES0.ls.nt X (ED.Psi tL tR P X w), e.1.kop X (ES0.ls.nt X (ED.Psi tL tR P X w)) q0) =
+      GCF.Partials[ES0.HG.EA, ES0.HG.FibT].kop-cong e.1 X (ES0.ls.nt X w) (ES0.ls.nt X (ED.Psi tL tR P X w))
+        (apH (ES0.ls.nt X) (symH (psiId X w))) q2 q0 R ;
+
+    lhs : ES0.HD.TF.EI X = ED.PhiF tL tR P X (w, eR.1.kop X w p) ;
+    rhs : ES0.HD.TF.EI X = (ED.Psi tL tR P X w, eL.1.kop X (ED.Psi tL tR P X w) (ED.mvP tL tR P X w p)) ;
+
+    hb : Id (ES0.HD.TB.EI X) (ES0.HD.fibB X lhs) (ES0.HD.fibB X rhs) =
+      transH (ED.PhiF-B tL tR P X (w, eR.1.kop X w p))
+        (transH (psiBId X (ES2.HD.fibB X (w, eR.1.kop X w p)))
+          (ES0.SB.mV-inj X (ES2.HD.fibB X (w, eR.1.kop X w p)) (ES0.HD.fibB X rhs)
+             (apH (\ z -> z.1) (symH (psiId X w)))
+             (transH (apH (ES1.SB.mV X) (ES2.kopB X w p))
+               (transH (ES1.kopB X (ES2.ls.nt X w) (ES2.qP X w p))
+                 (transH (apH (ES0.HG.fibB X) K) (symH (ES0.kopB X (ED.Psi tL tR P X w) (ED.mvP tL tR P X w p)))))))) ;
+
+    hl (W : Ob) (f : Hom W X) (i : Hom W Iv) : Id (ES0.HD.TA.EI W) (ES0.HD.fibL X lhs W f i) (ES0.HD.fibL X rhs W f i) =
+      transH (ED.PhiF-L tL tR P X (w, eR.1.kop X w p) W f i)
+        (transH (psiId W (ES2.HD.fibL X (w, eR.1.kop X w p) W f i))
+          (ES0.SA.mV-inj W (ES2.HD.fibL X (w, eR.1.kop X w p) W f i) (ES0.HD.fibL X rhs W f i)
+             (transH (ES2.HD.fibL-pt X (w, eR.1.kop X w p) W f i)
+               (symH (transH (ES0.HD.fibL-pt X rhs W f i) (apH (\ z -> T.act W X f z.1) (psiId X w)))))
+             (transH (apH (ES1.SA.mV W) (ES2.kopL X w p W f i))
+               (transH (ES1.kopL X (ES2.ls.nt X w) (ES2.qP X w p) W f i)
+                 (transH (apH (\ z -> ES0.HG.fibL X z W f i) K)
+                   (symH (ES0.kopL X (ED.Psi tL tR P X w) (ED.mvP tL tR P X w p) W f i))))))) ;
+
+    hyp : Id (ES0.HD.TF.EI X) lhs rhs =
+      ES0.HD.fibE-eq X lhs rhs (ED.PhiF-pt tL tR P X (w, eR.1.kop X w p)) hb hl ;
+  } ;
+
+  eqD-o : Id ((u : ED.Tri) * ED.EqOn u) (tL, eL) (tR, eR) =
+    ED.ext tL tR P eL eR (\ X w p -> Hy[X, w, p].hyp) ;
+} ;

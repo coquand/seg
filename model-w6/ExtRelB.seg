@@ -1,0 +1,121 @@
+-- ExtRelB.seg: MODEL/Poset/ExtRelB.agda.  Naturality of Ext for related
+-- data, the CORE (composites), part B: the B-side of the composite of Ext
+-- (ExtComp1, step (0)).  For a box c' of Ext(d') over Z and its image
+-- c = mapBox Phi c' (a box of Ext(d)):
+--   pfX       the line of c is full iff that of c' is (rf)
+--   betaEq    the box beta c' of B', mapped along mB, is beta c
+--   FBE-rel   the B-fillers correspond (given FillRel for the B-fillers)
+--   topB-rel  and their tops
+-- The parameters are those of RO (ExtRelObj) and the fillers.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module FibM = Fib[a, a] ;
+open Conn[a] ;
+open Yon[a] ;
+open Cofib[a] ;
+open Equiv[a] ;
+open UMapOver[a] ;
+open UnivOp[a] ;
+open ExtRelObj[a] ;
+open ExtRelObj2[a] ;
+
+module RB (Y X : Ob) (h : Hom Y X) (A'' : PTy[yP Y]) (A : PTy[yP X]) (PoA : PoATy Y X h A'' A) (PoAH : PoAHTy Y X h A'' A PoA)
+  (d' : UData[Y, A'']) (d : UData[X, A]) (mAof : MAofTy Y X h A'' A d' d) (mAofE : MAofETy Y X h A'' A PoA d' d mAof)
+  (R : RelG[Y, X, h, A'', A, d', d, mAof].URelB) (dd : Bool)
+  (fAS'' : FibM.FillDef[yP Y, A''].FillOp[src dd]) (fAS : FibM.FillDef[yP X, A].FillOp[src dd])
+  (fBS' : FibM.FillDef[CofL[yP Y, d'.psi].resCtx, d'.Bf.1].FillOp[src dd])
+  (fBS : FibM.FillDef[CofL[yP X, d.psi].resCtx, d.Bf.1].FillOp[src dd])
+  (FRB : MapOverR[a].MOR[CofL[yP Y, d'.psi].resCtx, CofL[yP X, d.psi].resCtx, RelPre[Y, X, h, d'.psi, d.psi].sR R.rf,
+                         d'.Bf.1, d.Bf.1, RO[Y, X, h, A'', A, PoA, PoAH, d', d, mAof, mAofE, R].mBM].FillRel (src dd) fBS' fBS) {
+
+  module R0 = RO[Y, X, h, A'', A, PoA, PoAH, d', d, mAof, mAofE, R] ;
+  module R2 = RO2[Y, X, h, A'', A, PoA, PoAH, d', d, mAof, mAofE, R] ;
+  module CY = CofL[yP Y, d'.psi] ;
+  module CX = CofL[yP X, d.psi] ;
+  module EXB = Ext[a].ExtDef[yP X, A, d.psi].ExtB[d.Bf.1, d.beta] ;
+  module EYB = Ext[a].ExtDef[yP Y, A'', d'.psi].ExtB[d'.Bf.1, d'.beta] ;
+  module EXB3 = Ext3[a].ExtB3[yP X, A, d.psi, d.Bf.1, d.beta] ;
+  module EYB3 = Ext3[a].ExtB3[yP Y, A'', d'.psi, d'.Bf.1, d'.beta] ;
+  module DY = ExtComp1[a].C1[yP Y, A'', d'.psi, d'.Bf.1, d'.beta, dd, fAS'', fBS'] ;
+  module DX = ExtComp1[a].C1[yP X, A, d.psi, d.Bf.1, d.beta, dd, fAS, fBS] ;
+  module MX = MapOver[yP Y, yP X, yH Y X h, Ext2[a].ExtB2[yP Y, A'', d'.psi, d'.Bf.1, d'.beta].ExtT,
+                      Ext2[a].ExtB2[yP X, A, d.psi, d.Bf.1, d.beta].ExtT, R2.PhiM] ;
+  module MBo = MapOver[CY.resCtx, CX.resCtx, RelPre[Y, X, h, d'.psi, d.psi].sR R.rf, d'.Bf.1, d.Bf.1, R0.mBM] ;
+
+  -- the image of a box
+  mc (Z : Ob) (c' : DY.BX.Box[src dd, Z]) : DX.BX.Box[src dd, Z] = MX.mapBox (src dd) Z c' ;
+
+  -- full lines correspond
+  pfX (Z : Ob) (c' : DY.BX.Box[src dd, Z]) (p' : IsT (CY.full (prodP Z Iv) c'.brho)) : IsT (CX.full (prodP Z Iv) (mc Z c').brho) =
+    subT (CY.full (prodP Z Iv) c'.brho) (CX.full (prodP Z Iv) (compH (prodP Z Iv) Y X h c'.brho)) (R.rf (prodP Z Iv) c'.brho) p' ;
+
+  -- Phi on the B-part
+  PhiB (W : Ob) (w : W0.Ix (EYB.EB.ob W)) : Id (W0.Ix (EXB3.EX.ob W)) (R0.PhiE W (EYB3.fromB W w)) (EXB3.fromB W (R0.mBE W w)) =
+    R0.Phi-B W w.1.1 w.1.2 w.2 ;
+
+  opaque PhiB ;
+
+  module BE (Z : Ob) (c' : DY.BX.Box[src dd, Z]) (p' : IsT (CY.full (prodP Z Iv) c'.brho)) {
+    module M1 = MBo.MB[src dd, Z, DY.beta Z c' p'] ;
+    module MC = MX.MB[src dd, Z, c'] ;
+
+    eu : Id (W0.Ix (EXB.EB.ob Z)) (DX.BB.lidE (src dd) Z M1.rho M1.u)
+            (DX.BB.lidE (src dd) Z (DX.beta Z (mc Z c') (pfX Z c' p')).brho (DX.beta Z (mc Z c') (pfX Z c' p')).bu) =
+      EXB3.fromB-inj Z (DX.BB.lidE (src dd) Z M1.rho M1.u)
+        (DX.BB.lidE (src dd) Z (DX.beta Z (mc Z c') (pfX Z c' p')).brho (DX.beta Z (mc Z c') (pfX Z c' p')).bu)
+        (transH {W0.Ix (EXB3.EX.ob Z)} (apH {W0.Ix (EXB.EB.ob Z)} {W0.Ix (EXB3.EX.ob Z)} (EXB3.fromB Z) M1.u-E)
+         (transH {W0.Ix (EXB3.EX.ob Z)}
+            (symH {W0.Ix (EXB3.EX.ob Z)} (PhiB Z (DY.BB.lidE (src dd) Z (DY.beta Z c' p').brho (DY.beta Z c' p').bu)))
+          (transH {W0.Ix (EXB3.EX.ob Z)} (apH {W0.Ix (EYB3.EX.ob Z)} {W0.Ix (EXB3.EX.ob Z)} (R0.PhiE Z) (DY.beta-lid Z c' p'))
+           (transH {W0.Ix (EXB3.EX.ob Z)} (symH {W0.Ix (EXB3.EX.ob Z)} MC.u-E)
+                   (symH {W0.Ix (EXB3.EX.ob Z)} (DX.beta-lid Z (mc Z c') (pfX Z c' p'))))))) ;
+
+    ev (l : Fin c'.br) (W : Ob) (psi' : Hom W (prodP Z Iv)) (i : InQ W Z (M1.Sd l).sQ psi')
+      (i' : InQ W Z ((DX.beta Z (mc Z c') (pfX Z c' p')).bs l).sQ psi')
+      : Id (W0.Ix (EXB.EB.ob W)) ((M1.Sd l).svE W psi' i) (((DX.beta Z (mc Z c') (pfX Z c' p')).bs l).svE W psi' i') =
+      EXB3.fromB-inj W ((M1.Sd l).svE W psi' i) (((DX.beta Z (mc Z c') (pfX Z c' p')).bs l).svE W psi' i')
+        (transH {W0.Ix (EXB3.EX.ob W)} (apH {W0.Ix (EXB.EB.ob W)} {W0.Ix (EXB3.EX.ob W)} (EXB3.fromB W) (M1.S-E l W psi' i))
+         (transH {W0.Ix (EXB3.EX.ob W)} (symH {W0.Ix (EXB3.EX.ob W)} (PhiB W (((DY.beta Z c' p').bs l).svE W psi' i)))
+          (transH {W0.Ix (EXB3.EX.ob W)} (apH {W0.Ix (EYB3.EX.ob W)} {W0.Ix (EXB3.EX.ob W)} (R0.PhiE W) (DY.beta-sv Z c' p' l W psi' i))
+           (transH {W0.Ix (EXB3.EX.ob W)} (symH {W0.Ix (EXB3.EX.ob W)} (MC.S-E l W psi' i))
+            (transH {W0.Ix (EXB3.EX.ob W)} (symH {W0.Ix (EXB3.EX.ob W)} (DX.beta-sv Z (mc Z c') (pfX Z c' p') l W psi' i))
+                    (apH {InQ W Z ((DX.beta Z (mc Z c') (pfX Z c' p')).bs l).sQ psi'} {W0.Ix (EXB3.EX.ob W)} (\ z -> EXB3.fromB W (((DX.beta Z (mc Z c') (pfX Z c' p')).bs l).svE W psi' z))
+                         (isProp-InQ W Z ((DX.beta Z (mc Z c') (pfX Z c' p')).bs l).sQ psi' i i'))))))) ;
+
+    betaEq : Id (DX.BB.Box[src dd, Z]) (MBo.mapBox (src dd) Z (DY.beta Z c' p')) (DX.beta Z (mc Z c') (pfX Z c' p')) =
+      DX.BB.box-ext (src dd) Z M1.rho (DX.beta Z (mc Z c') (pfX Z c' p')).brho M1.u (DX.beta Z (mc Z c') (pfX Z c' p')).bu c'.br
+        M1.Sd (DX.beta Z (mc Z c') (pfX Z c' p')).bs M1.cs (DX.beta Z (mc Z c') (pfX Z c' p')).bcs
+        M1.cb (DX.beta Z (mc Z c') (pfX Z c' p')).bcb
+        (refl M1.rho) eu (\ l t -> refl ((M1.Sd l).sQ t)) ev ;
+  } ;
+
+  betaEq (Z : Ob) (c' : DY.BX.Box[src dd, Z]) (p' : IsT (CY.full (prodP Z Iv) c'.brho))
+    : Id (DX.BB.Box[src dd, Z]) (MBo.mapBox (src dd) Z (DY.beta Z c' p')) (DX.beta Z (mc Z c') (pfX Z c' p')) =
+    BE[Z, c', p'].betaEq ;
+
+  opaque betaEq ;
+
+  -- the B-fillers correspond
+  FBE-rel (Z : Ob) (c' : DY.BX.Box[src dd, Z]) (p' : IsT (CY.full (prodP Z Iv) c'.brho))
+    : Id (W0.Ix (EXB.EB.ob (prodP Z Iv))) (R0.mBE (prodP Z Iv) (DY.FBE Z c' p')) (DX.FBE Z (mc Z c') (pfX Z c' p')) =
+    transH {W0.Ix (EXB.EB.ob (prodP Z Iv))} (FRB Z (DY.beta Z c' p'))
+           (apH {DX.BB.Box[src dd, Z]} {W0.Ix (EXB.EB.ob (prodP Z Iv))} (\ bb -> (bb.brho, fBS.fop Z bb)) (betaEq Z c' p')) ;
+
+  topB-rel (Z : Ob) (c' : DY.BX.Box[src dd, Z]) (p' : IsT (CY.full (prodP Z Iv) c'.brho))
+    : Id (W0.Ix (EXB.EB.ob Z)) (R0.mBE Z (DY.topB Z c' p')) (DX.topB Z (mc Z c') (pfX Z c' p')) =
+    transH {W0.Ix (EXB.EB.ob Z)} (R0.H1w Z (prodP Z Iv) (lid Z (tgt dd)) (DY.FBE Z c' p'))
+           (apH {W0.Ix (EXB.EB.ob (prodP Z Iv))} {W0.Ix (EXB.EB.ob Z)} (EXB.EB.act Z (prodP Z Iv) (lid Z (tgt dd))) (FBE-rel Z c' p')) ;
+
+  opaque FBE-rel ; opaque topB-rel ;
+} ;

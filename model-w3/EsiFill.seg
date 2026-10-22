@@ -1,0 +1,94 @@
+-- EsiFill.seg: MODEL/Lv/EsiFill.agda.  Fillers of ESI compositions are
+-- ESI (FESI): inserting an empty side in a box does not change the filler
+-- MkFill builds from it, because the box of the filler then gets an empty
+-- side inserted too (insF), one place further.
+--
+-- Posets at a, presheaves at l.  Agda's anonymous module in FesiMk is the
+-- segment FM.
+
+level a l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, l] ;
+open PR.PS ;
+module BXm = Box[a, l] ;
+module FibM = Fib[a, l] ;
+module ES = Esi[a, l] ;
+module CN = Conn[a] ;
+
+module FesiDef (G : PCtx) (A : PTy[G]) {
+  open PR.TyL[G, A] ;
+  module BX = BXm.Boxes[G, A] ;
+  module ED = ES.EsiDef[G, A] ;
+
+  FESI (eS : El Iv) (F : FibM.FillDef[G, A].FillOp[eS]) : U l =
+    (X : Ob) (k : Nat) (b b' : BX.Box[eS, X]) -> ED.InsE[eS, X, k, b, b']
+    -> Id (EI (prodP X Iv)) (b'.brho, F.fop X b') (b.brho, F.fop X b) ;
+} ;
+
+module FesiMk (G : PCtx) (A : PTy[G]) (d : Bool) (co : BXm.Boxes[G, A].CompOp[CN.src d, CN.tgt d])
+  (esi : ES.EsiDef[G, A].ESI (CN.src d) (CN.tgt d) co) {
+  open PR.TyL[G, A] ;
+  module BX = BXm.Boxes[G, A] ;
+  module ED = ES.EsiDef[G, A] ;
+  module MF = FibM.MkFill[G, A, d, co] ;
+
+  eS : El Iv = CN.src d ;
+
+  module FM (X : Ob) (k : Nat) (b b' : BX.Box[eS, X]) (ins : ED.InsE[eS, X, k, b, b']) {
+    module F = MF.FBox[X, b] ;
+    module F' = MF.FBox[X, b'] ;
+
+    Y : Ob = prodP X Iv ;
+
+    insQ : (n : Nat) (h : IsT (ltb n (suc b.br))) (h' : IsT (ltb (ES.skipN (suc k) n) (suc b'.br))) (s : El Y)
+      -> Id Bool ((F'.S' (ES.skipN (suc k) n, h')).sQ s.1) ((F.S' (n, h)).sQ s.1) = split {
+      zero -> \ h h' s -> refl (CN.zQ d X s.1) ;
+      suc m -> \ h h' s ->
+        transH (Pre[Y, X, pX X, (b'.bs (ES.skipN k m, h')).sQ].pre-el s)
+         (transH (ins.ins-Q m h h' (app Y X (pX X) s))
+                 (symH (Pre[Y, X, pX X, (b.bs (m, h)).sQ].pre-el s))) } ;
+
+    insV : (n : Nat) (h : IsT (ltb n (suc b.br))) (h' : IsT (ltb (ES.skipN (suc k) n) (suc b'.br)))
+      (W : Ob) (psi : Hom W (prodP Y Iv)) (i : InQ W Y (F'.S' (ES.skipN (suc k) n, h')).sQ psi)
+      (i' : InQ W Y (F.S' (n, h)).sQ psi)
+      -> Id (EI W) ((F'.S' (ES.skipN (suc k) n, h')).svE W psi i) ((F.S' (n, h)).svE W psi i') = split {
+      zero -> \ h h' W psi i i' ->
+        transH (F'.vAll-E (zero, h') W psi i)
+         (transH (apH (E.act W X (F.kOf W psi)) ins.ins-lid)
+                 (symH (F.vAll-E (zero, h) W psi i'))) ;
+      suc m -> \ h h' W psi i i' ->
+        transH (F'.vAll-E (suc (ES.skipN k m), h') W psi i)
+         (transH (ins.ins-v m h h' W (F.cOf W psi) (F'.inQc (ES.skipN k m, h') W psi i) (F.inQc (m, h) W psi i'))
+                 (symH (F.vAll-E (suc m, h) W psi i'))) } ;
+
+    insF : ED.InsE[eS, Y, suc k, F.fbox, F'.fbox] = new ED.InsE[eS, Y, suc k, F.fbox, F'.fbox,
+      apH (\ q -> suc q) ins.ins-r,
+      ins.ins-k,
+      apH (G.act (prodP Y Iv) Y (CN.conn d X)) ins.ins-rho,
+      transH (FibM.Kit[G, A].fromE-eq Y (G.act Y (prodP Y Iv) (lid Y eS) F'.rho') F'.uE' F'.upt)
+       (transH (apH (E.act Y X (pX X)) ins.ins-lid)
+               (symH (FibM.Kit[G, A].fromE-eq Y (G.act Y (prodP Y Iv) (lid Y eS) F.rho') F.uE' F.upt))),
+      \ hk s -> transH (Pre[Y, X, pX X, (b'.bs (k, hk)).sQ].pre-el s) (ins.ins-e hk (app Y X (pX X) s)),
+      insQ,
+      insV] ;
+
+    fesi : Id (EI Y) (b'.brho, MF.fill X b') (b.brho, MF.fill X b) =
+      transH (MF.fill-E X b')
+       (transH (esi Y (suc k) F.fbox F'.fbox insF)
+               (symH (MF.fill-E X b))) ;
+  } ;
+
+  fesiMk : FesiDef[G, A].FESI eS MF.fillOp = \ X k b b' ins -> FM[X, k, b, b', ins].fesi ;
+} ;
+
+fesiC (G : PCtx) (A : PTy[G]) (c : BXm.Boxes[G, A].Comp) (e : ES.EsiDef[G, A].ESIC c)
+  : FesiDef[G, A].FESI e0 (FibM.FillB[G, A].comp-to-fill c).1 * FesiDef[G, A].FESI e1 (FibM.FillB[G, A].comp-to-fill c).2 =
+  (FesiMk[G, A, true, c.1, e.1].fesiMk, FesiMk[G, A, false, c.2, e.2].fesiMk) ;

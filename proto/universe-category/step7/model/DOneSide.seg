@@ -1,0 +1,160 @@
+-- DOneSide.seg: on Delta a partial element is equivalent to ONE side on the
+-- union of its sieves (the sieves are canonical decidable sieves,
+-- DeltaBase.DS, so a union is one sieve; the value at f is read in the
+-- first side containing f).  Hence every uniform extension structure k
+-- gives one, KO.ko, that only sees that union:
+--
+--   one        the one-side partial element
+--   one-restr  it commutes with restriction
+--   one-ins    an inserted empty side does not change it
+--   KO.ko      k read on one-side partials: a ContrOp with KESI (line ESI)
+--
+-- Constructive.
+
+level a lz ;
+constraint a <= lz ;
+open Base ;
+open Prelude[lz+] ;
+open Paths[lz+] ;
+module W0 = V[lz] ;
+open Trees[a] ;
+open Arith[a] ;
+open DLvl[a, lz] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ;
+open DeltaNat[a] ;
+module DBm = DeltaBase[a] ;
+module DB = DBm.DB ;
+module DS = DBm.DS ;
+
+-- (unsk, skipN-unsk, unsk-lt, skipN-lt: Arith)
+
+module OS (D : DB.GPre[lz].PS.PCtx) (C : DB.GPre[lz].PS.PTy[D]) {
+  module PT = DB.GCofib[lz].Partials[D, C] ;
+  module PE = DB.GCofEsi[lz].PartialsEsi[D, C] ;
+  open DB.GPre[lz].TyL[D, C] ;
+
+  ----------------------------------------------------------------------
+  -- the union of the sieves of p
+
+  uB (X : Nat) (x : Pt X) (p : PT.Partial[X, x]) (W : Nat) (f : Hom (lin W) (lin X)) : Bool =
+    existsF p.pr (\ l hl -> (p.ps (l, hl)).pQ.1 W f) ;
+
+  uS (X : Nat) (x : Pt X) (p : PT.Partial[X, x]) : DS.Phi X =
+    (uB X x p,
+     \ W' W f g i -> exF-i p.pr (\ l hl -> (p.ps (l, hl)).pQ.1 W' (compH (lin W') (lin W) (lin X) f g))
+       (exF-e p.pr (\ l hl -> (p.ps (l, hl)).pQ.1 W f) i).1 (exF-e p.pr (\ l hl -> (p.ps (l, hl)).pQ.1 W f) i).2.1
+       ((p.ps ((exF-e p.pr (\ l hl -> (p.ps (l, hl)).pQ.1 W f) i).1, (exF-e p.pr (\ l hl -> (p.ps (l, hl)).pQ.1 W f) i).2.1)).pQ.2 W' W f g
+          (exF-e p.pr (\ l hl -> (p.ps (l, hl)).pQ.1 W f) i).2.2)) ;
+
+  inU (X : Nat) (x : Pt X) (p : PT.Partial[X, x]) (l : Fin p.pr) (W : Nat) (f : Hom (lin W) (lin X)) (t : DB.Lands W X (p.ps l).pQ f)
+    : DB.Lands W X (uS X x p) f = exF-i p.pr (\ l' hl -> (p.ps (l', hl)).pQ.1 W f) l.1 l.2 t ;
+
+  pick (X : Nat) (x : Pt X) (p : PT.Partial[X, x]) (W : Nat) (f : Hom (lin W) (lin X)) (i : DB.Lands W X (uS X x p) f) : Fin p.pr =
+    ((exF-e p.pr (\ l hl -> (p.ps (l, hl)).pQ.1 W f) i).1, (exF-e p.pr (\ l hl -> (p.ps (l, hl)).pQ.1 W f) i).2.1) ;
+
+  pickIn (X : Nat) (x : Pt X) (p : PT.Partial[X, x]) (W : Nat) (f : Hom (lin W) (lin X)) (i : DB.Lands W X (uS X x p) f)
+    : DB.Lands W X (p.ps (pick X x p W f i)).pQ f = (exF-e p.pr (\ l hl -> (p.ps (l, hl)).pQ.1 W f) i).2.2 ;
+
+  ov (X : Nat) (x : Pt X) (p : PT.Partial[X, x]) (W : Nat) (f : Hom (lin W) (lin X)) (i : DB.Lands W X (uS X x p) f) : EI W =
+    (p.ps (pick X x p W f i)).pv W f (pickIn X x p W f i) ;
+
+  ov-any (X : Nat) (x : Pt X) (p : PT.Partial[X, x]) (W : Nat) (f : Hom (lin W) (lin X)) (i : DB.Lands W X (uS X x p) f)
+    (l : Fin p.pr) (t : DB.Lands W X (p.ps l).pQ f) : Id (EI W) (ov X x p W f i) ((p.ps l).pv W f t) =
+    p.pcs (pick X x p W f i) l W f (pickIn X x p W f i) t ;
+
+  opaque ov ;
+
+  side (X : Nat) (x : Pt X) (p : PT.Partial[X, x]) : PT.PSide[X, x] =
+    new PT.PSide[X, x, uS X x p, ov X x p,
+      \ W f i -> transH (apH (\ z -> z.1) (ov-any X x p W f i (pick X x p W f i) (pickIn X x p W f i)))
+                        ((p.ps (pick X x p W f i)).ppt W f (pickIn X x p W f i)),
+      \ W' W chi f i i' -> transH (apH (E.act W' W chi) (ov-any X x p W f i (pick X x p W f i) (pickIn X x p W f i)))
+         (transH ((p.ps (pick X x p W f i)).pnat W' W chi f (pickIn X x p W f i)
+                    (DB.lands-comp W' W X (p.ps (pick X x p W f i)).pQ f chi (pickIn X x p W f i)))
+                 (symH (ov-any X x p W' (compH (lin W') (lin W) (lin X) f chi) i' (pick X x p W f i)
+                          (DB.lands-comp W' W X (p.ps (pick X x p W f i)).pQ f chi (pickIn X x p W f i)))))] ;
+
+  one (X : Nat) (x : Pt X) (p : PT.Partial[X, x]) : PT.Partial[X, x] =
+    new PT.Partial[X, x, suc zero, \ l -> side X x p, \ l j W f i i' -> PT.pv-irr X x (side X x p) W f i i'] ;
+
+  one-def (X : Nat) (x : Pt X) (p : PT.Partial[X, x])
+    : Id (PT.Partial[X, x]) (one X x p) (new PT.Partial[X, x, suc zero, \ l -> side X x p, \ l j W f i i' -> PT.pv-irr X x (side X x p) W f i i']) =
+    refl (one X x p) ;
+
+  ----------------------------------------------------------------------
+  -- restriction
+
+  one-restr (Y X : Nat) (h : Hom (lin Y) (lin X)) (x : Pt X) (p : PT.Partial[X, x])
+    : Id (PT.Partial[Y, D.act Y X h x]) (PT.restrictP Y X h x (one X x p)) (one Y (D.act Y X h x) (PT.restrictP Y X h x p)) =
+    PT.partExtH Y (D.act Y X h x) (D.act Y X h x) (refl (D.act Y X h x)) (PT.restrictP Y X h x (one X x p)) (one Y (D.act Y X h x) (PT.restrictP Y X h x p))
+      (refl (suc zero))
+      (\ l -> DS.phi-ext Y (DS.pre Y X h (uS X x p)) (uS Y (D.act Y X h x) (PT.restrictP Y X h x p)) (\ W f i -> i) (\ W f i -> i))
+      (\ l W f i i' -> transH (ov-any X x p W (compH (lin W) (lin Y) (lin X) h f) (DB.lands-pre W Y X h (uS X x p) f i)
+                                (pick Y (D.act Y X h x) (PT.restrictP Y X h x p) W f i')
+                                (DB.lands-pre W Y X h (p.ps (pick Y (D.act Y X h x) (PT.restrictP Y X h x p) W f i')).pQ f
+                                   (pickIn Y (D.act Y X h x) (PT.restrictP Y X h x p) W f i')))
+                         (symH (ov-any Y (D.act Y X h x) (PT.restrictP Y X h x p) W f i'
+                                  (pick Y (D.act Y X h x) (PT.restrictP Y X h x p) W f i') (pickIn Y (D.act Y X h x) (PT.restrictP Y X h x p) W f i')))) ;
+
+  ----------------------------------------------------------------------
+  -- an inserted empty side
+
+  module Ins (X : Nat) (x : Pt X) (k : Nat) (p p' : PT.Partial[X, x]) (ins : PE.InsP[X, x, k, p, p']) {
+    module IS = PE.InsSides[X, x, k, p, p', ins] ;
+
+    -- a side of p' is the empty side or an old side
+    toOld (W : Nat) (f : Hom (lin W) (lin X)) (l' : Fin p'.pr) (t : DB.Lands W X (p'.ps l').pQ f) : DB.Lands W X (uS X x p) f =
+      eqNDecL (DB.Lands W X (uS X x p) f) l'.1 k
+        (\ e -> absurd _ (DB.empty-lands W X f (DB.lands-sub W X (p'.ps l').pQ (DB.emptyS X) (IS.eE l' e) f t)))
+        (\ ne -> inU X x p (unsk k l'.1, unsk-lt k l'.1 p.pr ins.insp-k (substH (\ r -> IsT (ltb l'.1 r)) ins.insp-r l'.2) ne) W f
+                   (DB.lands-sub W X (p'.ps l').pQ (p.ps (unsk k l'.1, unsk-lt k l'.1 p.pr ins.insp-k (substH (\ r -> IsT (ltb l'.1 r)) ins.insp-r l'.2) ne)).pQ
+                      (IS.eQL (unsk k l'.1, unsk-lt k l'.1 p.pr ins.insp-k (substH (\ r -> IsT (ltb l'.1 r)) ins.insp-r l'.2) ne) l'
+                              (symH (skipN-unsk k l'.1 ne))) f t)) ;
+
+    -- an old side n is the side skipN k n of p'
+    nNew (n : Fin p.pr) : Fin p'.pr = (skipN k n.1, substH (\ r -> IsT (ltb (skipN k n.1) r)) (symH ins.insp-r) (skipN-lt k n.1 p.pr ins.insp-k n.2)) ;
+
+    toNew (W : Nat) (f : Hom (lin W) (lin X)) (n : Fin p.pr) (t : DB.Lands W X (p.ps n).pQ f) : DB.Lands W X (p'.ps (nNew n)).pQ f =
+      DB.lands-sub W X (p.ps n).pQ (p'.ps (nNew n)).pQ (symH (IS.eQL n (nNew n) (refl (skipN k n.1)))) f t ;
+
+    eQ : Id (DS.Phi X) (uS X x p') (uS X x p) =
+      DS.phi-ext X (uS X x p') (uS X x p)
+        (\ W f i -> toOld W f (pick X x p' W f i) (pickIn X x p' W f i))
+        (\ W f i -> inU X x p' (nNew (pick X x p W f i)) W f (toNew W f (pick X x p W f i) (pickIn X x p W f i))) ;
+
+    eV (W : Nat) (f : Hom (lin W) (lin X)) (i : DB.Lands W X (uS X x p') f) (i' : DB.Lands W X (uS X x p) f)
+      : Id (EI W) (ov X x p' W f i) (ov X x p W f i') =
+      transH (ov-any X x p' W f i (nNew (pick X x p W f i')) (toNew W f (pick X x p W f i') (pickIn X x p W f i')))
+        (transH (IS.eVL (pick X x p W f i') (nNew (pick X x p W f i')) (refl (skipN k (pick X x p W f i').1)) W f
+                   (toNew W f (pick X x p W f i') (pickIn X x p W f i')) (pickIn X x p W f i'))
+                (symH (ov-any X x p W f i' (pick X x p W f i') (pickIn X x p W f i')))) ;
+
+    one-ins : Id (PT.Partial[X, x]) (one X x p') (one X x p) =
+      transH (one-def X x p')
+        (transH (PT.partExt X x (suc zero) (\ l -> side X x p') (\ l -> side X x p)
+                   (\ l j W f i i' -> PT.pv-irr X x (side X x p') W f i i') (\ l j W f i i' -> PT.pv-irr X x (side X x p) W f i i')
+                   (\ l -> eQ) (\ l -> eV))
+                (symH (one-def X x p))) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- an extension structure read on one-side partials
+
+  module KO (k : PT.ContrOp) {
+    kop (X : Nat) (x : Pt X) (p : PT.Partial[X, x]) : T X x = k.kop X x (one X x p) ;
+
+    kside (X : Nat) (x : Pt X) (p : PT.Partial[X, x]) (l : Fin p.pr) (W : Nat) (f : Hom (lin W) (lin X)) (i : DB.Lands W X (p.ps l).pQ f)
+      : Id (EI W) (E.act W X f (x, kop X x p)) ((p.ps l).pv W f i) =
+      transH (k.kside X x (one X x p) (zero, refl true) W f (inU X x p l W f i)) (ov-any X x p W f (inU X x p l W f i) l i) ;
+
+    kunif (Y X : Nat) (h : Hom (lin Y) (lin X)) (x : Pt X) (p : PT.Partial[X, x])
+      : Id (EI Y) (E.act Y X h (x, kop X x p)) (D.act Y X h x, kop Y (D.act Y X h x) (PT.restrictP Y X h x p)) =
+      transH (k.kunif Y X h x (one X x p)) (apH (\ q -> (D.act Y X h x, k.kop Y (D.act Y X h x) q)) (one-restr Y X h x p)) ;
+
+    ko : PT.ContrOp = new PT.ContrOp[kop, kside, kunif] ;
+
+    kesi : PE.KESI ko = \ X x kk p p' ins -> apH (k.kop X x) Ins[X, x, kk, p, p', ins].one-ins ;
+  } ;
+} ;

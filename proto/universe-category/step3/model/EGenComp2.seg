@@ -1,0 +1,148 @@
+-- EGenComp2.seg: MODEL/Univ/EGenComp.agda, continued (split off to keep each
+-- check well under the ten-second cap): for the uniformity of the
+-- composition of EGen, the restricted box b0 is the box MB of the
+-- restricted EGen-box (boxEq).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module W0 = V[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module FS = FibSub[a, a] ;
+module CN = Conn[a] ;
+open BaseP.GYon[a] ;
+open UnivCtx[a].PU ;
+open EGenComp[a] ;
+
+-- the category laws are locked here (they are propositions), restored at
+-- the end: proofs built from them are then compared by their arguments
+opaque cylH ;
+
+module GU (d : Bool) {
+  open GC[d] ;
+
+  ----------------------------------------------------------------------
+  -- Uniformity
+
+  module CU (Y X : Ob) (h : Hom Y X) (b : BU.Box[eS, X]) {
+    b' : BU.Box[eS, Y] = BU.restrict eS Y X h b ;
+
+    module Bx = Box0[eS, X, b] ;
+    module By = Box0[eS, Y, b'] ;
+    module R1 = BU.Restrict[eS, Y, X, h] ;
+    module R0 = Bx.B0.Restrict[eS, Y, X, h] ;
+    module CX = GCX[X, b] ;
+
+    YI : Ob = BU.XI Y ;
+    XI : Ob = BU.XI X ;
+
+    cyl : Hom (BU.XI Y) (BU.XI X) = cylH Y X h ;
+
+    s : PSub[yP (BU.XI Y), yP (BU.XI X)] = yH (BU.XI Y) (BU.XI X) (cylH Y X h) ;
+
+    module SC = FS.SubComp[yP (BU.XI Y), yP (BU.XI X), Bx.PH.A, yH (BU.XI Y) (BU.XI X) (cylH Y X h), eS, eT, CX.co] ;
+    module MBy = SC.MB[eS, Y, By.b0] ;
+
+    -- b0 restricted along h, and the box of F made from the box of F [cyl]
+    rb0 : Bx.B0.Box[eS, Y] = Bx.B0.restrict eS Y X h Bx.b0 ;
+
+    mb : Bx.B0.Box[eS, Y] = MBy.box ;
+
+    -- their base points: id cyl = cyl id
+    erho : Id (Hom (BU.XI Y) (BU.XI X)) rb0.brho mb.brho =
+      calc (Hom (BU.XI Y) (BU.XI X)) {
+        compH (BU.XI Y) (BU.XI X) (BU.XI X) (idH (BU.XI X)) (cylH Y X h)
+          =< comp-idl (BU.XI Y) (BU.XI X) (cylH Y X h) >
+        cylH Y X h
+          =< symH (comp-idr (BU.XI Y) (BU.XI X) (cylH Y X h)) >
+        compH (BU.XI Y) (BU.XI Y) (BU.XI X) (cylH Y X h) (idH (BU.XI Y)) } ;
+
+    -- the points of the two lids: (id lid) h = lid h = cyl lid = cyl (id lid)
+    eL : Id (Hom Y (BU.XI X)) (Bx.PH.T0.E.act Y X h (Bx.B0.lidE eS X (idH (BU.XI X)) Bx.u0)).1 MBy.uE.1 =
+      calc (Hom Y (BU.XI X)) {
+        compH Y X (BU.XI X) (compH X (BU.XI X) (BU.XI X) (idH (BU.XI X)) (lid X eS)) h
+          =< apH (\ k -> compH Y X (BU.XI X) k h) (comp-idl X (BU.XI X) (lid X eS)) >
+        compH Y X (BU.XI X) (lid X eS) h
+          =< symH (cyl-lid Y X h eS) >
+        compH Y (BU.XI Y) (BU.XI X) (cylH Y X h) (lid Y eS)
+          =< apH (\ k -> compH Y (BU.XI Y) (BU.XI X) (cylH Y X h) k) (symH (comp-idl Y (BU.XI Y) (lid Y eS))) >
+        compH Y (BU.XI Y) (BU.XI X) (cylH Y X h) (compH Y (BU.XI Y) (BU.XI Y) (idH (BU.XI Y)) (lid Y eS)) } ;
+
+    -- read through phi, both lids are the lid of b'
+    Qlid : Id (EU Y) (Bx.PH.phi Y (Bx.PH.T0.E.act Y X h (Bx.B0.lidE eS X (idH (BU.XI X)) Bx.u0))) (Bx.PH.phi Y MBy.uE) =
+      calc (EU Y) {
+        Bx.PH.phi Y (Bx.PH.T0.E.act Y X h (Bx.B0.lidE eS X (idH (BU.XI X)) Bx.u0))
+          =< symH (Bx.PH.phiAct Y X h (Bx.B0.lidE eS X (idH (BU.XI X)) Bx.u0)) >
+        TU.E.act Y X h (Bx.PH.phi X (Bx.B0.lidE eS X (idH (BU.XI X)) Bx.u0))
+          =< apH (TU.E.act Y X h) (Bx.at0-phi X (lid X eS) b.bu) >
+        TU.E.act Y X h (BU.lidE eS X b.brho b.bu)
+          =< symH (R1.ruE b.brho b.bu) >
+        BU.lidE eS Y b'.brho b'.bu
+          =< symH (By.at0-phi Y (lid Y eS) b'.bu) >
+        By.PH.phi Y (By.B0.lidE eS Y (idH (BU.XI Y)) By.u0)
+          =< symH (phiLs (BU.XI Y) (BU.XI X) (cylH Y X h) b.brho Y
+                    ((yP (BU.XI Y)).act Y (BU.XI Y) (lid Y eS) (idH (BU.XI Y))) By.u0) >
+        Bx.PH.phi Y MBy.uE } ;
+
+    Elid : Id (Bx.PH.T0.EI Y) (Bx.B0.lidE eS Y rb0.brho rb0.bu) (Bx.B0.lidE eS Y mb.brho mb.bu) =
+      calc (Bx.PH.T0.EI Y) {
+        Bx.B0.lidE eS Y rb0.brho rb0.bu
+          =< R0.ruE (idH (BU.XI X)) Bx.u0 >
+        Bx.PH.T0.E.act Y X h (Bx.B0.lidE eS X (idH (BU.XI X)) Bx.u0)
+          =< Bx.PH.phiEq' Y (Bx.PH.T0.E.act Y X h (Bx.B0.lidE eS X (idH (BU.XI X)) Bx.u0)).1 MBy.uE.1 eL
+               (Bx.PH.T0.E.act Y X h (Bx.B0.lidE eS X (idH (BU.XI X)) Bx.u0)).2 MBy.uE.2 Qlid >
+        MBy.uE
+          =< symH (SC.KGE.fromE-eq Y ((yP (BU.XI X)).act Y (BU.XI Y) (lid Y eS) MBy.rho) MBy.uE MBy.upt) >
+        Bx.B0.lidE eS Y mb.brho mb.bu } ;
+
+    -- the sides: both are read, through phi, as the sides of b'
+    Ev (j : Arith[a].Fin b.br) (W : Ob) (psi : Hom W (BU.XI Y))
+      (i : InQ W Y (rb0.bs j).sQ psi) (i' : InQ W Y (mb.bs j).sQ psi)
+      : Id (Bx.PH.T0.EI W) ((rb0.bs j).svE W psi i) ((mb.bs j).svE W psi i') =
+      calc (Bx.PH.T0.EI W) {
+        (rb0.bs j).svE W psi i
+          =< R0.rsvE (idH (BU.XI X)) (Bx.side0 j) W psi i >
+        (Bx.side0 j).svE W cpsi (inQ-cyl W Y X h (b.bs j).sQ psi i)
+          =< Bx.PH.phiEq' W ((yP (BU.XI X)).act W (BU.XI X) cpsi (idH (BU.XI X))) (MBy.v j W psi i').1 eV
+               (Bx.sv0 j W cpsi (inQ-cyl W Y X h (b.bs j).sQ psi i)) (MBy.v j W psi i').2
+               (calc (EU W) {
+                  Bx.PH.phi W ((yP (BU.XI X)).act W (BU.XI X) cpsi (idH (BU.XI X)), Bx.sv0 j W cpsi (inQ-cyl W Y X h (b.bs j).sQ psi i))
+                    =< Bx.at0-phi W cpsi ((b.bs j).sv W cpsi (inQ-cyl W Y X h (b.bs j).sQ psi i)) >
+                  (b.bs j).svE W cpsi (inQ-cyl W Y X h (b.bs j).sQ psi i)
+                    =< apH (\ k -> (b.bs j).svE W cpsi k)
+                         (isProp-InQ W X (b.bs j).sQ cpsi (inQ-cyl W Y X h (b.bs j).sQ psi i) (inQ-cyl W Y X h (b.bs j).sQ psi i')) >
+                  (b.bs j).svE W cpsi (inQ-cyl W Y X h (b.bs j).sQ psi i')
+                    =< symH (R1.rsvE b.brho (b.bs j) W psi i') >
+                  (b'.bs j).svE W psi i'
+                    =< symH (By.at0-phi W psi ((b'.bs j).sv W psi i')) >
+                  By.PH.phi W ((yP (BU.XI Y)).act W (BU.XI Y) psi (idH (BU.XI Y)), By.sv0 j W psi i')
+                    =< symH (phiLs (BU.XI Y) (BU.XI X) (cylH Y X h) b.brho W
+                              ((yP (BU.XI Y)).act W (BU.XI Y) psi (idH (BU.XI Y))) (By.sv0 j W psi i')) >
+                  Bx.PH.phi W (MBy.v j W psi i') }) >
+        MBy.v j W psi i'
+          =< symH (MBy.S-E j W psi i') >
+        (mb.bs j).svE W psi i' }
+     where {
+       cpsi : Hom W (BU.XI X) = compH W (BU.XI Y) (BU.XI X) (cylH Y X h) psi ;
+       -- id (cyl psi) = cyl (id psi)
+       eV : Id (Hom W (BU.XI X)) ((yP (BU.XI X)).act W (BU.XI X) cpsi (idH (BU.XI X))) (MBy.v j W psi i').1 =
+         transH (comp-idl W (BU.XI X) cpsi)
+                (apH (\ k -> compH W (BU.XI Y) (BU.XI X) (cylH Y X h) k) (symH (comp-idl W (BU.XI Y) psi))) ; } ;
+
+    boxEq : Id (Bx.B0.Box[eS, Y]) rb0 mb =
+      Bx.B0.box-ext eS Y rb0.brho mb.brho rb0.bu mb.bu b.br rb0.bs mb.bs rb0.bcs mb.bcs rb0.bcb mb.bcb
+        erho Elid (\ j -> refl ((rb0.bs j).sQ)) Ev ;
+
+    opaque Elid ; opaque Ev ; opaque boxEq ;
+
+  } ;
+} ;
+
+transparent cylH ;

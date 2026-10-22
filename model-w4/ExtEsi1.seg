@@ -1,0 +1,129 @@
+-- ExtEsi1.seg: MODEL/Poset/ExtEsi1.agda.  ESI of Theorem 7's composite,
+-- part 1: for a box c of Ext and c' = c with an empty side inserted at k
+-- (InsE k c c'):
+--   ung-ins   the unglued boxes (MapBox along ext)
+--   beta-ins  on a full line, the boxes read in B
+--   FBE-ins, topB-ins   (FESI of the B-filler)
+--   a1E-ins   the top a1 of the extended unglued box (FESI of the A-filler,
+--             BPIns.FEp-ins; the delta family is the same by FBE-ins along
+--             restrictions, EsiRes.insRes)
+-- Agda's E1 / D pair is ONE segment E1 (as C1); its anonymous module over
+-- (X k c c' ins) is the segment EI.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module ES = Esi[a, a] ;
+module EF = EsiFill[a, a] ;
+open Conn[a] ;
+module CF = Cofib[a] ;
+open CF ;
+open Equiv[a] ;
+open ExtKit[a] ;
+open ExtBox[a] ;
+open ExtEsiBox[a] ;
+
+-- MapBox preserves inserted empty sides
+module MapIns (G : PCtx) (C A : PTy[G]) (m : PMap[G, C, A]) (eS : El Iv) {
+  module MB = MapBox[G, C, A, m, eS] ;
+  module BC = BXm.Boxes[G, C] ;
+  module TA = PR.TyL[G, A] ;
+  module EC' = ES.EsiDef[G, C] ;
+  module EA' = ES.EsiDef[G, A] ;
+
+  mapB-ins (X : Ob) (k : Nat) (b b' : BC.Box[eS, X]) (ins : EC'.InsE[eS, X, k, b, b'])
+    : EA'.InsE[eS, X, k, MB.mapB X b, MB.mapB X b'] =
+    new EA'.InsE[eS, X, k, MB.mapB X b, MB.mapB X b',
+      ins.ins-r,
+      ins.ins-k,
+      ins.ins-rho,
+      transH {TA.EI X} (MB.mapB-lid X b')
+        (transH {TA.EI X} (apH {PR.TyL[G, C].EI X} {TA.EI X} (m.mE X) ins.ins-lid) (symH {TA.EI X} (MB.mapB-lid X b))),
+      ins.ins-e,
+      ins.ins-Q,
+      \ n h h' W psi i i' ->
+        transH {TA.EI W} (MB.mapB-sv X b' (ES.skipN k n, h') W psi i)
+         (transH {TA.EI W} (apH {PR.TyL[G, C].EI W} {TA.EI W} (m.mE W) (ins.ins-v n h h' W psi i i'))
+                 (symH {TA.EI W} (MB.mapB-sv X b (n, h) W psi i')))] ;
+} ;
+
+module E1 (G : PCtx) (A : PTy[G]) (psi : CF.Cof[G]) (B : PTy[CF.CofL[G, psi].resCtx])
+  (al : PMap[CF.CofL[G, psi].resCtx, B, subTy CF.CofL[G, psi].resCtx G A CF.CofL[G, psi].inclR]) (d : Bool)
+  (fAS : FibM.FillDef[G, A].FillOp[src d]) (fBS : FibM.FillDef[CF.CofL[G, psi].resCtx, B].FillOp[src d])
+  (fesiA : EF.FesiDef[G, A].FESI (src d) fAS) (fesiB : EF.FesiDef[CF.CofL[G, psi].resCtx, B].FESI (src d) fBS) {
+  open CF.CofL[G, psi] ;
+  open Ext[a].ExtDef[G, A, psi] ;
+  open ExtB[B, al] ;
+  open Ext2[a].ExtB2[G, A, psi, B, al] ;
+  open Ext3[a].ExtB3[G, A, psi, B, al] ;
+  open Ext4[a].ExtB4[G, A, psi, B, al] ;
+  open ExtComp1[a].C1[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp1E[a].C1E[G, A, psi, B, al, d, fAS, fBS] ;
+
+  module BXe = BXm.Boxes[G, ExtT] ;
+  module EX' = ES.EsiDef[G, ExtT] ;
+  module EB' = ES.EsiDef[resCtx, B] ;
+  module BPA = BPIns[G, A, src d, fAS, fesiA] ;
+
+  module EI (X : Ob) (k : Nat) (c c' : BXe.Box[src d, X]) (ins : EX'.InsE[src d, X, k, c, c']) {
+
+    ung-ins : ES.EsiDef[G, A].InsE[src d, X, k, ung X c, ung X c'] =
+      MapIns[G, ExtT, A, extMap, src d].mapB-ins X k c c' ins ;
+
+    beta-ins (p : IsT (full (prodP X Iv) c.brho)) (p' : IsT (full (prodP X Iv) c'.brho))
+      : EB'.InsE[src d, X, k, beta X c p, beta X c' p'] =
+      new EB'.InsE[src d, X, k, beta X c p, beta X c' p',
+        ins.ins-r,
+        ins.ins-k,
+        res-eq (prodP X Iv) (beta X c' p').brho (beta X c p).brho ins.ins-rho,
+        fromB-inj X (BXm.Boxes[resCtx, B].lidE (src d) X (beta X c' p').brho (beta X c' p').bu)
+                    (BXm.Boxes[resCtx, B].lidE (src d) X (beta X c p).brho (beta X c p).bu)
+          (transH {TX.EI X} (beta-lid X c' p') (transH {TX.EI X} ins.ins-lid (symH {TX.EI X} (beta-lid X c p)))),
+        ins.ins-e,
+        ins.ins-Q,
+        \ n h h' W psi' i i' ->
+          fromB-inj W (((beta X c' p').bs (ES.skipN k n, h')).svE W psi' i) (((beta X c p).bs (n, h)).svE W psi' i')
+            (transH {TX.EI W} (beta-sv X c' p' (ES.skipN k n, h') W psi' i)
+             (transH {TX.EI W} (ins.ins-v n h h' W psi' i i') (symH {TX.EI W} (beta-sv X c p (n, h) W psi' i'))))] ;
+
+    FBE-ins (p : IsT (full (prodP X Iv) c.brho)) (p' : IsT (full (prodP X Iv) c'.brho))
+      : Id (TB.EI (prodP X Iv)) (FBE X c' p') (FBE X c p) =
+      fesiB X k (beta X c p) (beta X c' p') (beta-ins p p') ;
+
+    topB-ins (p : IsT (full (prodP X Iv) c.brho)) (p' : IsT (full (prodP X Iv) c'.brho))
+      : Id (TB.EI X) (topB X c' p') (topB X c p) =
+      apH {TB.EI (prodP X Iv)} {TB.EI X} (EB.act X (prodP X Iv) (lid X (tgt d))) (FBE-ins p p') ;
+
+    opaque FBE-ins ; opaque topB-ins ;
+  } ;
+
+  -- along restrictions (generic in the box, so that it can be used at restrict f c)
+  FBE-insR (W X : Ob) (f : Hom W X) (k : Nat) (c c' : BXe.Box[src d, X]) (ins : EX'.InsE[src d, X, k, c, c'])
+    (p : IsT (full (prodP W Iv) (BXe.restrict (src d) W X f c).brho)) (p' : IsT (full (prodP W Iv) (BXe.restrict (src d) W X f c').brho))
+    : Id (TB.EI (prodP W Iv)) (FBE W (BXe.restrict (src d) W X f c') p') (FBE W (BXe.restrict (src d) W X f c) p) =
+    EI[W, k, BXe.restrict (src d) W X f c, BXe.restrict (src d) W X f c',
+       EsiRes[a, a].EsiRes[G, ExtT].insRes (src d) W X f k c c' ins].FBE-ins p p' ;
+
+  a1E-ins (X : Ob) (k : Nat) (c c' : BXe.Box[src d, X]) (ins : EX'.InsE[src d, X, k, c, c']) : Id (TA.EI X) (a1E X c') (a1E X c) =
+    transH {TA.EI X} (a1E-def X c')
+     (transH {TA.EI X}
+        (apH {TA.EI (prodP X Iv)} {TA.EI X} (EA.act X (prodP X Iv) (lid X (tgt d)))
+           (BPA.BPI[X, k, ung X c, ung X c', EI[X, k, c, c', ins].ung-ins, r, P2F X c, P2F X c',
+                    \ j s -> apH {W0.Ix (G.ob (prodP X Iv))} {Bool} (\ z -> nrm X (dQ X z j) s.1) ins.ins-rho,
+                    \ j W f i i' -> apH {TB.EI (prodP W Iv)} {TA.EI (prodP W Iv)} (\ z -> toEA (prodP W Iv) (al.mE (prodP W Iv) z))
+                                      (FBE-insR W X f k c c' ins (pfull W X f c j i') (pfull W X f c' j i))].FEp-ins))
+        (symH {TA.EI X} (a1E-def X c))) ;
+
+  opaque FBE-insR ; opaque a1E-ins ;
+} ;

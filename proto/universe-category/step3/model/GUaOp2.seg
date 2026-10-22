@@ -1,0 +1,84 @@
+-- GUaOp2.seg (inside IvBase.FaU, any base): the univalence operation,
+-- step U2: the Ext data of a problem (GUaOp1) and its fibrancy.
+--   A_X      El along the Yoneda code of F (GElC.Yon; = F.1 by elYon)
+--   QA       the glued A is A_X restricted to D (ElCong by cFeq, elSub)
+--   al', eal'  the glued map and its equivalence structure, moved along QA
+--   fillers  El's (GElC.ElF) for A_X over y X and for B_g over D
+--   EF       Ext(A_X , psi , B_g , al') with its fibration (GExtFib)
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open Trees[a] ;
+open Arith[a] ;
+module GP = GCofib[a] ;
+module GE1 = GFibE[a+] ;
+module GX = GEqExt[a] ;
+open GLine[a] ;
+
+module U2 (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE) 
+  (kU0 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e0)
+  (kU1 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e1)
+  (kU0e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].SFm.SF].KESI kU0)
+  (kU1e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].SFm.SF].KESI kU1)
+  (X : Ob) (F : GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].U0 X)
+  (p : GCofib[a+].Partials[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx,
+                           GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].UaTy].Partial[X, F]) {
+  module O1 = GUaOp1.U1[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, X, F, p] ;
+  module UA = O1.UA ;
+  module UU = O1.UU ;
+  module EF0 = GElC.ElF[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e] ;
+  module EC = EF0.EC ;
+  module CL = O1.CL ;
+  module G = O1.G2.G ;
+
+  -- A over y X: El along the Yoneda code of F
+  cYnat (Y' Y : Ob) (h : Hom Y' Y) (g : Hom Y X) : Id (UU.U0 Y') (UU.uAct Y' X (compH Y' Y X g h) F) (UU.uAct Y' Y h (UU.uAct Y X g F)) =
+    UU.uAct-o Y' Y X g h F ;
+
+  module YN = EC.Yon[X, F, cYnat] ;
+  module FAX = EF0.Fam[yP X, YN.cY, cYnat] ;
+  AX : PTy[yP X] = FAX.FC.ElTy ;
+
+  -- the glued A is A_X on D
+  cR (Y : Ob) (x : W0.Ix (O1.D.ob Y)) : UU.U0 Y = YN.cY Y (CL.inclR.nt Y x) ;
+  cRnat (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (O1.D.ob Y)) : Id (UU.U0 Y') (cR Y' (O1.D.act Y' Y h x)) (UU.uAct Y' Y h (cR Y x)) =
+    transH (apH (YN.cY Y') (CL.inclR.nt-nat Y' Y h x)) (cYnat Y' Y h (CL.inclR.nt Y x)) ;
+
+  QA : Id (PTy[O1.D]) G.A (subTy O1.D (yP X) AX CL.inclR) =
+    transH EC.ElCong[O1.D, G.cF, cR, G.cnatF, cRnat, O1.cFeq].elCong
+           (symH (EC.elSub (yP X) YN.cY cYnat O1.D CL.inclR)) ;
+
+  -- the glued map and structure, on A_X
+  MS (T : PTy[O1.D]) : U a+ = (al2 : PMap[O1.D, G.B, T]) * GX.EqDat[O1.D].EqOn (G.B, (T, al2)) ;
+
+  ms : MS (subTy O1.D (yP X) AX CL.inclR) =
+    subst (PTy[O1.D]) MS G.A (subTy O1.D (yP X) AX CL.inclR) QA (G.al, O1.G2.eqOn) ;
+
+  al' : PMap[O1.D, G.B, subTy O1.D (yP X) AX CL.inclR] = ms.1 ;
+  eal' : GEquiv[a].EquivOp O1.D G.B (subTy O1.D (yP X) AX CL.inclR) al' = ms.2.1 ;
+  keal' : GCofEsi[a].PartialsEsi[GExt[a].ExtDef[yP X, AX, O1.psi].EA', GEquiv[a].HFib[O1.D, G.B, subTy O1.D (yP X) AX CL.inclR, al'].FibT].KESI eal' =
+    ms.2.2 ;
+
+  -- the fillers: El's
+  module FBg = EF0.Fam[O1.D, G.cB, G.cnatB] ;
+
+  module EF = GExtFib[a].ExtFib[yP X, AX, O1.psi, G.B, al', FAX.k0, FAX.k1, FBg.k0, FBg.k1, FAX.k0e, FAX.k1e, FBg.k0e, FBg.k1e, eal', keal'] ;
+} ;

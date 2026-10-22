@@ -1,0 +1,94 @@
+-- DClT.seg: horn classifiers along an equation of types (moved from
+-- DGlueCl).  TrT: transport of points and horn data along Q : T2 = T;
+-- ClT: a classifier along Q as a pointwise statement St (the fillers agree
+-- through the transport of points) <-> an Id in Sigma (toSig / ofSig; PTy
+-- is a set).
+--
+-- Constructive.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+module DBm = DeltaBase[a] ;
+module DB = DBm.DB ;
+module DS = DBm.DS ;
+module PR = DB.GPre[a] ;
+open PR.PS ;
+module GP = DB.GCofib[a] ;
+module DCl = DeltaClassifier[a] ;
+module DHm = DeltaHorn[a] ;
+open DB.GLine[a] ;
+open Constr[a] ;
+
+
+------------------------------------------------------------------------
+-- classifiers along an equation of types
+
+module TrT (D : PCtx) (T2 : PTy[D]) {
+  module H2 = DHornFib[a, a].DH[D, T2] ;
+
+  trE (W : Nat) (T : PTy[D]) (Q : Id (PTy[D]) T2 T) (w : PR.TyL[D, T2].EI W) : PR.TyL[D, T].EI W =
+    subst (PTy[D]) (\ T' -> PR.TyL[D, T'].EI W) T2 T Q w ;
+
+  trH (T : PTy[D]) (Q : Id (PTy[D]) T2 T) (m k : Nat) (rho : W0.Ix (D.ob (suc m))) (h : H2.HornData m k rho)
+    : DHornFib[a, a].DH[D, T].HornData m k rho =
+    subst (PTy[D]) (\ T' -> DHornFib[a, a].DH[D, T'].HornData m k rho) T2 T Q h ;
+
+  -- transport keeps the point
+  trE-pt (W : Nat) (T : PTy[D]) (Q : Id (PTy[D]) T2 T) (w : PR.TyL[D, T2].EI W) : Id (W0.Ix (D.ob W)) (trE W T Q w).1 w.1 =
+    idJ (PTy[D]) T2 (\ T' Q' -> Id (W0.Ix (D.ob W)) (trE W T' Q' w).1 w.1) (refl w.1) T Q ;
+
+  -- the values of transported horn data
+  trH-v (T : PTy[D]) (Q : Id (PTy[D]) T2 T) (m k : Nat) (rho : W0.Ix (D.ob (suc m))) (h : H2.HornData m k rho)
+    (W : Nat) (f : Hom (lin W) (lin (suc m))) (i : DS.Lands W (suc m) (DHm.hornS m k) f)
+    : Id (PR.TyL[D, T].EI W) ((trH T Q m k rho h).1 W f i) (trE W T Q (h.1 W f i)) =
+    idJ (PTy[D]) T2 (\ T' Q' -> Id (PR.TyL[D, T'].EI W) ((trH T' Q' m k rho h).1 W f i) (trE W T' Q' (h.1 W f i)))
+      (refl (h.1 W f i)) T Q ;
+
+  -- transport moves the fibre component along the objects part
+  trE-v (W : Nat) (T : PTy[D]) (Q : Id (PTy[D]) T2 T) (x : W0.Ix (D.ob W)) (b : W0.Ix (T2.tob W x))
+    : Id (PR.TyL[D, T].EI W) (trE W T Q (x, b))
+         (x, subst W0.V (\ z -> W0.Ix z) (T2.tob W x) (T.tob W x) (apH {PTy[D]} {W0.V} (\ T' -> T'.tob W x) Q) b) =
+    idJ (PTy[D]) T2
+      (\ T' Q' -> Id (PR.TyL[D, T'].EI W) (trE W T' Q' (x, b))
+         (x, subst W0.V (\ z -> W0.Ix z) (T2.tob W x) (T'.tob W x) (apH {PTy[D]} {W0.V} (\ T'' -> T''.tob W x) Q') b))
+      (refl (x, b)) T Q ;
+
+  opaque trE-pt ; opaque trH-v ; opaque trE-v ;
+} ;
+
+module ClT (D : PCtx) (T2 : PTy[D]) (c2 : DCl.ClD D T2) {
+  module H2 = DHornFib[a, a].DH[D, T2] ;
+  module TR = TrT[D, T2] ;
+
+  St (T : PTy[D]) (c : DCl.ClD D T) (Q : Id (PTy[D]) T2 T) : U a+ =
+    (m k : Nat) (hk : IsT (leb k (suc m))) (rho : W0.Ix (D.ob (suc m))) (h : H2.HornData m k rho)
+    -> Id (PR.TyL[D, T].EI (suc m)) (TR.trE (suc m) T Q (rho, (c2 m k hk rho h).1)) (rho, (c m k hk rho (TR.trH T Q m k rho h)).1) ;
+
+  toSig (T : PTy[D]) (Q : Id (PTy[D]) T2 T) (c : DCl.ClD D T) (H : St T c Q)
+    : Id ((A' : PTy[D]) * DCl.ClD D A') (T, c) (T2, c2) =
+    idJ (PTy[D]) T2 (\ T' Q' -> (c' : DCl.ClD D T') -> St T' c' Q' -> Id ((A' : PTy[D]) * DCl.ClD D A') (T', c') (T2, c2))
+      (\ c' H' -> DCl.FExt[D, T2].base c' c2 (\ m k hk rho v pp pnA pnB ->
+          transH (apH {H2.HornData m k rho} {W0.Ix (T2.tob (suc m) rho)} (\ hd -> (c' m k hk rho hd).1)
+                    (DCl.FExt[D, T2].hd-eq m k rho (v, (pp, pnA)) (v, (pp, pnB)) (refl v)))
+                 (symH (PR.TyL[D, T2].pr-inj (suc m) rho (c2 m k hk rho (v, (pp, pnB))).1 (c' m k hk rho (v, (pp, pnB))).1
+                          (H' m k hk rho (v, (pp, pnB)))))))
+      T Q c H ;
+
+  ofSig (T : PTy[D]) (c : DCl.ClD D T) (R : Id ((A' : PTy[D]) * DCl.ClD D A') (T2, c2) (T, c)) (Q : Id (PTy[D]) T2 T) : St T c Q =
+    idJ ((A' : PTy[D]) * DCl.ClD D A') (T2, c2)
+      (\ z R' -> (Q' : Id (PTy[D]) T2 z.1) -> Id (Id (PTy[D]) T2 z.1) (apH {(A' : PTy[D]) * DCl.ClD D A'} {PTy[D]} (\ y -> y.1) R') Q'
+                 -> St z.1 z.2 Q')
+      (\ Q' pf -> idJ (Id (PTy[D]) T2 T2) (refl T2) (\ Q'' pf' -> St T2 c2 Q'')
+                    (\ m k hk rho h -> refl (rho, (c2 m k hk rho h).1)) Q' pf)
+      (T, c) R Q (isSet-PTy D T2 T (apH {(A' : PTy[D]) * DCl.ClD D A'} {PTy[D]} (\ y -> y.1) R) Q) ;
+
+  opaque toSig ; opaque ofSig ;
+} ;

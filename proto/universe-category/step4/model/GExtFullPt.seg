@@ -1,0 +1,63 @@
+-- GExtFullPt.seg (inside IvBase, any base): Ext over a cofibration that is
+-- full at ONE point.  At w = (rho , a) with psi full at rho, the extension
+-- extEquiv gives at w is eal's, translated (fromFA): GExtFull.EqF.At with
+-- a pointwise hypothesis (so it applies to the universal data, full only
+-- on CU).
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[lv] ;
+open PR.PS ;
+module GP = GCofib[lv] ;
+open GLine[lv] ;
+
+module At (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (kA : LineFibP[GFam[lv].famPath, G, A].FibAt e1)
+  (eal : GEquiv[lv].EquivOp GP.CofL[G, psi].resCtx B (subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR) al)
+  (X : Ob) (w : PR.TyL[G, A].EI X) (p : GExtEquiv[lv].ExtEq[G, A, psi, B, al, kA, eal].PX.Partial[X, w])
+  (q : IsT (GP.CofL[G, psi].full X w.1)) {
+  module CL = GP.CofL[G, psi] ;
+  module E1 = GExtEquiv[lv].ExtEq[G, A, psi, B, al, kA, eal] ;
+  module EE3 = GExtEquiv3[lv].ExtEq3[G, A, psi, B, al, kA, eal] ;
+  module E3 = GExt3[lv].ExtB3[G, A, psi, B, al] ;
+  module E4 = GExt4[lv].ExtB4[G, A, psi, B, al] ;
+  module ED = GExt[lv].ExtDef[G, A, psi] ;
+  module T = GExtEquiv2[lv].ExtEq2[G, A, psi, B, al, kA, eal].Th[X, w, p] ;
+
+  qi : IsT (CL.full X (G.act X X (idH X) w.1)) = CL.full-eq X w.1 (G.act X X (idH X) w.1) (symH (G.act-id X w.1)) q ;
+  kk : (k : Fin CL.r) * Lands X X (CL.Q X w.1 k) (idH X) = CL.full-id X w.1 q ;
+
+  thE : Id (E1.FA.TF.EI X) (T.th X (idH X) qi) (E1.kE X w q p) =
+    E1.kE-cong X (ED.EA.act X X (idH X) w) w (ED.EA.act-id X w) qi q
+      (E1.PX.restrictP X X (idH X) w p) p (E1.PX.restrictP-id X w p) ;
+
+  thE' : Id (E1.FA.TF.EI X) (T.th X (idH X) (T.qOf X (idH X) kk.1 kk.2)) (E1.kE X w q p) =
+    transH (T.th-cong X (idH X) (T.qOf X (idH X) kk.1 kk.2) qi) thE ;
+
+  Bpart : Id (PR.TyL[G, GExt2[lv].ExtB2[G, A, psi, B, al].ExtT].EI X) (E1.FX.fibB X T.v0) (E1.FX.fibB X (E1.fromFA X (E1.kE X w q p))) =
+    transH T.gb-E
+      (transH (E4.glue-B X w.1 T.u q qi)
+        (transH (apH (E3.fromB X) (T.u-b X (idH X) qi))
+          (transH (apH (\ z -> E3.fromB X (E1.FA.fibB X z)) thE)
+                  (symH (E1.fromFA-B X (E1.kE X w q p)))))) ;
+
+  Lpart (W : Ob) (f : Hom W X) (i : Hom W Iv) : Id (PR.TyL[G, A].EI W) (E1.FX.fibL X T.v0 W f i) (E1.FX.fibL X (E1.fromFA X (E1.kE X w q p)) W f i) =
+    transH (T.Fv-eq W f (compH W X X (idH X) f) i i (symH (comp-idl W X f)) (refl i))
+      (transH (T.F-S2 kk.1 X (idH X) kk.2 W f i)
+        (transH (apH (\ z -> ED.toEA W (E1.FA.fibL X z W f i)) thE')
+                (symH (E1.fromFA-L X (E1.kE X w q p) W f i)))) ;
+
+  -- the result
+  extEqFull : Id (E1.FX.TF.EI X) (w, EE3.extEquiv.kop X w p) (E1.fromFA X (E1.kE X w q p)) =
+    E1.FX.fibE-eq X (w, EE3.extEquiv.kop X w p) (E1.fromFA X (E1.kE X w q p))
+      (symH (E1.fromFA-pt X (E1.kE X w q p))) Bpart Lpart ;
+
+  opaque thE ; opaque thE' ; opaque Bpart ; opaque Lpart ; opaque extEqFull ;
+} ;

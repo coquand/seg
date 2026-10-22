@@ -1,0 +1,273 @@
+-- GLocal[lv].seg (inside IvBase): composition is LOCAL over lines.  A line l
+-- in G at X is a natural family over the generalised points (f , i) of X,
+-- i.e. a map s_l : P X -> G from the presheaf P X = y X * y Iv, with
+-- s_l (f , i) = l f i on the nose; the line l itself is s_l of the
+-- diagonal line delta (f , i) = (f , i).  A problem for A over G at a point
+-- over l is therefore a problem for A[s_l] over P X at a point over delta:
+--
+--   Pts[X].P      the presheaf P X of generalised points
+--   sL X l        s_l : P X -> G
+--   dg X          the diagonal line in P X at X
+--   Pull          problems over G at a point over (the image of) a line d
+--                 in P X, pulled back to problems for A[s_l] (values moved
+--                 by coeT; read back by liftP)
+--
+-- (GLocal2: the composition of A from compositions of the A[s_l], given
+-- coherently in l.)  Only the poset base has an instance (P X = y(X * Iv)).
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+open Trees[a] ;
+open Arith[a] ;
+module W0 = V[lv] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+module FM = GFam[lv] ;
+module VL = VLift[a, lv] ;
+
+------------------------------------------------------------------------
+-- the generalised points of X
+
+module Pts (X : Ob) {
+  -- coded at level lv (the members of Hom are encoded by VLift)
+  obF (W : Ob) (z : (f : Hom W X) * Hom W Iv) : W0.V = W0.pairV (VL.encIx (homV W X) z.1) (VL.encIx (homV W Iv) z.2) ;
+
+  obInj (W : Ob) (z z' : (f : Hom W X) * Hom W Iv) (P : Id W0.M (obF W z).1 (obF W z').1) : Id ((f : Hom W X) * Hom W Iv) z z' =
+    transH (apH {Hom W X} {(f : Hom W X) * Hom W Iv} (\ k -> (k, z.2))
+              (VL.encIx-inj (homV W X) z.1 z'.1 (W0.pair-inj (VL.encIx (homV W X) z.1) (VL.encIx (homV W Iv) z.2)
+                                                   (VL.encIx (homV W X) z'.1) (VL.encIx (homV W Iv) z'.2) P).1))
+           (apH {Hom W Iv} {(f : Hom W X) * Hom W Iv} (\ k -> (z'.1, k))
+              (VL.encIx-inj (homV W Iv) z.2 z'.2 (W0.pair-inj (VL.encIx (homV W X) z.1) (VL.encIx (homV W Iv) z.2)
+                                                   (VL.encIx (homV W X) z'.1) (VL.encIx (homV W Iv) z'.2) P).2)) ;
+
+  ob (W : Ob) : W0.V = W0.mkV ((f : Hom W X) * Hom W Iv) (obF W) (obInj W) ;
+
+  act (V W : Ob) (g : Hom V W) (z : W0.Ix (ob W)) : W0.Ix (ob V) = (compH V W X z.1 g, compH V W Iv z.2 g) ;
+
+  act-id (W : Ob) (z : W0.Ix (ob W)) : Id (W0.Ix (ob W)) (act W W (idH W) z) z =
+    transH (apH {Hom W X} {W0.Ix (ob W)} (\ k -> (k, compH W W Iv z.2 (idH W))) (comp-idr W X z.1))
+           (apH {Hom W Iv} {W0.Ix (ob W)} (\ k -> (z.1, k)) (comp-idr W Iv z.2)) ;
+
+  act-o (K J I : Ob) (f : Hom J I) (g : Hom K J) (z : W0.Ix (ob I))
+    : Id (W0.Ix (ob K)) (act K I (compH K J I f g) z) (act K J g (act J I f z)) =
+    transH (apH {Hom K X} {W0.Ix (ob K)} (\ k -> (k, compH K I Iv z.2 (compH K J I f g))) (symH (comp-assoc K J I X z.1 f g)))
+           (apH {Hom K Iv} {W0.Ix (ob K)} (\ k -> (compH K J X (compH J I X z.1 f) g, k)) (symH (comp-assoc K J I Iv z.2 f g))) ;
+
+  P : PCtx = new PCtx[ob, act, act-id, act-o] ;
+} ;
+
+-- the diagonal line
+dg (X : Ob) : W0.Ix ((FM.FC[Pts[X].P]).ob X) = (\ W f i -> (f, i), \ V W g f i -> refl (compH V W X f g, compH V W Iv i g)) ;
+
+module Loc (G : PCtx) (A : PTy[G]) {
+  module FG = FM.FC[G] ;
+  module TA = GPR.TyL[G, A] ;
+
+  -- a line as a map from the generalised points
+  sL (X : Ob) (l : W0.Ix (FG.ob X)) : PSub[Pts[X].P, G] =
+    new PSub[Pts[X].P, G, \ W z -> l.1 W z.1 z.2, \ V W g z -> symH (l.2 V W g z.1 z.2)] ;
+
+  BL (X : Ob) (l : W0.Ix (FG.ob X)) : PTy[Pts[X].P] = subTy Pts[X].P G A (sL X l) ;
+
+  ----------------------------------------------------------------------
+  -- pulling back along s_l
+
+  module Pull (X : Ob) (l : W0.Ix (FG.ob X)) (e : IPt) {
+    D : PCtx = Pts[X].P ;
+    B : PTy[D] = BL X l ;
+    module FD = FM.FC[D] ;
+    module FB = FM.FT[D, B] ;
+    module TB = GPR.TyL[D, B] ;
+    module KA = EndKit[FM.famPath, G, A, e] ;
+    module KB = EndKit[FM.famPath, D, B, e] ;
+    module LA = LevKit[FM.famPath, FM.famConn, G, A, e] ;
+    module LB = LevKit[FM.famPath, FM.famConn, D, B, e] ;
+    module MF = FM.FMap[D, G, sL X l] ;
+
+    -- reading in E_A
+    rd (W : Ob) (w : TB.EI W) : TA.EI W = (liftP D G A (sL X l)).nt W w ;
+
+    rd-act (V W : Ob) (g : Hom V W) (w : TB.EI W) : Id (TA.EI V) (rd V (TB.E.act V W g w)) (TA.E.act V W g (rd W w)) =
+      (liftP D G A (sL X l)).nt-nat V W g w ;
+
+    -- an element of E_B is determined by its point and its reading
+    tb-eq (W : Ob) (w w' : TB.EI W) (P1 : Id (TB.Pt W) w.1 w'.1) (Q : Id (TA.EI W) (rd W w) (rd W w')) : Id (TB.EI W) w w' =
+      idJ (TB.Pt W) w.1
+        (\ y2 P2 -> (b2 : TB.T W y2) -> Id (TA.EI W) (rd W w) (rd W (y2, b2)) -> Id (TB.EI W) w (y2, b2))
+        (\ b2 Q2 -> apH {TB.T W w.1} {TB.EI W} (\ v -> (w.1, v)) (TA.pr-inj W ((sL X l).nt W w.1) w.2 b2 Q2))
+        w'.1 P1 w'.2 Q ;
+
+    -- a value of E_A over the image of a point, pulled back
+    pv (W : Ob) (d : TB.Pt W) (z : TA.EI W) (q : Id (TA.Pt W) z.1 ((sL X l).nt W d)) : TB.EI W = (d, TA.coeT W z.1 ((sL X l).nt W d) q z.2) ;
+
+    pv-rd (W : Ob) (d : TB.Pt W) (z : TA.EI W) (q : Id (TA.Pt W) z.1 ((sL X l).nt W d)) : Id (TA.EI W) (rd W (pv W d z q)) z =
+      symH (TA.pr-coe W z.1 ((sL X l).nt W d) q z.2) ;
+
+    -- a point over the end e of a line d in P X (at Y) whose image is the
+    -- line of the point y over G, pulled back
+    tvP (Y : Ob) (d : W0.Ix (FD.ob Y)) (y : KA.TV.EI Y) (q : Id (W0.Ix (FG.ob Y)) (MF.mapF Y d) y.1) : KB.TV.EI Y =
+      (d, TA.coeT Y (y.1.1 Y (idH Y) (ptH Y e)) ((MF.mapF Y d).1 Y (idH Y) (ptH Y e))
+             (symH (apH (\ k -> k.1 Y (idH Y) (ptH Y e)) q)) y.2) ;
+
+    tvP-rd (Y : Ob) (d : W0.Ix (FD.ob Y)) (y : KA.TV.EI Y) (q : Id (W0.Ix (FG.ob Y)) (MF.mapF Y d) y.1)
+      : Id (TA.EI Y) (rd Y (KB.endE Y (tvP Y d y q))) (KA.endE Y y) =
+      symH (TA.pr-coe Y (y.1.1 Y (idH Y) (ptH Y e)) ((MF.mapF Y d).1 Y (idH Y) (ptH Y e))
+              (symH (apH (\ k -> k.1 Y (idH Y) (ptH Y e)) q)) y.2) ;
+
+    ------------------------------------------------------------------
+    -- an element of the fibres over G, lying over the restriction of y
+    -- along f, pulled back over the restriction of tvP along f
+
+    module TSP (Y : Ob) (d : W0.Ix (FD.ob Y)) (y : KA.TV.EI Y) (q : Id (W0.Ix (FG.ob Y)) (MF.mapF Y d) y.1)
+      (W : Ob) (f : Hom W Y) (u : KA.TS.EI W) (pu : Id (KA.TV.EI W) u.1 (KA.TV.E.act W Y f y)) {
+      zB : KB.TV.EI W = KB.TV.E.act W Y f (tvP Y d y q) ;
+
+      -- the line of u lies over the image of d f
+      qg (W' : Ob) (f' : Hom W' W) (j' : Hom W' Iv)
+        : Id (TA.Pt W') (u.2.1.1.1 W' f' j').1 ((sL X l).nt W' (d.1 W' (compH W' W Y f f') j')) =
+        transH (apH (\ k -> k.1 W' f' j') u.2.1.2)
+          (transH (apH (\ k -> k.1.1 W' f' j') pu) (symH (apH (\ k -> k.1 W' (compH W' W Y f f') j') q))) ;
+
+      t (W' : Ob) (f' : Hom W' W) (j' : Hom W' Iv) : TB.EI W' = pv W' (d.1 W' (compH W' W Y f f') j') (u.2.1.1.1 W' f' j') (qg W' f' j') ;
+
+      tn (V W' : Ob) (g : Hom V W') (f' : Hom W' W) (j' : Hom W' Iv)
+        : Id (TB.EI V) (TB.E.act V W' g (t W' f' j')) (t V (compH V W' W f' g) (compH V W' Iv j' g)) =
+        tb-eq V (TB.E.act V W' g (t W' f' j')) (t V (compH V W' W f' g) (compH V W' Iv j' g))
+          (transH (d.2 V W' g (compH W' W Y f f') j')
+                  (apH (\ k -> d.1 V k (compH V W' Iv j' g)) (comp-assoc V W' W Y f f' g)))
+          (calc (TA.EI V) {
+              rd V (TB.E.act V W' g (t W' f' j'))
+            =< rd-act V W' g (t W' f' j') >
+              TA.E.act V W' g (rd W' (t W' f' j'))
+            =< apH (TA.E.act V W' g) (pv-rd W' (d.1 W' (compH W' W Y f f') j') (u.2.1.1.1 W' f' j') (qg W' f' j')) >
+              TA.E.act V W' g (u.2.1.1.1 W' f' j')
+            =< u.2.1.1.2 V W' g f' j' >
+              u.2.1.1.1 V (compH V W' W f' g) (compH V W' Iv j' g)
+            =< symH (pv-rd V (d.1 V (compH V W Y f (compH V W' W f' g)) (compH V W' Iv j' g))
+                       (u.2.1.1.1 V (compH V W' W f' g) (compH V W' Iv j' g)) (qg V (compH V W' W f' g) (compH V W' Iv j' g))) >
+              rd V (t V (compH V W' W f' g) (compH V W' Iv j' g)) }) ;
+
+      L : KB.TL.EI W = (zB.1, FB.lamA W zB.1 t (\ W' f' j' -> refl (d.1 W' (compH W' W Y f f') j')) tn) ;
+
+      -- its end at e is the restricted point
+      qe : Id (TB.EI W) (KB.endE W ((FM.famPath.pevA D B e).mE W L)) (KB.endE W zB) =
+        tb-eq W (KB.endE W ((FM.famPath.pevA D B e).mE W L)) (KB.endE W zB)
+          (apH (\ z -> z.1) (LB.endL-lev W L))
+          (calc (TA.EI W) {
+              rd W (KB.endE W ((FM.famPath.pevA D B e).mE W L))
+            =< apH (rd W) (LB.endL-lev W L) >
+              rd W (t W (idH W) (ptH W e))
+            =< pv-rd W (d.1 W (compH W W Y f (idH W)) (ptH W e)) (u.2.1.1.1 W (idH W) (ptH W e)) (qg W (idH W) (ptH W e)) >
+              u.2.1.1.1 W (idH W) (ptH W e)
+            =< symH (LA.endL-lev W (KA.lineL W u)) >
+              KA.endE W ((FM.famPath.pevA G A e).mE W (KA.lineL W u))
+            =< apH (KA.endE W) u.2.2 >
+              KA.endE W u.1
+            =< apH (KA.endE W) pu >
+              KA.endE W (KA.TV.E.act W Y f y)
+            =< KA.endE-act W Y f y >
+              TA.E.act W Y f (KA.endE Y y)
+            =< apH (TA.E.act W Y f) (symH (tvP-rd Y d y q)) >
+              TA.E.act W Y f (rd Y (KB.endE Y (tvP Y d y q)))
+            =< symH (rd-act W Y f (KB.endE Y (tvP Y d y q))) >
+              rd W (TB.E.act W Y f (KB.endE Y (tvP Y d y q)))
+            =< apH (rd W) (symH (KB.endE-act W Y f (tvP Y d y q))) >
+              rd W (KB.endE W zB) }) ;
+
+      res : KB.TS.EI W = KB.mkTS W zB L (refl zB.1) qe ;
+
+      -- the values of its line, read in E_A, are those of u
+      res-lev (W' : Ob) (f' : Hom W' W) (j' : Hom W' Iv)
+        : Id (TA.EI W') (rd W' (FM.famConn.levA D B W (KB.lineL W res) W' f' j')) (FM.famConn.levA G A W (KA.lineL W u) W' f' j') =
+        transH (apH (rd W') (LB.mkTS-lev W zB L (refl zB.1) qe W' f' j'))
+               (pv-rd W' (d.1 W' (compH W' W Y f f') j') (u.2.1.1.1 W' f' j') (qg W' f' j')) ;
+    } ;
+
+    ------------------------------------------------------------------
+    -- partial elements over y, pulled back over tvP
+
+    module PP (Y : Ob) (d : W0.Ix (FD.ob Y)) (y : KA.TV.EI Y) (q : Id (W0.Ix (FG.ob Y)) (MF.mapF Y d) y.1) {
+      x0 : KB.TV.EI Y = tvP Y d y q ;
+
+      res (W : Ob) (f : Hom W Y) (u : KA.TS.EI W) (pu : Id (KA.TV.EI W) u.1 (KA.TV.E.act W Y f y)) : KB.TS.EI W =
+        TSP[Y, d, y, q, W, f, u, pu].res ;
+
+      res-pt (W : Ob) (f : Hom W Y) (u : KA.TS.EI W) (pu : Id (KA.TV.EI W) u.1 (KA.TV.E.act W Y f y))
+        : Id (KB.TV.EI W) (res W f u pu).1 (KB.TV.E.act W Y f x0) =
+        KB.mkTS-pt W TSP[Y, d, y, q, W, f, u, pu].zB TSP[Y, d, y, q, W, f, u, pu].L
+          (refl TSP[Y, d, y, q, W, f, u, pu].zB.1) TSP[Y, d, y, q, W, f, u, pu].qe ;
+
+      -- the values of its line
+      res-val (W : Ob) (f : Hom W Y) (u : KA.TS.EI W) (pu : Id (KA.TV.EI W) u.1 (KA.TV.E.act W Y f y)) (V : Ob) (g : Hom V W) (j : Hom V Iv)
+        : Id (TB.EI V) (FM.famConn.levA D B W (KB.lineL W (res W f u pu)) V g j) (TSP[Y, d, y, q, W, f, u, pu].t V g j) =
+        LB.mkTS-lev W TSP[Y, d, y, q, W, f, u, pu].zB TSP[Y, d, y, q, W, f, u, pu].L
+          (refl TSP[Y, d, y, q, W, f, u, pu].zB.1) TSP[Y, d, y, q, W, f, u, pu].qe V g j ;
+
+      -- equal data give equal pulled elements
+      res-eq (W : Ob) (f1 f2 : Hom W Y) (Hf : Id (Hom W Y) f1 f2) (u1 u2 : KA.TS.EI W) (Hu : Id (KA.TS.EI W) u1 u2)
+        (pu1 : Id (KA.TV.EI W) u1.1 (KA.TV.E.act W Y f1 y)) (pu2 : Id (KA.TV.EI W) u2.1 (KA.TV.E.act W Y f2 y))
+        : Id (KB.TS.EI W) (res W f1 u1 pu1) (res W f2 u2 pu2) =
+        idJ (Hom W Y) f1
+          (\ f3 H3 -> (u3 : KA.TS.EI W) (Hu3 : Id (KA.TS.EI W) u1 u3) (pu3 : Id (KA.TV.EI W) u3.1 (KA.TV.E.act W Y f3 y))
+             -> Id (KB.TS.EI W) (res W f1 u1 pu1) (res W f3 u3 pu3))
+          (\ u3 Hu3 -> idJ (KA.TS.EI W) u1
+             (\ u4 H4 -> (pu4 : Id (KA.TV.EI W) u4.1 (KA.TV.E.act W Y f1 y)) -> Id (KB.TS.EI W) (res W f1 u1 pu1) (res W f1 u4 pu4))
+             (\ pu4 -> apH (\ z -> res W f1 u1 z) (W0.isSetIx (KA.TV.E.ob W) u1.1 (KA.TV.E.act W Y f1 y) pu1 pu4))
+             u3 Hu3)
+          f2 Hf u2 Hu pu2 ;
+
+      -- restriction of a pulled element is the pulled restriction
+      pu-act (W' W : Ob) (chi : Hom W' W) (f : Hom W Y) (u : KA.TS.EI W) (pu : Id (KA.TV.EI W) u.1 (KA.TV.E.act W Y f y))
+        : Id (KA.TV.EI W') (KA.TS.E.act W' W chi u).1 (KA.TV.E.act W' Y (compH W' W Y f chi) y) =
+        transH (apH (KA.TV.E.act W' W chi) pu) (symH (KA.TV.E.act-o W' W Y f chi y)) ;
+
+      res-act (W' W : Ob) (chi : Hom W' W) (f : Hom W Y) (u : KA.TS.EI W) (pu : Id (KA.TV.EI W) u.1 (KA.TV.E.act W Y f y))
+        : Id (KB.TS.EI W') (KB.TS.E.act W' W chi (res W f u pu)) (res W' (compH W' W Y f chi) (KA.TS.E.act W' W chi u) (pu-act W' W chi f u pu)) =
+        LB.ts-ext W' (KB.TS.E.act W' W chi (res W f u pu)) (res W' (compH W' W Y f chi) (KA.TS.E.act W' W chi u) (pu-act W' W chi f u pu))
+          (transH (apH (KB.TV.E.act W' W chi) (res-pt W f u pu))
+            (transH (symH (KB.TV.E.act-o W' W Y f chi x0))
+                    (symH (res-pt W' (compH W' W Y f chi) (KA.TS.E.act W' W chi u) (pu-act W' W chi f u pu)))))
+          (\ V g j ->
+            transH (LB.line-act W' W chi (res W f u pu) V g j)
+              (transH (res-val W f u pu V (compH V W' W chi g) j)
+                (transH
+                  (tb-eq V (TSP[Y, d, y, q, W, f, u, pu].t V (compH V W' W chi g) j)
+                           (TSP[Y, d, y, q, W', compH W' W Y f chi, KA.TS.E.act W' W chi u, pu-act W' W chi f u pu].t V g j)
+                    (apH (\ k -> d.1 V k j) (symH (comp-assoc V W' W Y f chi g)))
+                    (transH (pv-rd V (d.1 V (compH V W Y f (compH V W' W chi g)) j) (u.2.1.1.1 V (compH V W' W chi g) j)
+                               (TSP[Y, d, y, q, W, f, u, pu].qg V (compH V W' W chi g) j))
+                      (transH (symH (LA.line-act W' W chi u V g j))
+                        (symH (pv-rd V (d.1 V (compH V W' Y (compH W' W Y f chi) g) j) ((KA.TS.E.act W' W chi u).2.1.1.1 V g j)
+                                 (TSP[Y, d, y, q, W', compH W' W Y f chi, KA.TS.E.act W' W chi u, pu-act W' W chi f u pu].qg V g j))))))
+                  (symH (res-val W' (compH W' W Y f chi) (KA.TS.E.act W' W chi u) (pu-act W' W chi f u pu) V g j))))) ;
+
+      opaque res-eq ; opaque res-act ;
+
+      side (sd : KA.PT.PSide[Y, y]) : KB.PT.PSide[Y, x0] =
+        new KB.PT.PSide[Y, x0, sd.pQ, \ W f i -> res W f (sd.pv W f i) (sd.ppt W f i),
+          \ W f i -> res-pt W f (sd.pv W f i) (sd.ppt W f i),
+          \ W' W chi f i i' ->
+            transH (res-act W' W chi f (sd.pv W f i) (sd.ppt W f i))
+              (res-eq W' (compH W' W Y f chi) (compH W' W Y f chi) (refl (compH W' W Y f chi))
+                 (KA.TS.E.act W' W chi (sd.pv W f i)) (sd.pv W' (compH W' W Y f chi) i')
+                 (sd.pnat W' W chi f i i') (pu-act W' W chi f (sd.pv W f i) (sd.ppt W f i)) (sd.ppt W' (compH W' W Y f chi) i'))] ;
+
+      part (p : KA.PT.Partial[Y, y]) : KB.PT.Partial[Y, x0] =
+        new KB.PT.Partial[Y, x0, p.pr, \ k -> side (p.ps k),
+          \ k k' W f i i' -> res-eq W f f (refl f) ((p.ps k).pv W f i) ((p.ps k').pv W f i') (p.pcs k k' W f i i')
+                               ((p.ps k).ppt W f i) ((p.ps k').ppt W f i')] ;
+
+      -- an inserted empty side stays one
+      ins (k : Nat) (p p' : KA.PT.Partial[Y, y]) (h : GCofEsi[lv].PartialsEsi[KA.TV.E, KA.SFm.SF].InsP[Y, y, k, p, p'])
+        : GCofEsi[lv].PartialsEsi[KB.TV.E, KB.SFm.SF].InsP[Y, x0, k, part p, part p'] =
+        new GCofEsi[lv].PartialsEsi[KB.TV.E, KB.SFm.SF].InsP[Y, x0, k, part p, part p', h.insp-r, h.insp-k, h.insp-e, h.insp-Q,
+          \ n h1 h' W f i i' -> res-eq W f f (refl f)
+               ((p'.ps (Arith[a].skipN k n, h')).pv W f i) ((p.ps (n, h1)).pv W f i') (h.insp-v n h1 h' W f i i')
+               ((p'.ps (Arith[a].skipN k n, h')).ppt W f i) ((p.ps (n, h1)).ppt W f i')] ;
+    } ;
+  } ;
+} ;

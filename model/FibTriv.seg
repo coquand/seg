@@ -1,0 +1,109 @@
+-- FibTriv.seg: fibrancy as a trivial fibration (survey-slides, "Fibrancy";
+-- CYLINDER.md section 4).  A over G is fibrant at the end point e when
+-- evaluation of lines at e,
+--
+--   evA e : AI -> A [ev e]        (over the context of lines GI, PathObj)
+--
+-- is a trivial fibration: a uniform extension structure (Cofib ContrOp) on
+-- its strict fibres.  A partial line with a total end point extends to a
+-- total line; filling is primitive, composition is evaluation at the other
+-- end.
+--
+--   SFib[D, B, A, al]   the strict fibre type of a map al : B -> A over D,
+--                       over D.A: at (X , w) the b with al (w.1 , b) = w
+--   evA e               evaluation of lines at e, a PMap over GI
+--   LineFib.FibAt e     CF.GP.Partials[GI.A[ev e], SFib (evA e)].ContrOp
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open BaseP.GLine[a] ;
+open PR.PS ;
+module CF = Cofib[a] ;
+open Equiv[a] ;
+
+-- SFib, TrivFib, PathStr, LineFibP, CompAtP: the generic ones (IvBase GLine),
+-- opened above; here the poset path structure.
+
+------------------------------------------------------------------------
+-- Evaluation of lines at an end point (posets)
+
+module PosetEv (G : PCtx) (A : PTy[G]) (e : El Iv) {
+  module PO = PathObj[a].PathObj[G, A] ;
+  module TA = PR.TyL[G, A] ;
+  module TL = PR.TyL[PO.PC.GI, PO.AI] ;
+  Aev : PTy[PO.PC.GI] = subTy PO.PC.GI G A (PO.PC.ev e) ;
+
+  module TV = PR.TyL[PO.PC.GI, Aev] ;
+
+  -- the end of the line l over x
+  endT (X : Ob) (x : W0.Ix (G.ob (prodP X Iv))) (l : TL.T X x) : TV.T X x =
+    A.tact X (prodP X Iv) (lid X e) x (G.act X (prodP X Iv) (lid X e) x) (refl (G.act X (prodP X Iv) (lid X e) x)) l ;
+
+  -- read in the total presheaf of A
+  endT-E (X : Ob) (x : W0.Ix (G.ob (prodP X Iv))) (l : TL.T X x)
+    : Id (TA.EI X) (G.act X (prodP X Iv) (lid X e) x, endT X x l) (TA.E.act X (prodP X Iv) (lid X e) (x, l)) =
+    symH (TA.pr-tact X (prodP X Iv) (lid X e) x (G.act X (prodP X Iv) (lid X e) x) (refl (G.act X (prodP X Iv) (lid X e) x)) l) ;
+
+  mE (X : Ob) (w : TL.EI X) : TV.EI X = (w.1, endT X w.1 w.2) ;
+
+  -- the end of the restricted line is the restricted end
+  sndEq (Y X : Ob) (h : Hom Y X) (w : TL.EI X)
+    : Id (TV.T Y (PO.PC.giAct Y X h w.1)) (endT Y (PO.PC.giAct Y X h w.1) (PO.aiAct Y X h w.1 (PO.PC.giAct Y X h w.1) (refl (PO.PC.giAct Y X h w.1)) w.2))
+         (Aev.tact Y X h w.1 (PO.PC.giAct Y X h w.1) (refl (PO.PC.giAct Y X h w.1)) (endT X w.1 w.2)) =
+    TA.pr-inj Y (G.act Y (prodP Y Iv) (lid Y e) (PO.PC.giAct Y X h w.1)) _ _
+      (calc (TA.EI Y) {
+          (G.act Y (prodP Y Iv) (lid Y e) (PO.PC.giAct Y X h w.1),
+           endT Y (PO.PC.giAct Y X h w.1) (PO.aiAct Y X h w.1 (PO.PC.giAct Y X h w.1) (refl (PO.PC.giAct Y X h w.1)) w.2))
+        =< endT-E Y (PO.PC.giAct Y X h w.1) (PO.aiAct Y X h w.1 (PO.PC.giAct Y X h w.1) (refl (PO.PC.giAct Y X h w.1)) w.2) >
+          TA.E.act Y (prodP Y Iv) (lid Y e) (PO.PC.giAct Y X h w.1, PO.aiAct Y X h w.1 (PO.PC.giAct Y X h w.1) (refl (PO.PC.giAct Y X h w.1)) w.2)
+        =< apH (TA.E.act Y (prodP Y Iv) (lid Y e))
+               (symH (TA.pr-tact (prodP Y Iv) (prodP X Iv) (cylH Y X h) w.1 (PO.PC.giAct Y X h w.1) (refl (PO.PC.giAct Y X h w.1)) w.2)) >
+          TA.E.act Y (prodP Y Iv) (lid Y e) (TA.E.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) w)
+        =< TA.PE.actSq Y (prodP Y Iv) X (prodP X Iv) (cylH Y X h) (lid Y e) (lid X e) h (cyl-lid Y X h e) w >
+          TA.E.act Y X h (TA.E.act X (prodP X Iv) (lid X e) w)
+        =< apH (TA.E.act Y X h) (symH (endT-E X w.1 w.2)) >
+          TA.E.act Y X h (G.act X (prodP X Iv) (lid X e) w.1, endT X w.1 w.2)
+        =< TA.pr-tact Y X h (G.act X (prodP X Iv) (lid X e) w.1) (G.act Y (prodP Y Iv) (lid Y e) (PO.PC.giAct Y X h w.1))
+             (ntEq PO.PC.GI G (PO.PC.ev e) Y X h w.1 (PO.PC.giAct Y X h w.1) (refl (PO.PC.giAct Y X h w.1))) (endT X w.1 w.2) >
+          (G.act Y (prodP Y Iv) (lid Y e) (PO.PC.giAct Y X h w.1),
+           Aev.tact Y X h w.1 (PO.PC.giAct Y X h w.1) (refl (PO.PC.giAct Y X h w.1)) (endT X w.1 w.2)) }) ;
+
+  mnat (Y X : Ob) (h : Hom Y X) (w : TL.EI X) : Id (TV.EI Y) (mE Y (TL.E.act Y X h w)) (TV.E.act Y X h (mE X w)) =
+    calc (TV.EI Y) {
+        mE Y (TL.E.act Y X h w)
+      =< apH (mE Y) (TL.pr-tact Y X h w.1 (PO.PC.giAct Y X h w.1) (refl (PO.PC.giAct Y X h w.1)) w.2) >
+        (PO.PC.giAct Y X h w.1, endT Y (PO.PC.giAct Y X h w.1) (PO.aiAct Y X h w.1 (PO.PC.giAct Y X h w.1) (refl (PO.PC.giAct Y X h w.1)) w.2))
+      =< apH (\ z -> (PO.PC.giAct Y X h w.1, z)) (sndEq Y X h w) >
+        (PO.PC.giAct Y X h w.1, Aev.tact Y X h w.1 (PO.PC.giAct Y X h w.1) (refl (PO.PC.giAct Y X h w.1)) (endT X w.1 w.2))
+      =< symH (TV.pr-tact Y X h w.1 (PO.PC.giAct Y X h w.1) (refl (PO.PC.giAct Y X h w.1)) (endT X w.1 w.2)) >
+        TV.E.act Y X h (mE X w) } ;
+
+  evA : PMap[PO.PC.GI, PO.AI, Aev] = new PMap[PO.PC.GI, PO.AI, Aev, mE, \ X w -> refl w.1, mnat] ;
+} ;
+
+-- the poset instance
+posetPath : PathStr =
+  new PathStr[\ G -> PathObj[a].PathCtx[G].GI, \ G e -> PathObj[a].PathCtx[G].ev e,
+              \ G A -> PathObj[a].PathObj[G, A].AI, \ G A e -> PosetEv[G, A, e].evA] ;
+
+module LineFib (G : PCtx) (A : PTy[G]) {
+  module PO = PathObj[a].PathObj[G, A] ;
+  module TA = PR.TyL[G, A] ;
+
+  -- A at the end e of a line
+  Aev (e : El Iv) : PTy[PO.PC.GI] = subTy PO.PC.GI G A (PO.PC.ev e) ;
+
+  module TL = PR.TyL[PO.PC.GI, PO.AI] ;
+
+  -- A is fibrant at e: evaluation of lines at e is a trivial fibration
+  FibAt (e : El Iv) : U a+ = LineFibP[posetPath, G, A].FibAt e ;
+} ;

@@ -1,0 +1,108 @@
+-- BCH2.seg: MODEL/Univ/BCH2.agda.  Composites of substituted types under
+-- base change (URel's H1, H2).  For sR : D' -> D, sg : L' -> L, S over L,
+-- s1 : D' -> L', s2 : D -> L with  sg (s1 x) = s2 (sR x)  (pe),
+-- B' = S [sg] [s1], B = S [s2], and any identification Po of the fibres:
+--   mBE        transport of the fibres (as in UnivOp.RelG.mBE)
+--   mBact      it is natural (H1)
+--   copOver    the composite of B' (subComp twice) maps to the composite
+--              of B (subComp) on the mapped box (UMapOver.CopOver)
+--   compOver   both directions (H2)
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FS = FibSub[a, a] ;
+open UMapOver[a] ;
+
+module H2G (D' D L' L : PCtx) (sR : PSub[D', D]) (sg : PSub[L', L]) (S : PTy[L]) (s1 : PSub[D', L']) (s2 : PSub[D, L])
+  (pe : (W : Ob) (x : W0.Ix (D'.ob W)) -> Id (W0.Ix (L.ob W)) (sg.nt W (s1.nt W x)) (s2.nt W (sR.nt W x)))
+  (Po : (W : Ob) (x : W0.Ix (D'.ob W)) -> Id W0.V (S.tob W (sg.nt W (s1.nt W x))) (S.tob W (s2.nt W (sR.nt W x)))) {
+  S0t : PTy[L'] = subTy L' L S sg ;
+  B1t : PTy[D'] = subTy D' L' S0t s1 ;
+  B2t : PTy[D] = subTy D L S s2 ;
+
+  module T1 = PR.TyL[D', B1t] ;
+  module T2 = PR.TyL[D, B2t] ;
+  module TS = PR.TyL[L, S] ;
+  module S0E = Transp[a].SubE[L', L, S, sg] ;
+  module S1E = Transp[a].SubE[D', L', S0t, s1] ;
+  module S2E = Transp[a].SubE[D, L, S, s2] ;
+
+  mBE (W : Ob) (w : T1.EI W) : T2.EI W =
+    (sR.nt W w.1, subst W0.V (\ z -> W0.Ix z) (S.tob W (sg.nt W (s1.nt W w.1))) (S.tob W (s2.nt W (sR.nt W w.1))) (Po W w.1) w.2) ;
+
+  L1 (W : Ob) (w : T1.EI W) : TS.EI W = S0E.Ls W (S1E.Ls W w) ;
+
+  LsB (W : Ob) (w : T1.EI W) : Id (TS.EI W) (S2E.Ls W (mBE W w)) (L1 W w) =
+    symH (BCB[a].coeE L S W (sg.nt W (s1.nt W w.1)) (s2.nt W (sR.nt W w.1)) (pe W w.1) (Po W w.1) w.2) ;
+
+  mBact (V W : Ob) (k : Hom V W) (w : T1.EI W) : Id (T2.EI V) (mBE V (T1.E.act V W k w)) (T2.E.act V W k (mBE W w)) =
+    S2E.Ls-inj V (mBE V (T1.E.act V W k w)) (T2.E.act V W k (mBE W w)) (sR.nt-nat V W k w.1)
+      (transH (LsB V (T1.E.act V W k w))
+       (transH (apH (S0E.Ls V) (S1E.Ls-act V W k w))
+        (transH (S0E.Ls-act V W k (S1E.Ls W w))
+         (transH (apH (TS.E.act V W k) (symH (LsB W w))) (symH (S2E.Ls-act V W k (mBE W w))))))) ;
+
+  opaque LsB ; opaque mBact ;
+
+  mB : EMap[D', D, sR, B1t, B2t] = (mkEMap D' D sR B1t B2t mBE (\ W w -> refl (sR.nt W w.1)) mBact) ;
+
+  module MO = MapOver[D', D, sR, B1t, B2t, mB] ;
+  module BL = BXm.Boxes[L, S] ;
+
+  module CO (eS eT : El Iv) (co : BL.CompOp[eS, eT]) {
+    module S0 = FS.SubComp[L', L, S, sg, eS, eT, co] ;
+    module S1 = FS.SubComp[D', L', S0t, s1, eS, eT, S0.subComp] ;
+    module S2 = FS.SubComp[D, L, S, s2, eS, eT, co] ;
+
+    BX (X : Ob) (b : MO.B1.Box[eS, X])
+      : Id (BL.Box[eS, X]) S0.MB[eS, X, S1.MB[eS, X, b].box].box S2.MB[eS, X, MO.mapBox eS X b].box =
+      BL.box-ext eS X S0.MB[eS, X, S1.MB[eS, X, b].box].rho S2.MB[eS, X, MO.mapBox eS X b].rho
+        S0.MB[eS, X, S1.MB[eS, X, b].box].u S2.MB[eS, X, MO.mapBox eS X b].u b.br
+        S0.MB[eS, X, S1.MB[eS, X, b].box].S S2.MB[eS, X, MO.mapBox eS X b].S
+        S0.MB[eS, X, S1.MB[eS, X, b].box].cs S2.MB[eS, X, MO.mapBox eS X b].cs
+        S0.MB[eS, X, S1.MB[eS, X, b].box].cb S2.MB[eS, X, MO.mapBox eS X b].cb
+        (pe (prodP X Iv) b.brho)
+        (transH (S0.KGE.fromE-eq X (L.act X (prodP X Iv) (lid X eS) S0.MB[eS, X, S1.MB[eS, X, b].box].rho)
+                   S0.MB[eS, X, S1.MB[eS, X, b].box].uE S0.MB[eS, X, S1.MB[eS, X, b].box].upt)
+         (transH (apH (S0E.Ls X) (S1.KGE.fromE-eq X (L'.act X (prodP X Iv) (lid X eS) S1.MB[eS, X, b].rho) S1.MB[eS, X, b].uE S1.MB[eS, X, b].upt))
+          (transH (symH (LsB X (MO.B1.lidE eS X b.brho b.bu)))
+           (transH (apH (S2E.Ls X) (symH MO.MB[eS, X, b].u-E))
+                   (symH (S2.KGE.fromE-eq X (L.act X (prodP X Iv) (lid X eS) S2.MB[eS, X, MO.mapBox eS X b].rho)
+                            S2.MB[eS, X, MO.mapBox eS X b].uE S2.MB[eS, X, MO.mapBox eS X b].upt))))))
+        (\ l -> refl ((b.bs l).sQ))
+        (\ l W psi i i' ->
+          transH (S0.MB[eS, X, S1.MB[eS, X, b].box].S-E l W psi i)
+           (transH (apH (S0E.Ls W) (S1.MB[eS, X, b].S-E l W psi i))
+            (transH (symH (LsB W ((b.bs l).svE W psi i)))
+             (transH (apH (\ j -> S2E.Ls W (mBE W ((b.bs l).svE W psi j))) (isProp-InQ W X (b.bs l).sQ psi i i'))
+              (transH (apH (S2E.Ls W) (symH (MO.MB[eS, X, b].S-E l W psi i')))
+                      (symH (S2.MB[eS, X, MO.mapBox eS X b].S-E l W psi i'))))))) ;
+
+    copOver : MO.CopOver eS eT S1.subComp S2.subComp = \ X b ->
+      S2E.Ls-inj X (mBE X (MO.B1.topE eT X b.brho (S1.subComp.cop X b)))
+        (MO.B2.topE eT X (MO.mapBox eS X b).brho (S2.subComp.cop X (MO.mapBox eS X b)))
+        (sR.nt-nat X (prodP X Iv) (lid X eT) b.brho)
+        (transH (LsB X (MO.B1.topE eT X b.brho (S1.copS X b)))
+         (transH (apH (S0E.Ls X) (S1.copS-E X b))
+          (transH (S0.copS-E X S1.MB[eS, X, b].box)
+           (transH (apH (\ bb -> BL.topE eT X bb.brho (co.cop X bb)) (BX X b))
+                   (symH (S2.copS-E X (MO.mapBox eS X b))))))) ;
+
+    opaque BX ; opaque copOver ;
+  } ;
+
+  compOver (c : BL.Comp) : MO.CompOver (FS.subCompC D' L' S0t s1 (FS.subCompC L' L S sg c)) (FS.subCompC D L S s2 c) =
+    (CO[e0, e1, c.1].copOver, CO[e1, e0, c.2].copOver) ;
+} ;

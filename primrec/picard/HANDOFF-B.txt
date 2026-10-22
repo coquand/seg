@@ -1,0 +1,91 @@
+COMPLETED, 2026-10-20
+====================
+B's Horrocks proof is integrated in ../horrocks/ and A's geometry adapters
+and chart triviality are finished. Final entry point:
+  PicardComplete[l].Over[R,setR,sag].equivalence
+No charts or algebra parameters remain beyond the SAG assumptions.
+Eleven new geometry files, 545 lines; isolated full check: 9773 declarations,
+0 failed. All reviewed Horrocks source/dependency hashes match.
+See README.txt and CHECKED.txt. Nothing is committed.
+
+Historical handoff below; all tasks it assigned are now complete.
+================================================================
+
+Worker A -> worker B: Proposition 4.6
+====================================
+NEXT PHASE: the first phase below is complete. The current handoff is
+HORROCKS-INTERFACE.md. B's new target is
+  HorrocksInterface[l].Over[A,setA].Horrocks
+in a new horrocks/ directory. Link RankOneProjector.seg and
+HorrocksInterface.seg read-only. Both are checked in picard/All.seg.
+The module target contains no geometric or SAG hypotheses.
+A owns the affine-bundle adapters and Corollary 2.3.
+
+A update: the finite projector construction now checks, including its
+linear representation of global sections. See AFFINE-PROJECTOR.md.
+The Horrocks interface types are unchanged. The local-freeness and
+bundle-trivialisation adapters are still A's remaining work.
+
+Please review the checked interface before implementing against it:
+  PicardUnits.seg
+  PicardInterface.seg
+Both live in picard/ and are owned by A; link them read-only from laurent/.
+The latest full check is recorded in CHECKED.txt.
+
+Common ring: Ring[l].CRing, with an explicit setR. PicardUnits.Over builds
+its unit group in the existing torsor/Ab format. No third ring record is
+needed in the interface. A will port the short chart quotient and constancy
+argument to Ring; B owns all polynomial/Laurent code and any adapters to
+projective/PolynomialFunctions and LaurentFunctions.
+
+Interface Over[R,setR].AlgebraResults has three fields:
+  factorisation : Factorisation
+  degree-unique : DegreeUnique
+  intersection : ChartIntersection
+The exact checked types are in PicardInterface.seg. These are parameters
+of A's future theorem, not postulates or extra global axioms.
+
+Representation decision for review:
+  PolynomialUnit = R.R -> Units
+  LaurentUnit = Units -> Units
+These are units in the corresponding function algebras. Use uniform SQC
+to identify them with algebraic polynomial/Laurent units. This keeps A
+independent of B's coefficient representation and avoids another ring
+bridge. at-zero is then simply evaluation at zero. The interface's
+ChartIntersection is the consequence of coefficient comparison used in
+constancy; coefficient lemmas themselves remain B's implementation.
+
+Degree = nonneg n | negative n, with n : Ring[l].Nat.
+  nonneg n = n; negative n = -(n+1).
+monomial uses ordinary powers of the unit and of its inverse.
+Factorisation is mere existence of d,u,a,b such that for every unit x:
+  t(x) = u * x^d * a(x) * b(x^-1).
+DegreeUnique says x^d*a(x) = x^e*b(x^-1) implies d=e.
+A does not need uniqueness of all factors.
+
+Geometric convention:
+  lo(x)=[x:1], hi(y)=[1:y], overlap xy=1.
+  The chart frames of O(d) satisfy e_hi = x^d . e_lo.
+Thus coordinates satisfy coordinate_lo = x^d * coordinate_hi.
+
+A owns picard/. B owns laurent/. Existing source stays untouched.
+B should record any interface objection before relying on it; A will
+make any mutually agreed interface amendment. In particular do not add
+polynomial/SQC axioms: derive the three fields from the common SAG bundle.
+Chart triviality remains A's explicitly named geometric hypothesis.
+
+A completed the conditional theorem
+-----------------------------------
+See INTERFACE.md for the final status. The entry point is
+  PicardTheorem[l].Over[R,setR,algebra,charts].proposition-4-6
+Its only remaining inputs are your AlgebraResults and ChartTriviality.
+No interface field or convention changed. A's bridge from factorisation
+and degree uniqueness to bundle classification is now complete.
+
+Integration complete
+--------------------
+A linked your sources read-only and checked PicardSAG.Over with your exact
+LaurentResults.results. The shared interface is unchanged. Combined check:
+4039 declarations, 0 failed, 1.35 s; isolated regular-file export: 4039,
+0 failed, 1.53 s. Seven expected negative tests in both.
+See CHECKED.txt. Chart triviality is the only outstanding geometric input.

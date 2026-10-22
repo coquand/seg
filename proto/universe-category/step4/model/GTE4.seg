@@ -1,0 +1,87 @@
+-- GTE4.seg (inside IvBase.Cn): transport along a line, part 4: omega is
+-- natural in the fibre element (TranspSqN, in line form).  Along g : Y -> X:
+--
+--   ellN     the line of v g is the line of v restricted
+--   xhN      so is the start (the transport filler is natural: GTE1.uF-nat)
+--   omSqN    the square of v g is the square of v restricted (uniformity
+--            of the filler of the paths over the line)
+--   omVN     pointwise: the values of omega (v g) at (f , i) are those of
+--            omega v at (g f , i)
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module OmN (G : PCtx) (A : PTy[G]) (d : Bool) (ca : CompAtP[GFam[lv].famPath, G, A, src d, tgt d].CompAt)
+  (c01 : CompAtP[GFam[lv].famPath, G, A, e0, e1].CompAt)
+  (D : PCtx) (ln : PSub[D, GFam[lv].famPath.pth G]) {
+  module FM = GFam[lv] ;
+  module O = GTE3[lv].Om[G, A, d, ca, c01, D, ln] ;
+  module KK = O.KK ;
+  module T1 = O.T1 ;
+  module HF = O.HF ;
+  module PC = O.PC ;
+  module PT = O.PT ;
+  module FK = KK.FK ;
+  module LS = LevKit[FM.famPath, FM.famConn, G, A, src d] ;
+
+  module R (Y X : Ob) (g : Hom Y X) (v : HF.TF.EI X) {
+    module WX = O.W[X, v] ;
+    module WY = O.W[Y, HF.TF.E.act Y X g v] ;
+
+    -- the B part of the restricted fibre element
+    bN (W : Ob) (f : Hom W Y) : Id (HF.TB.EI W) (WX.L.bf W (compH W Y X g f)) (WY.L.bf W f) =
+      transH (symH (HF.TB.PE.actC W Y X g f (HF.fibB X v)))
+             (apH (HF.TB.E.act W Y f) (symH (HF.fibB-act Y X g v))) ;
+
+    ellN : Id (W0.Ix (FK.ob Y)) (FK.actF Y X g WX.L.ell) WY.L.ell =
+      FK.fam-eq Y (FK.actF Y X g WX.L.ell) WY.L.ell (\ W f j ->
+        KK.eabExt W (WX.L.lw W (compH W Y X g f) j) (WY.L.lw W f j) (refl (WX.L.lw W (compH W Y X g f) j).1)
+          (transH (WX.L.lvB W (compH W Y X g f) j) (transH (bN W f) (symH (WY.L.lvB W f j))))) ;
+
+    -- the values of the start
+    uN (W : Ob) (f : Hom W Y) (i : Hom W Iv) : Id (KK.TA.EI W) (WX.t W (compH W Y X g f) i) (WY.t W f i) =
+      calc (KK.TA.EI W) {
+          FM.famConn.levA G A X (T1.CA.EK.lineL X WX.u) W (compH W Y X g f) i
+        =< symH (LS.line-act Y X g WX.u W f i) >
+          FM.famConn.levA G A Y (T1.CA.EK.lineL Y (T1.CA.TS.E.act Y X g WX.u)) W f i
+        =< apH (\ z -> FM.famConn.levA G A Y (T1.CA.EK.lineL Y z) W f i) (T1.uF-nat Y X g WX.xb) >
+          FM.famConn.levA G A Y (T1.CA.EK.lineL Y (T1.uF Y (HF.TB.E.act Y X g WX.xb))) W f i
+        =< apH (\ z -> FM.famConn.levA G A Y (T1.CA.EK.lineL Y (T1.uF Y z)) W f i) (symH (HF.fibB-act Y X g v)) >
+          FM.famConn.levA G A Y (T1.CA.EK.lineL Y WY.u) W f i } ;
+
+    xhN : Id (PC.CP.TV.EI Y) (PC.CP.TV.E.act Y X g WX.xh) WY.xh =
+      PC.CP.EK.tv-eq Y (PC.CP.TV.E.act Y X g WX.xh) WY.xh ellN
+        (PT.tp-ext Y (PC.CP.EK.endE Y (PC.CP.TV.E.act Y X g WX.xh)) (PC.CP.EK.endE Y WY.xh)
+           (apH (\ z -> (FK.ev e0).nt Y z) ellN)
+           (\ W f i -> uN W f i)) ;
+
+    -- the restricted empty partial is the empty partial
+    emptyR : Id (PC.CP.PT.Partial[Y, WY.xh])
+                (subst (PC.CP.TV.EI Y) (\ z -> PC.CP.PT.Partial[Y, z]) (PC.CP.TV.E.act Y X g WX.xh) WY.xh xhN
+                       (PC.CP.PT.restrictP Y X g WX.xh WX.emptyP)) WY.emptyP =
+      PC.CP.PT.partExtH Y (PC.CP.TV.E.act Y X g WX.xh) WY.xh xhN (PC.CP.PT.restrictP Y X g WX.xh WX.emptyP) WY.emptyP (refl zero)
+        (\ l -> absurd _ (false-true l.2)) (\ l -> absurd _ (false-true l.2)) ;
+
+    omSqN : Id (PC.CP.TS.EI Y) (PC.CP.TS.E.act Y X g WX.omSq) WY.omSq =
+      transH (O.kS.kunif Y X g WX.xh WX.emptyP)
+        (PC.CP.PT.kop-cong O.kS Y (PC.CP.TV.E.act Y X g WX.xh) WY.xh xhN (PC.CP.PT.restrictP Y X g WX.xh WX.emptyP) WY.emptyP emptyR) ;
+
+    omEN : Id (PC.CP.TV'.EI Y) (PC.CP.TV'.E.act Y X g WX.omE) WY.omE =
+      transH (symH (PC.CP.endL-act Y X g WX.omSq)) (apH (PC.CP.endL Y) omSqN) ;
+
+    -- pointwise
+    omVN (W : Ob) (f : Hom W Y) (i : Hom W Iv) : Id (KK.TA.EI W) (WX.omE.2.1.1 W (compH W Y X g f) i) (WY.omE.2.1.1 W f i) =
+      apH (\ z -> z.2.1.1 W f i) omEN ;
+
+    opaque ellN ; opaque xhN ; opaque emptyR ; opaque omSqN ; opaque omEN ;
+  } ;
+} ;

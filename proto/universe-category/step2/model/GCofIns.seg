@@ -1,0 +1,90 @@
+-- GCofIns.seg (inside IvBase, any base): a cofibration psi' over D' is psi
+-- along s with ONE EMPTY generator inserted at k (InsC: the generators of
+-- psi' at d are psi's at s d, skipping k, where psi' is emptyS).  Its extent
+-- is psi's along s (fullS-ins), so ExtSub applies (GExtSub2.ExtSub at
+-- (psi' , fullS-ins)).  The KESI of the univalence operation: p' = p with
+-- an empty side inserted gives psi_p' = psi_p with an empty generator
+-- inserted (s = id).
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+module GP = GCofib[a] ;
+
+module InsC (G : PCtx) (psi : GP.Cof[G]) (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D']) (k : Nat) {
+  insc-r : Id Nat psi'.cr (suc psi.cr) ;
+  insc-k : IsT (leb k psi.cr) ;
+  -- the inserted generator is empty
+  insc-e (X : Ob) (d : W0.Ix (D'.ob X)) (hk : IsT (ltb k psi'.cr)) : Id (Phi X) (psi'.cQ X d (k, hk)) (emptyS X) ;
+  -- the others are psi's along s
+  insc-Q (X : Ob) (d : W0.Ix (D'.ob X)) (n : Nat) (h : IsT (ltb n psi.cr)) (h' : IsT (ltb (skipN k n) psi'.cr))
+    : Id (Phi X) (psi'.cQ X d (skipN k n, h')) (psi.cQ X (s.nt X d) (n, h)) ;
+} ;
+
+module FI (G : PCtx) (psi : GP.Cof[G]) (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D']) (k : Nat) (ins : InsC[G, psi, D', s, psi', k]) {
+  module CL = GP.CofL[G, psi] ;
+  module CL' = GP.CofL[D', psi'] ;
+
+  -- the bound of psi' is suc of psi's
+  rB (n : Nat) (h : IsT (ltb n psi'.cr)) : IsT (ltb n (suc psi.cr)) = substH (\ r -> IsT (ltb n r)) ins.insc-r h ;
+  rB' (n : Nat) (h : IsT (ltb n (suc psi.cr))) : IsT (ltb n psi'.cr) = substH (\ r -> IsT (ltb n r)) (symH ins.insc-r) h ;
+
+  LdTy (X : Ob) (d : W0.Ix (D'.ob X)) (l' : Fin psi'.cr) : U a = Lands X X (psi'.cQ X d l') (idH X) ;
+
+  -- the empty generator never lands
+  atK (X : Ob) (d : W0.Ix (D'.ob X)) (l' : Fin psi'.cr) (e : Id Nat l'.1 k) (ld : LdTy X d l') : Empty =
+    empty-lands X X (idH X)
+      (lands-sub X X (psi'.cQ X d (k, substH (\ z -> IsT (ltb z psi'.cr)) e l'.2)) (emptyS X)
+         (ins.insc-e X d (substH (\ z -> IsT (ltb z psi'.cr)) e l'.2)) (idH X)
+         (substH (\ z -> LdTy X d z) (fin-eq psi'.cr l' (k, substH (\ z -> IsT (ltb z psi'.cr)) e l'.2) e) ld)) ;
+
+  -- away from k, l' is skipN k n
+  module Off (X : Ob) (d : W0.Ix (D'.ob X)) (l' : Fin psi'.cr) (ne : IsT (not (eqN l'.1 k))) {
+    n : Nat = unsk k l'.1 ;
+    hn : IsT (ltb n psi.cr) = unsk-lt k l'.1 psi.cr ins.insc-k (rB l'.1 l'.2) ne ;
+    h' : IsT (ltb (skipN k n) psi'.cr) = rB' (skipN k n) (skipN-lt k n psi.cr ins.insc-k hn) ;
+    P : Id (Fin psi'.cr) l' (skipN k n, h') = fin-eq psi'.cr l' (skipN k n, h') (symH (skipN-unsk k l'.1 ne)) ;
+
+    res (ld : LdTy X d l') : (l : Fin psi.cr) * Lands X X (psi.cQ X (s.nt X d) l) (idH X) =
+      ((n, hn),
+       lands-sub X X (psi'.cQ X d (skipN k n, h')) (psi.cQ X (s.nt X d) (n, hn)) (ins.insc-Q X d n hn h') (idH X)
+         (substH (\ z -> LdTy X d z) P ld)) ;
+  } ;
+
+  -- a generator of psi' landing at the identity is not the empty one
+  back (X : Ob) (d : W0.Ix (D'.ob X)) (l' : Fin psi'.cr) (ld : LdTy X d l')
+    : (l : Fin psi.cr) * Lands X X (psi.cQ X (s.nt X d) l) (idH X) =
+    eqN-dec ((l : Fin psi.cr) * Lands X X (psi.cQ X (s.nt X d) l) (idH X)) l'.1 k
+      (\ e -> absurd _ (atK X d l' e ld))
+      (\ ne -> Off[X, d, l', ne].res ld) ;
+
+  fwd (X : Ob) (d : W0.Ix (D'.ob X)) (l : Fin psi.cr) (ld : Lands X X (psi.cQ X (s.nt X d) l) (idH X))
+    : (l' : Fin psi'.cr) * LdTy X d l' =
+    ((skipN k l.1, rB' (skipN k l.1) (skipN-lt k l.1 psi.cr ins.insc-k l.2)),
+     lands-sub X X (psi.cQ X (s.nt X d) l) (psi'.cQ X d (skipN k l.1, rB' (skipN k l.1) (skipN-lt k l.1 psi.cr ins.insc-k l.2)))
+       (symH (ins.insc-Q X d l.1 l.2 (rB' (skipN k l.1) (skipN-lt k l.1 psi.cr ins.insc-k l.2)))) (idH X) ld) ;
+
+  fullS (X : Ob) (d : W0.Ix (D'.ob X)) : Id Bool (CL'.full X d) (CL.full X (s.nt X d)) =
+    bool-ext (CL'.full X d) (CL.full X (s.nt X d))
+      (\ hq -> CL.full-of-id X (s.nt X d) (back X d (CL'.full-id X d hq).1 (CL'.full-id X d hq).2))
+      (\ hq -> CL'.full-of-id X d (fwd X d (CL.full-id X (s.nt X d) hq).1 (CL.full-id X (s.nt X d) hq).2)) ;
+
+  opaque back ; opaque fwd ;
+} ;
+
+fullS-ins (G : PCtx) (psi : GP.Cof[G]) (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D']) (k : Nat) (ins : InsC[G, psi, D', s, psi', k])
+  (X : Ob) (d : W0.Ix (D'.ob X)) : Id Bool (GP.CofL[D', psi'].full X d) (GP.CofL[G, psi].full X (s.nt X d)) =
+  FI[G, psi, D', s, psi', k, ins].fullS X d ;
+
+opaque fullS-ins ;
+
+-- the generator lists of psi' (at d) and psi (at s d) in GensIns form: one
+-- empty generator inserted at k
+hg-ins (G : PCtx) (psi : GP.Cof[G]) (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D']) (k : Nat) (ins : InsC[G, psi, D', s, psi', k])
+  (X : Ob) (d : W0.Ix (D'.ob X)) : GensIns X psi.cr (\ n -> psi.cQ X (s.nt X d) n) psi'.cr (\ n' -> psi'.cQ X d n') =
+  inr (k, (ins.insc-k, (ins.insc-r, (\ h -> ins.insc-e X d h, \ n h h' -> ins.insc-Q X d n h h')))) ;

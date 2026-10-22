@@ -1,0 +1,98 @@
+-- EsiPath.seg: MODEL/Lv/EsiPath.agda.  Path types preserve empty-side
+-- invariance.  The A-box over X * [1] of a path box has the two end point
+-- sides first, then the sides of the path box: inserting an empty side at
+-- k in the path box inserts one at k + 2 in the A-box.
+--
+-- Posets at a, presheaves at l.  Agda's anonymous module is the segment
+-- EP1; its three-way matches on n are helpers splitting n, then n - 1.
+
+level a l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, l] ;
+open PR.PS ;
+module BXm = Box[a, l] ;
+module FPa = FibPath[a, l] ;
+module ES = Esi[a, l] ;
+module CN = Conn[a] ;
+
+module EsiPath (G : PCtx) (A : PTy[G]) (a b : PEl[G, A]) (eS eT : El Iv) (co : BXm.Boxes[G, A].CompOp[eS, eT])
+  (esi : ES.EsiDef[G, A].ESI eS eT co) {
+  open FPa.PathTy[G, A, a, b] ;
+  open FPa.PathComp[G, A, a, b, eS, eT, co] ;
+  module EP = ES.EsiDef[G, PathP] ;
+  module EA = ES.EsiDef[G, A] ;
+
+  module EP1 (X : Ob) (k : Nat) (b0 b0' : BP.Box[eS, X]) (ins : EP.InsE[eS, X, k, b0, b0']) {
+    module P0 = PB[X, b0] ;
+    module P1 = PB[X, b0'] ;
+    open FPa.PathMaps[X] ;
+
+    rA : Id (TA.Pt ZI) P1.rhoA P0.rhoA = apH (G.act ZI (prodP X Iv) sw) ins.ins-rho ;
+
+    QG (n : Nat) : U l = (h : IsT (ltb n P0.BR)) (h' : IsT (ltb (ES.skipN (suc (suc k)) n) P1.BR)) (c : El Z)
+      -> Id Bool ((P1.S' (ES.skipN (suc (suc k)) n, h')).sQ c.1) ((P0.S' (n, h)).sQ c.1) ;
+
+    insQ : (n : Nat) -> QG n = split {
+      zero -> \ h h' c -> refl (CN.zQ true X c.1) ;
+      suc n -> insQ1 n } ;
+
+    insQ1 : (n : Nat) -> QG (suc n) = split {
+      zero -> \ h h' c -> refl (CN.zQ false X c.1) ;
+      suc m -> \ h h' c ->
+        transH (Pre[Z, X, pX X, (b0'.bs (ES.skipN k m, h')).sQ].pre-el c)
+         (transH (ins.ins-Q m h h' (app Z X (pX X) c))
+                 (symH (Pre[Z, X, pX X, (b0.bs (m, h)).sQ].pre-el c))) } ;
+
+    VG (n : Nat) : U l = (h : IsT (ltb n P0.BR)) (h' : IsT (ltb (ES.skipN (suc (suc k)) n) P1.BR))
+      (W : Ob) (psi : Hom W ZI) (i : InQ W Z (P1.S' (ES.skipN (suc (suc k)) n, h')).sQ psi)
+      (i' : InQ W Z (P0.S' (n, h)).sQ psi)
+      -> Id (TA.EI W) ((P1.S' (ES.skipN (suc (suc k)) n, h')).svE W psi i) ((P0.S' (n, h)).svE W psi i') ;
+
+    insV : (n : Nat) -> VG n = split {
+      zero -> \ h h' W psi i i' ->
+        transH (P1.vAll-E (zero, h') W psi i)
+         (transH (apH (\ r -> elOf a W (G.act W ZI psi r)) rA) (symH (P0.vAll-E (zero, h) W psi i'))) ;
+      suc n -> insV1 n } ;
+
+    insV1 : (n : Nat) -> VG (suc n) = split {
+      zero -> \ h h' W psi i i' ->
+        transH (P1.vAll-E (suc zero, h') W psi i)
+         (transH (apH (\ r -> elOf b W (G.act W ZI psi r)) rA) (symH (P0.vAll-E (suc zero, h) W psi i'))) ;
+      suc m -> \ h h' W psi i i' ->
+        transH (P1.vAll-E (suc (suc (ES.skipN k m)), h') W psi i)
+         (transH (apH (\ z -> TA.E.act W (prodP W Iv) (evm W psi) (pth W z))
+                      (ins.ins-v m h h' W (P0.swOf W psi) (P1.inQs (ES.skipN k m, h') W psi i) (P0.inQs (m, h) W psi i')))
+                 (symH (P0.vAll-E (suc (suc m), h) W psi i'))) } ;
+
+    insA : EA.InsE[eS, Z, suc (suc k), P0.abox, P1.abox] = new EA.InsE[eS, Z, suc (suc k), P0.abox, P1.abox,
+      apH (\ n -> suc (suc n)) ins.ins-r,
+      ins.ins-k,
+      rA,
+      transH (KA.fromE-eq Z (G.act Z ZI (lid Z eS) P1.rhoA) P1.uE (P1.ptLid eS))
+       (transH (apH (pth X) ins.ins-lid) (symH (KA.fromE-eq Z (G.act Z ZI (lid Z eS) P0.rhoA) P0.uE (P0.ptLid eS)))),
+      \ hk c -> transH (Pre[Z, X, pX X, (b0'.bs (k, hk)).sQ].pre-el c) (ins.ins-e hk (app Z X (pX X) c)),
+      insQ,
+      insV] ;
+
+    esiP : Id (TP.EI X) (BP.topE eT X b0'.brho (copP X b0')) (BP.topE eT X b0.brho (copP X b0)) =
+      pthInj X (BP.topE eT X b0'.brho (copP X b0')) (BP.topE eT X b0.brho (copP X b0))
+        (apH (G.act X (prodP X Iv) (lid X eT)) ins.ins-rho)
+        (transH (copP-pth X b0')
+         (transH (esi Z (suc (suc k)) P0.abox P1.abox insA)
+                 (symH (copP-pth X b0)))) ;
+  } ;
+
+  esiPath : EP.ESI eS eT pathComp = \ X k b0 b0' ins -> EP1[X, k, b0, b0', ins].esiP ;
+} ;
+
+esiPathC (G : PCtx) (A : PTy[G]) (a b : PEl[G, A]) (c : BXm.Boxes[G, A].Comp) (e : ES.EsiDef[G, A].ESIC c)
+  : ES.EsiDef[G, FPa.PathTy[G, A, a, b].PathP].ESIC (FPa.pathCompC G A a b c) =
+  (EsiPath[G, A, a, b, e0, e1, c.1, e.1].esiPath, EsiPath[G, A, a, b, e1, e0, c.2, e.2].esiPath) ;

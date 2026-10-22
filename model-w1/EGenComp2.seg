@@ -1,0 +1,89 @@
+-- EGenComp2.seg: MODEL/Univ/EGenComp.agda, continued (split off to keep each
+-- check well under the ten-second cap): for the uniformity of the
+-- composition of EGen, the restricted box b0 is the box MB of the
+-- restricted EGen-box (boxEq).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module W0 = V[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module FS = FibSub[a, a] ;
+module CN = Conn[a] ;
+open Yon[a] ;
+open UAct[a] ;
+open UnivCtx[a] ;
+open EGenComp[a] ;
+
+module GU (d : Bool) {
+  open GC[d] ;
+
+  ----------------------------------------------------------------------
+  -- Uniformity
+
+  module CU (Y X : Ob) (h : Hom Y X) (b : BU.Box[eS, X]) {
+    b' : BU.Box[eS, Y] = BU.restrict eS Y X h b ;
+
+    module Bx = Box0[eS, X, b] ;
+    module By = Box0[eS, Y, b'] ;
+    module R1 = BU.Restrict[eS, Y, X, h] ;
+    module R0 = Bx.B0.Restrict[eS, Y, X, h] ;
+    module CX = GCX[X, b] ;
+
+    YI : Ob = prodP Y Iv ;
+    XI : Ob = prodP X Iv ;
+
+    cyl : Hom YI XI = cylH Y X h ;
+
+    s : PSub[yP YI, yP XI] = yH YI XI cyl ;
+
+    module SC = FS.SubComp[yP YI, yP XI, Bx.A, s, eS, eT, CX.co] ;
+    module MBy = SC.MB[eS, Y, By.b0] ;
+
+    rb0 : Bx.B0.Box[eS, Y] = Bx.B0.restrict eS Y X h Bx.b0 ;
+
+    mb : Bx.B0.Box[eS, Y] = MBy.box ;
+
+    gL : Hom Y XI = (yP XI).act Y X h ((yP XI).act X XI (lid X eS) (idH XI)) ;
+    gR : Hom Y XI = compH Y YI XI cyl ((yP YI).act Y YI (lid Y eS) (idH YI)) ;
+
+    Elid : Id (Bx.T0.EI Y) (Bx.B0.lidE eS Y rb0.brho rb0.bu) (Bx.B0.lidE eS Y mb.brho mb.bu) =
+      transH (R0.ruE (idH XI) b.bu)
+       (transH (Bx.PH.phiEq' Y gL gR (hom-eq Y XI gL gR (pw-lid Y X h eS))
+                  (Bx.T0.E.act Y X h (Bx.B0.lidE eS X (idH XI) b.bu)).2 b'.bu
+                  (transH (symH (Bx.PH.phiAct Y X h (Bx.B0.lidE eS X (idH XI) b.bu)))
+                   (transH (symH (R1.ruE b.brho b.bu))
+                           (mkE Y (uAct Y YI (lid Y eS) (uAct YI XI cyl Bx.F)) (uAct Y XI gR Bx.F)
+                              (symH (uAct-o Y YI XI cyl (lid Y eS) Bx.F)) (refl (fib0 Y (uAct Y XI gR Bx.F)))
+                              b'.bu b'.bu (refl b'.bu)))))
+               (symH (SC.KG.fromE-eq Y ((yP XI).act Y YI (lid Y eS) MBy.rho) MBy.uE MBy.upt))) ;
+
+    Ev (j : Fin b.br) (W : Ob) (psi : Hom W YI)
+      (i : InQ W Y (rb0.bs j).sQ psi) (i' : InQ W Y (mb.bs j).sQ psi)
+      : Id (Bx.T0.EI W) ((rb0.bs j).svE W psi i) ((mb.bs j).svE W psi i') =
+      transH (R0.rsvE (idH XI) (Bx.side0 j) W psi i)
+       (transH (Bx.PH.phiEq W (compH W YI XI cyl psi)
+                  (Bx.sv0 j W (compH W YI XI cyl psi) (inQ-cyl W Y X h (b.bs j).sQ psi i))
+                  ((b'.bs j).sv W psi i')
+                  (transH (apH (\ k -> Bx.PH.phi W (compH W YI XI cyl psi, (b.bs j).sv W (compH W YI XI cyl psi) k))
+                               (isProp-InQ W X (b.bs j).sQ (compH W YI XI cyl psi)
+                                  (inQ-cyl W Y X h (b.bs j).sQ psi i) (inQ-cyl W Y X h (b.bs j).sQ psi i')))
+                   (transH (symH (R1.rsvE b.brho (b.bs j) W psi i'))
+                           (mkE W (uAct W YI psi (uAct YI XI cyl Bx.F)) (uAct W XI (compH W YI XI cyl psi) Bx.F)
+                              (symH (uAct-o W YI XI cyl psi Bx.F)) (refl (fib0 W (uAct W XI (compH W YI XI cyl psi) Bx.F)))
+                              ((b'.bs j).sv W psi i') ((b'.bs j).sv W psi i') (refl ((b'.bs j).sv W psi i'))))))
+               (symH (MBy.S-E j W psi i'))) ;
+
+    boxEq : Id (Bx.B0.Box[eS, Y]) rb0 mb =
+      Bx.B0.box-ext eS Y rb0.brho mb.brho rb0.bu mb.bu b.br rb0.bs mb.bs rb0.bcs mb.bcs rb0.bcb mb.bcb
+        (refl rb0.brho) Elid (\ j x -> refl ((rb0.bs j).sQ x)) Ev ;
+
+    opaque Elid ; opaque Ev ; opaque boxEq ;
+
+  } ;
+} ;

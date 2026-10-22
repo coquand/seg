@@ -1,0 +1,209 @@
+-- GUnivEq.seg (inside IvBase, any base): the type of univalence
+-- (cours6: Sigma (X : U) Equiv(X, A)) over the universe of a fibrancy
+-- classifier (GUniv.Univ), step G2 of the univalence plan.
+--
+--   encPMap, EncC.encContr, encEqOn   codes one level up: a map is
+--              determined by mE (pmap-ext), a contractibility structure by
+--              kop (contr-ext, partial elements by GUnivL.EncP), KESI is
+--              a proposition
+--   UaU[Cl, ...]   for a classifier:
+--     UaT0 X F   (B : U0 X) * (al : PMap[y X, B, F]) * EqOn (B , F , al)
+--                (an equivalence structure on al with its KESI)
+--     q4Act      substitution of (F , B , al , e) along s : y Y -> y X,
+--                componentwise (uActS, GEqLaws.eqDSub); q4-id / q4-o from
+--                eqD-id / eqD-o and clSub-id / clSub-o (comb: the types
+--                form a set, so the paths agree on them)
+--     UaTy       the presheaf type over UCtx: fibre UaT0, action q4Act
+--                along y f, moved to the given point F' (U0 is a set)
+-- All equations are Ids of codes (CYLINDER.md "Strictness = equality of
+-- codes").
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+module L1 = GPre[a+].PS ;
+open GYon ;
+open Encode[a, a+] ;
+open GLine[a] ;
+module GCF = GCofib[a] ;
+module GCE = GCofEsi[a] ;
+module GQ = GEquiv[a] ;
+module GX = GEqExt[a] ;
+module GL = GEqLaws[a] ;
+module GL2 = GEqLaws2[a] ;
+
+------------------------------------------------------------------------
+-- codes
+
+encPMap (G : PCtx) (B A : PTy[G]) : Enc (PMap[G, B, A]) =
+  encInj (PMap[G, B, A]) (GL.TriL[G].METy B A) (\ al -> al.mE)
+    (\ al al2 P -> GL.TriL[G].pmap-ext B A al al2 (\ X w -> apH (\ m -> m X w) P))
+    (encPi0 Ob (\ X -> GPR.TyL[G, B].EI X -> GPR.TyL[G, A].EI X) GUnivL.encOb (\ X ->
+       encPi0 (GPR.TyL[G, B].EI X) (\ w -> GPR.TyL[G, A].EI X) (encIx0 ((extP G B).ob X)) (\ w -> encIx0 ((extP G A).ob X)))) ;
+
+module EncC (D : PCtx) (C : PTy[D]) {
+  module P = GCF.Partials[D, C] ;
+  module TC = GPR.TyL[D, C] ;
+
+  encContr : Enc (P.ContrOp) =
+    encInj (P.ContrOp) P.KopTy (\ k -> k.kop) (\ k k' Q -> P.contr-ext k k' (\ X x p -> apH (\ m -> m X x p) Q))
+      (encPi0 Ob (\ X -> (x : TC.Pt X) (p : P.Partial[X, x]) -> TC.T X x) GUnivL.encOb (\ X ->
+       encPi0 (TC.Pt X) (\ x -> (p : P.Partial[X, x]) -> TC.T X x) (encIx0 (D.ob X)) (\ x ->
+       encPi0 (P.Partial[X, x]) (\ p -> TC.T X x) (GUnivL.EncP[D, C].encPart X x) (\ p -> encIx0 (C.tob X x))))) ;
+} ;
+
+encEqOn (G : PCtx) (t : GX.EqDat[G].Tri) : Enc (GX.EqDat[G].EqOn t) =
+  encSig (GQ.EquivOp G t.1 t.2.1 t.2.2) (\ e -> GCE.PartialsEsi[GQ.HFib[G, t.1, t.2.1, t.2.2].EA, GQ.HFib[G, t.1, t.2.1, t.2.2].FibT].KESI e)
+    (EncC[GQ.HFib[G, t.1, t.2.1, t.2.2].EA, GQ.HFib[G, t.1, t.2.1, t.2.2].FibT].encContr)
+    (\ e -> encProp (GCE.PartialsEsi[GQ.HFib[G, t.1, t.2.1, t.2.2].EA, GQ.HFib[G, t.1, t.2.1, t.2.2].FibT].KESI e)
+              (GCE.PartialsEsi[GQ.HFib[G, t.1, t.2.1, t.2.2].EA, GQ.HFib[G, t.1, t.2.1, t.2.2].FibT].isProp-KESI e)) ;
+
+opaque encPMap ; opaque encEqOn ;
+
+------------------------------------------------------------------------
+-- pairs over the set of types
+
+-- in a Sigma over types, a path between two pairs with the same type
+-- gives a path of the second components (PTy is a set)
+sndSet (G : PCtx) (C : PTy[G] -> U a+) (A : PTy[G]) (c c2 : C A) (Q : Id ((A' : PTy[G]) * C A') (A, c) (A, c2)) : Id (C A) c c2 =
+  transH (apH (\ q -> subst (PTy[G]) C A A q c)
+                (symH (isSet-PTy G A A (ap ((A' : PTy[G]) * C A') (PTy[G]) (\ w -> w.1) (A, c) (A, c2) Q) (refl A))))
+         (Sigma-snd (PTy[G]) C A A c c2 Q) ;
+
+-- two paths, one of the data and one of (type, classifier), make one
+comb (G : PCtx) (S : U a+) (pi : S -> PTy[G]) (C : PTy[G] -> U a+) (s s' : S) (c : C (pi s)) (c' : C (pi s'))
+  (P1 : Id S s s') (P2 : Id ((A : PTy[G]) * C A) (pi s, c) (pi s', c')) : Id ((x : S) * C (pi x)) (s, c) (s', c') =
+  idJ S s
+    (\ s2 Q -> (c2 : C (pi s2)) -> Id ((A : PTy[G]) * C A) (pi s, c) (pi s2, c2) -> Id ((x : S) * C (pi x)) (s, c) (s2, c2))
+    (\ c2 Q2 -> apH {C (pi s)} {(x : S) * C (pi x)} (\ z -> (s, z)) (sndSet G C (pi s) c c2 Q2))
+    s' P1 c' P2 ;
+
+opaque sndSet ; opaque comb ;
+
+------------------------------------------------------------------------
+-- the type of univalence over a classifier
+
+module UaU (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A)) {
+  module UU = GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl] ;
+
+  Dat (X : Ob) (B F : UU.U0 X) : U a+ = (al : PMap[yP X, B.1, F.1]) * GX.EqDat[yP X].EqOn (B.1, (F.1, al)) ;
+
+  UaT0 (X : Ob) (F : UU.U0 X) : U a+ = (B : UU.U0 X) * Dat X B F ;
+
+  Q4 (X : Ob) : U a+ = (F : UU.U0 X) * UaT0 X F ;
+
+  q4Act (Y X : Ob) (s : PSub[yP Y, yP X]) (q : Q4 X) : Q4 Y =
+    (UU.uActS Y X s q.1,
+     (UU.uActS Y X s q.2.1,
+      ((GL.eqDSub (yP Y) (yP X) s (q.2.1.1, (q.1.1, q.2.2.1)) q.2.2.2).1.2.2,
+       (GL.eqDSub (yP Y) (yP X) s (q.2.1.1, (q.1.1, q.2.2.1)) q.2.2.2).2))) ;
+
+  ----------------------------------------------------------------------
+  -- the laws, through the presentation R: (data , classifier of B) ,
+  -- classifier of F
+
+  EqS (X : Ob) : U a+ = (u : GX.EqDat[yP X].Tri) * GX.EqDat[yP X].EqOn u ;
+
+  R1 (X : Ob) : U a+ = (ue : EqS X) * Cl (yP X) ue.1.1 ;
+
+  R (X : Ob) : U a+ = (y : R1 X) * Cl (yP X) y.1.1.2.1 ;
+
+  toR (X : Ob) (q : Q4 X) : R X = ((((q.2.1.1, (q.1.1, q.2.2.1)), q.2.2.2), q.2.1.2), q.1.2) ;
+
+  fromR (X : Ob) (r : R X) : Q4 X = ((r.1.1.1.2.1, r.2), ((r.1.1.1.1, r.1.2), (r.1.1.1.2.2, r.1.1.2))) ;
+
+  rAct (Y X : Ob) (s : PSub[yP Y, yP X]) (r : R X) : R Y =
+    ((GL.eqDSub (yP Y) (yP X) s r.1.1.1 r.1.1.2, clSub (yP Y) (yP X) s r.1.1.1.1 r.1.2), clSub (yP Y) (yP X) s r.1.1.1.2.1 r.2) ;
+
+  r-id (X : Ob) (r : R X) : Id (R X) r (rAct X X (idS (yP X)) r) =
+    comb (yP X) (R1 X) (\ y -> y.1.1.2.1) (Cl (yP X)) r.1 (rAct X X (idS (yP X)) r).1 r.2 (rAct X X (idS (yP X)) r).2
+      (comb (yP X) (EqS X) (\ ue -> ue.1.1) (Cl (yP X)) r.1.1 (GL.eqDSub (yP X) (yP X) (idS (yP X)) r.1.1.1 r.1.1.2)
+         r.1.2 (clSub (yP X) (yP X) (idS (yP X)) r.1.1.1.1 r.1.2)
+         (GL.LawId[yP X, r.1.1.1, r.1.1.2].eqD-id) (clSub-id (yP X) r.1.1.1.1 r.1.2))
+      (clSub-id (yP X) r.1.1.1.2.1 r.2) ;
+
+  r-o (Z Y X : Ob) (s : PSub[yP Y, yP X]) (s' : PSub[yP Z, yP Y]) (r : R X)
+    : Id (R Z) (rAct Z X (oS (yP Z) (yP Y) (yP X) s s') r) (rAct Z Y s' (rAct Y X s r)) =
+    comb (yP Z) (R1 Z) (\ y -> y.1.1.2.1) (Cl (yP Z))
+      (rAct Z X (oS (yP Z) (yP Y) (yP X) s s') r).1 (rAct Z Y s' (rAct Y X s r)).1
+      (rAct Z X (oS (yP Z) (yP Y) (yP X) s s') r).2 (rAct Z Y s' (rAct Y X s r)).2
+      (comb (yP Z) (EqS Z) (\ ue -> ue.1.1) (Cl (yP Z))
+         (GL.eqDSub (yP Z) (yP X) (oS (yP Z) (yP Y) (yP X) s s') r.1.1.1 r.1.1.2)
+         (GL.eqDSub (yP Z) (yP Y) s' (GL.eqDSub (yP Y) (yP X) s r.1.1.1 r.1.1.2).1 (GL.eqDSub (yP Y) (yP X) s r.1.1.1 r.1.1.2).2)
+         (clSub (yP Z) (yP X) (oS (yP Z) (yP Y) (yP X) s s') r.1.1.1.1 r.1.2)
+         (clSub (yP Z) (yP Y) s' (subTy (yP Y) (yP X) r.1.1.1.1 s) (clSub (yP Y) (yP X) s r.1.1.1.1 r.1.2))
+         (GL2.LawO[yP Z, yP Y, yP X, s, s', r.1.1.1, r.1.1.2].eqD-o) (clSub-o (yP Z) (yP Y) (yP X) s s' r.1.1.1.1 r.1.2))
+      (clSub-o (yP Z) (yP Y) (yP X) s s' r.1.1.1.2.1 r.2) ;
+
+  q4-id (X : Ob) (q : Q4 X) : Id (Q4 X) q (q4Act X X (idS (yP X)) q) = apH (fromR X) (r-id X (toR X q)) ;
+
+  q4-o (Z Y X : Ob) (s : PSub[yP Y, yP X]) (s' : PSub[yP Z, yP Y]) (q : Q4 X)
+    : Id (Q4 Z) (q4Act Z X (oS (yP Z) (yP Y) (yP X) s s') q) (q4Act Z Y s' (q4Act Y X s q)) =
+    apH (fromR Z) (r-o Z Y X s s' (toR X q)) ;
+
+  opaque r-id ; opaque r-o ; opaque q4-id ; opaque q4-o ;
+
+  ----------------------------------------------------------------------
+  -- the presheaf type over UCtx
+
+  -- U0 is a set (it is coded), so pairs with the same first point are
+  -- compared by their second components
+  fibEq (X : Ob) (F : UU.U0 X) (y y' : UaT0 X F) (Q : Id (Q4 X) (F, y) (F, y')) : Id (UaT0 X F) y y' =
+    transH (apH (\ q -> subst (UU.U0 X) (UaT0 X) F F q y)
+                  (symH (V1.isSetIx (UU.codeU X) F F (ap (Q4 X) (UU.U0 X) (\ w -> w.1) (F, y) (F, y') Q) (refl F))))
+           (Sigma-snd (UU.U0 X) (UaT0 X) F F y y' Q) ;
+
+  pairSubst (X : Ob) (F F' : UU.U0 X) (e : Id (UU.U0 X) F F') (y : UaT0 X F)
+    : Id (Q4 X) (F', subst (UU.U0 X) (UaT0 X) F F' e y) (F, y) =
+    idJ (UU.U0 X) F (\ F2 e2 -> Id (Q4 X) (F2, subst (UU.U0 X) (UaT0 X) F F2 e2 y) (F, y)) (refl (F, y)) F' e ;
+
+  opaque fibEq ; opaque pairSubst ;
+
+  encUa (X : Ob) (F : UU.U0 X) : Enc (UaT0 X F) =
+    encSig (UU.U0 X) (\ B -> Dat X B F) (UU.encU X) (\ B ->
+      encSig (PMap[yP X, B.1, F.1]) (\ al -> GX.EqDat[yP X].EqOn (B.1, (F.1, al))) (encPMap (yP X) B.1 F.1) (\ al ->
+        encEqOn (yP X) (B.1, (F.1, al)))) ;
+
+  encUaf (X : Ob) (F : UU.U0 X) (z : UaT0 X F) : V1.V = (encUa X F).1 z ;
+
+  encUainj (X : Ob) (F : UU.U0 X) : V1.Inj (UaT0 X F) (encUaf X F) = (encUa X F).2 ;
+
+  opaque encUaf ; opaque encUainj ;
+
+  codeUa (X : Ob) (F : UU.U0 X) : V1.V = V1.mkV (UaT0 X F) (encUaf X F) (encUainj X F) ;
+
+  uaTact (J I : Ob) (f : Hom J I) (F : UU.U0 I) (F' : UU.U0 J) (e : Id (UU.U0 J) (UU.uAct J I f F) F') (y : UaT0 I F) : UaT0 J F' =
+    subst (UU.U0 J) (UaT0 J) (UU.uAct J I f F) F' e (q4Act J I (yH J I f) (F, y)).2 ;
+
+  uaTid (I : Ob) (F : UU.U0 I) (e : Id (UU.U0 I) (UU.uAct I I (idH I) F) F) (y : UaT0 I F) : Id (UaT0 I F) (uaTact I I (idH I) F F e y) y =
+    fibEq I F (uaTact I I (idH I) F F e y) y
+      (transH (pairSubst I (UU.uAct I I (idH I) F) F e (q4Act I I (yH I I (idH I)) (F, y)).2)
+        (transH (apH (\ s -> q4Act I I s (F, y)) (yH-idH I)) (symH (q4-id I (F, y))))) ;
+
+  uaTo (K J I : Ob) (f : Hom J I) (g : Hom K J) (F : UU.U0 I) (F' : UU.U0 J) (F'' : UU.U0 K)
+    (e1 : Id (UU.U0 J) (UU.uAct J I f F) F') (e2 : Id (UU.U0 K) (UU.uAct K J g F') F'')
+    (e3 : Id (UU.U0 K) (UU.uAct K I (compH K J I f g) F) F'') (y : UaT0 I F)
+    : Id (UaT0 K F'') (uaTact K I (compH K J I f g) F F'' e3 y) (uaTact K J g F' F'' e2 (uaTact J I f F F' e1 y)) =
+    fibEq K F'' (uaTact K I (compH K J I f g) F F'' e3 y) (uaTact K J g F' F'' e2 (uaTact J I f F F' e1 y))
+      (transH (pairSubst K (UU.uAct K I (compH K J I f g) F) F'' e3 (q4Act K I (yH K I (compH K J I f g)) (F, y)).2)
+       (transH (apH (\ s -> q4Act K I s (F, y)) (yH-compH K J I f g))
+        (transH (q4-o K J I (yH J I f) (yH K J g) (F, y))
+         (transH (apH (q4Act K J (yH K J g)) (symH (pairSubst J (UU.uAct J I f F) F' e1 (q4Act J I (yH J I f) (F, y)).2)))
+                 (symH (pairSubst K (UU.uAct K J g F') F'' e2 (q4Act K J (yH K J g) (F', uaTact J I f F F' e1 y)).2)))))) ;
+
+  opaque uaTid ; opaque uaTo ;
+
+  UaTy : L1.PTy[UU.UCtx] =
+    new L1.PTy[UU.UCtx, \ I F -> codeUa I F, uaTact, uaTid, \ K J I f g x y z e1 e2 e3 a -> uaTo K J I f g x y z e1 e2 e3 a] ;
+} ;

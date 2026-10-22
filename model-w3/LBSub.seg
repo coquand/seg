@@ -1,0 +1,172 @@
+-- LBSub.seg: MODEL/Univ/LBSub.agda.  Base change for LBox fillers.  For
+-- sigma : L' -> L and S' = S [sigma],
+--   mapB         a box of S' as a box of S (values through Ls)
+--   FillSubOK    the filler of S' is the filler of S read back:
+--                Ls (fop' b') = fop (mapB b')
+--   mapLD        LBox data for S' as LBox data for S
+--   FE-sub       Ls (FE' D') = FE (mapLD D')
+-- (FillSubOK holds for the fillers of a substituted composition: FillSub.)
+-- Agda's anonymous modules are the segments LBF (fillers) and FS (fok).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module CN = Conn[a] ;
+open CN ;
+open Cofib[a] ;
+open ExtKit[a] ;
+
+module LBS (L' L : PCtx) (sg : PSub[L', L]) (S : PTy[L]) (eS : El Iv) {
+  S' : PTy[L'] = subTy L' L S sg ;
+
+  module SE = Transp[a].SubE[L', L, S, sg] ;
+  module B = BXm.Boxes[L, S] ;
+  module B' = BXm.Boxes[L', S'] ;
+  module KG = FibM.Kit[L, S] ;
+  module TL = PR.TyL[L, S] ;
+  module TL' = PR.TyL[L', S'] ;
+
+  EL : PCtx = TL.E ;
+  EL' : PCtx = TL'.E ;
+
+  ----------------------------------------------------------------------
+  -- Boxes of S' as boxes of S
+
+  module MapB (X : Ob) (b : B'.Box[eS, X]) {
+    rhoD : W0.Ix (L'.ob (prodP X Iv)) = b.brho ;
+
+    rho : W0.Ix (L.ob (prodP X Iv)) = sg.nt (prodP X Iv) rhoD ;
+
+    uE : TL.EI X = SE.Ls X (B'.lidE eS X rhoD b.bu) ;
+
+    upt : Id (W0.Ix (L.ob X)) uE.1 (L.act X (prodP X Iv) (lid X eS) rho) = sg.nt-nat X (prodP X Iv) (lid X eS) rhoD ;
+
+    u : TL.T X (L.act X (prodP X Iv) (lid X eS) rho) = KG.fromE X (L.act X (prodP X Iv) (lid X eS) rho) uE upt ;
+
+    v (l : Fin b.br) : KG.VTy X (b.bs l).sQ = \ W psi i -> SE.Ls W ((b.bs l).svE W psi i) ;
+
+    vpt (l : Fin b.br) : KG.VPt X rho (b.bs l).sQ (v l) = \ W psi i -> sg.nt-nat W (prodP X Iv) psi rhoD ;
+
+    vnat (l : Fin b.br) : KG.VNat X (b.bs l).sQ (v l) = \ W' W chi psi i i' ->
+      transH (symH (SE.Ls-act W' W chi ((b.bs l).svE W psi i))) (apH (SE.Ls W') ((b.bs l).snat W' W chi psi i i')) ;
+
+    Sd (l : Fin b.br) : B.Side[X, rho] = KG.mkSideE X rho (b.bs l).sQ (v l) (vpt l) (vnat l) ;
+
+    S-E (l : Fin b.br) (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X (b.bs l).sQ psi)
+      : Id (TL.EI W) ((Sd l).svE W psi i) (v l W psi i) = KG.mkSideE-E X rho (b.bs l).sQ (v l) (vpt l) (vnat l) W psi i ;
+
+    u-E : Id (TL.EI X) (B.lidE eS X rho u) uE = KG.fromE-eq X (L.act X (prodP X Iv) (lid X eS) rho) uE upt ;
+
+    cs : B.CsTy X rho b.br Sd = \ l j W psi i i' ->
+      TL.pr-inj W (L.act W (prodP X Iv) psi rho) ((Sd l).sv W psi i) ((Sd j).sv W psi i')
+        (transH (S-E l W psi i)
+         (transH (apH {TL'.T W (L'.act W (prodP X Iv) psi rhoD)} {TL.EI W} (\ z -> SE.Ls W (L'.act W (prodP X Iv) psi rhoD, z))
+                     (b.bcs l j W psi i i'))
+                 (symH (S-E j W psi i')))) ;
+
+    cb : B.CbTy eS X rho u b.br Sd = \ l W phi i ->
+      transH (apH (EL.act W X phi) u-E)
+       (transH (symH (SE.Ls-act W X phi (B'.lidE eS X rhoD b.bu)))
+        (transH (apH (SE.Ls W) (b.bcb l W phi i)) (symH (S-E l W (compH W X (prodP X Iv) (lid X eS) phi) i)))) ;
+
+    opaque cs ; opaque cb ;
+
+    box : B.Box[eS, X] = (B.mkBox eS X rho u b.br Sd cs cb) ;
+  } ;
+
+  mapB (X : Ob) (b : B'.Box[eS, X]) : B.Box[eS, X] = MapB[X, b].box ;
+
+  module LBF (fA : FibM.FillDef[L, S].FillOp[eS]) (fA' : FibM.FillDef[L', S'].FillOp[eS]) {
+    module LB = LBox[a].LBox[L, S, eS, fA] ;
+    module LB' = LBox[a].LBox[L', S', eS, fA'] ;
+
+    FillSubOK : U a = (X : Ob) (b : B'.Box[eS, X])
+      -> Id (TL.EI (prodP X Iv)) (SE.Ls (prodP X Iv) (b.brho, fA'.fop X b)) ((mapB X b).brho, fA.fop X (mapB X b)) ;
+
+    ------------------------------------------------------------------
+    -- Data for S' as data for S
+
+    mapFam (X : Ob) (rho' : W0.Ix (L'.ob (prodP X Iv))) (lw' : TL'.EI X) (r : Nat) (F : LB'.LFam[X, rho', lw', r])
+      : LB.LFam[X, sg.nt (prodP X Iv) rho', SE.Ls X lw', r] =
+      new LB.LFam[X, sg.nt (prodP X Iv) rho', SE.Ls X lw', r,
+        F.fQ,
+        \ l W f i -> SE.Ls (prodP W Iv) (F.fP l W f i),
+        \ l W f i -> transH (apH (sg.nt (prodP W Iv)) (F.fpt l W f i)) (sg.nt-nat (prodP W Iv) (prodP X Iv) (cylH W X f) rho'),
+        \ l W' W chi f i i' -> transH (apH (SE.Ls (prodP W' Iv)) (F.fnat l W' W chi f i i'))
+                                      (SE.Ls-act (prodP W' Iv) (prodP W Iv) (cylH W' W chi) (F.fP l W f i)),
+        \ l W f i -> transH (symH (SE.Ls-act W (prodP W Iv) (lid W eS) (F.fP l W f i)))
+                            (transH (apH (SE.Ls W) (F.flid l W f i)) (SE.Ls-act W X f lw'))] ;
+
+    mapLD (X : Ob) (rho' : W0.Ix (L'.ob (prodP X Iv))) (r1 r2 : Nat) (D : LB'.LData[X, rho', r1, r2])
+      : LB.LData[X, sg.nt (prodP X Iv) rho', r1, r2] =
+      new LB.LData[X, sg.nt (prodP X Iv) rho', r1, r2, SE.Ls X D.lw,
+        transH (apH (sg.nt X) D.lwpt) (sg.nt-nat X (prodP X Iv) (lid X eS) rho'),
+        mapFam X rho' D.lw r1 D.F1, mapFam X rho' D.lw r2 D.F2,
+        \ l l' W f i i' -> apH (SE.Ls (prodP W Iv)) (D.c11 l l' W f i i'),
+        \ l l' W f i i' -> apH (SE.Ls (prodP W Iv)) (D.c12 l l' W f i i'),
+        \ l l' W f i i' -> apH (SE.Ls (prodP W Iv)) (D.c22 l l' W f i i')] ;
+
+    module BE (X : Ob) (rho' : W0.Ix (L'.ob (prodP X Iv))) (r1 r2 : Nat) (D : LB'.LData[X, rho', r1, r2]) {
+      module Bx' = LB'.Bx[X, rho', r1, r2, D] ;
+      module Bx = LB.Bx[X, sg.nt (prodP X Iv) rho', r1, r2, mapLD X rho' r1 r2 D] ;
+      module M = MapB[X, Bx'.box] ;
+
+      eQs : (s : Plus (Fin r1) (Fin r2)) (t : Tree) -> Id Bool ((Bx'.sideAt s).sQ t) ((Bx.sideAt s).sQ t) = split {
+        inl l -> \ t -> refl (D.F1.fQ l t) ;
+        inr l -> \ t -> refl (D.F2.fQ l t) } ;
+
+      evs : (s : Plus (Fin r1) (Fin r2)) (W : Ob) (psi : Hom W (prodP X Iv))
+        (i : InQ W X (Bx'.sideAt s).sQ psi) (i' : InQ W X (Bx.sideAt s).sQ psi)
+        -> Id (TL.EI W) (SE.Ls W (Bx'.valAt s W psi i)) (Bx.valAt s W psi i') = split {
+        inl l -> \ W psi i i' ->
+          transH (apH (\ j -> SE.Ls W (Bx'.valAt (inl l) W psi j)) (isProp-InQ W X (D.F1.fQ l) psi i i'))
+                 (SE.Ls-act W (prodP W Iv) (evm X W psi)
+                    (D.F1.fP l W (compH W (prodP X Iv) X (pX X) psi) (landsQ W X (D.F1.fQ l) psi i'))) ;
+        inr l -> \ W psi i i' ->
+          transH (apH (\ j -> SE.Ls W (Bx'.valAt (inr l) W psi j)) (isProp-InQ W X (D.F2.fQ l) psi i i'))
+                 (SE.Ls-act W (prodP W Iv) (evm X W psi)
+                    (D.F2.fP l W (compH W (prodP X Iv) X (pX X) psi) (landsQ W X (D.F2.fQ l) psi i'))) } ;
+
+      res : Id (B.Box[eS, X]) (mapB X Bx'.box) Bx.box =
+        B.box-ext eS X M.rho Bx.rho' M.u Bx.u (plus r1 r2) M.Sd Bx.sides M.cs Bx.cs M.cb Bx.cb
+          (refl M.rho)
+          (transH M.u-E (transH (apH (SE.Ls X) Bx'.lidE-u) (symH Bx.lidE-u)))
+          (\ j t -> eQs (splitF r1 r2 j) t)
+          (\ j W psi i i' ->
+             transH (M.S-E j W psi i)
+              (transH (apH (SE.Ls W) (Bx'.valAt-E (splitF r1 r2 j) W psi i))
+               (transH (evs (splitF r1 r2 j) W psi i i')
+                       (symH (Bx.valAt-E (splitF r1 r2 j) W psi i'))))) ;
+    } ;
+
+    boxEq (X : Ob) (rho' : W0.Ix (L'.ob (prodP X Iv))) (r1 r2 : Nat) (D : LB'.LData[X, rho', r1, r2])
+      : Id (B.Box[eS, X]) (mapB X LB'.Bx[X, rho', r1, r2, D].box) LB.Bx[X, sg.nt (prodP X Iv) rho', r1, r2, mapLD X rho' r1 r2 D].box =
+      BE[X, rho', r1, r2, D].res ;
+
+    opaque boxEq ;
+
+    module FS (fok : FillSubOK) {
+      FE-sub (X : Ob) (rho' : W0.Ix (L'.ob (prodP X Iv))) (r1 r2 : Nat) (D : LB'.LData[X, rho', r1, r2])
+        : Id (TL.EI (prodP X Iv)) (SE.Ls (prodP X Iv) (LB'.FE X rho' r1 r2 D)) (LB.FE X (sg.nt (prodP X Iv) rho') r1 r2 (mapLD X rho' r1 r2 D)) =
+        transH (apH (\ z -> SE.Ls (prodP X Iv) (rho', z)) (LB'.fopA-def X rho' r1 r2 D))
+         (transH (fok X LB'.Bx[X, rho', r1, r2, D].box)
+          (transH (apH (\ bb -> (bb.brho, fA.fop X bb)) (boxEq X rho' r1 r2 D))
+                  (symH (apH {TL.T (prodP X Iv) (sg.nt (prodP X Iv) rho')} {TL.EI (prodP X Iv)} (\ z -> (sg.nt (prodP X Iv) rho', z))
+                           (LB.fopA-def X (sg.nt (prodP X Iv) rho') r1 r2 (mapLD X rho' r1 r2 D)))))) ;
+
+      opaque FE-sub ;
+    } ;
+  } ;
+} ;

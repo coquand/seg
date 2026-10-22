@@ -1,0 +1,99 @@
+-- GLocal2[lv].seg (inside IvBase): pulling back commutes with restriction.
+-- Restricting a pulled problem along h : Y -> X1 gives the problem pulled
+-- along the restricted line h* d at the restricted point (tvP-shift,
+-- res-shift, part-shift).
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+open Trees[a] ;
+open Arith[a] ;
+module W0 = V[lv] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+module FM = GFam[lv] ;
+
+module Shift (G : PCtx) (A : PTy[G]) (X : Ob) (l : W0.Ix ((FM.FC[G]).ob X)) (e : IPt)
+  (X1 : Ob) (d : W0.Ix ((FM.FC[GLocal[lv].Pts[X].P]).ob X1)) (y : EndKit[FM.famPath, G, A, e].TV.EI X1)
+  (q : Id (W0.Ix ((FM.FC[G]).ob X1)) (GLocal[lv].Loc[G, A].Pull[X, l, e].MF.mapF X1 d) y.1)
+  (Y : Ob) (h : Hom Y X1) {
+  module PL = GLocal[lv].Loc[G, A].Pull[X, l, e] ;
+  module KA = PL.KA ;
+  module KB = PL.KB ;
+
+  d' : W0.Ix (PL.FD.ob Y) = PL.FD.actF Y X1 h d ;
+
+  y' : KA.TV.EI Y = KA.TV.E.act Y X1 h y ;
+
+  q' : Id (W0.Ix (FM.FC[G].ob Y)) (PL.MF.mapF Y d') y'.1 =
+    transH (symH (PL.MF.mapF-act Y X1 h d)) (apH (FM.FC[G].actF Y X1 h) q) ;
+
+  module P1 = PL.PP[X1, d, y, q] ;
+  module P2 = PL.PP[Y, d', y', q'] ;
+
+  -- the restricted pulled point is the pulled restricted point
+  tvP-shift : Id (KB.TV.EI Y) (KB.TV.E.act Y X1 h P1.x0) P2.x0 =
+    KB.tv-eq Y (KB.TV.E.act Y X1 h P1.x0) P2.x0 (refl d')
+      (PL.tb-eq Y (KB.endE Y (KB.TV.E.act Y X1 h P1.x0)) (KB.endE Y P2.x0)
+        (refl ((FM.famPath.pev PL.D e).nt Y d'))
+        (calc (GPR.TyL[G, A].EI Y) {
+            PL.rd Y (KB.endE Y (KB.TV.E.act Y X1 h P1.x0))
+          =< apH (PL.rd Y) (KB.endE-act Y X1 h P1.x0) >
+            PL.rd Y (PL.TB.E.act Y X1 h (KB.endE X1 P1.x0))
+          =< PL.rd-act Y X1 h (KB.endE X1 P1.x0) >
+            GPR.TyL[G, A].E.act Y X1 h (PL.rd X1 (KB.endE X1 P1.x0))
+          =< apH (GPR.TyL[G, A].E.act Y X1 h) (PL.tvP-rd X1 d y q) >
+            GPR.TyL[G, A].E.act Y X1 h (KA.endE X1 y)
+          =< symH (KA.endE-act Y X1 h y) >
+            KA.endE Y y'
+          =< symH (PL.tvP-rd Y d' y' q') >
+            PL.rd Y (KB.endE Y P2.x0) })) ;
+
+  -- pulled elements of the fibres
+  res-shift (W : Ob) (g : Hom W Y) (u : KA.TS.EI W)
+    (pu : Id (KA.TV.EI W) u.1 (KA.TV.E.act W X1 (compH W Y X1 h g) y)) (pu' : Id (KA.TV.EI W) u.1 (KA.TV.E.act W Y g y'))
+    : Id (KB.TS.EI W) (P1.res W (compH W Y X1 h g) u pu) (P2.res W g u pu') =
+    PL.LB.ts-ext W (P1.res W (compH W Y X1 h g) u pu) (P2.res W g u pu')
+      (transH (P1.res-pt W (compH W Y X1 h g) u pu)
+        (transH (KB.TV.E.act-o W Y X1 h g P1.x0)
+          (transH (apH (KB.TV.E.act W Y g) tvP-shift) (symH (P2.res-pt W g u pu')))))
+      (\ V g' j ->
+        transH (P1.res-val W (compH W Y X1 h g) u pu V g' j)
+          (transH
+            (PL.tb-eq V (PL.TSP[X1, d, y, q, W, compH W Y X1 h g, u, pu].t V g' j)
+                        (PL.TSP[Y, d', y', q', W, g, u, pu'].t V g' j)
+              (apH (\ k -> d.1 V k j) (comp-assoc V W Y X1 h g g'))
+              (transH (PL.pv-rd V (d.1 V (compH V W X1 (compH W Y X1 h g) g') j) (u.2.1.1.1 V g' j)
+                         (PL.TSP[X1, d, y, q, W, compH W Y X1 h g, u, pu].qg V g' j))
+                      (symH (PL.pv-rd V (d'.1 V (compH V W Y g g') j) (u.2.1.1.1 V g' j)
+                         (PL.TSP[Y, d', y', q', W, g, u, pu'].qg V g' j)))))
+            (symH (P2.res-val W g u pu' V g' j)))) ;
+
+  opaque tvP-shift ; opaque res-shift ;
+
+  -- pulled partial elements
+  part-shift (p : KA.PT.Partial[X1, y])
+    : Id (KB.PT.Partial[Y, P2.x0])
+         (subst (KB.TV.EI Y) (\ z -> KB.PT.Partial[Y, z]) (KB.TV.E.act Y X1 h P1.x0) P2.x0 tvP-shift
+            (KB.PT.restrictP Y X1 h P1.x0 (P1.part p)))
+         (P2.part (KA.PT.restrictP Y X1 h y p)) =
+    KB.PT.partExtH Y (KB.TV.E.act Y X1 h P1.x0) P2.x0 tvP-shift
+      (KB.PT.restrictP Y X1 h P1.x0 (P1.part p)) (P2.part (KA.PT.restrictP Y X1 h y p))
+      (refl p.pr)
+      (\ k -> refl (pre Y X1 h (p.ps k).pQ))
+      (\ k W g i i' ->
+        transH (P1.res-eq W (compH W Y X1 h g) (compH W Y X1 h g) (refl (compH W Y X1 h g))
+                  ((p.ps k).pv W (compH W Y X1 h g) (lands-pre W Y X1 h (p.ps k).pQ g i))
+                  ((p.ps k).pv W (compH W Y X1 h g) (lands-pre W Y X1 h (p.ps k).pQ g i'))
+                  (KA.PT.pv-irr X1 y (p.ps k) W (compH W Y X1 h g) (lands-pre W Y X1 h (p.ps k).pQ g i) (lands-pre W Y X1 h (p.ps k).pQ g i'))
+                  ((p.ps k).ppt W (compH W Y X1 h g) (lands-pre W Y X1 h (p.ps k).pQ g i))
+                  ((p.ps k).ppt W (compH W Y X1 h g) (lands-pre W Y X1 h (p.ps k).pQ g i')))
+          (res-shift W g ((p.ps k).pv W (compH W Y X1 h g) (lands-pre W Y X1 h (p.ps k).pQ g i'))
+             ((p.ps k).ppt W (compH W Y X1 h g) (lands-pre W Y X1 h (p.ps k).pQ g i'))
+             (((KA.PT.restrictP Y X1 h y p).ps k).ppt W g i'))) ;
+
+  opaque part-shift ;
+} ;

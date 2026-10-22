@@ -1,0 +1,82 @@
+-- GTE14.seg (inside IvBase.Cn): transport along a line, part 14: the
+-- extension is uniform (kunif: B part GTE12.bnN, path GTE13.pathN), so
+-- transport along a fibrant line is an equivalence:
+--
+--   TrE[G, A, d, ca, cb, c01, D, ln].trEquiv : EquivOp D SB SA tr
+--   caOf / cbOf    the compositions of a fibrancy structure in the
+--                  direction d and back (by cases on d)
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module TrE (G : PCtx) (A : PTy[G]) (d : Bool) (ca : CompAtP[GFam[lv].famPath, G, A, src d, tgt d].CompAt)
+  (cb : CompAtP[GFam[lv].famPath, G, A, tgt d, src d].CompAt)
+  (c01 : CompAtP[GFam[lv].famPath, G, A, e0, e1].CompAt)
+  (D : PCtx) (ln : PSub[D, GFam[lv].famPath.pth G]) {
+  module EX = GTE10[lv].Ext[G, A, d, ca, cb, c01, D, ln] ;
+  module KS = GTE11[lv].KS[G, A, d, ca, cb, c01, D, ln] ;
+  module BU = GTE12[lv].BU[G, A, d, ca, cb, c01, D, ln] ;
+  module PU = GTE13[lv].PU[G, A, d, ca, cb, c01, D, ln] ;
+  module T1 = EX.T1 ;
+  module HF = EX.HF ;
+  module FP = EX.B.FP ;
+
+  kop (X : Ob) (w : HF.TA.EI X) (p : FP.Partial[X, w]) : HF.TF.T X w = EX.Bx[X, w, p].kop ;
+
+  kside (X : Ob) (w : HF.TA.EI X) (p : FP.Partial[X, w]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (h : Lands W X (p.ps l).pQ f)
+    : Id (HF.TF.EI W) (HF.TF.E.act W X f (w, kop X w p)) ((p.ps l).pv W f h) = KS.Sd[X, w, p, l, W, f, h].kside ;
+
+  module Un (Y X : Ob) (h : Hom Y X) (w : HF.TA.EI X) (p : FP.Partial[X, w]) {
+    module XB = EX.Bx[X, w, p] ;
+    module YB = EX.Bx[Y, HF.TA.E.act Y X h w, FP.restrictP Y X h w p] ;
+    module UB = BU.Un[Y, X, h, w, p] ;
+    module UP = PU.Un[Y, X, h, w, p] ;
+
+    ql (W : Ob) (g : Hom W Y) (i : Hom W Iv) : Id (HF.TA.EI W) (XB.t W (compH W Y X h g) i) (YB.t W g i) =
+      EX.saInj W (XB.t W (compH W Y X h g) i) (YB.t W g i)
+        (symH (GPR.PshL[D].actC W Y X h g w.1))
+        (transH (XB.t-rd W (compH W Y X h g) i)
+          (transH (apH (\ z -> z.2.1.1 W g i) UP.pathN) (symH (YB.t-rd W g i)))) ;
+
+    res : Id (HF.TF.EI Y) (HF.TF.E.act Y X h (w, kop X w p)) (HF.TA.E.act Y X h w, kop Y (HF.TA.E.act Y X h w) (FP.restrictP Y X h w p)) =
+      HF.fibE-eq Y (HF.TF.E.act Y X h (w, kop X w p)) (HF.TA.E.act Y X h w, kop Y (HF.TA.E.act Y X h w) (FP.restrictP Y X h w p))
+        (refl (HF.TA.E.act Y X h w))
+        (transH (HF.fibB-act Y X h (w, kop X w p)) UB.bnN)
+        ql ;
+
+    opaque ql ;
+  } ;
+
+  kunif (Y X : Ob) (h : Hom Y X) (w : HF.TA.EI X) (p : FP.Partial[X, w])
+    : Id (HF.TF.EI Y) (HF.TF.E.act Y X h (w, kop X w p)) (HF.TA.E.act Y X h w, kop Y (HF.TA.E.act Y X h w) (FP.restrictP Y X h w p)) =
+    Un[Y, X, h, w, p].res ;
+
+  trEquiv : GEquiv[lv].EquivOp D T1.SB T1.SA T1.tr = new FP.ContrOp[kop, kside, kunif] ;
+} ;
+
+-- the compositions of a fibrancy structure in the direction d and back
+caOf (G : PCtx) (A : PTy[G]) : (d : Bool) -> GFibE[lv].FE[G, A].Comp -> CompAtP[GFam[lv].famPath, G, A, src d, tgt d].CompAt = split {
+  true -> \ c -> c.1 ;
+  false -> \ c -> c.2 } ;
+
+cbOf (G : PCtx) (A : PTy[G]) : (d : Bool) -> GFibE[lv].FE[G, A].Comp -> CompAtP[GFam[lv].famPath, G, A, tgt d, src d].CompAt = split {
+  true -> \ c -> c.2 ;
+  false -> \ c -> c.1 } ;
+
+-- transport along a line of a fibrant type, in the direction d
+module TrF (G : PCtx) (A : PTy[G]) (c : GFibE[lv].FE[G, A].Comp) (d : Bool) (D : PCtx) (ln : PSub[D, GFam[lv].famPath.pth G]) {
+  module T = TrE[G, A, d, caOf G A d c, cbOf G A d c, c.1, D, ln] ;
+  SB : PTy[D] = T.T1.SB ;
+  SA : PTy[D] = T.T1.SA ;
+  tr : PMap[D, SB, SA] = T.T1.tr ;
+  trEquiv : GEquiv[lv].EquivOp D SB SA tr = T.trEquiv ;
+} ;

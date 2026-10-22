@@ -1,0 +1,262 @@
+-- ExtComp2T.seg: MODEL/Poset/ExtComp2T.agda.  Theorem 7, part 2T: the
+-- partial element PE of the fibre of alpha over wq X c q (sides: the
+-- values vA on the sides of c, vD on delta; ExtComp2), and theta = its
+-- extension by the equivalence structure eal.  Laws: theta on a full side
+-- (th-full), uniformity (th-nat), th-cong.  th is opaque (with th-def).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module CN = Conn[a] ;
+open CN ;
+open VCode[a] ;
+module CF = Cofib[a] ;
+open CF ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open ExtKit[a] ;
+open ExtComp1E[a] ;
+
+module C2T (G : PCtx) (A : PTy[G]) (psi : CF.GP.Cof[G]) (B : PTy[CF.GP.CofL[G, psi].resCtx])
+  (al : PMap[CF.GP.CofL[G, psi].resCtx, B, subTy CF.GP.CofL[G, psi].resCtx G A CF.GP.CofL[G, psi].inclR]) (d : Bool)
+  (fAS : FibM.FillDef[G, A].FillOp[src d]) (fBS : FibM.FillDef[CF.GP.CofL[G, psi].resCtx, B].FillOp[src d])
+  (eal : EquivOp CF.GP.CofL[G, psi].resCtx B (subTy CF.GP.CofL[G, psi].resCtx G A CF.GP.CofL[G, psi].inclR) al) {
+  open CF.GP.CofL[G, psi] ;
+  open CF.CofD[G, psi] ;
+  open BaseP.GExt.ExtDef[G, A, psi] ;
+  open ExtB[B, al] ;
+  open BaseP.GExt3.ExtB3[G, A, psi, B, al] ;
+  open BaseP.GExt4.ExtB4[G, A, psi, B, al] ;
+  open ExtComp1[a].C1[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp1E[a].C1E[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp1b[a].C1b[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp2[a].C2[G, A, psi, B, al, d, fAS, fBS, eal] ;
+  open ExtComp2N[a].C2N[G, A, psi, B, al, d, fAS, fBS, eal] ;
+
+  ----------------------------------------------------------------------
+  -- The partial element, and theta
+
+  module PEm (X : Ob) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c))) {
+    w : TA'.EI X = wq X c q ;
+
+    nr : Nat = plus c.br r ;
+
+    QAt : Plus (Fin c.br) (Fin r) -> Subset X = split {
+      inl l -> (c.bs l).sQ ;
+      inr k -> (dQ X c.brho k) } ;
+
+    vAt : (s : Plus (Fin c.br) (Fin r)) (V : Ob) (g : Hom V X) -> Lands V X (QAt s) g -> FA.TF.EI V = split {
+      inl l -> vA X c q l ;
+      inr k -> vD X c q k } ;
+
+    vAt-pt : (s : Plus (Fin c.br) (Fin r)) -> PA.PptTy X w (QAt s) (vAt s) = split {
+      inl l -> \ V g i -> constFib-pt V (xg X c q V g) (bA X c q l V g i) (ptA X c q l V g i) (eA X c q l V g i) ;
+      inr k -> \ V g i -> constFib-pt V (xg X c q V g) (bD X c k V g i) (ptD X c q k V g i) (eD X c q k V g i) } ;
+
+    vAt-nat : (s : Plus (Fin c.br) (Fin r)) -> PA.PnTy X (QAt s) (vAt s) = split {
+      inl l -> vA-nat X c q l ;
+      inr k -> vD-nat X c q k } ;
+
+    CsG (s s' : Plus (Fin c.br) (Fin r)) : U a = (V : Ob) (g : Hom V X)
+      (i : Lands V X (QAt s) g) (i' : Lands V X (QAt s') g) -> Id (FA.TF.EI V) (vAt s V g i) (vAt s' V g i') ;
+
+    csL (l : Fin c.br) : (s' : Plus (Fin c.br) (Fin r)) -> CsG (inl l) s' = split {
+      inl l' -> cAA X c q l l' ;
+      inr k -> cAD X c q l k } ;
+
+    csR (k : Fin r) : (s' : Plus (Fin c.br) (Fin r)) -> CsG (inr k) s' = split {
+      inl l -> \ V g i i' -> symH (cAD X c q l k V g i' i) ;
+      inr k' -> cDD X c q k k' } ;
+
+    vAt-cs : (s s' : Plus (Fin c.br) (Fin r)) -> CsG s s' = split { inl l -> csL l ; inr k -> csR k } ;
+
+    side (s : Plus (Fin c.br) (Fin r)) : PA.PSide[X, w] = new PA.PSide[X, w, QAt s, vAt s, vAt-pt s, vAt-nat s] ;
+
+    pcs : PA.PCsTy X w nr (\ l -> side (splitF c.br r l)) = \ l j V g i i' ->
+      vAt-cs (splitF c.br r l) (splitF c.br r j) V g i i' ;
+
+    opaque pcs ;
+
+    PE : PA.Partial[X, w] = new PA.Partial[X, w, nr, \ l -> side (splitF c.br r l), pcs] ;
+  } ;
+
+  -- theta, read in E
+  th (X : Ob) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c))) : FA.TF.EI X =
+    (wq X c q, eal.kop X (wq X c q) PEm[X, c, q].PE) ;
+
+  th-pt (X : Ob) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c))) : Id (TA'.EI X) (th X c q).1 (wq X c q) = refl (wq X c q) ;
+
+  th-def (X : Ob) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c)))
+    : Id (FA.TF.EI X) (th X c q) (wq X c q, eal.kop X (wq X c q) PEm[X, c, q].PE) = refl (th X c q) ;
+
+  -- theta on a full side
+  module TF (X : Ob) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c))) {
+    module P = PEm[X, c, q] ;
+
+    full1 (l : Fin c.br) (i : Lands X X (P.QAt (inl l)) (idH X)) : Id (FA.TF.EI X) (th X c q) (P.vAt (inl l) X (idH X) i) =
+      trans (FA.TF.EI X) (th X c q) (P.vAt (splitF c.br r (finL c.br r l)) X (idH X) (subst (Plus (Fin c.br) (Fin r)) (\ s -> Lands X X (P.QAt s) (idH X)) (inl l) (splitF c.br r (finL c.br r l)) (sym (Plus (Fin c.br) (Fin r)) (splitF c.br r (finL c.br r l)) (inl l) (splitL c.br r l)) i)) (P.vAt (inl l) X (idH X) i)
+        (PA.kfull eal X P.w P.PE (finL c.br r l) (subst (Plus (Fin c.br) (Fin r)) (\ s -> Lands X X (P.QAt s) (idH X)) (inl l) (splitF c.br r (finL c.br r l)) (sym (Plus (Fin c.br) (Fin r)) (splitF c.br r (finL c.br r l)) (inl l) (splitL c.br r l)) i))
+        (idJ (Plus (Fin c.br) (Fin r)) (inl l)
+           (\ s2 E2 -> (i2 : Lands X X (P.QAt s2) (idH X)) -> Id (FA.TF.EI X) (P.vAt s2 X (idH X) i2) (P.vAt (inl l) X (idH X) i))
+           (\ i2 -> ap (Lands X X (c.bs l).sQ (idH X)) (FA.TF.EI X) (P.vAt (inl l) X (idH X)) i2 i (isProp-Lands X X (c.bs l).sQ (idH X) i2 i))
+           (splitF c.br r (finL c.br r l)) (sym (Plus (Fin c.br) (Fin r)) (splitF c.br r (finL c.br r l)) (inl l) (splitL c.br r l)) (subst (Plus (Fin c.br) (Fin r)) (\ s -> Lands X X (P.QAt s) (idH X)) (inl l) (splitF c.br r (finL c.br r l)) (sym (Plus (Fin c.br) (Fin r)) (splitF c.br r (finL c.br r l)) (inl l) (splitL c.br r l)) i)) ;
+
+    full2 (k : Fin r) (i : Lands X X (P.QAt (inr k)) (idH X)) : Id (FA.TF.EI X) (th X c q) (P.vAt (inr k) X (idH X) i) =
+      trans (FA.TF.EI X) (th X c q) (P.vAt (splitF c.br r (finR c.br r k)) X (idH X) (subst (Plus (Fin c.br) (Fin r)) (\ s -> Lands X X (P.QAt s) (idH X)) (inr k) (splitF c.br r (finR c.br r k)) (sym (Plus (Fin c.br) (Fin r)) (splitF c.br r (finR c.br r k)) (inr k) (splitR c.br r k)) i)) (P.vAt (inr k) X (idH X) i)
+        (PA.kfull eal X P.w P.PE (finR c.br r k) (subst (Plus (Fin c.br) (Fin r)) (\ s -> Lands X X (P.QAt s) (idH X)) (inr k) (splitF c.br r (finR c.br r k)) (sym (Plus (Fin c.br) (Fin r)) (splitF c.br r (finR c.br r k)) (inr k) (splitR c.br r k)) i))
+        (idJ (Plus (Fin c.br) (Fin r)) (inr k)
+           (\ s2 E2 -> (i2 : Lands X X (P.QAt s2) (idH X)) -> Id (FA.TF.EI X) (P.vAt s2 X (idH X) i2) (P.vAt (inr k) X (idH X) i))
+           (\ i2 -> ap (Lands X X ((dQ X c.brho k)) (idH X)) (FA.TF.EI X) (P.vAt (inr k) X (idH X)) i2 i (isProp-Lands X X ((dQ X c.brho k)) (idH X) i2 i))
+           (splitF c.br r (finR c.br r k)) (sym (Plus (Fin c.br) (Fin r)) (splitF c.br r (finR c.br r k)) (inr k) (splitR c.br r k)) (subst (Plus (Fin c.br) (Fin r)) (\ s -> Lands X X (P.QAt s) (idH X)) (inr k) (splitF c.br r (finR c.br r k)) (sym (Plus (Fin c.br) (Fin r)) (splitF c.br r (finR c.br r k)) (inr k) (splitR c.br r k)) i)) ;
+
+    res : (s : Plus (Fin c.br) (Fin r)) (i : Lands X X (P.QAt s) (idH X)) -> Id (FA.TF.EI X) (th X c q) (P.vAt s X (idH X) i) = split {
+      inl l -> full1 l ;
+      inr k -> full2 k } ;
+  } ;
+
+  th-full (X : Ob) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c))) (s : Plus (Fin c.br) (Fin r))
+    (i : Lands X X (PEm[X, c, q].QAt s) (idH X)) : Id (FA.TF.EI X) (th X c q) (PEm[X, c, q].vAt s X (idH X) i) =
+    TF[X, c, q].res s i ;
+
+  ----------------------------------------------------------------------
+  -- The point is uniform
+
+  wqGen (Y X : Ob) (h : Hom Y X) (r0 : W0.Ix (G.ob X)) (q : IsT (full X r0)) (a0 : TA.T X r0) (e : TA.EI X)
+    (E : Id (TA.EI X) (r0, a0) e) (r0' : W0.Ix (G.ob Y)) (q' : IsT (full Y r0')) (a0' : TA.T Y r0') (e' : TA.EI Y)
+    (E' : Id (TA.EI Y) (r0', a0') e') (U0 : Id (TA.EI Y) (EA.act Y X h e) e')
+    : Id (TA'.EI Y) (EA'.act Y X h ((r0, q), a0)) ((r0', q'), a0') =
+    toEA-inj Y (EA'.act Y X h ((r0, q), a0)) ((r0', q'), a0')
+      (trans (TA.EI Y) (EA.act Y X h (r0, a0)) (EA.act Y X h e) (r0', a0')
+         (ap (TA.EI X) (TA.EI Y) (EA.act Y X h) (r0, a0) e E)
+         (trans (TA.EI Y) (EA.act Y X h e) e' (r0', a0') U0 (sym (TA.EI Y) (r0', a0') e' E'))) ;
+
+  wq-unif (Y X : Ob) (h : Hom Y X) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c)))
+    (q' : IsT (full Y (rho1 Y (BX.restrict eS Y X h c))))
+    : Id (TA'.EI Y) (EA'.act Y X h (wq X c q)) (wq Y (BX.restrict eS Y X h c) q') =
+    wqGen Y X h (rho1 X c) q (a1T X c) (a1E X c) (a1T-E X c)
+      (rho1 Y (BX.restrict eS Y X h c)) q' (a1T Y (BX.restrict eS Y X h c)) (a1E Y (BX.restrict eS Y X h c))
+      (a1T-E Y (BX.restrict eS Y X h c)) (a1-unif Y X h c) ;
+
+  xg-restr (Y X : Ob) (h : Hom Y X) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c)))
+    (q' : IsT (full Y (rho1 Y (BX.restrict eS Y X h c)))) (V : Ob) (g : Hom V Y)
+    : Id (TA'.EI V) (xg X c q V (compH V Y X h g)) (xg Y (BX.restrict eS Y X h c) q' V g) =
+    trans (TA'.EI V) (xg X c q V (compH V Y X h g)) (EA'.act V Y g (EA'.act Y X h (wq X c q))) (xg Y (BX.restrict eS Y X h c) q' V g)
+      (EA'.act-o V Y X h g (wq X c q))
+      (ap (TA'.EI Y) (TA'.EI V) (EA'.act V Y g) (EA'.act Y X h (wq X c q)) (wq Y (BX.restrict eS Y X h c) q') (wq-unif Y X h c q q')) ;
+
+  sA-restr (Y X : Ob) (h : Hom Y X) (c : BX.Box[eS, X]) (l : Fin c.br) (V : Ob) (g : Hom V Y)
+    (i0 : Lands V X (c.bs l).sQ (compH V Y X h g)) (i' : Lands V Y ((BX.restrict eS Y X h c).bs l).sQ g)
+    : Id (TX.EI V) (sA X c l V (compH V Y X h g) i0) (sA Y (BX.restrict eS Y X h c) l V g i') =
+    trans (TX.EI V) (sA X c l V (compH V Y X h g) i0)
+      ((c.bs l).svE V (compH V (prodP Y Iv) (prodP X Iv) (cylH Y X h) (compH V Y (prodP Y Iv) (lid Y eT) g))
+         (inQ-cyl V Y X h (c.bs l).sQ (compH V Y (prodP Y Iv) (lid Y eT) g) iY))
+      (sA Y (BX.restrict eS Y X h c) l V g i')
+      ((c.bs l).pw V (compH V X (prodP X Iv) (lid X eT) (compH V Y X h g))
+         (compH V (prodP Y Iv) (prodP X Iv) (cylH Y X h) (compH V Y (prodP Y Iv) (lid Y eT) g))
+         (lid-restr-pw V Y X eT h g) (lands-inQ-lid V X (c.bs l).sQ eT (compH V Y X h g) i0)
+         (inQ-cyl V Y X h (c.bs l).sQ (compH V Y (prodP Y Iv) (lid Y eT) g) iY))
+      (symH (BX.Restrict[eS, Y, X, h].rsvE c.brho (c.bs l) V (compH V Y (prodP Y Iv) (lid Y eT) g) iY))
+   where { iY : InQ V Y ((BX.restrict eS Y X h c).bs l).sQ (compH V Y (prodP Y Iv) (lid Y eT) g) =
+             lands-inQ-lid V Y ((BX.restrict eS Y X h c).bs l).sQ eT g i' ; } ;
+
+  bGen (V : Ob) (v v' : TX.EI V) (p : IsT (full V v.1)) (p' : IsT (full V v'.1)) (P : Id (TX.EI V) v v')
+    : Id (TB.EI V) (toB V v p) (toB V v' p') =
+    fromB-inj V (toB V v p) (toB V v' p')
+      (trans (TX.EI V) (fromB V (toB V v p)) v (fromB V (toB V v' p')) (fromB-toB V v p)
+         (trans (TX.EI V) v v' (fromB V (toB V v' p')) P (symH (fromB-toB V v' p')))) ;
+
+  opaque wqGen ; opaque wq-unif ; opaque xg-restr ; opaque sA-restr ; opaque bGen ;
+
+  bA-restr (Y X : Ob) (h : Hom Y X) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c)))
+    (q' : IsT (full Y (rho1 Y (BX.restrict eS Y X h c)))) (l : Fin c.br) (V : Ob) (g : Hom V Y)
+    (i0 : Lands V X (c.bs l).sQ (compH V Y X h g)) (i' : Lands V Y ((BX.restrict eS Y X h c).bs l).sQ g)
+    : Id (TB.EI V) (bA X c q l V (compH V Y X h g) i0) (bA Y (BX.restrict eS Y X h c) q' l V g i') =
+    bGen V (sA X c l V (compH V Y X h g) i0) (sA Y (BX.restrict eS Y X h c) l V g i')
+      (qA X c q V (compH V Y X h g)) (qA Y (BX.restrict eS Y X h c) q' V g) (sA-restr Y X h c l V g i0 i') ;
+
+  bD-restr (Y X : Ob) (h : Hom Y X) (c : BX.Box[eS, X]) (k : Fin r) (V : Ob) (g : Hom V Y)
+    (i0 : Lands V X ((dQ X c.brho k)) (compH V Y X h g))
+    (i' : Lands V Y ((dQ Y (BX.restrict eS Y X h c).brho k)) g)
+    : Id (TB.EI V) (bD X c k V (compH V Y X h g) i0) (bD Y (BX.restrict eS Y X h c) k V g i') =
+    ap (TB.EI (prodP V Iv)) (TB.EI V) (EB.act V (prodP V Iv) (lid V eT))
+       (FBE V (BX.restrict eS V X (compH V Y X h g) c) (pfull V X (compH V Y X h g) c k i0))
+       (FBE V (BX.restrict eS V Y g (BX.restrict eS Y X h c)) (pfull V Y g (BX.restrict eS Y X h c) k i'))
+       (FBE-cong V (BX.restrict eS V X (compH V Y X h g) c) (BX.restrict eS V Y g (BX.restrict eS Y X h c))
+          (symH (BX.restrict-o eS V Y X g h c)) (pfull V X (compH V Y X h g) c k i0) (pfull V Y g (BX.restrict eS Y X h c) k i')) ;
+
+  module VR (Y X : Ob) (h : Hom Y X) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c)))
+    (q' : IsT (full Y (rho1 Y (BX.restrict eS Y X h c)))) {
+    module PX = PEm[X, c, q] ;
+    module PY = PEm[Y, BX.restrict eS Y X h c, q'] ;
+
+    RTy (s : Plus (Fin c.br) (Fin r)) : U a = (V : Ob) (g : Hom V Y) (i : Lands V Y (pre Y X h (PX.QAt s)) g)
+      (i' : Lands V Y (PY.QAt s) g)
+      -> Id (FA.TF.EI V) (PX.vAt s V (compH V Y X h g) (lands-pre V Y X h (PX.QAt s) g i)) (PY.vAt s V g i') ;
+
+    res : (s : Plus (Fin c.br) (Fin r)) -> RTy s = split {
+      inl l -> \ V g i i' ->
+        constFib-eq V (xg X c q V (compH V Y X h g)) (xg Y (BX.restrict eS Y X h c) q' V g)
+          (bA X c q l V (compH V Y X h g) (lands-pre V Y X h (c.bs l).sQ g i)) (bA Y (BX.restrict eS Y X h c) q' l V g i')
+          (ptA X c q l V (compH V Y X h g) (lands-pre V Y X h (c.bs l).sQ g i))
+          (eA X c q l V (compH V Y X h g) (lands-pre V Y X h (c.bs l).sQ g i))
+          (ptA Y (BX.restrict eS Y X h c) q' l V g i') (eA Y (BX.restrict eS Y X h c) q' l V g i')
+          (xg-restr Y X h c q q' V g) (bA-restr Y X h c q q' l V g (lands-pre V Y X h (c.bs l).sQ g i) i') ;
+      inr k -> \ V g i i' ->
+        constFib-eq V (xg X c q V (compH V Y X h g)) (xg Y (BX.restrict eS Y X h c) q' V g)
+          (bD X c k V (compH V Y X h g) (lands-pre V Y X h ((dQ X c.brho k)) g i)) (bD Y (BX.restrict eS Y X h c) k V g i')
+          (ptD X c q k V (compH V Y X h g) (lands-pre V Y X h ((dQ X c.brho k)) g i))
+          (eD X c q k V (compH V Y X h g) (lands-pre V Y X h ((dQ X c.brho k)) g i))
+          (ptD Y (BX.restrict eS Y X h c) q' k V g i') (eD Y (BX.restrict eS Y X h c) q' k V g i')
+          (xg-restr Y X h c q q' V g) (bD-restr Y X h c k V g (lands-pre V Y X h ((dQ X c.brho k)) g i) i') } ;
+
+    qres : (s : Plus (Fin c.br) (Fin r)) -> Id (Subset Y) (pre Y X h (PX.QAt s)) (PY.QAt s) = split {
+      inl l -> refl (pre Y X h (c.bs l).sQ) ;
+      inr k -> (symH (dQ-nat Y X h c.brho k)) } ;
+
+    -- theta is uniform
+    nat : Id (FA.TF.EI Y) (EFA.act Y X h (th X c q)) (th Y (BX.restrict eS Y X h c) q') =
+      trans (FA.TF.EI Y) (EFA.act Y X h (th X c q))
+        (EA'.act Y X h (wq X c q), eal.kop Y (EA'.act Y X h (wq X c q)) (PA.restrictP Y X h (wq X c q) PX.PE))
+        (th Y (BX.restrict eS Y X h c) q')
+        (eal.kunif Y X h (wq X c q) PX.PE)
+        (PA.kop-cong eal Y (EA'.act Y X h (wq X c q)) (wq Y (BX.restrict eS Y X h c) q') (wq-unif Y X h c q q')
+           (PA.restrictP Y X h (wq X c q) PX.PE) PY.PE
+           (PA.partExtH Y (EA'.act Y X h (wq X c q)) (wq Y (BX.restrict eS Y X h c) q') (wq-unif Y X h c q q')
+              (PA.restrictP Y X h (wq X c q) PX.PE) PY.PE (refl PX.nr)
+              (\ l -> qres (splitF c.br r l))
+              (\ l V g i i' -> res (splitF c.br r l) V g i i'))) ;
+  } ;
+
+  vAt-restr (Y X : Ob) (h : Hom Y X) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c)))
+    (q' : IsT (full Y (rho1 Y (BX.restrict eS Y X h c)))) (s : Plus (Fin c.br) (Fin r))
+    : VR[Y, X, h, c, q, q'].RTy s = VR[Y, X, h, c, q, q'].res s ;
+
+  QAt-restr (Y X : Ob) (h : Hom Y X) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c)))
+    (q' : IsT (full Y (rho1 Y (BX.restrict eS Y X h c)))) (s : Plus (Fin c.br) (Fin r))
+    : Id (Subset Y) (pre Y X h (PEm[X, c, q].QAt s)) (PEm[Y, BX.restrict eS Y X h c, q'].QAt s) = VR[Y, X, h, c, q, q'].qres s ;
+
+  th-nat (Y X : Ob) (h : Hom Y X) (c : BX.Box[eS, X]) (q : IsT (full X (rho1 X c)))
+    (q' : IsT (full Y (rho1 Y (BX.restrict eS Y X h c))))
+    : Id (FA.TF.EI Y) (EFA.act Y X h (th X c q)) (th Y (BX.restrict eS Y X h c) q') = VR[Y, X, h, c, q, q'].nat ;
+
+  th-cong (X : Ob) (c c' : BX.Box[eS, X]) (P : Id (BX.Box[eS, X]) c c') (q : IsT (full X (rho1 X c))) (q' : IsT (full X (rho1 X c')))
+    : Id (FA.TF.EI X) (th X c q) (th X c' q') =
+    idJ (BX.Box[eS, X]) c (\ c2 P2 -> (q2 : IsT (full X (rho1 X c2))) -> Id (FA.TF.EI X) (th X c q) (th X c2 q2))
+      (\ q2 -> apH (th X c) (isProp-IsT' (full X (rho1 X c)) q q2)) c' P q' ;
+
+  opaque th ; opaque th-pt ; opaque th-def ; opaque th-full ; opaque QAt-restr ; opaque th-nat ; opaque th-cong ;
+} ;

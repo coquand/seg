@@ -1,0 +1,88 @@
+-- ExtComp1b.seg: MODEL/Poset/ExtComp1b.agda.  Theorem 7, part 1b: fact
+-- F3, the top a1 of the extended A-filler is uniform (a1-unif), through
+-- BoxPlusR.FEp-unifC (which names the restricted box with BoxPlus's own
+-- restrict).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+open Conn[a] ;
+open VCode[a] ;
+module CF = Cofib[a] ;
+open CF ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open ExtKit[a] ;
+open ExtBox[a] ;
+open ExtBox2[a] ;
+open ExtBox3[a] ;
+
+module C1b (G : PCtx) (A : PTy[G]) (psi : CF.GP.Cof[G]) (B : PTy[CF.GP.CofL[G, psi].resCtx])
+  (al : PMap[CF.GP.CofL[G, psi].resCtx, B, subTy CF.GP.CofL[G, psi].resCtx G A CF.GP.CofL[G, psi].inclR]) (d : Bool)
+  (fAS : FibM.FillDef[G, A].FillOp[src d]) (fBS : FibM.FillDef[CF.GP.CofL[G, psi].resCtx, B].FillOp[src d]) {
+  open CF.GP.CofL[G, psi] ;
+  open CF.CofD[G, psi] ;
+  open BaseP.GExt[a].ExtDef[G, A, psi] ;
+  open ExtB[B, al] ;
+  open BaseP.GExt4[a].ExtB4[G, A, psi, B, al] ;
+  open ExtComp1[a].C1[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp1E[a].C1E[G, A, psi, B, al, d, fAS, fBS] ;
+
+  module BPR = BoxPlusR[G, A, eS, fAS] ;
+
+  mbr (Y X : Ob) (h : Hom Y X) (b : BX.Box[eS, X])
+    : Id (BA.Box[eS, Y]) (BA.restrict eS Y X h (ung X b)) (ung Y (BX.restrict eS Y X h b)) = MB.mapB-restr Y X h b ;
+
+  a1eP (Y X : Ob) (h : Hom Y X) (b : BX.Box[eS, X]) (k : Fin r) (W : Ob) (g : Hom W Y)
+    (i : Lands W Y (pre Y X h ((dQ X b.brho k))) g)
+    (i' : Lands W Y ((dQ Y (BX.restrict eS Y X h b).brho k)) g)
+    : Id (TA.EI (prodP W Iv)) (P2v X b k W (compH W Y X h g) (lands-pre W Y X h ((dQ X b.brho k)) g i))
+                             (P2v Y (BX.restrict eS Y X h b) k W g i') =
+    ap (TB.EI (prodP W Iv)) (TA.EI (prodP W Iv)) (\ z -> toEA (prodP W Iv) (al.mE (prodP W Iv) z))
+       (FBE W (BX.restrict eS W X (compH W Y X h g) b) (pfull W X (compH W Y X h g) b k (lands-pre W Y X h ((dQ X b.brho k)) g i)))
+       (FBE W (BX.restrict eS W Y g (BX.restrict eS Y X h b)) (pfull W Y g (BX.restrict eS Y X h b) k i'))
+       (FBE-cong W (BX.restrict eS W X (compH W Y X h g) b) (BX.restrict eS W Y g (BX.restrict eS Y X h b))
+          (symH (BX.restrict-o eS W Y X g h b))
+          (pfull W X (compH W Y X h g) b k (lands-pre W Y X h ((dQ X b.brho k)) g i))
+          (pfull W Y g (BX.restrict eS Y X h b) k i')) ;
+
+  a1eQ (Y X : Ob) (h : Hom Y X) (b : BX.Box[eS, X]) (k : Fin r)
+    : Id (Subset Y) (pre Y X h ((dQ X b.brho k))) ((dQ Y (BX.restrict eS Y X h b).brho k)) =
+    (symH (dQ-nat Y X h b.brho k)) ;
+
+  opaque mbr ; opaque a1eP ; opaque a1eQ ;
+
+  a1-unif (Y X : Ob) (h : Hom Y X) (b : BX.Box[eS, X])
+    : Id (TA.EI Y) (EA.act Y X h (a1E X b)) (a1E Y (BX.restrict eS Y X h b)) =
+    trans (TA.EI Y) (EA.act Y X h (a1E X b)) (EA.act Y X h (EA.act X (prodP X Iv) (lid X eT) (FAp X b))) (a1E Y (BX.restrict eS Y X h b))
+      (ap (TA.EI X) (TA.EI Y) (EA.act Y X h) (a1E X b) (EA.act X (prodP X Iv) (lid X eT) (FAp X b)) (a1E-def X b))
+      (trans (TA.EI Y) (EA.act Y X h (EA.act X (prodP X Iv) (lid X eT) (FAp X b)))
+                       (EA.act Y (prodP Y Iv) (lid Y eT) (EA.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) (FAp X b)))
+                       (a1E Y (BX.restrict eS Y X h b))
+        (TA.PE.actSq Y X (prodP Y Iv) (prodP X Iv) (lid X eT) h (cylH Y X h) (lid Y eT) (hom-eq Y (prodP X Iv) (compH Y X (prodP X Iv) (lid X eT) h) (compH Y (prodP Y Iv) (prodP X Iv) (cylH Y X h) (lid Y eT)) (pw-lid Y X h eT)) (FAp X b))
+        (trans (TA.EI Y) (EA.act Y (prodP Y Iv) (lid Y eT) (EA.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) (FAp X b)))
+                         (EA.act Y (prodP Y Iv) (lid Y eT) (FAp Y (BX.restrict eS Y X h b)))
+                         (a1E Y (BX.restrict eS Y X h b))
+          (ap (TA.EI (prodP Y Iv)) (TA.EI Y) (EA.act Y (prodP Y Iv) (lid Y eT))
+             (EA.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) (FAp X b)) (FAp Y (BX.restrict eS Y X h b))
+             (BPR.FEp-unifC Y X h (ung X b) r (P2F X b) (ung Y (BX.restrict eS Y X h b)) (mbr Y X h b)
+                (P2F Y (BX.restrict eS Y X h b)) (a1eQ Y X h b) (a1eP Y X h b)))
+          (sym (TA.EI Y) (a1E Y (BX.restrict eS Y X h b)) (EA.act Y (prodP Y Iv) (lid Y eT) (FAp Y (BX.restrict eS Y X h b)))
+             (a1E-def Y (BX.restrict eS Y X h b))))) ;
+
+  opaque a1-unif ;
+} ;

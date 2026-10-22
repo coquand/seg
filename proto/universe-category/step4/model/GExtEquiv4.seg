@@ -1,0 +1,120 @@
+-- GExtEquiv4.seg (inside IvBase, any base; line form of ExtEsi*'s
+-- equivalence half).  KESI of extEquiv: an empty side inserted into the
+-- partial element p of the fibre of ext is not seen by the extension, if
+-- it is not seen by eal (keal) nor by the filler kA1 (kA1e).
+--   theta does not change (the translated partial elements are an
+--   insertion: eal's KESI);
+--   the joined partial line is an insertion (GCofEsi.joinIns: the sides of
+--   p get the empty side, theta's sides are the same);
+--   so the filler, a0, the pair u and v0 do not change (kA1's KESI).
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[lv] ;
+open PR.PS ;
+module GP = GCofib[lv] ;
+open GLine[lv] ;
+
+module ExtEq4 (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (kA1 : LineFibP[GFam[lv].famPath, G, A].FibAt e1)
+  (eal : GEquiv[lv].EquivOp GP.CofL[G, psi].resCtx B (subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR) al)
+  (kA1e : GCofEsi[lv].PartialsEsi[EndKit[GFam[lv].famPath, G, A, e1].TV.E, EndKit[GFam[lv].famPath, G, A, e1].SFm.SF].KESI kA1)
+  (keal : GCofEsi[lv].PartialsEsi[GExt[lv].ExtDef[G, A, psi].EA', GEquiv[lv].HFib[GP.CofL[G, psi].resCtx, B,
+            subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR, al].FibT].KESI eal) {
+  open GP.CofL[G, psi] ;
+  open GExt[lv].ExtDef[G, A, psi] ;
+  open ExtB[B, al] ;
+  open GExt2[lv].ExtB2[G, A, psi, B, al] ;
+  open GExt3[lv].ExtB3[G, A, psi, B, al] ;
+  open GExt4[lv].ExtB4[G, A, psi, B, al] ;
+  open GExtEquiv[lv].ExtEq[G, A, psi, B, al, kA1, eal] ;
+  open GExtEquiv2[lv].ExtEq2[G, A, psi, B, al, kA1, eal] ;
+  module E3 = GExtEquiv3[lv].ExtEq3[G, A, psi, B, al, kA1, eal] ;
+
+  module PEX = GCofEsi[lv].PartialsEsi[EA, FX.FibT] ;
+  module PEA = GCofEsi[lv].PartialsEsi[EA', FA.FibT] ;
+  module PEK = GCofEsi[lv].PartialsEsi[KA.TV.E, KA.SFm.SF] ;
+
+  module KI (X : Ob) (w : TA.EI X) (k : Nat) (p p' : PX.Partial[X, w]) (ins : PEX.InsP[X, w, k, p, p']) {
+    module T = Th[X, w, p] ;
+    module T' = Th[X, w, p'] ;
+
+    ------------------------------------------------------------------
+    -- theta does not change
+
+    module TI (W : Ob) (f : Hom W X) (q : IsT (full W (G.act W X f w.1))) {
+      rp : PX.Partial[W, EA.act W X f w] = PX.restrictP W X f w p ;
+      rp' : PX.Partial[W, EA.act W X f w] = PX.restrictP W X f w p' ;
+      R : PEX.InsP[W, EA.act W X f w, k, rp, rp'] = PEX.insR W X f w k p p' ins ;
+      module TR = Tr[W, EA.act W X f w, q] ;
+
+      trIns : PEA.InsP[W, wq W (EA.act W X f w) q, k, TR.TrP rp, TR.TrP rp'] =
+        new PEA.InsP[W, wq W (EA.act W X f w) q, k, TR.TrP rp, TR.TrP rp', R.insp-r, R.insp-k, R.insp-e, R.insp-Q,
+          \ n h h' V g i i' ->
+            toFA-cong V ((rp'.ps (Arith[a].skipN k n, h')).pv V g i) ((rp.ps (n, h)).pv V g i') (R.insp-v n h h' V g i i')
+              (TR.qv (rp'.ps (Arith[a].skipN k n, h')) V g i) (TR.qv (rp.ps (n, h)) V g i')] ;
+
+      th-ins : Id (FA.TF.EI W) (T'.th W f q) (T.th W f q) =
+        apH {FA.TF.T W (wq W (EA.act W X f w) q)} {FA.TF.EI W} (\ z -> (wq W (EA.act W X f w) q, z))
+          (keal W (wq W (EA.act W X f w) q) k (TR.TrP rp) (TR.TrP rp') trIns) ;
+    } ;
+
+    ------------------------------------------------------------------
+    -- the sides of p' against those of p
+
+    module IS = PEX.InsSides[X, w, k, p, p', ins] ;
+
+    eVL (m : Fin p.pr) (m' : Fin p'.pr) (P : Id Nat m'.1 (Arith[a].skipN k m.1)) (V : Ob) (f : Hom V X)
+      (i : Lands V X (p'.ps m').pQ f) (i' : Lands V X (p.ps m).pQ f)
+      : Id (KA.TS.EI V) (T'.S1[m'].SO.sv V f i) (T.S1[m].SO.sv V f i') =
+      LA.ts-ext V (T'.S1[m'].SO.sv V f i) (T.S1[m].SO.sv V f i')
+        (transH (T'.S1[m'].SO.sv-pt V f i) (symH (T.S1[m].SO.sv-pt V f i')))
+        (\ W g j -> transH (T'.S1[m'].SO.sv-lev V f i W g j)
+           (transH (apH (\ z -> FX.fibL V z W g j) (IS.eVL m m' P V f i i')) (symH (T.S1[m].SO.sv-lev V f i' W g j)))) ;
+
+    eVR (j : Fin r) (V : Ob) (f : Hom V X) (i : Lands V X (Q X w.1 j) f) (i' : Lands V X (Q X w.1 j) f)
+      : Id (KA.TS.EI V) (T'.S2[j].SO.sv V f i) (T.S2[j].SO.sv V f i') =
+      LA.ts-ext V (T'.S2[j].SO.sv V f i) (T.S2[j].SO.sv V f i')
+        (transH (T'.S2[j].SO.sv-pt V f i) (symH (T.S2[j].SO.sv-pt V f i')))
+        (\ W g jj -> transH (T'.S2[j].SO.sv-lev V f i W g jj)
+           (transH (apH (\ z -> toEA W (FA.fibL V z W g jj))
+                      (transH (TI[V, f, T.qOf V f j i].th-ins) (T.th-cong V f (T.qOf V f j i) (T.qOf V f j i'))))
+                   (symH (T.S2[j].SO.sv-lev V f i' W g jj)))) ;
+
+    ------------------------------------------------------------------
+    -- the joined partial line, the filler, v0
+
+    insJ : PEK.InsPH[X, T.x0, T'.x0, k, T.J.part, T'.J.part] =
+      PEK.joinIns X T.x0 T'.x0 k p.pr r ins.insp-k (\ l -> T.S1[l].SO.side) (\ j -> T.S2[j].SO.side) T.c11 T.c12 T.c22
+        (\ j -> T'.S2[j].SO.side) T'.c22 (\ j -> refl (Q X w.1 j)) eVR p'.pr (symH ins.insp-r)
+        (\ l -> T'.S1[l].SO.side) T'.c11 T'.c12 IS.eE IS.eQL eVL ;
+
+    fill-eq : Id (KA.TS.EI X) (T'.x0, T'.fill) (T.x0, T.fill) =
+      PEK.kesiH kA1 kA1e X T.x0 T'.x0 (refl T.x0) k T.J.part T'.J.part insJ ;
+
+    Fv-eq (W : Ob) (f : Hom W X) (j : Hom W Iv) : Id (TA.EI W) (T'.Fv W f j) (T.Fv W f j) = apH (\ u -> u.2.1.1.1 W f j) fill-eq ;
+
+    a0-eq : Id (TA.T X w.1) T'.a0 T.a0 =
+      TA.pr-inj X w.1 T'.a0 T.a0 (transH T'.a0-E (transH (Fv-eq X (idH X) (ptH X e0)) (symH T.a0-E))) ;
+
+    u-eq : Id (Pairs X w.1) T'.u T.u =
+      pairs-eq X w.1 T'.u T.u (transH T'.u-a (transH a0-eq (symH T.u-a)))
+        (\ W f q -> transH (T'.u-b W f q) (transH (apH (FA.fibB W) (TI[W, f, q].th-ins)) (symH (T.u-b W f q)))) ;
+
+    v0-eq : Id (FX.TF.EI X) T'.v0 T.v0 =
+      FX.fibE-eq X T'.v0 T.v0 (refl w)
+        (transH T'.gb-E (transH (apH (glue X w.1) u-eq) (symH T.gb-E)))
+        (\ W f j -> Fv-eq W f j) ;
+
+    res : Id (FX.TF.T X w) (E3.kopX X w p') (E3.kopX X w p) = FX.TF.pr-inj X w (E3.kopX X w p') (E3.kopX X w p) v0-eq ;
+  } ;
+
+  extEquiv-kesi : PEX.KESI E3.extEquiv = \ X w k p p' ins -> KI[X, w, k, p, p', ins].res ;
+} ;

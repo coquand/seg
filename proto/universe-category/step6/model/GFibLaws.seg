@@ -1,0 +1,108 @@
+-- GFibLaws.seg (inside IvBase): substitution of fibrant types (line form,
+-- any base) is functorial, by the extensionality principle (GFibExt).
+--
+--   subFibEL-id   F[id] = F           (the composites agree by definition)
+--   subFibEL-o    F[s o s'] = F[s][s'] (MorComp: moving problems along s'
+--                                       and then s = along s o s')
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+module FM = GFam[lv] ;
+module GS = GSubst[lv] ;
+module GE = GFibE[lv] ;
+module GX = GFibExt[lv] ;
+
+-- the naturality of the identity on data, from a pointwise equality of actions
+natOf (G : PCtx) (A : PTy[G]) (q : GX.FX[G].Pack A.tob) (Ht : PtEq G A.tob A.tact q.1) : GX.FX[G].NatTy A q =
+  \ J I f w -> apH {W0.Ix (A.tob J (G.act J I f w.1))} {W0.Ix ((extP G A).ob J)} (\ v -> (G.act J I f w.1, v))
+                 (symH (Ht J I f w.1 (G.act J I f w.1) (refl (G.act J I f w.1)) w.2)) ;
+
+------------------------------------------------------------------------
+-- the identity
+
+subFibEL-id (G : PCtx) (F : GE.FibEL G) : Id (GE.FibEL G) F (GS.subFibEL G G (idS G) F) =
+  GX.FX[G].fibExtL F.1 F.2.1 F.2.2
+    ((subTy G G F.1 (idS G)).tact, ((subTy G G F.1 (idS G)).tact-id, (subTy G G F.1 (idS G)).tact-o))
+    (\ J I f x y e a -> tact-irr G F.1 J I f x y e (ntEq G G (idS G) J I f x y e) a)
+    (liftP G G F.1 (idS G)).nt-nat
+    (GS.subFibEL G G (idS G) F).2.1 (GS.subFibEL G G (idS G) F).2.2
+    (\ X x p -> refl (GS.SubF[G, G, idS G, F].S0.compAt.cop X x p),
+     \ X x p -> refl (GS.SubF[G, G, idS G, F].S1.compAt.cop X x p)) ;
+
+------------------------------------------------------------------------
+-- composition
+
+module MorComp (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (e e' : IPt)
+  (ca : CompAtP[FM.famPath, G, A, e, e'].CompAt) {
+  module M1 = GS.SubC[D, G, s, A, e, e', ca].M ;
+  B1 : PTy[D] = GS.srcTy D G s A (subTy D G A s).tact (subTy D G A s).tact-id (subTy D G A s).tact-o ;
+  module M2 = GS.SubC[T, D, s', GS.srcTy D G s A (subTy D G A s).tact (subTy D G A s).tact-id (subTy D G A s).tact-o, e, e', M1.compAt].M ;
+  module M12 = GS.SubC[T, G, oS T D G s s', A, e, e', ca].M ;
+
+  q : GX.FX[T].Pack (GS.srcTy T G (oS T D G s s') A (subTy T G A (oS T D G s s')).tact (subTy T G A (oS T D G s s')).tact-id (subTy T G A (oS T D G s s')).tact-o).tob =
+    ((subTy T D B1 s').tact, ((subTy T D B1 s').tact-id, (subTy T D B1 s').tact-o)) ;
+
+  Ht : PtEq T (GS.srcTy T G (oS T D G s s') A (subTy T G A (oS T D G s s')).tact (subTy T G A (oS T D G s s')).tact-id (subTy T G A (oS T D G s s')).tact-o).tob
+         (GS.srcTy T G (oS T D G s s') A (subTy T G A (oS T D G s s')).tact (subTy T G A (oS T D G s s')).tact-id (subTy T G A (oS T D G s s')).tact-o).tact q.1 =
+    \ J I f x y e1 a -> tact-irr G A J I f (s.nt I (s'.nt I x)) (s.nt J (s'.nt J y))
+                         (ntEq T G (oS T D G s s') J I f x y e1)
+                         (ntEq D G s J I f (s'.nt I x) (s'.nt J y) (ntEq T D s' J I f x y e1)) a ;
+
+  module M0 = GS.MorC[T, T, idS T,
+    GS.srcTy T G (oS T D G s s') A (subTy T G A (oS T D G s s')).tact (subTy T G A (oS T D G s s')).tact-id (subTy T G A (oS T D G s s')).tact-o,
+    q.1, q.2.1, q.2.2,
+    natOf T (GS.srcTy T G (oS T D G s s') A (subTy T G A (oS T D G s s')).tact (subTy T G A (oS T D G s s')).tact-id (subTy T G A (oS T D G s s')).tact-o) q Ht,
+    e, e', M12.compAt] ;
+
+  tvComp (W : Ob) (z : M0.MP.CD.TV.EI W) : Id (M12.MP.CG.TV.EI W) (M12.MP.tvN W (M0.MP.tvN W z)) (M1.MP.tvN W (M2.MP.tvN W z)) =
+    M12.MP.CG.EK.tv-eq W (M12.MP.tvN W (M0.MP.tvN W z)) (M1.MP.tvN W (M2.MP.tvN W z))
+      (FM.FC[G].fam-eq W (M12.MP.tvN W (M0.MP.tvN W z)).1 (M1.MP.tvN W (M2.MP.tvN W z)).1 (\ W' f i -> refl (s.nt W' (s'.nt W' (z.1.1 W' f i)))))
+      (refl (M12.MP.CG.EK.endE W (M12.MP.tvN W (M0.MP.tvN W z)))) ;
+
+  tsComp (W : Ob) (u : M0.MP.CD.TS.EI W) : Id (M12.MP.CG.TS.EI W) (M12.MP.tsN W (M0.MP.tsN W u)) (M1.MP.tsN W (M2.MP.tsN W u)) =
+    M12.MP.LG.ts-ext W (M12.MP.tsN W (M0.MP.tsN W u)) (M1.MP.tsN W (M2.MP.tsN W u))
+      (transH (M12.MP.CG.EK.mkTS-pt W (M12.MP.tvN W (M0.MP.tsN W u).1) M12.MP.TSN[W, M0.MP.tsN W u].lineG
+                 (refl (M12.MP.MC.mapF W (M0.MP.tsN W u).1.1)) M12.MP.TSN[W, M0.MP.tsN W u].qN)
+        (transH (apH (M12.MP.tvN W) (M0.MP.CG.EK.mkTS-pt W (M0.MP.tvN W u.1) M0.MP.TSN[W, u].lineG (refl (M0.MP.MC.mapF W u.1.1)) M0.MP.TSN[W, u].qN))
+          (transH (tvComp W u.1)
+            (symH (transH (M1.MP.CG.EK.mkTS-pt W (M1.MP.tvN W (M2.MP.tsN W u).1) M1.MP.TSN[W, M2.MP.tsN W u].lineG
+                             (refl (M1.MP.MC.mapF W (M2.MP.tsN W u).1.1)) M1.MP.TSN[W, M2.MP.tsN W u].qN)
+                    (apH (M1.MP.tvN W) (M2.MP.CG.EK.mkTS-pt W (M2.MP.tvN W u.1) M2.MP.TSN[W, u].lineG (refl (M2.MP.MC.mapF W u.1.1)) M2.MP.TSN[W, u].qN)))))))
+      (\ V g j -> transH (M12.MP.TSN[W, M0.MP.tsN W u].res-lev V g j)
+                   (transH (apH (M12.MP.mE.nt V) (M0.MP.TSN[W, u].res-lev V g j))
+                     (symH (transH (M1.MP.TSN[W, M2.MP.tsN W u].res-lev V g j) (apH (M1.MP.mE.nt V) (M2.MP.TSN[W, u].res-lev V g j)))))) ;
+
+  cop-comp (X : Ob) (x : M0.MP.CD.TV.EI X) (p : M0.MP.CD.PT.Partial[X, x])
+    : Id (M0.MP.CD.TV'.T X x.1) (M0.cop X x p) (M2.cop X x p) =
+    M12.MP.TA.pr-inj X ((FM.famPath.pev G e').nt X (M12.MP.tvN X (M0.MP.tvN X x)).1) (M0.cop X x p) (M2.cop X x p)
+      (apH (M12.MP.KG'.endE X)
+        (M12.MP.CG.cop-cong ca X (M12.MP.tvN X (M0.MP.tvN X x)) (M1.MP.tvN X (M2.MP.tvN X x)) (tvComp X x)
+           (M12.MP.MN.mapP X (M0.MP.tvN X x) (M0.MP.MN.mapP X x p)) (M1.MP.MN.mapP X (M2.MP.tvN X x) (M2.MP.MN.mapP X x p))
+           (M12.MP.CG.PT.partExtH X (M12.MP.tvN X (M0.MP.tvN X x)) (M1.MP.tvN X (M2.MP.tvN X x)) (tvComp X x)
+              (M12.MP.MN.mapP X (M0.MP.tvN X x) (M0.MP.MN.mapP X x p)) (M1.MP.MN.mapP X (M2.MP.tvN X x) (M2.MP.MN.mapP X x p))
+              (refl p.pr) (\ l -> refl (p.ps l).pQ)
+              (\ l W f i i' ->
+                 transH (M12.MP.MN.mapS-pv X (M0.MP.tvN X x) (M0.MP.MN.mapS X x (p.ps l)) W f i)
+                   (transH (apH (M12.MP.tsN W) (M0.MP.MN.mapS-pv X x (p.ps l) W f i))
+                     (transH (tsComp W ((p.ps l).pv W f i))
+                       (transH (apH (\ z -> M1.MP.tsN W (M2.MP.tsN W z)) (M0.MP.CD.PT.pv-irr X x (p.ps l) W f i i'))
+                         (symH (transH (M1.MP.MN.mapS-pv X (M2.MP.tvN X x) (M2.MP.MN.mapS X x (p.ps l)) W f i')
+                                       (apH (M1.MP.tsN W) (M2.MP.MN.mapS-pv X x (p.ps l) W f i'))))))))))) ;
+} ;
+
+subFibEL-o (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (F : GE.FibEL G)
+  : Id (GE.FibEL T) (GS.subFibEL T G (oS T D G s s') F) (GS.subFibEL T D s' (GS.subFibEL D G s F)) =
+  GX.FX[T].fibExtL (GS.subFibEL T G (oS T D G s s') F).1 (GS.subFibEL T G (oS T D G s s') F).2.1 (GS.subFibEL T G (oS T D G s s') F).2.2
+    MorComp[T, D, G, s, s', F.1, e0, e1, F.2.1.1].q MorComp[T, D, G, s, s', F.1, e0, e1, F.2.1.1].Ht
+    (natOf T (GS.subFibEL T G (oS T D G s s') F).1 MorComp[T, D, G, s, s', F.1, e0, e1, F.2.1.1].q MorComp[T, D, G, s, s', F.1, e0, e1, F.2.1.1].Ht)
+    (GS.subFibEL T D s' (GS.subFibEL D G s F)).2.1 (GS.subFibEL T D s' (GS.subFibEL D G s F)).2.2
+    (MorComp[T, D, G, s, s', F.1, e0, e1, F.2.1.1].cop-comp, MorComp[T, D, G, s, s', F.1, e1, e0, F.2.1.2].cop-comp) ;

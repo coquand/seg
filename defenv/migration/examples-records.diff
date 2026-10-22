@@ -1,0 +1,315 @@
+--- pre-records/examples/aliases.seg
++++ examples/aliases.seg
+@@ -5,7 +5,7 @@
+ data Nat = zero | suc (n : Nat) ;
+ data Bool = true | false ;
+ module Outer (A : U l) {
+-  module Side {
++  record Side {
+     v : A ;
+     vv : A = v ;
+   } ;
+--- /dev/null
++++ examples/fixedfields.seg
+@@ -0,0 +1,36 @@
++-- fixedfields.seg: partially fixed record types R[ps][x := e] (RECORDS.md §4).
++-- A fixed field is known from the TYPE at the point where a projection is
++-- checked: t.x is elaborated to e.  Conversion stays untyped, so this is
++-- stable under substitution; forgetting the refinement forgets it.
++
++level a ;
++data N = zero | suc (n : N) ;
++
++-- a fixed field enters the types of the later projections
++record Pack { A : U a ; value : A ; } ;
++pv (p : Pack[A := N]) : N = p.value ;
++pvSuc (p : Pack[A := N]) : N = suc p.value ;
++pA (p : Pack[A := N]) : Id (U a) p.A N = refl N ;
++
++record Mon (l : Level) { A : U l ; op : A -> A -> A ; e : A ; sq (x : A) : A = op x x ; } ;
++
++-- on a variable and on a neutral application alike
++viaVar (M : Mon[a, N]) : Id (U a) M.A N = refl N ;
++viaApp (S : N -> Mon[a, N]) : Id (U a) (S zero).A N = refl N ;
++-- the types of derived members see the fixed field
++sqN (M : Mon[a, N]) (x : N) : N = M.sq x ;
++
++-- forgetting the refinement forgets its computation; Id keeps the equality
++pass (M : Mon[a, N]) : Mon[a] = M ;
++#fails { lost (M : Mon[a, N]) : Id (U a) (pass M).A N = refl N ; } ;
++kept : (M : Mon[a, N]) -> Id (U a) (pass M).A N = split { Mon A op e -> refl N } ;
++
++-- elements: the same constructor, the fixed value must agree
++m0 : Mon[a, N] = new Mon[a, N, \ x y -> x, zero] ;
++#fails { bad : Mon[a, N] = new Mon[a, N -> N, \ f g -> f, \ x -> x] ; } ;
++-- subtyping: more fields fixed is a subtype, not the converse
++up (M : Mon[a, N]) : Mon[a] = M ;
++#fails { down (M : Mon[a]) : Mon[a, N] = M ; } ;
++
++-- formation: a fixed field's type may mention only fixed fields
++#fails { badForm : U a = Mon[a, e := zero] ; } ;
+--- pre-records/examples/hidden.seg
++++ examples/hidden.seg
+@@ -37,7 +37,7 @@
+ r2 : Id N one one = refl2 ;
+ 
+ -- CwF-style fields with hidden contexts, through an element of a segment
+-module Cat {
++record Cat {
+   Ob : U a ;
+   Hom (X Y : Ob) : U a ;
+   idm {X : Ob} : Hom X X ;
+@@ -69,11 +69,11 @@
+ -- over-applied result whose type F y is known once p is matched
+ substH {A : U a} (F : A -> U a) {x y : A} (p : Id A x y) (u : F x) : F y =
+   idJ A x (\ z q -> F z) u y p ;
+-module R { f : (n : N) -> Id N n n ; } ;
++record R { f : (n : N) -> Id N n n ; } ;
+ r3 : R = new R[\ n -> trans (refl n) (refl n)] ;
+ over (x y : N) (p : Id N x y) (u : N -> N) : N = substH (\ z -> N -> N) p u zero ;
+ -- a variable of a PARTIAL segment type quotes back as itself
+-module Tw (A : U a) { B : A -> U a ; } ;
++record Tw (A : U a) { B : A -> U a ; } ;
+ pt (T : Tw[N]) (x y : T.B one) (p : Id (T.B one) x y) : Id (T.B one) x x = trans p (sym p) ;
+ 
+ -- a member of a segment with parameters, written inline: the hidden
+@@ -87,7 +87,7 @@
+   idJ A x (\ z q -> Id B (f x) (f z)) (refl (f x)) y p ;
+ succ (n : N) : N = suc n ;
+ lamB (x y : N) (p : Id N x y) : Id N (succ x) (succ y) = trans (apH (\ n -> succ n) p) (refl (succ y)) ;
+-module Bx (n : N) (m : N) { } ;
++record Bx { n : N ; m : N ; } ;
+ -- one occurrence of new (elements are compared by occurrence)
+ mkBx (c : N) : Bx = new Bx[zero, c] ;
+ lamS (x y : N) (p : Id N x y) : Id (Bx) (mkBx x) (mkBx y) =
+@@ -96,7 +96,7 @@
+ -- seg-60's rep6: an element whose first field is r.x is not r.  Elements
+ -- are compared by NAME (Half, Gofer): one occurrence  mk3 , used everywhere
+ isPropT (A : U a) : U a = (u v : A) -> Id A u v ;
+-module R3 { x : N ; y : N ; z : N ; } ;
++record R3 { x : N ; y : N ; z : N ; } ;
+ mk3 (u v w : N) : R3 = new R3[u, v, w] ;
+ t6 (pr : isPropT N) (r r' : R3) (P : Id N r.x r'.x) : Id R3 (mk3 r.x r.y r.z) (mk3 r'.x r'.y r'.z) =
+   idJ N r.x (\ k P2 -> (c d : N) -> Id R3 (mk3 r.x r.y r.z) (mk3 k c d))
+--- pre-records/examples/nestedsort.seg
++++ examples/nestedsort.seg
+@@ -1,7 +1,7 @@
+ level a ;
+ data N = zero ;
+ module Outer (k : Level) {
+-  module P { ob : N -> U k ; } ;
++  record P { ob : N -> U k ; } ;
+   okHere (G : P) : Id P G G = refl G ;
+ } ;
+ module Q = Outer[a] ;
+@@ -14,6 +14,6 @@
+ #type Outer[a+].P ;
+ 
+ -- the universe counts only the fields that are NOT fixed
+-module Big (k : Level) { X : U k+ ; x : X ; } ;
++record Big (k : Level) { X : U k+ ; x : X ; } ;
+ #type Big[a] ;
+ #type Big[k := a, X := U a] ;
+--- /dev/null
++++ examples/recordopen.seg
+@@ -0,0 +1,52 @@
++-- recordopen.seg: open of a module instance inside a record body
++-- (RECORDS.md §1).  A scope operation: the opened members keep their
++-- identities (Objs[obV].Ob), and at an element their arguments are the
++-- element's projections.
++
++level a ;
++data N = zero | suc (n : N) ;
++
++module Objs (o : N) {
++  Ob : U a = N ;
++  pt : Ob = o ;
++} ;
++
++record Cat {
++  obV : N ;
++  open Objs[obV] ;             -- depends on the field obV
++  hom : Ob -> Ob -> U a ;      -- a field type through the open
++  idm (x : Ob) : hom x x ;
++  idm0 : hom pt pt = idm pt ;  -- a derived member through the open
++} ;
++
++-- the opened member is Objs[obV].Ob itself, at the element's obV
++obIs (c : Cat) : Id (U a) (Objs[c.obV].Ob) (Objs[c.obV].Ob) = refl (Objs[c.obV].Ob) ;
++useHom (c : Cat) (x : Objs[c.obV].Ob) : U a = c.hom x x ;
++useIdm (c : Cat) (x : Objs[c.obV].Ob) : c.hom x x = c.idm x ;
++idm0Is (c : Cat) : Id (c.hom (Objs[c.obV].pt) (Objs[c.obV].pt)) c.idm0 (c.idm (Objs[c.obV].pt)) =
++  refl (c.idm (Objs[c.obV].pt)) ;
++-- on a neutral application too
++idm0App (S : N -> Cat) : Id ((S zero).hom (Objs[(S zero).obV].pt) (Objs[(S zero).obV].pt))
++                            (S zero).idm0 ((S zero).idm (Objs[(S zero).obV].pt)) =
++  refl ((S zero).idm (Objs[(S zero).obV].pt)) ;
++
++-- an element built with new
++idN (x y : N) : U a = Id N x y ;
++c1 : Cat = new Cat[suc zero, idN, \ x -> refl x] ;
++#conv c1.idm0 = refl (suc zero) ;
++
++-- the opened names are in scope only in the record body
++#fails { outside : U a = Ob ; } ;
++-- the normal scope checks: a field may not reuse a variable's name
++#fails { record Bad (obV : N) { obV : N ; } ; } ;
++
++-- with Ob and pt locked, types still match by identity, never by unfolding
++opaque Objs.Ob ;
++opaque Objs.pt ;
++useHomL (c : Cat) (x : Objs[c.obV].Ob) : U a = c.hom x x ;
++idm0L (c : Cat) : Id (c.hom (Objs[c.obV].pt) (Objs[c.obV].pt)) c.idm0 (c.idm (Objs[c.obV].pt)) =
++  refl (c.idm (Objs[c.obV].pt)) ;
++-- a different obV is a different Ob
++#fails { otherOb (c : Cat) (x : Objs[zero].Ob) : U a = c.hom x x ; } ;
++-- locked, Ob is not N
++#fails { notN (c : Cat) (x : N) : U a = c.hom x x ; } ;
+--- /dev/null
++++ examples/recordrules.seg
+@@ -0,0 +1,86 @@
++-- recordrules.seg: records versus modules (RECORDS.md §§1-3).
++
++level a ;
++data N = zero | suc (n : N) ;
++
++record Box (A : U a) {
++  value : A ;
++  get : A = value ;              -- a derived member
++  twice (f : A -> A) : A = f (f value) ;
++} ;
++
++-- formation: the head parameters are given, the fields are not
++BN : U a = Box[N] ;
++#fails { noParam : U a = Box ; } ;
++
++-- construction and beta for projections and derived members
++b0 : Box[N] = new Box[N, zero] ;
++#conv b0.value = zero ;
++#conv b0.get = zero ;
++#conv b0.twice (\ n -> suc n) = suc (suc zero) ;
++#fails { getNotField : Box[N] = new Box[N, zero, zero] ; } ;
++
++-- new is the constructor: equal arguments, equal elements
++one : N = suc zero ;
++eqNew : Id (Box[N]) (new Box[N, one]) (new Box[N, suc zero]) = refl (new Box[N, one]) ;
++#fails { neqNew : Id (Box[N]) (new Box[N, one]) (new Box[N, zero]) = refl (new Box[N, one]) ; } ;
++
++-- the eliminator binds the fields only (the parameter is given by the type)
++unbox : Box[N] -> N = split { Box v -> v } ;
++#conv unbox b0 = zero ;
++#fails { withParam : Box[N] -> N = split { Box A0 v -> v } ; } ;
++
++-- eta holds in Id, by the eliminator ...
++etaBox : (b : Box[N]) -> Id (Box[N]) b (new Box[N, b.value]) =
++  split { Box v -> refl (new Box[N, v]) } ;
++-- ... and not by conversion
++#fails { etaDef (b : Box[N]) : Id (Box[N]) b (new Box[N, b.value]) = refl b ; } ;
++
++-- an unlocked derived member unfolds on a neutral element
++getVar (b : Box[N]) : Id N b.get b.value = refl b.value ;
++getApp (S : N -> Box[N]) : Id N (S zero).get (S zero).value = refl (S zero).value ;
++
++-- records are nominal: the same fields, a different record
++record Box' (A : U a) { value : A ; } ;
++#fails { nominal (b : Box[N]) : Box'[N] = b ; } ;
++
++-- a record inside a module, depending on the module's parameter
++module Outer (B : U a) {
++  record In { val : B ; } ;
++  mkIn (x : B) : In = new In[x] ;
++} ;
++inN : Outer[N].In = Outer[N].mkIn zero ;
++#conv inN.val = zero ;
++
++-- a module is not a type ...
++module M (A : U a) { x : A ; y : A = x ; } ;
++#normal M[N, zero].y ;
++#fails { mType : U a = M[N, zero] ; } ;
++#fails { mVar (c : M[N, zero]) : N = zero ; } ;
++#fails { mNew : N = (new M[N, zero]).y ; } ;
++#fails { mMissing : N = M[N].y ; } ;
++
++-- ... and a record is not a module
++#fails { recMember : N = Box[N].get ; } ;
++#fails { module BM = Box[N] ; } ;
++#fails { module T { open Box[N] ; } ; } ;
++
++-- a record body has fields and definitions only
++#fails { record Bad { module Inner { } ; } ; } ;
++
++-- a locked derived member does not unfold, even on new
++opaque Box.get ;
++#fails { getLocked (b : Box[N]) : Id N b.get b.value = refl b.value ; } ;
++#fails { getLockedNew : Id N b0.get zero = refl zero ; } ;
++
++-- a derived member is the definition applied to the ELEMENT, not to its
++-- fields: locked, b.get and (new Box[N, b.value]).get differ, as b and
++-- new Box[N, b.value] do (no eta)
++#fails { lockedEta (b : Box[N]) : Id N b.get (new Box[N, b.value]).get = refl b.get ; } ;
++lockedSame (b : Box[N]) : Id N b.get b.get = refl b.get ;
++lockedApp (S : N -> Box[N]) : Id N (S zero).get (S zero).get = refl (S zero).get ;
++
++-- a derived member written back for a hidden argument: R[ps].d at the element
++symH {A : U a} {x y : A} (p : Id A x y) : Id A y x = idJ A x (\ z q -> Id A z x) (refl x) y p ;
++hidMem (S : N -> Box[N]) (p : Id N (S zero).get zero) : Id N zero (S zero).get = symH p ;
++hidVar (b : Box[N]) (p : Id N b.get zero) : Id N zero b.get = symH p ;
+--- pre-records/examples/records.seg
++++ examples/records.seg
+@@ -1,12 +1,12 @@
+--- records.seg: a segment with fields comes with its constructor.
+--- module M (params) { fields .. }  gives
++-- records.seg: a record comes with its constructor.
++-- record M (params) { fields .. }  gives
+ --   mkM (params) (fields) : M[params] = new M[params, fields]
+ -- one occurrence of `new`, so elements built by mkM compare by name.
+ 
+ level a ;
+ data N = zero | suc (n : N) ;
+ 
+-module Pt (A : U a) {
++record Pt (A : U a) {
+   px : A ;
+   py : A ;
+   sum (f : A -> A -> A) : A = f px py ;     -- a member
+@@ -22,7 +22,7 @@
+ eNew : Id (Pt[N]) (new Pt[N, zero, zero]) (mkPt N zero zero) = refl (mkPt N zero zero) ;
+ 
+ -- fields with telescopes become Pi-typed arguments; dependent fields
+-module Fam (A : U a) {
++record Fam (A : U a) {
+   F : A -> U a ;
+   pick (x : A) : F x ;
+   fst-of (x : A) : F x = pick x ;
+@@ -31,10 +31,10 @@
+ #normal fN.fst-of zero ;
+ 
+ -- a user definition of mkM wins
+-module Box2 (A : U a) { b1 : A ; } ;
++record Box2 (A : U a) { b1 : A ; } ;
+ mkBox2 (A : U a) (x : A) : Box2[A] = new Box2[A, x] ;
+ #normal (mkBox2 N zero).b1 ;
+ 
+ -- no constructor when a field type mentions a member defined in the body
+-module Dep (A : U a) { d0 : A ; T : U a = Id A d0 d0 ; d1 : T ; } ;
++record Dep (A : U a) { d0 : A ; T : U a = Id A d0 d0 ; d1 : T ; } ;
+ #fails { k : Dep[N] = mkDep N zero (refl zero) ; } ;
+--- pre-records/examples/segtypes.seg
++++ examples/segtypes.seg
+@@ -6,7 +6,7 @@
+ 
+ -- a definition BETWEEN fields, used in the type of a later field:
+ -- the shape of MODEL's record CwF (p-lift-T between the fields)
+-module Mon (l : Level) {
++record Mon (l : Level) {
+   A    : U l ;
+   op   : A -> A -> A ;
+   sq (x : A) : A = op x x ;                   -- a member, not a field
+@@ -69,6 +69,6 @@
+ #type Mon[a+] ;
+ 
+ -- a member of a NEUTRAL element unfolds (by eta, in the filling pass)
+-module MM { f : N ; g (n : N) : N = suc f ; } ;
++record MM { f : N ; g (n : N) : N = suc f ; } ;
+ okVar (s : MM) : Id N (s.g zero) (suc s.f) = refl (suc s.f) ;
+ okApp (S : N -> MM) (k : N) : Id N ((S k).g zero) (suc (S k).f) = refl (suc (S k).f) ;

@@ -1,0 +1,34 @@
+-- RelBridge.seg: MODEL/Univ/RelBridge.agda.  UnivOp.RelG's H3Ty/H4Ty are
+-- RelGen's, for RelG's maps.  Stated once on variables (UData d' d),
+-- where the comparison is cheap; applying it at an instance compares
+-- RelGen's terms with RelGen's.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Cat[a] ;
+open Constr[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+open Yon[a] ;
+open Cofib[a] ;
+open Equiv[a] ;
+open UMapOver[a] ;
+open UnivOp[a] ;
+
+module RB (Y X : Ob) (h : Hom Y X) (A' : PTy[yP Y]) (A : PTy[yP X]) (d' : UData[Y, A']) (d : UData[X, A])
+  (mAof : (rf : RelPre[Y, X, h, d'.psi, d.psi].RFull)
+          -> EMap[RelPre[Y, X, h, d'.psi, d.psi].G', RelPre[Y, X, h, d'.psi, d.psi].G, RelPre[Y, X, h, d'.psi, d.psi].sR rf,
+                  subTy (CofL[yP Y, d'.psi].resCtx) (yP Y) A' (CofL[yP Y, d'.psi].inclR),
+                  subTy (CofL[yP X, d.psi].resCtx) (yP X) A (CofL[yP X, d.psi].inclR)])
+  (rf : RelPre[Y, X, h, d'.psi, d.psi].RFull) (Po : RelG[Y, X, h, A', A, d', d, mAof].PoTy rf) {
+  module RGd = RelG[Y, X, h, A', A, d', d, mAof] ;
+  module RP = RelPre[Y, X, h, d'.psi, d.psi] ;
+  module RGg = RelGen[a].RG[RP.G', RP.G, RP.sR rf, d'.Bf.1, RGd.AL', d.Bf.1, RGd.AG, d'.beta, d.beta, RGd.mBE rf Po, (mAof rf).mE] ;
+
+  h3 (H : RGg.H3Ty) : RGd.RG[rf, Po].H3Ty = H ;
+
+  h4 (H : RGg.H4Ty d'.eB d.eB) : RGd.RG[rf, Po].H4Ty = H ;
+} ;

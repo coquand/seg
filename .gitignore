@@ -1,0 +1,7 @@
+dist-newstyle/
+dist-prof/
+dist/
+.segserver/
+*.orig*
+*.hi
+*.o

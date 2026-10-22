@@ -1,0 +1,126 @@
+-- TranspEquiv2.seg: MODEL/Univ/TranspEquiv2.agda.  Transport along a line
+-- is an equivalence: the side and uniformity laws of the extension
+-- (ksideE, kunifE on the E-form kopE; kside, kunif on kop) and
+--   trEquiv : EquivOp D SB SA tr.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module CN = Conn[a] ;
+open CN ;
+module CF = Cofib[a] ;
+open CF ;
+open Equiv[a] ;
+open EndQ[a] ;
+open TranspSqN[a] ;
+open TranspP[a] ;
+
+module TEq2 (D L : PCtx) (S : PTy[L])
+  (ln : (W : Ob) -> W0.Ix (D.ob W) -> W0.Ix (L.ob (prodP W Iv)))
+  (lnat : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D.ob W))
+          -> Id (W0.Ix (L.ob (prodP W' Iv))) (L.act (prodP W' Iv) (prodP W Iv) (cylH W' W g) (ln W x)) (ln W' (D.act W' W g x)))
+  (d : Bool) (fS : FibM.FillDef[L, S].FillOp[src d]) (f0 : FibM.FillDef[L, S].FillOp[e0])
+  (fT : FibM.FillDef[L, S].FillOp[tgt d]) {
+  open Transp[a].Tp[D, L, S, ln, lnat, d, fS] ;
+  open TranspSq[a].Sq[D, L, S, ln, lnat, d, fS, f0] ;
+  open TranspSqN[a].SqN[D, L, S, ln, lnat, d, fS, f0] ;
+  open TranspB[a].TB[D, L, S, ln, lnat, d, fS, f0, fT] ;
+  open TranspP[a].TP[D, L, S, ln, lnat, d, fS, f0, fT] ;
+  open TranspPU[a].TPU[D, L, S, ln, lnat, d, fS, f0, fT] ;
+  open TranspEquiv[a].TEq[D, L, S, ln, lnat, d, fS, f0, fT] ;
+
+  mkPt (X : Ob) (w : SEt.TD.EI X) (p : PX.Partial[X, w]) : Id (FTr.TA.EI X) (kopE X w p).1 w =
+    FTr.mkFibE-pt X w (bE X w p) (pE X w p) (refl w.1) (refl (pE X w p).1) (q0E X w p) (q1E X w p) ;
+
+  mkB (X : Ob) (w : SEt.TD.EI X) (p : PX.Partial[X, w]) : Id (FTr.TB.EI X) (FTr.fibB X (kopE X w p)) (bE X w p) =
+    FTr.mkFibE-B X w (bE X w p) (pE X w p) (refl w.1) (refl (pE X w p).1) (q0E X w p) (q1E X w p) ;
+
+  mkP (X : Ob) (w : SEt.TD.EI X) (p : PX.Partial[X, w]) : Id (FTr.TA.EI (prodP X Iv)) (FTr.fibP X (kopE X w p)) (pE X w p) =
+    FTr.mkFibE-P X w (bE X w p) (pE X w p) (refl w.1) (refl (pE X w p).1) (q0E X w p) (q1E X w p) ;
+
+  module KS (X : Ob) (w : SEt.TD.EI X) (p : PX.Partial[X, w]) (k : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps k).pQ f) {
+    pB : Id (FTr.TB.EI W) (FTr.EB.act W X f (bE X w p)) (FTr.fibB W ((p.ps k).pv W f i)) =
+      SEs.Ls-inj W (FTr.EB.act W X f (bE X w p)) (FTr.fibB W ((p.ps k).pv W f i))
+        (symH (apH (\ z -> z.1) ((p.ps k).ppt W f i)))
+        (transH (SEs.Ls-act W X f (bE X w p)) (bnew-side X w p k W f i)) ;
+
+    pP : Id (FTr.TA.EI (prodP W Iv)) (FTr.EA.act (prodP W Iv) (prodP X Iv) (cylH W X f) (pE X w p)) (FTr.fibP W ((p.ps k).pv W f i)) =
+      SEt.Ls-inj (prodP W Iv) (FTr.EA.act (prodP W Iv) (prodP X Iv) (cylH W X f) (pE X w p)) (FTr.fibP W ((p.ps k).pv W f i))
+        (transH (DL.actSq (prodP W Iv) (prodP X Iv) W X (pX X) (cylH W X f) f (pX W) (CN.Nat[true, W, X, f].pX-cylPW) w.1)
+                (apH (D.act (prodP W Iv) W (pX W)) (symH (apH (\ z -> z.1) ((p.ps k).ppt W f i)))))
+        (transH (SEt.Ls-act (prodP W Iv) (prodP X Iv) (cylH W X f) (pE X w p)) (pnew-side X w p k W f i)) ;
+
+    res : Id (FTr.TF.EI W) (FTr.EF.act W X f (kopE X w p)) ((p.ps k).pv W f i) =
+      FTr.fibE-eq W (FTr.EF.act W X f (kopE X w p)) ((p.ps k).pv W f i)
+        (transH (apH (EA.act W X f) (mkPt X w p)) (symH ((p.ps k).ppt W f i)))
+        (transH (FTr.fibB-act W X f (kopE X w p)) (transH (apH (FTr.EB.act W X f) (mkB X w p)) pB))
+        (transH (FTr.fibP-act W X f (kopE X w p)) (transH (apH (FTr.EA.act (prodP W Iv) (prodP X Iv) (cylH W X f)) (mkP X w p)) pP)) ;
+  } ;
+
+  ksideE (X : Ob) (w : SEt.TD.EI X) (p : PX.Partial[X, w]) (k : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps k).pQ f)
+    : Id (FTr.TF.EI W) (FTr.EF.act W X f (kopE X w p)) ((p.ps k).pv W f i) = KS[X, w, p, k, W, f, i].res ;
+
+  module KU (Y X : Ob) (h : Hom Y X) (w : SEt.TD.EI X) (p : PX.Partial[X, w]) {
+    wY : SEt.TD.EI Y = EA.act Y X h w ;
+    pY : PX.Partial[Y, wY] = PX.restrictP Y X h w p ;
+
+    pB : Id (FTr.TB.EI Y) (FTr.EB.act Y X h (bE X w p)) (bE Y wY pY) =
+      SEs.Ls-inj Y (FTr.EB.act Y X h (bE X w p)) (bE Y wY pY) (refl (D.act Y X h w.1))
+        (transH (SEs.Ls-act Y X h (bE X w p)) (bn-unif Y X h w p)) ;
+
+    pP : Id (FTr.TA.EI (prodP Y Iv)) (FTr.EA.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) (pE X w p)) (pE Y wY pY) =
+      SEt.Ls-inj (prodP Y Iv) (FTr.EA.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) (pE X w p)) (pE Y wY pY)
+        (DL.actSq (prodP Y Iv) (prodP X Iv) Y X (pX X) (cylH Y X h) h (pX Y) (CN.Nat[true, Y, X, h].pX-cylPW) w.1)
+        (transH (SEt.Ls-act (prodP Y Iv) (prodP X Iv) (cylH Y X h) (pE X w p))
+         (transH (TS.PE.actSq (prodP Y Iv) (prodP X Iv) (prodP (prodP Y Iv) Iv) (prodP (prodP X Iv) Iv) (lid (prodP X Iv) t) (cylH Y X h)
+                    (cylH (prodP Y Iv) (prodP X Iv) (cylH Y X h)) (lid (prodP Y Iv) t) (pw-lid (prodP Y Iv) (prodP X Iv) (cylH Y X h) t) (FEp X w p))
+                 (apH (ES.act (prodP Y Iv) (prodP (prodP Y Iv) Iv) (lid (prodP Y Iv) t)) (FEp-unif Y X h w p)))) ;
+
+    res : Id (FTr.TF.EI Y) (FTr.EF.act Y X h (kopE X w p)) (kopE Y wY pY) =
+      FTr.fibE-eq Y (FTr.EF.act Y X h (kopE X w p)) (kopE Y wY pY)
+        (transH (apH (EA.act Y X h) (mkPt X w p)) (symH (mkPt Y wY pY)))
+        (transH (FTr.fibB-act Y X h (kopE X w p))
+         (transH (apH (FTr.EB.act Y X h) (mkB X w p)) (transH pB (symH (mkB Y wY pY)))))
+        (transH (FTr.fibP-act Y X h (kopE X w p))
+         (transH (apH (FTr.EA.act (prodP Y Iv) (prodP X Iv) (cylH Y X h)) (mkP X w p)) (transH pP (symH (mkP Y wY pY))))) ;
+  } ;
+
+  kunifE (Y X : Ob) (h : Hom Y X) (w : SEt.TD.EI X) (p : PX.Partial[X, w])
+    : Id (FTr.TF.EI Y) (FTr.EF.act Y X h (kopE X w p)) (kopE Y (EA.act Y X h w) (PX.restrictP Y X h w p)) = KU[Y, X, h, w, p].res ;
+
+  opaque ksideE ; opaque kunifE ;
+
+  kside (X : Ob) (w : SEt.TD.EI X) (p : PX.Partial[X, w]) (k : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps k).pQ f)
+    : Id (FTr.TF.EI W) (FTr.EF.act W X f (w, kop X w p)) ((p.ps k).pv W f i) =
+    trans (FTr.TF.EI W) (FTr.EF.act W X f (w, kop X w p)) (FTr.EF.act W X f (kopE X w p)) ((p.ps k).pv W f i)
+      (ap (FTr.TF.EI X) (FTr.TF.EI W) (FTr.EF.act W X f) (w, kop X w p) (kopE X w p) (kop-E X w p))
+      (ksideE X w p k W f i) ;
+
+  kunif (Y X : Ob) (h : Hom Y X) (w : SEt.TD.EI X) (p : PX.Partial[X, w])
+    : Id (FTr.TF.EI Y) (FTr.EF.act Y X h (w, kop X w p))
+                       (EA.act Y X h w, kop Y (EA.act Y X h w) (PX.restrictP Y X h w p)) =
+    trans (FTr.TF.EI Y) (FTr.EF.act Y X h (w, kop X w p)) (FTr.EF.act Y X h (kopE X w p))
+      (EA.act Y X h w, kop Y (EA.act Y X h w) (PX.restrictP Y X h w p))
+      (ap (FTr.TF.EI X) (FTr.TF.EI Y) (FTr.EF.act Y X h) (w, kop X w p) (kopE X w p) (kop-E X w p))
+      (trans (FTr.TF.EI Y) (FTr.EF.act Y X h (kopE X w p)) (kopE Y (EA.act Y X h w) (PX.restrictP Y X h w p))
+         (EA.act Y X h w, kop Y (EA.act Y X h w) (PX.restrictP Y X h w p))
+         (kunifE Y X h w p)
+         (sym (FTr.TF.EI Y) (EA.act Y X h w, kop Y (EA.act Y X h w) (PX.restrictP Y X h w p))
+              (kopE Y (EA.act Y X h w) (PX.restrictP Y X h w p)) (kop-E Y (EA.act Y X h w) (PX.restrictP Y X h w p)))) ;
+
+  opaque kside ; opaque kunif ;
+
+  trEquiv : EquivOp D SB SA tr = new PX.ContrOp[kop, kside, kunif] ;
+} ;

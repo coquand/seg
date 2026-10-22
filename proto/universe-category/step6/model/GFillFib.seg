@@ -1,0 +1,417 @@
+-- GFillFib.seg: composition in line form gives fibrancy, over any base
+-- with a path structure with connections (generic home of
+-- FillLineFib.seg): cE-pt / cE-src / cE-side, ProbR (naturality of the
+-- composites), Fill (the filler as lamA), fibAt : FibAt (src d).
+
+level l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+module W0 = V[l] ;
+open Trees[a] ;
+open Arith[a] ;
+
+  module GPR = GPre[l] ;
+  open GPR.PS ;
+  open GLine[l] ;
+  open GConn[l] ;
+
+  module FillLineFib (P : PathStr) (C : PathConn[P]) (G : PCtx) (A : PTy[G]) (d : Bool)
+    (ca : CompAtP[P, G, A, src d, tgt d].CompAt) {
+    module FL = GFill[l].FillLine[P, C, G, A, d, ca] ;
+    module CA = FL.CA ;
+    module K = FL.K ;
+    module E0 = FL.E0 ;
+    module E1 = FL.E1 ;
+    module TA = FL.TA ;
+    module TL = FL.TL ;
+
+    ----------------------------------------------------------------------
+    -- the composite of a problem
+
+    module PL (W : Ob) (xW : CA.TV.EI W) (pW : CA.PT.Partial[W, xW]) (i : Hom W Iv) {
+      module PB = FL.Prob[W, xW, pW, i] ;
+
+      -- it lies over z (id , i): c (i , tgt) = i
+      cE-pt : Id (W0.Ix (G.ob W)) PB.cE.1 (C.lev G W xW.1 W (idH W) i) =
+        calc (W0.Ix (G.ob W)) {
+            (P.pev G (tgt d)).nt W (K.connL W xW.1 i)
+          =< C.lev-ev G (tgt d) W (K.connL W xW.1 i) >
+            C.lev G W (K.connL W xW.1 i) W (idH W) (ptH W (tgt d))
+          =< K.connL-lev W xW.1 i W (idH W) (ptH W (tgt d)) >
+            C.lev G W xW.1 W (idH W) (cI d W (compH W W Iv i (idH W)) (ptH W (tgt d)))
+          =< apH (\ k -> C.lev G W xW.1 W (idH W) k) (cI-jtgt d W (compH W W Iv i (idH W))) >
+            C.lev G W xW.1 W (idH W) (compH W W Iv i (idH W))
+          =< apH (\ k -> C.lev G W xW.1 W (idH W) k) (comp-idr W Iv i) >
+            C.lev G W xW.1 W (idH W) i } ;
+
+      -- the composite at the identity, through a total side
+      cE-at (l : Fin (suc pW.pr)) (h : Lands W W (PB.S' l).pQ (idH W))
+        : Id (TA.EI W) PB.cE (C.levA G A W (CA.EK.lineL W ((PB.S' l).pv W (idH W) h)) W (idH W) (ptH W (tgt d))) =
+        calc (TA.EI W) {
+            PB.cE
+          =< apH (E1.endE W) (symH (CA.TV'.E.act-id W (PB.x'.1, ca.cop W PB.x' PB.p'))) >
+            E1.endE W (CA.TV'.E.act W W (idH W) (PB.x'.1, ca.cop W PB.x' PB.p'))
+          =< apH (E1.endE W) (ca.cside W PB.x' PB.p' l W (idH W) h) >
+            E1.endE W (CA.endL W ((PB.S' l).pv W (idH W) h))
+          =< FL.L1.endL-lev W (CA.EK.lineL W ((PB.S' l).pv W (idH W) h)) >
+            C.levA G A W (CA.EK.lineL W ((PB.S' l).pv W (idH W) h)) W (idH W) (ptH W (tgt d)) } ;
+
+      -- on {i = src d} the composite is the start
+      cE-src (h : Lands W W PB.Q0 (idH W)) : Id (TA.EI W) PB.cE (E0.endE W xW) =
+        calc (TA.EI W) {
+            PB.cE
+          =< cE-at (zero, refl true) h >
+            C.levA G A W (CA.EK.lineL W (PB.pv0 W (idH W) h)) W (idH W) (ptH W (tgt d))
+          =< PB.pv0-lev W (idH W) h W (idH W) (ptH W (tgt d)) >
+            TA.E.act W W (idH W) (E0.endE W (CA.TV.E.act W W (idH W) PB.x'))
+          =< TA.E.act-id W (E0.endE W (CA.TV.E.act W W (idH W) PB.x')) >
+            E0.endE W (CA.TV.E.act W W (idH W) PB.x')
+          =< apH (E0.endE W) (CA.TV.E.act-id W PB.x') >
+            E0.endE W PB.x'
+          =< PB.x'-E >
+            E0.endE W xW } ;
+
+      -- where the side l of pW is total, the composite is its line at i
+      cE-side (l : Fin pW.pr) (h : Lands W W (pW.ps l).pQ (idH W))
+        : Id (TA.EI W) PB.cE (C.levA G A W (CA.EK.lineL W ((pW.ps l).pv W (idH W) h)) W (idH W) i) =
+        calc (TA.EI W) {
+            PB.cE
+          =< cE-at (suc l.1, l.2) h >
+            C.levA G A W (CA.EK.lineL W (PB.SL[l].pv W (idH W) h)) W (idH W) (ptH W (tgt d))
+          =< PB.SL[l].pv-lev W (idH W) h W (idH W) (ptH W (tgt d)) >
+            C.levA G A W (CA.EK.lineL W ((pW.ps l).pv W (idH W) h)) W (idH W)
+              (cI d W (compH W W Iv (compH W W Iv i (idH W)) (idH W)) (ptH W (tgt d)))
+          =< apH (\ k -> C.levA G A W (CA.EK.lineL W ((pW.ps l).pv W (idH W) h)) W (idH W) k)
+                 (transH (cI-jtgt d W (compH W W Iv (compH W W Iv i (idH W)) (idH W)))
+                   (transH (comp-idr W Iv (compH W W Iv i (idH W))) (comp-idr W Iv i))) >
+            C.levA G A W (CA.EK.lineL W ((pW.ps l).pv W (idH W) h)) W (idH W) i } ;
+    } ;
+
+    -- the composite of equal problems
+    prob-cong (W : Ob) (x x' : CA.TV.EI W) (Q : Id (CA.TV.EI W) x x') (p : CA.PT.Partial[W, x]) (p' : CA.PT.Partial[W, x'])
+      (R : Id (CA.PT.Partial[W, x']) (subst (CA.TV.EI W) (\ z -> CA.PT.Partial[W, z]) x x' Q p) p') (i : Hom W Iv)
+      : Id (TA.EI W) FL.Prob[W, x, p, i].cE FL.Prob[W, x', p', i].cE =
+      idJ (CA.TV.EI W) x
+        (\ x2 Q2 -> (p2 : CA.PT.Partial[W, x2]) -> Id (CA.PT.Partial[W, x2]) (subst (CA.TV.EI W) (\ z -> CA.PT.Partial[W, z]) x x2 Q2 p) p2
+           -> Id (TA.EI W) FL.Prob[W, x, p, i].cE FL.Prob[W, x2, p2, i].cE)
+        (\ p2 R2 -> apH {CA.PT.Partial[W, x]} {TA.EI W} (\ z -> FL.Prob[W, x, z, i].cE) R2)
+        x' Q p' R ;
+
+    ----------------------------------------------------------------------
+    -- the restricted problem is the problem at the restricted data
+
+    module ProbR (W : Ob) (xW : CA.TV.EI W) (pW : CA.PT.Partial[W, xW]) (i : Hom W Iv) (V : Ob) (g : Hom V W) {
+      module PW = FL.Prob[W, xW, pW, i] ;
+      module PV = FL.Prob[V, CA.TV.E.act V W g xW, CA.PT.restrictP V W g xW pW, compH V W Iv i g] ;
+
+      Pt : Id (CA.TV.EI V) (CA.TV.E.act V W g PW.x') PV.x' =
+        E0.tv-eq V (CA.TV.E.act V W g PW.x') PV.x' (K.connL-act V W g xW.1 i)
+          (transH (PW.endW V g) (symH (transH PV.x'-E (E0.endE-act V W g xW)))) ;
+
+      -- the points of the sides
+      ptE (V' : Ob) (g' : Hom V' V)
+        : Id (CA.TV.EI V') (CA.TV.E.act V' W (compH V' V W g g') PW.x') (CA.TV.E.act V' V g' PV.x') =
+        transH (symH (CA.TV.PE.actC V' V W g g' PW.x')) (apH (CA.TV.E.act V' V g') Pt) ;
+
+      eQ'' : (n : Nat) (hn : IsT (ltb n (suc pW.pr)))
+        -> Id (Phi V) (pre V W g (PW.S'' n hn).pQ) (PV.S'' n hn).pQ = split {
+        zero -> \ hn -> pre-comp V W Iv g i (ptS (src d)) ;
+        suc n -> \ hn -> refl (pre V W g (pW.ps (n, hn)).pQ) } ;
+
+      eQt : CA.PT.EQT V (CA.TV.E.act V W g PW.x') PV.x' (CA.PT.restrictP V W g PW.x' PW.p') PV.p'.pr PV.p'.ps (refl (suc pW.pr)) =
+        \ l -> eQ'' l.1 l.2 ;
+
+      eV'' : (n : Nat) (hn : IsT (ltb n (suc pW.pr))) (V' : Ob) (g' : Hom V' V)
+        (h : Lands V' V (pre V W g (PW.S'' n hn).pQ) g') (h' : Lands V' V (PV.S'' n hn).pQ g') (V'' : Ob) (g'' : Hom V'' V') (j : Hom V'' Iv)
+        -> Id (TA.EI V'') (C.levA G A V' (CA.EK.lineL V' ((PW.S'' n hn).pv V' (compH V' V W g g') (lands-pre V' V W g (PW.S'' n hn).pQ g' h))) V'' g'' j)
+                          (C.levA G A V' (CA.EK.lineL V' ((PV.S'' n hn).pv V' g' h')) V'' g'' j) = split {
+        zero -> \ hn V' g' h h' V'' g'' j ->
+          transH (PW.pv0-lev V' (compH V' V W g g') (lands-pre V' V W g PW.Q0 g' h) V'' g'' j)
+           (transH (apH (\ z -> TA.E.act V'' V' g'' (E0.endE V' z)) (ptE V' g'))
+                   (symH (PV.pv0-lev V' g' h' V'' g'' j))) ;
+        suc n -> \ hn V' g' h h' V'' g'' j ->
+          calc (TA.EI V'') {
+              C.levA G A V' (CA.EK.lineL V' (PW.SL[(n, hn)].pv V' (compH V' V W g g') (lands-pre V' V W g (pW.ps (n, hn)).pQ g' h))) V'' g'' j
+            =< PW.SL[(n, hn)].pv-lev V' (compH V' V W g g') (lands-pre V' V W g (pW.ps (n, hn)).pQ g' h) V'' g'' j >
+              C.levA G A V' (CA.EK.lineL V' ((pW.ps (n, hn)).pv V' (compH V' V W g g') (lands-pre V' V W g (pW.ps (n, hn)).pQ g' h))) V'' g''
+                (cI d V'' (compH V'' V' Iv (compH V' W Iv i (compH V' V W g g')) g'') j)
+            =< apH (\ u -> C.levA G A V' (CA.EK.lineL V' u) V'' g'' (cI d V'' (compH V'' V' Iv (compH V' W Iv i (compH V' V W g g')) g'') j))
+                   (CA.PT.pv-irr W xW (pW.ps (n, hn)) V' (compH V' V W g g') (lands-pre V' V W g (pW.ps (n, hn)).pQ g' h)
+                      (lands-pre V' V W g (pW.ps (n, hn)).pQ g' h')) >
+              C.levA G A V' (CA.EK.lineL V' ((pW.ps (n, hn)).pv V' (compH V' V W g g') (lands-pre V' V W g (pW.ps (n, hn)).pQ g' h'))) V'' g''
+                (cI d V'' (compH V'' V' Iv (compH V' W Iv i (compH V' V W g g')) g'') j)
+            =< apH (\ k -> C.levA G A V' (CA.EK.lineL V' ((pW.ps (n, hn)).pv V' (compH V' V W g g') (lands-pre V' V W g (pW.ps (n, hn)).pQ g' h'))) V'' g''
+                             (cI d V'' (compH V'' V' Iv k g'') j))
+                   (symH (comp-assoc V' V W Iv i g g')) >
+              C.levA G A V' (CA.EK.lineL V' ((pW.ps (n, hn)).pv V' (compH V' V W g g') (lands-pre V' V W g (pW.ps (n, hn)).pQ g' h'))) V'' g''
+                (cI d V'' (compH V'' V' Iv (compH V' V Iv (compH V W Iv i g) g') g'') j)
+            =< symH (PV.SL[(n, hn)].pv-lev V' g' h' V'' g'' j) >
+              C.levA G A V' (CA.EK.lineL V' (PV.SL[(n, hn)].pv V' g' h')) V'' g'' j } } ;
+
+      ptS2 (n : Nat) (hn : IsT (ltb n (suc pW.pr))) (V' : Ob) (g' : Hom V' V)
+        (h : Lands V' V (pre V W g (PW.S'' n hn).pQ) g') (h' : Lands V' V (PV.S'' n hn).pQ g')
+        : Id (CA.TV.EI V') ((PW.S'' n hn).pv V' (compH V' V W g g') (lands-pre V' V W g (PW.S'' n hn).pQ g' h)).1 ((PV.S'' n hn).pv V' g' h').1 =
+        transH (PW.ptS'' n hn V' (compH V' V W g g') (lands-pre V' V W g (PW.S'' n hn).pQ g' h))
+          (transH (ptE V' g') (symH (PV.ptS'' n hn V' g' h'))) ;
+
+      eVt : CA.PT.EVT V (CA.TV.E.act V W g PW.x') PV.x' (CA.PT.restrictP V W g PW.x' PW.p') PV.p'.pr PV.p'.ps (refl (suc pW.pr)) =
+        \ l V' g' h h' ->
+          FL.L0.ts-ext V' ((PW.S' l).pv V' (compH V' V W g g') (lands-pre V' V W g (PW.S' l).pQ g' h)) ((PV.S' l).pv V' g' h')
+            (ptS2 l.1 l.2 V' g' h h') (\ V'' g'' j -> eV'' l.1 l.2 V' g' h h' V'' g'' j) ;
+
+      Rp : Id (CA.PT.Partial[V, PV.x']) (subst (CA.TV.EI V) (\ z -> CA.PT.Partial[V, z]) (CA.TV.E.act V W g PW.x') PV.x' Pt
+                                                (CA.PT.restrictP V W g PW.x' PW.p')) PV.p' =
+        CA.PT.partExtH V (CA.TV.E.act V W g PW.x') PV.x' Pt (CA.PT.restrictP V W g PW.x' PW.p') PV.p' (refl (suc pW.pr)) eQt eVt ;
+
+      -- uniformity of the composite
+      cE-eq : Id (TA.EI V) (TA.E.act V W g PW.cE) PV.cE =
+        calc (TA.EI V) {
+            TA.E.act V W g PW.cE
+          =< symH (E1.endE-act V W g (PW.x'.1, ca.cop W PW.x' PW.p')) >
+            E1.endE V (CA.TV'.E.act V W g (PW.x'.1, ca.cop W PW.x' PW.p'))
+          =< apH (E1.endE V) (ca.cunif V W g PW.x' PW.p') >
+            E1.endE V ((CA.TV.E.act V W g PW.x').1, ca.cop V (CA.TV.E.act V W g PW.x') (CA.PT.restrictP V W g PW.x' PW.p'))
+          =< apH (E1.endE V) (CA.cop-cong ca V (CA.TV.E.act V W g PW.x') PV.x' Pt (CA.PT.restrictP V W g PW.x' PW.p') PV.p' Rp) >
+            PV.cE } ;
+
+      opaque Pt ; opaque Rp ;
+    } ;
+
+    ----------------------------------------------------------------------
+    -- the filler
+
+    module Fill (X : Ob) (x : CA.TV.EI X) (p : CA.PT.Partial[X, x]) {
+      c : C.FamA G A X = \ W f i -> FL.Prob[W, CA.TV.E.act W X f x, CA.PT.restrictP W X f x p, i].cE ;
+
+      -- restricting twice is restricting along the composite
+      rr (W : Ob) (f : Hom W X) (V : Ob) (g : Hom V W) (j : Hom V Iv)
+        : Id (TA.EI V) FL.Prob[V, CA.TV.E.act V W g (CA.TV.E.act W X f x), CA.PT.restrictP V W g (CA.TV.E.act W X f x) (CA.PT.restrictP W X f x p), j].cE
+                       (c V (compH V W X f g) j) =
+        symH (prob-cong V (CA.TV.E.act V X (compH V W X f g) x) (CA.TV.E.act V W g (CA.TV.E.act W X f x)) (CA.TV.E.act-o V W X f g x)
+                (CA.PT.restrictP V X (compH V W X f g) x p) (CA.PT.restrictP V W g (CA.TV.E.act W X f x) (CA.PT.restrictP W X f x p))
+                (CA.PT.restrictP-o V W X g f x p) j) ;
+
+      cp : C.FamAPt G A X x.1 c = \ W f i ->
+        transH (PL[W, CA.TV.E.act W X f x, CA.PT.restrictP W X f x p, i].cE-pt)
+          (transH (C.lev-act G W X f x.1 W (idH W) i) (apH (\ k -> C.lev G X x.1 W k i) (comp-idr W X f))) ;
+
+      cn : C.FamANat G A X c = \ V W g f i ->
+        transH (ProbR[W, CA.TV.E.act W X f x, CA.PT.restrictP W X f x p, i, V, g].cE-eq) (rr W f V g (compH V W Iv i g)) ;
+
+      fill : W0.Ix ((P.pthTy G A).tob X x.1) = C.lamA G A X x.1 c cp cn ;
+
+      fill-lev (W : Ob) (f : Hom W X) (i : Hom W Iv) : Id (TA.EI W) (C.levA G A X (x.1, fill) W f i) (c W f i) =
+        C.levA-lam G A X x.1 c cp cn W f i ;
+
+      -- its end at src d is the start
+      h0 : Lands X X (pre X Iv (ptH X (src d)) (ptS (src d))) (idH X) =
+        pre-lands X X Iv (ptH X (src d)) (ptS (src d)) (idH X)
+          (lands-eq X Iv (ptS (src d)) (ptH X (src d)) (compH X X Iv (ptH X (src d)) (idH X)) (symH (comp-idr X Iv (ptH X (src d))))
+            (pt-lands X (src d))) ;
+
+      kfib : Id (CA.TV.EI X) ((P.pevA G A (src d)).mE X (x.1, fill)) x =
+        E0.tv-eq X ((P.pevA G A (src d)).mE X (x.1, fill)) x ((P.pevA G A (src d)).mpt X (x.1, fill))
+          (calc (TA.EI X) {
+              E0.endE X ((P.pevA G A (src d)).mE X (x.1, fill))
+            =< FL.L0.endL-lev X (x.1, fill) >
+              C.levA G A X (x.1, fill) X (idH X) (ptH X (src d))
+            =< fill-lev X (idH X) (ptH X (src d)) >
+              c X (idH X) (ptH X (src d))
+            =< PL[X, CA.TV.E.act X X (idH X) x, CA.PT.restrictP X X (idH X) x p, ptH X (src d)].cE-src h0 >
+              E0.endE X (CA.TV.E.act X X (idH X) x)
+            =< apH (E0.endE X) (CA.TV.E.act-id X x) >
+              E0.endE X x }) ;
+
+      kop : CA.TS.T X x = (fill, kfib) ;
+
+      -- along the side l of p, the filler is its line
+      module KS (l : Fin p.pr) (W : Ob) (f : Hom W X) (h : Lands W X (p.ps l).pQ f) {
+        u : CA.TS.EI W = (p.ps l).pv W f h ;
+
+        hV (V : Ob) (g : Hom V W) : Lands V V (pre V X (compH V W X f g) (p.ps l).pQ) (idH V) =
+          pre-lands V V X (compH V W X f g) (p.ps l).pQ (idH V)
+            (lands-eq V X (p.ps l).pQ (compH V W X f g) (compH V V X (compH V W X f g) (idH V)) (symH (comp-idr V X (compH V W X f g)))
+              (lands-comp V W X (p.ps l).pQ f g h)) ;
+
+        lv (V : Ob) (g : Hom V W) (j : Hom V Iv)
+          : Id (TA.EI V) (c V (compH V W X f g) j) (C.levA G A W (CA.EK.lineL W u) V g j) =
+          calc (TA.EI V) {
+              c V (compH V W X f g) j
+            =< PL[V, CA.TV.E.act V X (compH V W X f g) x, CA.PT.restrictP V X (compH V W X f g) x p, j].cE-side l (hV V g) >
+              C.levA G A V (CA.EK.lineL V ((p.ps l).pv V (compH V V X (compH V W X f g) (idH V))
+                                           (lands-pre V V X (compH V W X f g) (p.ps l).pQ (idH V) (hV V g)))) V (idH V) j
+            =< apH (\ z -> C.levA G A V (CA.EK.lineL V z) V (idH V) j)
+                   (transH (CA.PT.pv-hom X x (p.ps l) V (compH V V X (compH V W X f g) (idH V)) (compH V W X f g) (comp-idr V X (compH V W X f g))
+                              (lands-pre V V X (compH V W X f g) (p.ps l).pQ (idH V) (hV V g)) (lands-comp V W X (p.ps l).pQ f g h))
+                           (symH ((p.ps l).pnat V W g f h (lands-comp V W X (p.ps l).pQ f g h)))) >
+              C.levA G A V (CA.EK.lineL V (CA.TS.E.act V W g u)) V (idH V) j
+            =< FL.L0.line-act V W g u V (idH V) j >
+              C.levA G A W (CA.EK.lineL W u) V (compH V V W g (idH V)) j
+            =< apH (\ k -> C.levA G A W (CA.EK.lineL W u) V k j) (comp-idr V W g) >
+              C.levA G A W (CA.EK.lineL W u) V g j } ;
+
+        side : Id (CA.TS.EI W) (CA.TS.E.act W X f (x, kop)) u =
+          FL.L0.ts-ext W (CA.TS.E.act W X f (x, kop)) u (symH ((p.ps l).ppt W f h))
+            (\ V g j -> transH (FL.L0.line-act W X f (x, kop) V g j) (transH (fill-lev V (compH V W X f g) j) (lv V g j))) ;
+      } ;
+    } ;
+
+    -- uniformity of the filler
+    kunif (Y X : Ob) (h : Hom Y X) (x : CA.TV.EI X) (p : CA.PT.Partial[X, x])
+      : Id (CA.TS.EI Y) (CA.TS.E.act Y X h (x, Fill[X, x, p].kop)) (CA.TV.E.act Y X h x, Fill[Y, CA.TV.E.act Y X h x, CA.PT.restrictP Y X h x p].kop) =
+      FL.L0.ts-ext Y (CA.TS.E.act Y X h (x, Fill[X, x, p].kop)) (CA.TV.E.act Y X h x, Fill[Y, CA.TV.E.act Y X h x, CA.PT.restrictP Y X h x p].kop)
+        (refl (CA.TV.E.act Y X h x))
+        (\ V g j ->
+          transH (FL.L0.line-act Y X h (x, Fill[X, x, p].kop) V g j)
+           (transH (Fill[X, x, p].fill-lev V (compH V Y X h g) j)
+            (transH (symH (Fill[X, x, p].rr Y h V g j))
+                    (symH (Fill[Y, CA.TV.E.act Y X h x, CA.PT.restrictP Y X h x p].fill-lev V g j))))) ;
+
+    fibAt : CA.LP.FibAt (src d) =
+      new CA.PT.ContrOp[\ X x p -> Fill[X, x, p].kop, \ X x p l W f h -> Fill[X, x, p].KS[l, W, f, h].side, kunif] ;
+
+    ----------------------------------------------------------------------
+    -- ESI: if the composition does not see an inserted empty side, neither
+    -- does the filler (the problem of p' is that of p with an empty side
+    -- inserted after side 0)
+
+    module PI (W : Ob) (xW : CA.TV.EI W) (k : Nat) (pW pW' : CA.PT.Partial[W, xW]) (ins : CA.PEs.InsP[W, xW, k, pW, pW']) (i : Hom W Iv) {
+      module Q0 = FL.Prob[W, xW, pW, i] ;
+      module Q1 = FL.Prob[W, xW, pW', i] ;
+
+      insQ'' : (n : Nat) (h : IsT (ltb n (suc pW.pr))) (h' : IsT (ltb (Arith[a].skipN (suc k) n) (suc pW'.pr)))
+        -> Id (Phi W) (Q1.S'' (Arith[a].skipN (suc k) n) h').pQ (Q0.S'' n h).pQ = split {
+        zero -> \ h h' -> refl (pre W Iv i (ptS (src d))) ;
+        suc m -> \ h h' -> ins.insp-Q m h h' } ;
+
+      -- the values of the lines of the sides agree
+      valE'' : (n : Nat) (h : IsT (ltb n (suc pW.pr))) (h' : IsT (ltb (Arith[a].skipN (suc k) n) (suc pW'.pr)))
+        (V : Ob) (g : Hom V W) (i1 : Lands V W (Q1.S'' (Arith[a].skipN (suc k) n) h').pQ g) (i2 : Lands V W (Q0.S'' n h).pQ g)
+        (V' : Ob) (g' : Hom V' V) (j : Hom V' Iv)
+        -> Id (TA.EI V') (Q1.valS'' (Arith[a].skipN (suc k) n) h' V g i1 V' g' j) (Q0.valS'' n h V g i2 V' g' j) = split {
+        zero -> \ h h' V g i1 i2 V' g' j -> refl (TA.E.act V' V g' (E0.endE V (CA.TV.E.act V W g Q0.x'))) ;
+        suc m -> \ h h' V g i1 i2 V' g' j ->
+          apH (\ u -> C.levA G A V (CA.EK.lineL V u) V' g' (cI d V' (compH V' V Iv (compH V W Iv i g) g') j)) (ins.insp-v m h h' V g i1 i2) } ;
+
+      insV (n : Nat) (h : IsT (ltb n (suc pW.pr))) (h' : IsT (ltb (Arith[a].skipN (suc k) n) (suc pW'.pr)))
+        (V : Ob) (g : Hom V W) (i1 : Lands V W (Q1.S'' (Arith[a].skipN (suc k) n) h').pQ g) (i2 : Lands V W (Q0.S'' n h).pQ g)
+        : Id (CA.TS.EI V) ((Q1.S'' (Arith[a].skipN (suc k) n) h').pv V g i1) ((Q0.S'' n h).pv V g i2) =
+        FL.L0.ts-ext V ((Q1.S'' (Arith[a].skipN (suc k) n) h').pv V g i1) ((Q0.S'' n h).pv V g i2)
+          (transH (Q1.ptS'' (Arith[a].skipN (suc k) n) h' V g i1) (symH (Q0.ptS'' n h V g i2)))
+          (\ V' g' j -> transH (Q1.levS'' (Arith[a].skipN (suc k) n) h' V g i1 V' g' j)
+                          (transH (valE'' n h h' V g i1 i2 V' g' j) (symH (Q0.levS'' n h V g i2 V' g' j)))) ;
+
+      insP : CA.PEs.InsP[W, Q0.x', suc k, Q0.p', Q1.p'] =
+        new CA.PEs.InsP[W, Q0.x', suc k, Q0.p', Q1.p', apH (\ n -> suc n) ins.insp-r, ins.insp-k, \ hk -> ins.insp-e hk,
+                        \ n h h' -> insQ'' n h h', \ n h h' V g i1 i2 -> insV n h h' V g i1 i2] ;
+    } ;
+
+    module Kesi (ce : CA.CESI ca) {
+      cE-eq (W : Ob) (xW : CA.TV.EI W) (k : Nat) (pW pW' : CA.PT.Partial[W, xW]) (ins : CA.PEs.InsP[W, xW, k, pW, pW']) (i : Hom W Iv)
+        : Id (TA.EI W) FL.Prob[W, xW, pW', i].cE FL.Prob[W, xW, pW, i].cE =
+        apH (\ c -> E1.endE W (FL.Prob[W, xW, pW, i].x'.1, c))
+          (ce W FL.Prob[W, xW, pW, i].x' (suc k) FL.Prob[W, xW, pW, i].p' FL.Prob[W, xW, pW', i].p' PI[W, xW, k, pW, pW', ins, i].insP) ;
+
+      module KF (X : Ob) (x : CA.TV.EI X) (k : Nat) (p p' : CA.PT.Partial[X, x]) (ins : CA.PEs.InsP[X, x, k, p, p']) {
+        cc (W : Ob) (f : Hom W X) (i : Hom W Iv) : Id (TA.EI W) (Fill[X, x, p'].c W f i) (Fill[X, x, p].c W f i) =
+          cE-eq W (CA.TV.E.act W X f x) k (CA.PT.restrictP W X f x p) (CA.PT.restrictP W X f x p') (CA.PEs.insR W X f x k p p' ins) i ;
+
+        eL : Id (TL.EI X) (x.1, Fill[X, x, p'].fill) (x.1, Fill[X, x, p].fill) =
+          C.levA-ext G A X (x.1, Fill[X, x, p'].fill) (x.1, Fill[X, x, p].fill) (\ W f i ->
+            transH (Fill[X, x, p'].fill-lev W f i) (transH (cc W f i) (symH (Fill[X, x, p].fill-lev W f i)))) ;
+
+        res : Id (CA.TS.T X x) Fill[X, x, p'].kop Fill[X, x, p].kop =
+          CA.SFm.sf-eq X x Fill[X, x, p'].kop Fill[X, x, p].kop (TL.pr-inj X x.1 Fill[X, x, p'].fill Fill[X, x, p].fill eL) ;
+      } ;
+
+      kesi : CA.PEs.KESI fibAt = \ X x k p p' ins -> KF[X, x, k, p, p', ins].res ;
+    } ;
+
+    ----------------------------------------------------------------------
+    -- the end of the filler is the composite (cI tgt j = j: the problem at
+    -- i = tgt d is the given one with an empty side inserted first)
+
+    -- src d and tgt d are disjoint
+    sdDisj : (d2 : Bool) (V : Ob) (g : Hom V Iv) (i0 : Lands V Iv (ptS (src d2)) g) (i1 : Lands V Iv (ptS (tgt d2)) g) -> Empty = split {
+      true -> \ V g i0 i1 -> pt-disj V g i0 i1 ;
+      false -> \ V g i0 i1 -> pt-disj V g i1 i0 } ;
+
+    module End (ce : CA.CESI ca) (X : Ob) (x : CA.TV.EI X) (p : CA.PT.Partial[X, x]) {
+      iT : Hom X Iv = ptH X (tgt d) ;
+      module PB = FL.Prob[X, x, p, iT] ;
+
+      -- (i g) g' = tgt
+      itg (V : Ob) (g : Hom V X) : Id (Hom V Iv) (compH V X Iv iT g) (ptH V (tgt d)) = ptH-nat V X g (tgt d) ;
+
+      -- the connection line at tgt d is the line
+      lineE : Id (W0.Ix ((P.pth G).ob X)) (K.connL X x.1 iT) x.1 =
+        C.lev-ext G X (K.connL X x.1 iT) x.1 (\ V g j ->
+          transH (K.connL-lev X x.1 iT V g j)
+            (apH (\ k -> C.lev G X x.1 V g k) (transH (apH (\ k -> cI d V k j) (itg V g)) (cI-itgt d V j)))) ;
+
+      xE : Id (CA.TV.EI X) PB.x' x = E0.tv-eq X PB.x' x lineE PB.x'-E ;
+
+      -- side 0 is empty
+      e0E : Id (Phi X) PB.Q0 (emptyS X) =
+        is-empty X PB.Q0 (\ V g h ->
+          sdDisj d V (compH V X Iv iT g) (lands-pre V X Iv iT (ptS (src d)) g h)
+            (lands-eq V Iv (ptS (tgt d)) (ptH V (tgt d)) (compH V X Iv iT g) (symH (itg V g)) (pt-lands V (tgt d)))) ;
+
+      -- the sides of p at equal indices
+      pvIdx (V : Ob) (f : Hom V X) (m1 m2 : Fin p.pr) (E : Id (Fin p.pr) m1 m2)
+        (i1 : Lands V X (p.ps m1).pQ f) (i2 : Lands V X (p.ps m2).pQ f) : Id (CA.TS.EI V) ((p.ps m1).pv V f i1) ((p.ps m2).pv V f i2) =
+        idJ (Fin p.pr) m1 (\ m E2 -> (i3 : Lands V X (p.ps m).pQ f) -> Id (CA.TS.EI V) ((p.ps m1).pv V f i1) ((p.ps m).pv V f i3))
+          (\ i3 -> CA.PT.pv-irr X x (p.ps m1) V f i1 i3) m2 E i2 ;
+
+      insV (n : Nat) (h : IsT (ltb n p.pr)) (h' : IsT (ltb (Arith[a].skipN zero n) PB.p'.pr))
+        (W : Ob) (f : Hom W X) (i : Lands W X (PB.p'.ps (Arith[a].skipN zero n, h')).pQ f) (i' : Lands W X (p.ps (n, h)).pQ f)
+        : Id (CA.TS.EI W) ((PB.p'.ps (Arith[a].skipN zero n, h')).pv W f i) ((p.ps (n, h)).pv W f i') =
+        FL.L0.ts-ext W (PB.SL[(n, h')].pv W f i) ((p.ps (n, h)).pv W f i')
+          (transH (PB.SL[(n, h')].pv-pt W f i) (transH (apH (CA.TV.E.act W X f) xE) (symH ((p.ps (n, h)).ppt W f i'))))
+          (\ V' g' j ->
+            transH (PB.SL[(n, h')].pv-lev W f i V' g' j)
+             (transH (apH (\ k -> C.levA G A W (CA.EK.lineL W ((p.ps (n, h')).pv W f i)) V' g' k)
+                        (transH (apH (\ k -> cI d V' k j)
+                                   (transH (apH (\ k -> compH V' W Iv k g') (itg W f)) (ptH-nat V' W g' (tgt d))))
+                                (cI-itgt d V' j)))
+                     (apH (\ u -> C.levA G A W (CA.EK.lineL W u) V' g' j)
+                        (pvIdx W f (n, h') (n, h) (fin-eq p.pr (n, h') (n, h) (refl n)) i i')))) ;
+
+      ins : CA.PEs.InsPH[X, x, PB.x', zero, p, PB.p'] =
+        new CA.PEs.InsPH[X, x, PB.x', zero, p, PB.p', refl (suc p.pr), refl true,
+          \ hk -> e0E,
+          \ n h h' -> apH (\ m -> (p.ps m).pQ) (fin-eq p.pr (n, h') (n, h) (refl n)),
+          insV] ;
+
+      -- the composite of the problem at tgt d is the composite of (x , p)
+      cE-eq : Id (CA.TV'.EI X) (PB.x'.1, ca.cop X PB.x' PB.p') (x.1, ca.cop X x p) =
+        CA.cesiH ca ce X x PB.x' xE zero p PB.p' ins ;
+    } ;
+
+    module EndC (ce : CA.CESI ca) {
+      module FF = CA.FromFib[fibAt] ;
+
+      endEq (X : Ob) (x : CA.TV.EI X) (p : CA.PT.Partial[X, x]) : Id (CA.TV'.EI X) (FF.endK X x p) (x.1, ca.cop X x p) =
+        E1.tv-eq X (FF.endK X x p) (x.1, ca.cop X x p) ((P.pevA G A (tgt d)).mpt X (x.1, Fill[X, x, p].fill))
+          (calc (TA.EI X) {
+              E1.endE X (FF.endK X x p)
+            =< FL.L1.endL-lev X (x.1, Fill[X, x, p].fill) >
+              C.levA G A X (x.1, Fill[X, x, p].fill) X (idH X) (ptH X (tgt d))
+            =< Fill[X, x, p].fill-lev X (idH X) (ptH X (tgt d)) >
+              Fill[X, x, p].c X (idH X) (ptH X (tgt d))
+            =< prob-cong X (CA.TV.E.act X X (idH X) x) x (CA.TV.E.act-id X x) (CA.PT.restrictP X X (idH X) x p) p
+                 (CA.PT.restrictP-id X x p) (ptH X (tgt d)) >
+              FL.Prob[X, x, p, ptH X (tgt d)].cE
+            =< apH (E1.endE X) End[ce, X, x, p].cE-eq >
+              E1.endE X (x.1, ca.cop X x p) }) ;
+
+      -- the composition read off the filler is ca
+      endCa : Id CA.CompAt FF.ca ca =
+        CA.CompAt-ext FF.ca ca (\ X x p ->
+          CA.TV'.pr-inj X x.1 (FF.cop X x p) (ca.cop X x p) (transH (FF.cop-E X x p) (endEq X x p))) ;
+
+      opaque endEq ; opaque endCa ;
+    } ;
+  } ;

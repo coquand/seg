@@ -1,0 +1,83 @@
+-- GUaOp3.seg (inside IvBase.FaU, any base): the univalence operation,
+-- step U3: the extension.  For a problem (X , F , p):
+--   B_out    (Ext , glueCl ... (tautCl B_g) extFib): the code of the
+--            glued type, its classifier by the glue classifier (by cases
+--            on psi; posets: extFib's own structure) from B_g's
+--            tautological classifier (the side codes' own, moved)
+--   al_out   ext, read in F.1 along elYon
+--   e_out    (extEquiv , its KESI), along elYon
+--   kop      (B_out , al_out , e_out) : UaT0 X F
+-- tautCl / glueCl are the classifier's parameters (posets: El's fib.2;
+-- Delta: pointwise, DGlueCl.GC.clExt).
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open Trees[a] ;
+open Arith[a] ;
+module GP = GCofib[a] ;
+module GE1 = GFibE[a+] ;
+module GX = GEqExt[a] ;
+open GLine[a] ;
+
+module U3 (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE) 
+  (kU0 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e0)
+  (kU1 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e1)
+  (kU0e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].SFm.SF].KESI kU0)
+  (kU1e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].SFm.SF].KESI kU1)
+  (X : Ob) (F : GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].U0 X)
+  (p : GCofib[a+].Partials[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx,
+                           GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].UaTy].Partial[X, F])
+  (tautCl : (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].U0 Y)
+     (cnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y))
+        -> Id (GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].U0 Y') (c Y' (D.act Y' Y h x))
+              (GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].uAct Y' Y h (c Y x)))
+     -> Cl D GElC.ElC[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE].Fam[D, c, cnat].ElTy)
+  (glueCl : (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+     (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+     (hB : Cl GP.CofL[G, psi].resCtx B)
+     (c : GFibE[a].FE[G, GExt2[a].ExtB2[G, A, psi, B, al].ExtT].Comp) (e : GFibE[a].FE[G, GExt2[a].ExtB2[G, A, psi, B, al].ExtT].ESIC c)
+     -> Cl G GExt2[a].ExtB2[G, A, psi, B, al].ExtT) {
+  module O2 = GUaOp2.U2[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e, X, F, p] ;
+  module O1 = O2.O1 ;
+  module UA = O2.UA ;
+  module UU = O2.UU ;
+  module G = O2.G ;
+
+  ExtT : PTy[yP X] = GExt2[a].ExtB2[yP X, O2.AX, O1.psi, G.B, O2.al'].ExtT ;
+
+  -- the code of the glued type
+  hB : Cl O1.D G.B = tautCl O1.D G.cB G.cnatB ;
+
+  Bout : UU.U0 X = (ExtT, glueCl (yP X) O2.AX O1.psi G.B O2.al' hB O2.EF.extFib.2.1 O2.EF.extFib.2.2) ;
+
+  -- ext and its equivalence structure, read in F.1
+  module E4 = GExtEquiv4[a].ExtEq4[yP X, O2.AX, O1.psi, G.B, O2.al', O2.FAX.k1, O2.eal', O2.FAX.k1e, O2.keal'] ;
+  module E3 = GExtEquiv3[a].ExtEq3[yP X, O2.AX, O1.psi, G.B, O2.al', O2.FAX.k1, O2.eal'] ;
+
+  MS2 (T : PTy[yP X]) : U a+ = (al2 : PMap[yP X, ExtT, T]) * GX.EqDat[yP X].EqOn (ExtT, (T, al2)) ;
+
+  out : MS2 F.1 =
+    subst (PTy[yP X]) MS2 O2.AX F.1 O2.YN.elYon
+      (GExt4[a].ExtB4[yP X, O2.AX, O1.psi, G.B, O2.al'].extMap, (E3.extEquiv, E4.extEquiv-kesi)) ;
+
+  -- the operation at (X , F , p)
+  kop : UA.UaT0 X F = (Bout, out) ;
+} ;

@@ -1,0 +1,509 @@
+-- FillCell.seg: MODEL/Poset/FillCell.agda.  Case 2 of smodel-proofs (no
+-- side of the box is full): the descending recursion over the chains
+-- P_N, ..., P_0 of the prism [N] * [1].
+--
+-- P_k is filled by a horn at its vertex (k , 0).  Its faces are
+--   y < k     : P_{k-1} of the face y          (the stage below)
+--   y = k+1   : Q_{k+1}                         (the previous step)
+--   y > k+1   : P_k of the face y-1             (the stage below)
+-- and the missing face y = k is the new chain Q_k.  The recursion starts
+-- from Q_{N+1}, the lower lid.  The stage below is given by low : LowI N
+-- (nothing when N = 0).
+--
+-- Agda's dot patterns  f .(suc k') (cLt k' refl h)  are a lemma stated at
+-- the matched indices (loReal, hiReal, caseLt, caseK1, caseGt) and a
+-- dispatch by idJR (J with the right endpoint fixed), which computes on refl.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module DD = D[a] ;
+open FillBase[a] ;
+
+-- a few contradictions
+lt-le (x y : Nat) (h1 : IsT (ltb x y)) (h2 : IsT (leb y x)) : Empty = ltb-irr x (ltb-leb-trans x y x h1 h2) ;
+
+ltb-trans (x y z : Nat) (h1 : IsT (ltb x y)) (h2 : IsT (ltb y z)) : IsT (ltb x z) = leb-trans (suc x) y z h1 (ltb-leb y z h2) ;
+
+neq-refl (y : Nat) (ky : IsT (not (eqN y y))) : Empty = false-true (transH (symH (apH not (eqN-refl y))) ky) ;
+
+neq-suc : (k : Nat) -> IsT (not (eqN (suc k) k)) = split { zero -> refl true ; suc k -> neq-suc k } ;
+
+neq-lt (y k : Nat) (h : IsT (ltb y k)) : IsT (not (eqN y k)) = ltb-neq y k h ;
+
+neq-gt (y k : Nat) (h : IsT (ltb k y)) : IsT (not (eqN y k)) = neq-sym k y (ltb-neq k y h) ;
+
+module FC (G : PCtx) (A : PTy[G]) (horn : Box[a, a].Horns[G, A].HornOp) {
+  open PR.TyL[G, A] ;
+  open DD.DT[G, A] ;
+  module FBm = FB[G, A] ;
+  open FBm ;
+  open FBm.RC ;
+  open Box[a, a].Horns[G, A] ;
+
+  ----------------------------------------------------------------------
+  -- What a stage needs from the stage below
+
+  LowI : Nat -> U a = split { zero -> Top ; suc n -> Stage[n] } ;
+
+  -- the faces of Q_k
+  QFT : (N : Nat) -> LowI N -> (b : BoxL N) (k : Nat) -> T (lin N) (ctxQ N b k) -> U a = split {
+    zero -> \ low b k q -> Top ;
+    suc n -> \ S b k q -> (y : Nat) -> IsT (leb y (suc n)) -> (ix' : IxK (qface y k) (suc n))
+      -> Id (EI (lin n)) (E.act (lin n) (lin (suc n)) (dl n y) (ctxQ (suc n) b k, q))
+                         (ctxQ n (rB n y b) (qface y k), S.Q (rB n y b) (qface y k) ix') } ;
+
+  -- the faces y < k of P_k
+  PLoT : (N : Nat) -> LowI N -> (b : BoxL N) (k : Nat) -> T (lin (suc N)) (ctxP N b k) -> U a = split {
+    zero -> \ low b k p -> Top ;
+    suc n -> \ S b k p -> (k' y : Nat) -> Id Nat k (suc k') -> IsT (leb y k') -> (ix' : IxK k' n)
+      -> Id (EI (lin (suc n))) (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) y) (ctxP (suc n) b k, p))
+                               (ctxP n (rB n y b) k', S.P (rB n y b) k' ix') } ;
+
+  -- the faces y > k+1 of P_k
+  PHiT : (N : Nat) -> LowI N -> (b : BoxL N) (k : Nat) -> T (lin (suc N)) (ctxP N b k) -> U a = split {
+    zero -> \ low b k p -> Top ;
+    suc n -> \ S b k p -> (y : Nat) -> IsT (ltb k y) -> IsT (leb y (suc n)) -> (ix' : IxK k n)
+      -> Id (EI (lin (suc n))) (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) (suc y)) (ctxP (suc n) b k, p))
+                               (ctxP n (rB n y b) k, S.P (rB n y b) k ix') } ;
+
+  -- the faces of the stage below, read at the right context
+  lowLo : (N : Nat) -> LowI N -> (b : BoxL N) (k' y : Nat) -> IsT (leb y k') -> IsT (leb (suc k') N)
+    -> T (lin N) (G.act (lin N) (lin (suc N)) (dl N y) (ctxP N b (suc k'))) = split {
+    zero -> \ low b k' y hy hk -> absurd _ (false-true hk) ;
+    suc n -> \ S b k' y hy hk ->
+      coeT (lin (suc n)) _ _ (symH (eqLo n b k' y hy hk)) (S.P (rB n y b) k' (mkIx k' n hk)) } ;
+
+  lowHi : (N : Nat) -> LowI N -> (b : BoxL N) (k y : Nat) -> IsT (ltb k y) -> IsT (leb y N)
+    -> T (lin N) (G.act (lin N) (lin (suc N)) (dl N (suc y)) (ctxP N b k)) = split {
+    zero -> \ low b k y hky hy ->
+      absurd _ (lt-le k zero (substH (\ v -> IsT (ltb k v)) (leb-zero y hy) hky) (refl true)) ;
+    suc n -> \ S b k y hky hy ->
+      coeT (lin (suc n)) _ _ (symH (eqHi n b k y hky (ltb-leb-trans k y (suc n) hky hy)))
+           (S.P (rB n y b) k (mkIx k n (ltb-leb-trans k y (suc n) hky hy))) } ;
+
+  ----------------------------------------------------------------------
+  -- One horn
+
+  module Col (N : Nat) (low : LowI N) (b : BoxL N) {
+
+    QData (k : Nat) : U a = (q : T (lin N) (ctxQ N b k)) * QFT N low b k q ;
+
+    qE (k : Nat) (d : QData k) : EI (lin N) = (ctxQ N b k, d.1) ;
+
+    Cell (k : Nat) (above : QData (suc k)) : U a =
+      (p : T (lin (suc N)) (ctxP N b k)) *
+        (PLoT N low b k p * (PHiT N low b k p *
+         Id (EI (lin N)) (E.act (lin N) (lin (suc N)) (dl N (suc k)) (ctxP N b k, p)) (qE (suc k) above))) ;
+
+    FT (k y : Nat) : U a = T (lin N) (G.act (lin N) (lin (suc N)) (dl N y) (ctxP N b k)) ;
+
+    faceC (k : Nat) (hk : IsT (leb k N)) (above : QData (suc k)) (y : Nat)
+      : Cmp y k -> IsT (leb y (suc N)) -> IsT (not (eqN y k)) -> FT k y = split {
+      cLt k' e h -> \ hy ky ->
+        idJR Nat (suc k') (\ k1 e1 -> IsT (leb k1 N) -> FT k1 y) (\ hk1 -> lowLo N low b k' y h hk1) k e hk ;
+      cEq e -> \ hy ky -> absurd _ (neq-refl y (substH (\ v -> IsT (not (eqN y v))) (symH e) ky)) ;
+      cK1 e -> \ hy ky -> substH (\ v -> FT k v) (symH e) (coeT (lin N) _ _ (symH (eqK1 N b k hk)) above.1) ;
+      cGt y' e h -> \ hy ky ->
+        idJR Nat (suc y') (\ y1 e1 -> IsT (leb y1 (suc N)) -> FT k y1) (\ hy1 -> lowHi N low b k y' h hy1) y e hy } ;
+
+    F (k : Nat) (hk : IsT (leb k N)) (above : QData (suc k)) : Faces N k (ctxP N b k) = \ y hy ky ->
+      faceC k hk above y (cmp y k) hy ky ;
+
+    pairSub (k y y' : Nat) (p : Id Nat y y') (w : FT k y)
+      : Id (EI (lin N)) (G.act (lin N) (lin (suc N)) (dl N y') (ctxP N b k), substH (\ v -> FT k v) p w)
+                        (G.act (lin N) (lin (suc N)) (dl N y) (ctxP N b k), w) =
+      idJ Nat y (\ y1 p1 -> Id (EI (lin N)) (G.act (lin N) (lin (suc N)) (dl N y1) (ctxP N b k), substH (\ v -> FT k v) p1 w)
+                                            (G.act (lin N) (lin (suc N)) (dl N y) (ctxP N b k), w))
+          (refl (G.act (lin N) (lin (suc N)) (dl N y) (ctxP N b k), w)) y' p ;
+
+    -- the face k+1 is the previous Q
+    fE-k1 (k : Nat) (hk : IsT (leb k N)) (above : QData (suc k))
+      : (c : Cmp (suc k) k) (hy : IsT (leb (suc k) (suc N))) (ky : IsT (not (eqN (suc k) k)))
+      -> Id (EI (lin N)) (G.act (lin N) (lin (suc N)) (dl N (suc k)) (ctxP N b k), faceC k hk above (suc k) c hy ky)
+                         (qE (suc k) above) = split {
+      cLt k' e h -> \ hy ky ->
+        absurd _ (lt-le k' (suc k') (leb-refl k')
+                   (leb-trans (suc k') (suc (suc k')) k' (leb-suc (suc k')) (substH (\ v -> IsT (leb (suc v) k')) e h))) ;
+      cEq e -> \ hy ky -> absurd _ (neq-refl k (substH (\ v -> IsT (not (eqN v k))) e ky)) ;
+      cK1 e -> \ hy ky ->
+        transH (pairSub k (suc k) (suc k) (symH e) (coeT (lin N) _ _ (symH (eqK1 N b k hk)) above.1))
+               (symH (pr-coe (lin N) _ _ (symH (eqK1 N b k hk)) above.1)) ;
+      cGt y' e h -> \ hy ky ->
+        absurd _ (lt-le k y' h (substH (\ v -> IsT (leb y' v)) (suc-inj _ _ (symH e)) (leb-refl y'))) } ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- Compatibility of the horn, and the faces of its filler, when N > 0
+
+  module ColS (n : Nat) (S : Stage[n]) (b : BoxL (suc n)) {
+    open Col[suc n, S, b] ;
+
+    -- independence of the index
+    ePk (b' : BoxL n) (k1 k2 : Nat) (e : Id Nat k1 k2) (ix1 : IxK k1 n) (ix2 : IxK k2 n)
+      : Id (EI (lin (suc n))) (ctxP n b' k1, S.P b' k1 ix1) (ctxP n b' k2, S.P b' k2 ix2) =
+      idJ Nat k1 (\ k3 e3 -> (ix3 : IxK k3 n) -> Id (EI (lin (suc n))) (ctxP n b' k1, S.P b' k1 ix1) (ctxP n b' k3, S.P b' k3 ix3))
+          (\ ix3 -> apH (\ ix -> (ctxP n b' k1, S.P b' k1 ix)) (isProp-IxK k1 n ix1 ix3)) k2 e ix2 ;
+
+    eQk (b' : BoxL n) (k1 k2 : Nat) (e : Id Nat k1 k2) (ix1 : IxK k1 (suc n)) (ix2 : IxK k2 (suc n))
+      : Id (EI (lin n)) (ctxQ n b' k1, S.Q b' k1 ix1) (ctxQ n b' k2, S.Q b' k2 ix2) =
+      idJ Nat k1 (\ k3 e3 -> (ix3 : IxK k3 (suc n)) -> Id (EI (lin n)) (ctxQ n b' k1, S.Q b' k1 ix1) (ctxQ n b' k3, S.Q b' k3 ix3))
+          (\ ix3 -> apH (\ ix -> (ctxQ n b' k1, S.Q b' k1 ix)) (isProp-IxK k1 (suc n) ix1 ix3)) k2 e ix2 ;
+
+    -- the faces y < k, read in E
+    LoGoal (k : Nat) (hk : IsT (leb k (suc n))) (above : QData (suc k)) (y : Nat) (c : Cmp y k)
+      (hy : IsT (leb y (suc (suc n)))) (ky : IsT (not (eqN y k))) (k' : Nat) (ix' : IxK k' n) : U a =
+      Id (EI (lin (suc n))) (G.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) y) (ctxP (suc n) b k), faceC k hk above y c hy ky)
+                            (ctxP n (rB n y b) k', S.P (rB n y b) k' ix') ;
+
+    loReal (k1 : Nat) (y : Nat) (h : IsT (leb y k1)) (hk : IsT (leb (suc k1) (suc n))) (above : QData (suc (suc k1)))
+      (hy : IsT (leb y (suc (suc n)))) (ky : IsT (not (eqN y (suc k1)))) (k' : Nat) (e : Id Nat (suc k1) (suc k'))
+      (ix' : IxK k' n) : LoGoal (suc k1) hk above y (cLt k1 (refl (suc k1)) h) hy ky k' ix' =
+      transH (symH (pr-coe (lin (suc n)) _ _ (symH (eqLo n b k1 y h hk)) (S.P (rB n y b) k1 (mkIx k1 n hk))))
+             (ePk (rB n y b) k1 k' (suc-inj _ _ e) (mkIx k1 n hk) ix') ;
+
+    fE-lo (k : Nat) (hk : IsT (leb k (suc n))) (above : QData (suc k)) (y : Nat)
+      : (c : Cmp y k) (hy : IsT (leb y (suc (suc n)))) (ky : IsT (not (eqN y k)))
+        (k' : Nat) (e : Id Nat k (suc k')) (hyk : IsT (leb y k')) (ix' : IxK k' n) -> LoGoal k hk above y c hy ky k' ix' = split {
+      cLt k1 e1 h -> \ hy ky k' e hyk ix' ->
+        idJR Nat (suc k1)
+          (\ k2 e2 -> (hk2 : IsT (leb k2 (suc n))) (above2 : QData (suc k2)) (ky2 : IsT (not (eqN y k2)))
+             -> Id Nat k2 (suc k') -> LoGoal k2 hk2 above2 y (cLt k1 e2 h) hy ky2 k' ix')
+          (\ hk2 above2 ky2 e' -> loReal k1 y h hk2 above2 hy ky2 k' e' ix') k e1 hk above ky e ;
+      cEq e1 -> \ hy ky k' e hyk ix' -> absurd _ (neq-refl y (substH (\ v -> IsT (not (eqN y v))) (symH e1) ky)) ;
+      cK1 e1 -> \ hy ky k' e hyk ix' ->
+        absurd _ (lt-le k' k (substH (\ v -> IsT (ltb k' v)) (symH e) (leb-refl k'))
+                    (leb-trans k (suc k) k' (leb-suc k) (substH (\ v -> IsT (leb v k')) e1 hyk))) ;
+      cGt y' e1 h -> \ hy ky k' e hyk ix' ->
+        absurd _ (lt-le k y' h (leb-trans y' (suc y') k (leb-suc y')
+                    (leb-trans (suc y') k' k (substH (\ v -> IsT (leb v k')) e1 hyk)
+                               (substH (\ v -> IsT (leb k' v)) (symH e) (leb-suc k'))))) } ;
+
+    -- the faces y > k+1, read in E
+    HiGoal (k : Nat) (hk : IsT (leb k (suc n))) (above : QData (suc k)) (y1 : Nat) (c : Cmp y1 k)
+      (hy : IsT (leb y1 (suc (suc n)))) (ky : IsT (not (eqN y1 k))) (ix' : IxK k n) : U a =
+      Id (EI (lin (suc n))) (G.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) y1) (ctxP (suc n) b k), faceC k hk above y1 c hy ky)
+                            (ctxP n (rB n (pred y1) b) k, S.P (rB n (pred y1) b) k ix') ;
+
+    hiReal (k : Nat) (hk : IsT (leb k (suc n))) (above : QData (suc k)) (y' : Nat) (h : IsT (ltb k y'))
+      (hy : IsT (leb (suc y') (suc (suc n)))) (ky : IsT (not (eqN (suc y') k))) (ix' : IxK k n)
+      : HiGoal k hk above (suc y') (cGt y' (refl (suc y')) h) hy ky ix' =
+      transH (symH (pr-coe (lin (suc n)) _ _ (symH (eqHi n b k y' h (ltb-leb-trans k y' (suc n) h hy)))
+                     (S.P (rB n y' b) k (mkIx k n (ltb-leb-trans k y' (suc n) h hy)))))
+             (ePk (rB n y' b) k k (refl k) (mkIx k n (ltb-leb-trans k y' (suc n) h hy)) ix') ;
+
+    fE-hi (k : Nat) (hk : IsT (leb k (suc n))) (above : QData (suc k)) (y : Nat)
+      : (c : Cmp (suc y) k) (hy : IsT (leb (suc y) (suc (suc n)))) (ky : IsT (not (eqN (suc y) k)))
+        (hky : IsT (ltb k y)) (ix' : IxK k n) -> HiGoal k hk above (suc y) c hy ky ix' = split {
+      cLt k' e h -> \ hy ky hky ix' ->
+        absurd _ (lt-le y k' h (leb-trans k' (suc (suc k')) y (leb-step k' (suc k') (leb-suc k'))
+                                  (substH (\ v -> IsT (ltb v y)) e hky))) ;
+      cEq e -> \ hy ky hky ix' -> absurd _ (neq-refl (suc y) (substH (\ v -> IsT (not (eqN (suc y) v))) (symH e) ky)) ;
+      cK1 e -> \ hy ky hky ix' -> absurd _ (ltb-irr y (substH (\ v -> IsT (ltb v y)) (symH (suc-inj _ _ e)) hky)) ;
+      cGt y' e h -> \ hy ky hky ix' ->
+        idJR Nat (suc y')
+          (\ y2 e2 -> (hy2 : IsT (leb y2 (suc (suc n)))) (ky2 : IsT (not (eqN y2 k)))
+             -> HiGoal k hk above y2 (cGt y' e2 h) hy2 ky2 ix')
+          (\ hy2 ky2 -> hiReal k hk above y' h hy2 ky2 ix') (suc y) e hy ky } ;
+
+    -- compatibility of the horn at the vertex k
+    CGoal (k : Nat) (hk : IsT (leb k (suc n))) (above : QData (suc k)) (y z : Nat)
+      (hy : IsT (leb y (suc (suc n)))) (hz : IsT (leb (suc z) (suc (suc n))))
+      (ky : IsT (not (eqN y k))) (kz : IsT (not (eqN (suc z) k))) (c1 : Cmp y k) (c2 : Cmp (suc z) k) : U a =
+      Id (EI (lin n))
+         (E.act (lin n) (lin (suc n)) (dl n z) (G.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) y) (ctxP (suc n) b k), faceC k hk above y c1 hy ky))
+         (E.act (lin n) (lin (suc n)) (dl n y) (G.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) (suc z)) (ctxP (suc n) b k), faceC k hk above (suc z) c2 hz kz)) ;
+
+    -- y < k (Agda: compatC .(suc k') .. (cLt k' refl h1) c2)
+    caseLt (k' : Nat) (y z : Nat) (h1 : IsT (leb y k')) (hk : IsT (leb (suc k') (suc n))) (above : QData (suc (suc k')))
+      (hyz : IsT (leb y z)) (hy : IsT (leb y (suc (suc n)))) (hz : IsT (leb (suc z) (suc (suc n))))
+      (ky : IsT (not (eqN y (suc k')))) (kz : IsT (not (eqN (suc z) (suc k'))))
+      : (c2 : Cmp (suc z) (suc k')) -> CGoal (suc k') hk above y z hy hz ky kz (cLt k' (refl (suc k')) h1) c2 = split {
+      -- (i) y <= z < z+1 < k
+      cLt k'' e2 h2 ->
+        transH (apH (E.act (lin n) (lin (suc n)) (dl n z))
+                    (fE-lo (suc k') hk above y (cLt k' (refl (suc k')) h1) hy ky k' (refl (suc k')) h1 (mkIx k' n hk)))
+         (transH (S.ddLL b k' y z hyz (substH (\ v -> IsT (leb (suc z) v)) (suc-inj _ _ (symH e2)) h2) (mkIx k' n hk))
+                 (symH (apH (E.act (lin n) (lin (suc n)) (dl n y))
+                            (fE-lo (suc k') hk above (suc z) (cLt k'' e2 h2) hz kz k' (refl (suc k'))
+                                   (substH (\ v -> IsT (leb (suc z) v)) (suc-inj _ _ (symH e2)) h2) (mkIx k' n hk))))) ;
+      -- (ii) y < k, z = k
+      cK1 e2 ->
+        transH (apH (E.act (lin n) (lin (suc n)) (dl n z))
+                    (fE-lo (suc k') hk above y (cLt k' (refl (suc k')) h1) hy ky k' (refl (suc k')) h1 (mkIx k' n hk)))
+         (transH (apH (\ v -> E.act (lin n) (lin (suc n)) (dl n v) (ctxP n (rB n y b) k', S.P (rB n y b) k' (mkIx k' n hk)))
+                      (suc-inj _ _ e2))
+          (transH (S.pq1 (rB n y b) k' (mkIx k' n hk) (mkIx (suc k') (suc n) hk))
+           (transH (eQk (rB n y b) (suc k') (qface y (suc (suc k'))) (symH (qface-lt y (suc k') (leb-step y k' h1)))
+                        (mkIx (suc k') (suc n) hk) (ixq' y k' h1 hk))
+                   (symH (transH (apH (E.act (lin n) (lin (suc n)) (dl n y)) (fE-k1' k' hk above z (suc-inj _ _ e2) e2 hz kz))
+                                 (above.2 y (leb-trans y z (suc n) hyz hz) (ixq' y k' h1 hk))))))) ;
+      -- (iii) y < k < z
+      cGt z' e2 h2 ->
+        transH (apH (E.act (lin n) (lin (suc n)) (dl n z))
+                    (fE-lo (suc k') hk above y (cLt k' (refl (suc k')) h1) hy ky k' (refl (suc k')) h1 (mkIx k' n hk)))
+         (transH (S.ddLH b k' y z h1 (h2' z z' e2 (suc k') h2) hz (mkIx k' n hk)
+                         (mkIx (suc k') n (ltb-leb-trans (suc k') z (suc n) (h2' z z' e2 (suc k') h2) hz)))
+                 (symH (apH (E.act (lin n) (lin (suc n)) (dl n y))
+                            (fE-hi (suc k') hk above z (cGt z' e2 h2) hz kz (h2' z z' e2 (suc k') h2)
+                                   (mkIx (suc k') n (ltb-leb-trans (suc k') z (suc n) (h2' z z' e2 (suc k') h2) hz)))))) ;
+      cEq e2 -> absurd _ (neq-refl (suc z) (substH (\ v -> IsT (not (eqN (suc z) v))) (symH e2) kz)) } ;
+
+    -- from  e2 : suc z = suc z'  and  k < z'
+    h2' (z z' : Nat) (e2 : Id Nat (suc z) (suc z')) (k : Nat) (h2 : IsT (ltb k z')) : IsT (ltb k z) =
+      substH (\ v -> IsT (ltb k v)) (suc-inj _ _ (symH e2)) h2 ;
+
+    ixq' (y k' : Nat) (h1 : IsT (leb y k')) (hk : IsT (leb (suc k') (suc n))) : IxK (qface y (suc (suc k'))) (suc n) =
+      mkIx (qface y (suc (suc k'))) (suc n)
+        (substH (\ v -> IsT (leb v (suc n))) (symH (qface-lt y (suc k') (leb-step y k' h1))) hk) ;
+
+    -- the face z+1 = k+1 is the previous Q (Agda's fE-k1', by J on z = k)
+    fE-k1' (k' : Nat) (hk : IsT (leb (suc k') (suc n))) (above : QData (suc (suc k'))) (z : Nat) (ez : Id Nat z (suc k'))
+      (e2 : Id Nat (suc z) (suc (suc k'))) (hz : IsT (leb (suc z) (suc (suc n)))) (kz : IsT (not (eqN (suc z) (suc k'))))
+      : Id (EI (lin (suc n))) (G.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) (suc z)) (ctxP (suc n) b (suc k')),
+                               faceC (suc k') hk above (suc z) (cK1 e2) hz kz)
+                              (qE (suc (suc k')) above) =
+      idJR Nat (suc k')
+        (\ z2 ez2 -> (e2' : Id Nat (suc z2) (suc (suc k'))) (hz2 : IsT (leb (suc z2) (suc (suc n))))
+           (kz2 : IsT (not (eqN (suc z2) (suc k'))))
+           -> Id (EI (lin (suc n))) (G.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) (suc z2)) (ctxP (suc n) b (suc k')),
+                                     faceC (suc k') hk above (suc z2) (cK1 e2') hz2 kz2)
+                                    (qE (suc (suc k')) above))
+        (\ e2' hz2 kz2 -> fE-k1 (suc k') hk above (cK1 e2') hz2 kz2) z ez e2 hz kz ;
+
+    -- (iv) y = k+1 < z+1
+    caseK1 (k : Nat) (hk : IsT (leb k (suc n))) (above : QData (suc k)) (z : Nat)
+      (hyz : IsT (leb (suc k) z)) (hy : IsT (leb (suc k) (suc (suc n)))) (hz : IsT (leb (suc z) (suc (suc n))))
+      (ky : IsT (not (eqN (suc k) k))) (kz : IsT (not (eqN (suc z) k))) (z' : Nat) (e2 : Id Nat (suc z) (suc z')) (h2 : IsT (ltb k z'))
+      : CGoal k hk above (suc k) z hy hz ky kz (cK1 (refl (suc k))) (cGt z' e2 h2) =
+      transH (apH (E.act (lin n) (lin (suc n)) (dl n z)) (fE-k1 k hk above (cK1 (refl (suc k))) hy ky))
+       (transH (above.2 z hz ixq)
+        (transH (eQk (rB n z b) (qface z (suc k)) (suc k) (qface-ge z (suc k) hyz) ixq ixq2)
+         (transH (symH (S.pq1 (rB n z b) k ix ixq2))
+                 (symH (apH (E.act (lin n) (lin (suc n)) (dl n (suc k)))
+                            (fE-hi k hk above z (cGt z' e2 h2) hz kz (h2' z z' e2 k h2) ix))))))
+     where {
+      hkz : IsT (ltb k (suc n)) = ltb-leb-trans k z (suc n) (h2' z z' e2 k h2) hz ;
+      ix : IxK k n = mkIx k n hkz ;
+      ixq2 : IxK (suc k) (suc n) = mkIx (suc k) (suc n) hkz ;
+      ixq : IxK (qface z (suc k)) (suc n) =
+        mkIx (qface z (suc k)) (suc n) (substH (\ v -> IsT (leb v (suc n))) (symH (qface-ge z (suc k) hyz)) hkz) ;
+     } ;
+
+    -- (v) k+1 < y <= z
+    caseGt (k : Nat) (hk : IsT (leb k (suc n))) (above : QData (suc k)) (y' z : Nat) (h1 : IsT (ltb k y'))
+      (hyz : IsT (leb (suc y') z)) (hy : IsT (leb (suc y') (suc (suc n)))) (hz : IsT (leb (suc z) (suc (suc n))))
+      (ky : IsT (not (eqN (suc y') k))) (kz : IsT (not (eqN (suc z) k))) (z' : Nat) (e2 : Id Nat (suc z) (suc z')) (h2 : IsT (ltb k z'))
+      : CGoal k hk above (suc y') z hy hz ky kz (cGt y' (refl (suc y')) h1) (cGt z' e2 h2) =
+      transH (apH (E.act (lin n) (lin (suc n)) (dl n z)) (fE-hi k hk above y' (cGt y' (refl (suc y')) h1) hy ky h1 ix))
+       (transH (S.ddHH b k y' z h1 hyz hz ix)
+               (symH (apH (E.act (lin n) (lin (suc n)) (dl n (suc y')))
+                          (fE-hi k hk above z (cGt z' e2 h2) hz kz (h2' z z' e2 k h2) ix))))
+     where { ix : IxK k n = mkIx k n (ltb-leb-trans k z (suc n) (h2' z z' e2 k h2) hz) ; } ;
+
+    compatC (k : Nat) (hk : IsT (leb k (suc n))) (above : QData (suc k)) (y z : Nat) (hyz : IsT (leb y z))
+      (hy : IsT (leb y (suc (suc n)))) (hz : IsT (leb (suc z) (suc (suc n))))
+      (ky : IsT (not (eqN y k))) (kz : IsT (not (eqN (suc z) k)))
+      : (c1 : Cmp y k) (c2 : Cmp (suc z) k) -> CGoal k hk above y z hy hz ky kz c1 c2 = split {
+      cLt k' e1 h1 -> \ c2 ->
+        idJR Nat (suc k')
+          (\ k2 e2 -> (hk2 : IsT (leb k2 (suc n))) (above2 : QData (suc k2)) (ky2 : IsT (not (eqN y k2)))
+             (kz2 : IsT (not (eqN (suc z) k2))) (c2' : Cmp (suc z) k2)
+             -> CGoal k2 hk2 above2 y z hy hz ky2 kz2 (cLt k' e2 h1) c2')
+          (\ hk2 above2 ky2 kz2 c2' -> caseLt k' y z h1 hk2 above2 hyz hy hz ky2 kz2 c2') k e1 hk above ky kz c2 ;
+      cEq e1 -> \ c2 -> absurd _ (neq-refl y (substH (\ v -> IsT (not (eqN y v))) (symH e1) ky)) ;
+      cK1 e1 -> split {
+        cLt k'' e2 h2 ->
+          absurd _ (lt-le z k'' h2 (leb-trans k'' (suc (suc k'')) z (leb-step k'' (suc k'') (leb-suc k''))
+                      (substH (\ v -> IsT (leb (suc v) z)) e2 (substH (\ v -> IsT (leb v z)) e1 hyz)))) ;
+        cEq e2 -> absurd _ (neq-refl (suc z) (substH (\ v -> IsT (not (eqN (suc z) v))) (symH e2) kz)) ;
+        cK1 e2 -> absurd _ (ltb-irr z (substH (\ v -> IsT (leb v z)) (transH e1 (symH e2)) hyz)) ;
+        cGt z' e2 h2 ->
+          idJR Nat (suc k)
+            (\ y2 e1' -> (hyz2 : IsT (leb y2 z)) (hy2 : IsT (leb y2 (suc (suc n)))) (ky2 : IsT (not (eqN y2 k)))
+               -> CGoal k hk above y2 z hy2 hz ky2 kz (cK1 e1') (cGt z' e2 h2))
+            (\ hyz2 hy2 ky2 -> caseK1 k hk above z hyz2 hy2 hz ky2 kz z' e2 h2) y e1 hyz hy ky } ;
+      cGt y' e1 h1 -> split {
+        cLt k'' e2 h2 ->
+          absurd _ (lt-le z y' (ltb-trans z (suc k'') y' (leb-step (suc z) k'' h2) (substH (\ v -> IsT (ltb v y')) e2 h1))
+                              (leb-trans y' (suc y') z (leb-suc y') (substH (\ v -> IsT (leb v z)) e1 hyz))) ;
+        cEq e2 -> absurd _ (neq-refl (suc z) (substH (\ v -> IsT (not (eqN (suc z) v))) (symH e2) kz)) ;
+        cK1 e2 ->
+          absurd _ (lt-le k y' h1 (leb-trans y' (suc y') k (leb-suc y')
+                      (substH (\ v -> IsT (leb v k)) e1 (substH (\ v -> IsT (leb y v)) (suc-inj _ _ e2) hyz)))) ;
+        cGt z' e2 h2 ->
+          idJR Nat (suc y')
+            (\ y2 e1' -> (hyz2 : IsT (leb y2 z)) (hy2 : IsT (leb y2 (suc (suc n)))) (ky2 : IsT (not (eqN y2 k)))
+               -> CGoal k hk above y2 z hy2 hz ky2 kz (cGt y' e1' h1) (cGt z' e2 h2))
+            (\ hyz2 hy2 ky2 -> caseGt k hk above y' z h1 hyz2 hy2 hz ky2 kz z' e2 h2) y e1 hyz hy ky } } ;
+
+    compat (k : Nat) (hk : IsT (leb k (suc n))) (above : QData (suc k)) : HCompat (suc n) k (ctxP (suc n) b k) (F k hk above) =
+      \ y z hyz hy hz ky kz -> compatC k hk above y z hyz hy hz ky kz (cmp y k) (cmp (suc z) k) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- Filling one horn, and the faces of the filler
+
+  compatAt : (N : Nat) (low : LowI N) (b : BoxL N) (k : Nat) (hk : IsT (leb k N)) (above : Col[N, low, b].QData (suc k))
+    -> HCompat N k (ctxP N b k) (Col[N, low, b].F k hk above) = split {
+    zero -> \ low b k hk above -> tt ;
+    suc n -> \ S b k hk above -> ColS[n, S, b].compat k hk above } ;
+
+  fillAt (N : Nat) (low : LowI N) (b : BoxL N) (k : Nat) (hk : IsT (leb k N)) (above : Col[N, low, b].QData (suc k))
+    : Filler N k (ctxP N b k) (Col[N, low, b].F k hk above) =
+    horn N k (leb-step k N hk) (ctxP N b k) (Col[N, low, b].F k hk above) (compatAt N low b k hk above) ;
+
+  loAt : (N : Nat) (low : LowI N) (b : BoxL N) (k : Nat) (hk : IsT (leb k N)) (above : Col[N, low, b].QData (suc k))
+    -> PLoT N low b k (fillAt N low b k hk above).1 = split {
+    zero -> \ low b k hk above -> tt ;
+    suc n -> \ S b k hk above k' y e hy ix' ->
+      transH ((fillAt (suc n) S b k hk above).2 y (loHy n k k' y e hy hk) (neq-lt y k (loHyk k k' y e hy)))
+             (ColS[n, S, b].fE-lo k hk above y (cmp y k) (loHy n k k' y e hy hk) (neq-lt y k (loHyk k k' y e hy)) k' e hy ix') } ;
+
+  loHyk (k k' y : Nat) (e : Id Nat k (suc k')) (hy : IsT (leb y k')) : IsT (ltb y k) =
+    substH (\ v -> IsT (ltb y v)) (symH e) hy ;
+
+  loHy (n k k' y : Nat) (e : Id Nat k (suc k')) (hy : IsT (leb y k')) (hk : IsT (leb k (suc n))) : IsT (leb y (suc (suc n))) =
+    leb-step y (suc n) (ltb-leb y (suc n) (ltb-leb-trans y k (suc n) (loHyk k k' y e hy) hk)) ;
+
+  hiAt : (N : Nat) (low : LowI N) (b : BoxL N) (k : Nat) (hk : IsT (leb k N)) (above : Col[N, low, b].QData (suc k))
+    -> PHiT N low b k (fillAt N low b k hk above).1 = split {
+    zero -> \ low b k hk above -> tt ;
+    suc n -> \ S b k hk above y hky hy ix' ->
+      transH ((fillAt (suc n) S b k hk above).2 (suc y) hy (neq-gt (suc y) k (ltb-trans k y (suc y) hky (leb-refl y))))
+             (ColS[n, S, b].fE-hi k hk above y (cmp (suc y) k) hy (neq-gt (suc y) k (ltb-trans k y (suc y) hky (leb-refl y)))
+                                  hky ix') } ;
+
+  cellAt (N : Nat) (low : LowI N) (b : BoxL N) (k : Nat) (hk : IsT (leb k N)) (above : Col[N, low, b].QData (suc k))
+    : Col[N, low, b].Cell k above =
+    ((fillAt N low b k hk above).1, (loAt N low b k hk above, (hiAt N low b k hk above,
+      transH ((fillAt N low b k hk above).2 (suc k) hk (neq-suc k))
+             (Col[N, low, b].fE-k1 k hk above (cmp (suc k) k) hk (neq-suc k))))) ;
+
+  ----------------------------------------------------------------------
+  -- The new chain Q_k, and its faces
+
+  qOf (N : Nat) (b : BoxL N) (k : Nat) (hk : IsT (leb k N)) (p : T (lin (suc N)) (ctxP N b k)) : T (lin N) (ctxQ N b k) =
+    A.tact (lin N) (lin (suc N)) (dl N k) (ctxP N b k) (ctxQ N b k) (eqK N b k hk) p ;
+
+  qOf-E (N : Nat) (b : BoxL N) (k : Nat) (hk : IsT (leb k N)) (p : T (lin (suc N)) (ctxP N b k))
+    : Id (EI (lin N)) (ctxQ N b k, qOf N b k hk p) (E.act (lin N) (lin (suc N)) (dl N k) (ctxP N b k, p)) =
+    symH (pr-tact (lin N) (lin (suc N)) (dl N k) (ctxP N b k) (ctxQ N b k) (eqK N b k hk) p) ;
+
+  module QF (n : Nat) (S : Stage[n]) (b : BoxL (suc n)) {
+    open Col[suc n, S, b] ;
+    module CS = ColS[n, S, b] ;
+
+    Goal (y k : Nat) (above : QData (suc k)) (c : Cell k above) (ix' : IxK (qface y k) (suc n)) : U a =
+      Id (EI (lin n)) (E.act (lin n) (lin (suc (suc n))) (compH (lin n) (lin (suc n)) (lin (suc (suc n))) (dl (suc n) k) (dl n y))
+                             (ctxP (suc n) b k, c.1))
+                      (ctxQ n (rB n y b) (qface y k), S.Q (rB n y b) (qface y k) ix') ;
+
+    lo (y : Nat) : (k : Nat) (hk : IsT (leb k (suc n))) (above : QData (suc k)) (c : Cell k above) (lt : IsT (ltb y k))
+      (ix' : IxK (qface y k) (suc n)) -> Goal y k above c ix' = split {
+      zero -> \ hk above c lt ix' -> absurd _ (false-true lt) ;
+      suc k' -> \ hk above c lt ix' ->
+        transH (PE.actEq (lin n) (lin (suc (suc n))) _ _ (hom-eq (lin n) (lin (suc (suc n))) _ _ (pw-dl-dl n y k' lt)) (ctxP (suc n) b (suc k'), c.1))
+         (transH (E.act-o (lin n) (lin (suc n)) (lin (suc (suc n))) (dl (suc n) y) (dl n k') (ctxP (suc n) b (suc k'), c.1))
+          (transH (apH (E.act (lin n) (lin (suc n)) (dl n k')) (c.2.1 k' y (refl (suc k')) lt (mkIx k' n hk)))
+           (transH (S.pq (rB n y b) k' (mkIx k' n hk) (mkIx k' (suc n) (leb-step k' n hk)))
+                   (CS.eQk (rB n y b) k' (qface y (suc k')) (symH (qface-lt y k' lt)) (mkIx k' (suc n) (leb-step k' n hk)) ix')))) } ;
+
+    eqReal (y : Nat) (hy : IsT (leb y (suc n))) (above : QData (suc y)) (c : Cell y above) (ix' : IxK (qface y y) (suc n))
+      : Goal y y above c ix' =
+      transH (PE.actEq (lin n) (lin (suc (suc n))) _ _ (hom-eq (lin n) (lin (suc (suc n))) _ _ (pw-sym (lin n) (lin (suc (suc n)))
+                   (compH (lin n) (lin (suc n)) (lin (suc (suc n))) (dl (suc n) (suc y)) (dl n y))
+                   (compH (lin n) (lin (suc n)) (lin (suc (suc n))) (dl (suc n) y) (dl n y))
+                   (pw-dl-dl n y y (leb-refl y)))) (ctxP (suc n) b y, c.1))
+       (transH (E.act-o (lin n) (lin (suc n)) (lin (suc (suc n))) (dl (suc n) (suc y)) (dl n y) (ctxP (suc n) b y, c.1))
+        (transH (apH (E.act (lin n) (lin (suc n)) (dl n y)) c.2.2.2)
+         (transH (above.2 y hy ix3)
+                 (CS.eQk (rB n y b) (qface y (suc y)) (qface y y)
+                         (transH (qface-lt y y (leb-refl y)) (symH (qface-ge y y (leb-refl y)))) ix3 ix'))))
+     where { ix3 : IxK (qface y (suc y)) (suc n) =
+               mkIx (qface y (suc y)) (suc n) (substH (\ v -> IsT (leb v (suc n))) (symH (qface-lt y y (leb-refl y))) hy) ; } ;
+
+    eqC (y : Nat) (hy : IsT (leb y (suc n))) (k : Nat) (e : Id Nat y k) (above : QData (suc k)) (c : Cell k above)
+      (ix' : IxK (qface y k) (suc n)) : Goal y k above c ix' =
+      idJ Nat y (\ k1 e1 -> (above1 : QData (suc k1)) (c1 : Cell k1 above1) (ix1 : IxK (qface y k1) (suc n)) -> Goal y k1 above1 c1 ix1)
+          (\ above1 c1 ix1 -> eqReal y hy above1 c1 ix1) k e above c ix' ;
+
+    hi (y k : Nat) (hk : IsT (leb k (suc n))) (above : QData (suc k)) (c : Cell k above) (ge : IsT (leb k y))
+      (ne : IsT (not (eqN y k))) (hy : IsT (leb y (suc n))) (ix' : IxK (qface y k) (suc n)) : Goal y k above c ix' =
+      transH (PE.actEq (lin n) (lin (suc (suc n))) _ _ (hom-eq (lin n) (lin (suc (suc n))) _ _ (pw-sym (lin n) (lin (suc (suc n)))
+                   (compH (lin n) (lin (suc n)) (lin (suc (suc n))) (dl (suc n) (suc y)) (dl n k))
+                   (compH (lin n) (lin (suc n)) (lin (suc (suc n))) (dl (suc n) k) (dl n y))
+                   (pw-dl-dl n k y ge))) (ctxP (suc n) b k, c.1))
+       (transH (E.act-o (lin n) (lin (suc n)) (lin (suc (suc n))) (dl (suc n) (suc y)) (dl n k) (ctxP (suc n) b k, c.1))
+        (transH (apH (E.act (lin n) (lin (suc n)) (dl n k)) (c.2.2.1 y klt hy ix4))
+         (transH (S.pq (rB n y b) k ix4 (mkIx k (suc n) hk))
+                 (CS.eQk (rB n y b) k (qface y k) (symH (qface-ge y k ge)) (mkIx k (suc n) hk) ix'))))
+     where {
+      klt : IsT (ltb k y) = leb-neq k y ge (neq-sym y k ne) ;
+      ix4 : IxK k n = mkIx k n (ltb-leb-trans k y (suc n) klt hy) ;
+     } ;
+
+    qfK (k : Nat) (hk : IsT (leb k (suc n))) (above : QData (suc k)) (c : Cell k above)
+      : QFT (suc n) S b k (qOf (suc n) b k hk c.1) = \ y hy ix' ->
+      transH (apH (E.act (lin n) (lin (suc n)) (dl n y)) (qOf-E (suc n) b k hk c.1))
+       (transH (PE.actC (lin n) (lin (suc n)) (lin (suc (suc n))) (dl (suc n) k) (dl n y) (ctxP (suc n) b k, c.1))
+               (ltb-dec (Goal y k above c ix') y k
+                  (\ lt -> lo y k hk above c lt ix')
+                  (\ ge -> eqN-dec (Goal y k above c ix') y k
+                             (\ e -> eqC y hy k e above c ix')
+                             (\ ne -> hi y k hk above c ge ne hy ix')))) ;
+
+    -- the lower lid
+    qfBot : QFT (suc n) S b (suc (suc n)) (coeT (lin (suc n)) _ _ (eqBot (suc n) b) (b.bu.1 (suc n) (idH (lin (suc n))))) =
+      \ y hy ix' ->
+      transH (apH (E.act (lin n) (lin (suc n)) (dl n y))
+                  (symH (pr-coe (lin (suc n)) _ _ (eqBot (suc n) b) (b.bu.1 (suc n) (idH (lin (suc n)))))))
+       (transH (botE-rB n y b)
+        (transH (symH (S.qbot (rB n y b) (mkIx (suc n) (suc n) (leb-refl n))))
+                (CS.eQk (rB n y b) (suc n) (qface y (suc (suc n))) (symH (qface-lt y (suc n) hy))
+                        (mkIx (suc n) (suc n) (leb-refl n)) ix'))) ;
+  } ;
+
+  qfAt : (N : Nat) (low : LowI N) (b : BoxL N) (k : Nat) (hk : IsT (leb k N)) (above : Col[N, low, b].QData (suc k))
+    (c : Col[N, low, b].Cell k above) -> QFT N low b k (qOf N b k hk c.1) = split {
+    zero -> \ low b k hk above c -> tt ;
+    suc n -> \ S b k hk above c -> QF[n, S, b].qfK k hk above c } ;
+
+  qfBotAt : (N : Nat) (low : LowI N) (b : BoxL N)
+    -> QFT N low b (suc N) (coeT (lin N) _ _ (eqBot N b) (b.bu.1 N (idH (lin N)))) = split {
+    zero -> \ low b -> tt ;
+    suc n -> \ S b -> QF[n, S, b].qfBot } ;
+
+  ----------------------------------------------------------------------
+  -- The descending recursion
+
+  module Rec (N : Nat) (low : LowI N) (b : BoxL N) {
+    open Col[N, low, b] ;
+
+    botQ : QData (suc N) = (coeT (lin N) _ _ (eqBot N b) (b.bu.1 N (idH (lin N))), qfBotAt N low b) ;
+
+    e'f (k r : Nat) (e : Id Nat (plus k (suc r)) (suc N)) : Id Nat (plus k r) N =
+      suc-inj (plus k r) N (transH (symH (plus-suc k r)) e) ;
+
+    qdata (k : Nat) : (r : Nat) -> Id Nat (plus k r) (suc N) -> QData k = split {
+      zero -> \ e -> substH (\ k1 -> QData k1) (symH (transH (symH (plus-zero k)) e)) botQ ;
+      suc r -> \ e ->
+        (qOf N b k (ixLe k N (r, e'f k r e)) (col k r (e'f k r e)).1,
+         qfAt N low b k (ixLe k N (r, e'f k r e)) (qdata (suc k) r (apH (\ m -> suc m) (e'f k r e))) (col k r (e'f k r e))) } ;
+
+    col (k r : Nat) (e : Id Nat (plus k r) N) : Cell k (qdata (suc k) r (apH (\ m -> suc m) e)) =
+      cellAt N low b k (ixLe k N (r, e)) (qdata (suc k) r (apH (\ m -> suc m) e)) ;
+  } ;
+} ;

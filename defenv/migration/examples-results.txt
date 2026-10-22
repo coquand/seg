@@ -1,0 +1,13 @@
+aliases.seg: 10 declarations, 0 failed, 0.00 s
+basic.seg: 49 declarations, 0 failed, 0.00 s
+calc.seg: 11 declarations, 0 failed, 0.00 s
+closures.seg: 11 declarations, 0 failed, 0.00 s
+fixedfields.seg: 23 declarations, 0 failed, 0.00 s
+hidden.seg: 60 declarations, 0 failed, 0.00 s
+locks.seg: 26 declarations, 1 failed, 0.00 s
+nestedsort.seg: 16 declarations, 0 failed, 0.00 s
+order.seg: 5 declarations, 0 failed, 0.00 s
+recordopen.seg: 23 declarations, 0 failed, 0.00 s
+recordrules.seg: 52 declarations, 0 failed, 0.00 s
+records.seg: 28 declarations, 0 failed, 0.00 s
+segtypes.seg: 38 declarations, 0 failed, 0.00 s

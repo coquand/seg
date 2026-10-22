@@ -1,0 +1,338 @@
+-- GSig.seg: Sigma types are fibrant in line form, over any base, with the
+-- family path object (CYLINDER.md step 3).  A partial line in Sigma A B
+-- over x with a total end (a , b) is filled by
+--
+--   1. its A part (along pA), filled by kA: a line LA in A over x;
+--   2. its B part (along pB), a partial line in B over the line LA of
+--      G.A (a line in A over a line in G IS a line in G.A), filled by kB;
+--   3. the two put together (jn).
+--
+-- (FMap, the functoriality of the family path object: GFam.)
+
+level lv ;
+constraint a <= lv ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+open Axioms[lv+].FunExtLemmas[fe @(lv+)] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+module PFm = PresheafFormers[a, lv].PFormers[BC] ;
+
+------------------------------------------------------------------------
+-- Sigma
+
+module SigFib (G : PCtx) (A : PTy[G]) (B : PTy[extP G A]) (e : IPt)
+  (kA : LineFibP[GFam[lv].famPath, G, A].FibAt e) (kB : LineFibP[GFam[lv].famPath, extP G A, B].FibAt e) {
+  module SG = PFm.SigAB[G, A, B] ;
+  module TA = GPR.TyL[G, A] ;
+  module TB = GPR.TyL[extP G A, B] ;
+  module TSg = GPR.TyL[G, SG.SigP] ;
+  module FS = GFam[lv].FT[G, SG.SigP] ;
+  module FA = GFam[lv].FT[G, A] ;
+  module FB = GFam[lv].FT[extP G A, B] ;
+  module KS = EndKit[GFam[lv].famPath, G, SG.SigP, e] ;
+  module KA = EndKit[GFam[lv].famPath, G, A, e] ;
+  module KB = EndKit[GFam[lv].famPath, extP G A, B, e] ;
+  module LA = LevKit[GFam[lv].famPath, GFam[lv].famConn, G, A, e] ;
+
+  ----------------------------------------------------------------------
+  -- the parts of an element of Sigma, in E
+
+  pA : PSub[TSg.E, TA.E] = new PSub[TSg.E, TA.E, \ W z -> (z.1, z.2.1), \ J I f z -> refl (TA.E.act J I f (z.1, z.2.1))] ;
+
+  pB : PSub[TSg.E, TB.E] = new PSub[TSg.E, TB.E, \ W z -> ((z.1, z.2.1), z.2.2), \ J I f z -> refl (TB.E.act J I f ((z.1, z.2.1), z.2.2))] ;
+
+  jn : PSub[TB.E, TSg.E] = new PSub[TB.E, TSg.E, \ W z -> (z.1.1, (z.1.2, z.2)), \ J I f z -> refl (TSg.E.act J I f (z.1.1, (z.1.2, z.2)))] ;
+
+  module MA = GFam[lv].FMap[TSg.E, TA.E, pA] ;
+  module MB = GFam[lv].FMap[TSg.E, TB.E, pB] ;
+  module MJ = GFam[lv].FMap[TB.E, TSg.E, jn] ;
+
+  ----------------------------------------------------------------------
+  -- step 1: the A part
+
+  -- of a point over the end
+  tvA : PSub[KS.TV.E, KA.TV.E] =
+    new PSub[KS.TV.E, KA.TV.E, \ W w -> (w.1, w.2.1), \ J I f w -> refl (KA.TV.E.act J I f (w.1, w.2.1))] ;
+
+  -- of a line in Sigma over x: a line in A over x
+  lineA (X : Ob) (x : W0.Ix (FS.FG.ob X)) (L : W0.Ix (FS.tobF X x)) : W0.Ix (FA.tobF X x) =
+    (MA.mapF X L.1, transH (FA.FG.fam-eq X (FA.piL X (MA.mapF X L.1)) (FS.piL X L.1) (\ W f i -> refl (L.1.1 W f i).1)) L.2) ;
+
+  -- its end is the A part of the end
+  endA (W : Ob) (u : KS.TS.EI W)
+    : Id (KA.TV.EI W) ((GFam[lv].famPath.pevA G A e).mE W (u.1.1, lineA W u.1.1 u.2.1)) (tvA.nt W u.1) =
+    KA.tv-eq W ((GFam[lv].famPath.pevA G A e).mE W (u.1.1, lineA W u.1.1 u.2.1)) (tvA.nt W u.1) (refl u.1.1)
+      (calc (TA.EI W) {
+          KA.endE W ((GFam[lv].famPath.pevA G A e).mE W (u.1.1, lineA W u.1.1 u.2.1))
+        =< FA.Ev[e].endB-E W (u.1.1, lineA W u.1.1 u.2.1) >
+          pA.nt W (u.2.1.1.1 W (idH W) (ptH W e))
+        =< apH (pA.nt W) (symH (FS.Ev[e].endB-E W (u.1.1, u.2.1))) >
+          pA.nt W (KS.endE W ((GFam[lv].famPath.pevA G SG.SigP e).mE W (u.1.1, u.2.1)))
+        =< apH (\ z -> pA.nt W (KS.endE W z)) u.2.2 >
+          KA.endE W (tvA.nt W u.1) }) ;
+
+  -- of an element of the fibres
+  tsA (W : Ob) (u : KS.TS.EI W) : KA.TS.EI W = (tvA.nt W u.1, (lineA W u.1.1 u.2.1, endA W u)) ;
+
+  -- commutes with restriction: same point, same line values
+  tsA-act (V W : Ob) (g : Hom V W) (u : KS.TS.EI W)
+    : Id (KA.TS.EI V) (KA.TS.E.act V W g (tsA W u)) (tsA V (KS.TS.E.act V W g u)) =
+    LA.ts-ext V (KA.TS.E.act V W g (tsA W u)) (tsA V (KS.TS.E.act V W g u)) (refl (KA.TV.E.act V W g (tvA.nt W u.1)))
+      (\ V' g' j -> refl (pA.nt V' (u.2.1.1.1 V' (compH V' V W g g') j))) ;
+
+  opaque endA ;
+
+  module MPA = GCF.MapP[KS.TV.E, KA.TV.E, KS.SFm.SF, KA.SFm.SF, tvA, tsA, \ W u -> refl (tvA.nt W u.1), tsA-act] ;
+
+  module LB = LevKit[GFam[lv].famPath, GFam[lv].famConn, extP G A, B, e] ;
+
+  ----------------------------------------------------------------------
+  -- step 2: the B part, over the filled A line; step 3: together
+
+  module Fill (X : Ob) (w : KS.TV.EI X) (p : KS.PT.Partial[X, w]) {
+    pAp : KA.PT.Partial[X, tvA.nt X w] = MPA.mapP X w p ;
+
+    -- the filled A line (kA.kop X (tvA.nt X w) pAp).1.1 is a line in G.A
+
+    yE : Id (TA.EI X) ((kA.kop X (tvA.nt X w) pAp).1.1.1 X (idH X) (ptH X e)) (KA.endE X (tvA.nt X w)) =
+      transH (symH (FA.Ev[e].endB-E X (w.1, (kA.kop X (tvA.nt X w) pAp).1))) (apH (KA.endE X) (kA.kop X (tvA.nt X w) pAp).2) ;
+
+    b' : W0.Ix (B.tob X ((kA.kop X (tvA.nt X w) pAp).1.1.1 X (idH X) (ptH X e))) =
+      TB.coeT X (KA.endE X (tvA.nt X w)) ((kA.kop X (tvA.nt X w) pAp).1.1.1 X (idH X) (ptH X e)) (symH yE) w.2.2 ;
+
+    -- the start of the B part
+    wB : KB.TV.EI X = ((kA.kop X (tvA.nt X w) pAp).1.1, b') ;
+
+    wB-E : Id (TB.EI X) (KB.endE X wB) (pB.nt X (KS.endE X w)) =
+      symH (TB.pr-coe X (KA.endE X (tvA.nt X w)) ((kA.kop X (tvA.nt X w) pAp).1.1.1 X (idH X) (ptH X e)) (symH yE) w.2.2) ;
+
+    module SB (l : Fin p.pr) {
+      s : KS.PT.PSide[X, w] = p.ps l ;
+
+      -- the A part of the side is the A filler, restricted
+      kA-side (V : Ob) (f : Hom V X) (h : Lands V X s.pQ f)
+        : Id (KA.TS.EI V) (KA.TS.E.act V X f (tvA.nt X w, (kA.kop X (tvA.nt X w) pAp))) (tsA V (s.pv V f h)) =
+        transH (kA.kside X (tvA.nt X w) pAp l V f h) (MPA.mapS-pv X w s V f h) ;
+
+      -- the B part of the line of the side
+      Lb (V : Ob) (f : Hom V X) (h : Lands V X s.pQ f) : KB.TL.EI V =
+        (FB.piL V (MB.mapF V (s.pv V f h).2.1.1), (MB.mapF V (s.pv V f h).2.1.1, refl (FB.piL V (MB.mapF V (s.pv V f h).2.1.1)))) ;
+
+      Pb (V : Ob) (f : Hom V X) (h : Lands V X s.pQ f) : Id (W0.Ix (FB.FG.ob V)) (Lb V f h).1 (KB.TV.E.act V X f wB).1 =
+        FB.FG.fam-eq V (Lb V f h).1 (FB.FG.actF V X f (kA.kop X (tvA.nt X w) pAp).1.1) (\ W' g i -> symH (apH (\ z -> z.2.1.1.1 W' g i) (kA-side V f h))) ;
+
+      Qb (V : Ob) (f : Hom V X) (h : Lands V X s.pQ f)
+        : Id (TB.EI V) (KB.endE V ((GFam[lv].famPath.pevA (extP G A) B e).mE V (Lb V f h))) (KB.endE V (KB.TV.E.act V X f wB)) =
+        calc (TB.EI V) {
+            KB.endE V ((GFam[lv].famPath.pevA (extP G A) B e).mE V (Lb V f h))
+          =< FB.Ev[e].endB-E V (Lb V f h) >
+            pB.nt V ((s.pv V f h).2.1.1.1 V (idH V) (ptH V e))
+          =< apH (pB.nt V) (symH (FS.Ev[e].endB-E V ((s.pv V f h).1.1, (s.pv V f h).2.1))) >
+            pB.nt V (KS.endE V ((GFam[lv].famPath.pevA G SG.SigP e).mE V ((s.pv V f h).1.1, (s.pv V f h).2.1)))
+          =< apH (\ z -> pB.nt V (KS.endE V z)) (s.pv V f h).2.2 >
+            pB.nt V (KS.endE V (s.pv V f h).1)
+          =< apH (\ z -> pB.nt V (KS.endE V z)) (s.ppt V f h) >
+            pB.nt V (KS.endE V (KS.TV.E.act V X f w))
+          =< apH (pB.nt V) (KS.endE-act V X f w) >
+            TB.E.act V X f (pB.nt X (KS.endE X w))
+          =< apH (TB.E.act V X f) (symH wB-E) >
+            TB.E.act V X f (KB.endE X wB)
+          =< symH (KB.endE-act V X f wB) >
+            KB.endE V (KB.TV.E.act V X f wB) } ;
+
+      pv : KB.PT.PvTy X s.pQ = \ V f h -> KB.mkTS V (KB.TV.E.act V X f wB) (Lb V f h) (Pb V f h) (Qb V f h) ;
+
+      pv-pt (V : Ob) (f : Hom V X) (h : Lands V X s.pQ f) : Id (KB.TV.EI V) (pv V f h).1 (KB.TV.E.act V X f wB) =
+        KB.mkTS-pt V (KB.TV.E.act V X f wB) (Lb V f h) (Pb V f h) (Qb V f h) ;
+
+      -- the values of its line: the B parts of the values of the side
+      pv-lev (V : Ob) (f : Hom V X) (h : Lands V X s.pQ f) (W' : Ob) (g : Hom W' V) (j : Hom W' Iv)
+        : Id (TB.EI W') (GFam[lv].famConn.levA (extP G A) B V (KB.lineL V (pv V f h)) W' g j) (pB.nt W' ((s.pv V f h).2.1.1.1 W' g j)) =
+        LB.mkTS-lev V (KB.TV.E.act V X f wB) (Lb V f h) (Pb V f h) (Qb V f h) W' g j ;
+
+      pnat : KB.PT.PnTy X s.pQ pv = \ V' V g f h h' ->
+        LB.ts-ext V' (KB.TS.E.act V' V g (pv V f h)) (pv V' (compH V' V X f g) h')
+          (transH (apH (KB.TV.E.act V' V g) (pv-pt V f h))
+            (transH (KB.TV.PE.actC V' V X f g wB) (symH (pv-pt V' (compH V' V X f g) h'))))
+          (\ W' g' j ->
+            calc (TB.EI W') {
+                GFam[lv].famConn.levA (extP G A) B V' (KB.lineL V' (KB.TS.E.act V' V g (pv V f h))) W' g' j
+              =< LB.line-act V' V g (pv V f h) W' g' j >
+                GFam[lv].famConn.levA (extP G A) B V (KB.lineL V (pv V f h)) W' (compH W' V' V g g') j
+              =< pv-lev V f h W' (compH W' V' V g g') j >
+                pB.nt W' ((s.pv V f h).2.1.1.1 W' (compH W' V' V g g') j)
+              =< apH (\ z -> pB.nt W' (z.2.1.1.1 W' g' j)) (s.pnat V' V g f h h') >
+                pB.nt W' ((s.pv V' (compH V' V X f g) h').2.1.1.1 W' g' j)
+              =< symH (pv-lev V' (compH V' V X f g) h' W' g' j) >
+                GFam[lv].famConn.levA (extP G A) B V' (KB.lineL V' (pv V' (compH V' V X f g) h')) W' g' j }) ;
+
+      side : KB.PT.PSide[X, wB] = new KB.PT.PSide[X, wB, s.pQ, pv, pv-pt, pnat] ;
+
+      opaque pv ;
+    } ;
+
+    pcs : KB.PT.PCsTy X wB p.pr (\ l -> SB[l].side) = \ l m V f h h' ->
+      LB.ts-ext V (SB[l].pv V f h) (SB[m].pv V f h') (transH (SB[l].pv-pt V f h) (symH (SB[m].pv-pt V f h')))
+        (\ W' g j -> transH (SB[l].pv-lev V f h W' g j)
+           (transH (apH (\ z -> pB.nt W' (z.2.1.1.1 W' g j)) (p.pcs l m V f h h')) (symH (SB[m].pv-lev V f h' W' g j)))) ;
+
+    pBp : KB.PT.Partial[X, wB] = new KB.PT.Partial[X, wB, p.pr, \ l -> SB[l].side, pcs] ;
+
+    -- the filler: the B line with its A part, a line in Sigma over w.1
+    piS : Id (W0.Ix (FS.FG.ob X)) (FS.piL X (MJ.mapF X (kB.kop X wB pBp).1.1)) w.1 =
+      FS.FG.fam-eq X (FS.piL X (MJ.mapF X (kB.kop X wB pBp).1.1)) w.1 (\ W' f i ->
+        transH (apH (\ z -> z.1) (apH (\ q -> q.1 W' f i) (kB.kop X wB pBp).1.2)) (apH (\ q -> q.1 W' f i) (kA.kop X (tvA.nt X w) pAp).1.2)) ;
+
+    Ls : W0.Ix (FS.tobF X w.1) = (MJ.mapF X (kB.kop X wB pBp).1.1, piS) ;
+
+    endS : Id (KS.TV.EI X) ((GFam[lv].famPath.pevA G SG.SigP e).mE X (w.1, Ls)) w =
+      KS.tv-eq X ((GFam[lv].famPath.pevA G SG.SigP e).mE X (w.1, Ls)) w (refl w.1)
+        (calc (TSg.EI X) {
+            KS.endE X ((GFam[lv].famPath.pevA G SG.SigP e).mE X (w.1, Ls))
+          =< FS.Ev[e].endB-E X (w.1, Ls) >
+            jn.nt X ((kB.kop X wB pBp).1.1.1 X (idH X) (ptH X e))
+          =< apH (jn.nt X) (symH (FB.Ev[e].endB-E X ((kA.kop X (tvA.nt X w) pAp).1.1, (kB.kop X wB pBp).1))) >
+            jn.nt X (KB.endE X ((GFam[lv].famPath.pevA (extP G A) B e).mE X ((kA.kop X (tvA.nt X w) pAp).1.1, (kB.kop X wB pBp).1)))
+          =< apH (\ z -> jn.nt X (KB.endE X z)) (kB.kop X wB pBp).2 >
+            jn.nt X (KB.endE X wB)
+          =< apH (jn.nt X) wB-E >
+            KS.endE X w }) ;
+
+    kop : KS.TS.T X w = (Ls, endS) ;
+  } ;
+
+  module LS = LevKit[GFam[lv].famPath, GFam[lv].famConn, G, SG.SigP, e] ;
+
+  ----------------------------------------------------------------------
+  -- the filler agrees with the sides
+
+  kside (X : Ob) (w : KS.TV.EI X) (p : KS.PT.Partial[X, w]) (l : Fin p.pr) (V : Ob) (f : Hom V X) (h : Lands V X (p.ps l).pQ f)
+    : Id (KS.TS.EI V) (KS.TS.E.act V X f (w, Fill[X, w, p].kop)) ((p.ps l).pv V f h) =
+    LS.ts-ext V (KS.TS.E.act V X f (w, Fill[X, w, p].kop)) ((p.ps l).pv V f h) (symH ((p.ps l).ppt V f h))
+      (\ W' g j ->
+        calc (TSg.EI W') {
+            GFam[lv].famConn.levA G SG.SigP V (KS.lineL V (KS.TS.E.act V X f (w, Fill[X, w, p].kop))) W' g j
+          =< LS.line-act V X f (w, Fill[X, w, p].kop) W' g j >
+            jn.nt W' ((kB.kop X Fill[X, w, p].wB Fill[X, w, p].pBp).1.1.1 W' (compH W' V X f g) j)
+          =< apH (\ z -> jn.nt W' (z.2.1.1.1 W' g j)) (kB.kside X Fill[X, w, p].wB Fill[X, w, p].pBp l V f h) >
+            jn.nt W' (GFam[lv].famConn.levA (extP G A) B V (KB.lineL V (Fill[X, w, p].SB[l].pv V f h)) W' g j)
+          =< apH (jn.nt W') (Fill[X, w, p].SB[l].pv-lev V f h W' g j) >
+            GFam[lv].famConn.levA G SG.SigP V (KS.lineL V ((p.ps l).pv V f h)) W' g j }) ;
+
+  ----------------------------------------------------------------------
+  -- the filler is uniform: the restricted problem is the problem at the
+  -- restricted data (A part by mapP-restr and kA.kunif, then B part)
+
+  module Unif (Y X : Ob) (h : Hom Y X) (w : KS.TV.EI X) (p : KS.PT.Partial[X, w]) {
+    module FX = Fill[X, w, p] ;
+    module FY = Fill[Y, KS.TV.E.act Y X h w, KS.PT.restrictP Y X h w p] ;
+
+    -- the A filler, restricted
+    eA : Id (KA.TS.EI Y) (KA.TS.E.act Y X h (tvA.nt X w, kA.kop X (tvA.nt X w) FX.pAp))
+                         (tvA.nt Y (KS.TV.E.act Y X h w), kA.kop Y (tvA.nt Y (KS.TV.E.act Y X h w)) FY.pAp) =
+      transH (kA.kunif Y X h (tvA.nt X w) FX.pAp)
+        (KA.PT.kop-cong kA Y (KA.TV.E.act Y X h (tvA.nt X w)) (tvA.nt Y (KS.TV.E.act Y X h w)) (refl (tvA.nt Y (KS.TV.E.act Y X h w)))
+           (KA.PT.restrictP Y X h (tvA.nt X w) FX.pAp) FY.pAp (MPA.mapP-restr Y X h w p)) ;
+
+    -- the start of the B part, restricted
+    eY : Id (W0.Ix (FB.FG.ob Y)) (KB.TV.E.act Y X h FX.wB).1 FY.wB.1 = apH (\ z -> z.2.1.1) eA ;
+
+    eW : Id (KB.TV.EI Y) (KB.TV.E.act Y X h FX.wB) FY.wB =
+      KB.tv-eq Y (KB.TV.E.act Y X h FX.wB) FY.wB eY
+        (calc (TB.EI Y) {
+            KB.endE Y (KB.TV.E.act Y X h FX.wB)
+          =< KB.endE-act Y X h FX.wB >
+            TB.E.act Y X h (KB.endE X FX.wB)
+          =< apH (TB.E.act Y X h) FX.wB-E >
+            TB.E.act Y X h (pB.nt X (KS.endE X w))
+          =< apH (pB.nt Y) (symH (KS.endE-act Y X h w)) >
+            pB.nt Y (KS.endE Y (KS.TV.E.act Y X h w))
+          =< symH FY.wB-E >
+            KB.endE Y FY.wB }) ;
+
+    -- the B partial line, restricted
+    eV : KB.PT.EVT Y (KB.TV.E.act Y X h FX.wB) FY.wB (KB.PT.restrictP Y X h FX.wB FX.pBp) FY.pBp.pr FY.pBp.ps (refl p.pr) =
+      \ l V g i i' ->
+        LB.ts-ext V (FX.SB[l].pv V (compH V Y X h g) (lands-pre V Y X h (p.ps l).pQ g i)) (FY.SB[l].pv V g i')
+          (transH (FX.SB[l].pv-pt V (compH V Y X h g) (lands-pre V Y X h (p.ps l).pQ g i))
+            (transH (symH (KB.TV.PE.actC V Y X h g FX.wB))
+              (transH (apH (KB.TV.E.act V Y g) eW) (symH (FY.SB[l].pv-pt V g i')))))
+          (\ W' g' j ->
+            transH (FX.SB[l].pv-lev V (compH V Y X h g) (lands-pre V Y X h (p.ps l).pQ g i) W' g' j)
+              (transH (apH (\ z -> pB.nt W' (z.2.1.1.1 W' g' j))
+                         (KS.PT.pv-irr X w (p.ps l) V (compH V Y X h g) (lands-pre V Y X h (p.ps l).pQ g i)
+                            (lands-pre V Y X h (p.ps l).pQ g i')))
+                      (symH (FY.SB[l].pv-lev V g i' W' g' j)))) ;
+
+    eR : Id (KB.PT.Partial[Y, FY.wB])
+            (subst (KB.TV.EI Y) (\ z -> KB.PT.Partial[Y, z]) (KB.TV.E.act Y X h FX.wB) FY.wB eW (KB.PT.restrictP Y X h FX.wB FX.pBp))
+            FY.pBp =
+      KB.PT.partExtH Y (KB.TV.E.act Y X h FX.wB) FY.wB eW (KB.PT.restrictP Y X h FX.wB FX.pBp) FY.pBp (refl p.pr)
+        (\ l -> refl (pre Y X h (p.ps l).pQ)) eV ;
+
+    -- the B filler, restricted
+    eB : Id (KB.TS.EI Y) (KB.TS.E.act Y X h (FX.wB, kB.kop X FX.wB FX.pBp)) (FY.wB, kB.kop Y FY.wB FY.pBp) =
+      transH (kB.kunif Y X h FX.wB FX.pBp)
+        (KB.PT.kop-cong kB Y (KB.TV.E.act Y X h FX.wB) FY.wB eW (KB.PT.restrictP Y X h FX.wB FX.pBp) FY.pBp eR) ;
+
+    res : Id (KS.TS.EI Y) (KS.TS.E.act Y X h (w, FX.kop)) (KS.TV.E.act Y X h w, FY.kop) =
+      LS.ts-ext Y (KS.TS.E.act Y X h (w, FX.kop)) (KS.TV.E.act Y X h w, FY.kop) (refl (KS.TV.E.act Y X h w))
+        (\ W' g j ->
+          transH (LS.line-act Y X h (w, FX.kop) W' g j)
+                 (apH (\ z -> jn.nt W' (z.2.1.1.1 W' g j)) eB)) ;
+
+    opaque eA ; opaque eW ; opaque eR ;
+  } ;
+
+  -- Sigma A B is fibrant at e
+  fibAt : LineFibP[GFam[lv].famPath, G, SG.SigP].FibAt e =
+    new KS.PT.ContrOp[\ X w p -> Fill[X, w, p].kop, kside, \ Y X h w p -> Unif[Y, X, h, w, p].res] ;
+
+  ----------------------------------------------------------------------
+  -- ESI: from KESI of A and of B, the Sigma filler does not see an
+  -- inserted empty side (the B start points agree propositionally: kesiH)
+
+  module PEA = GCofEsi[lv].PartialsEsi[KA.TV.E, KA.SFm.SF] ;
+  module PEB = GCofEsi[lv].PartialsEsi[KB.TV.E, KB.SFm.SF] ;
+  module PES = GCofEsi[lv].PartialsEsi[KS.TV.E, KS.SFm.SF] ;
+  module MIA = GCofEsi[lv].MapIns[KS.TV.E, KA.TV.E, KS.SFm.SF, KA.SFm.SF, tvA, tsA, \ W u -> refl (tvA.nt W u.1), tsA-act] ;
+
+  module KE (keA : PEA.KESI kA) (keB : PEB.KESI kB) (X : Ob) (w : KS.TV.EI X) (k : Nat) (p p' : KS.PT.Partial[X, w])
+    (ins : PES.InsP[X, w, k, p, p']) {
+    module F = Fill[X, w, p] ;
+    module F' = Fill[X, w, p'] ;
+
+    eA : Id (KA.TS.T X (tvA.nt X w)) (kA.kop X (tvA.nt X w) F'.pAp) (kA.kop X (tvA.nt X w) F.pAp) =
+      keA X (tvA.nt X w) k F.pAp F'.pAp (MIA.mapIns X w k p p' ins) ;
+
+    ewB : Id (KB.TV.EI X) F'.wB F.wB = KB.tv-eq X F'.wB F.wB (apH (\ u -> u.1.1) eA) (transH F'.wB-E (symH F.wB-E)) ;
+
+    insv (n : Nat) (h : IsT (ltb n p.pr)) (h' : IsT (ltb (Arith[a].skipN k n) p'.pr)) (V : Ob) (f : Hom V X)
+      (i : Lands V X (p'.ps (Arith[a].skipN k n, h')).pQ f) (i' : Lands V X (p.ps (n, h)).pQ f)
+      : Id (KB.TS.EI V) (F'.SB[(Arith[a].skipN k n, h')].pv V f i) (F.SB[(n, h)].pv V f i') =
+      LB.ts-ext V (F'.SB[(Arith[a].skipN k n, h')].pv V f i) (F.SB[(n, h)].pv V f i')
+        (transH (F'.SB[(Arith[a].skipN k n, h')].pv-pt V f i)
+          (transH (apH (KB.TV.E.act V X f) ewB) (symH (F.SB[(n, h)].pv-pt V f i'))))
+        (\ W' g j -> transH (F'.SB[(Arith[a].skipN k n, h')].pv-lev V f i W' g j)
+                       (transH (apH (\ u -> pB.nt W' (u.2.1.1.1 W' g j)) (ins.insp-v n h h' V f i i'))
+                               (symH (F.SB[(n, h)].pv-lev V f i' W' g j)))) ;
+
+    insH : PEB.InsPH[X, F.wB, F'.wB, k, F.pBp, F'.pBp] =
+      new PEB.InsPH[X, F.wB, F'.wB, k, F.pBp, F'.pBp, ins.insp-r, ins.insp-k, \ hk -> ins.insp-e hk,
+                    \ n h h' -> ins.insp-Q n h h', \ n h h' V f i i' -> insv n h h' V f i i'] ;
+
+    eB : Id (KB.TS.EI X) (F'.wB, kB.kop X F'.wB F'.pBp) (F.wB, kB.kop X F.wB F.pBp) =
+      PEB.kesiH kB keB X F.wB F'.wB ewB k F.pBp F'.pBp insH ;
+
+    res : Id (KS.TS.T X w) F'.kop F.kop =
+      KS.SFm.sf-eq X w F'.kop F.kop
+        (FS.tob-eq X w.1 F'.Ls F.Ls (FS.FE.fam-eq X F'.Ls.1 F.Ls.1 (\ W f i -> apH (\ z -> jn.nt W (z.2.1.1.1 W f i)) eB))) ;
+  } ;
+
+  kesi (keA : PEA.KESI kA) (keB : PEB.KESI kB) : PES.KESI fibAt = \ X w k p p' ins -> KE[keA, keB, X, w, k, p, p', ins].res ;
+} ;

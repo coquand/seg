@@ -1,0 +1,209 @@
+-- GSubst.seg (inside IvBase): line composition, and fibrant types, are
+-- stable under substitution, over any base, at the family path object.
+-- A problem for A[s] over D is moved along s (lines by FMap, lines in E by
+-- FMap along liftP), composed in A over G; the composite lies in A[s] on
+-- the nose.  ESI is carried by MapIns.
+--
+--   SubC[D, G, s, A, e, e', ca].compAt / cesi
+--   subFibEL D G s F : FibEL D
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+-- the source type of MorC: the objects of A along s, the action h
+srcTy (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (h : TactTy D (\ I x -> A.tob I (s.nt I x)))
+  (hi : IdLaw D (\ I x -> A.tob I (s.nt I x)) h) (ho : OLaw D (\ I x -> A.tob I (s.nt I x)) h) : PTy[D] =
+  mkTy D (\ I x -> A.tob I (s.nt I x)) h hi ho ;
+
+-- MorP: problems over D for a type B with B.tob = A.tob o s (on the nose),
+-- given by its action h (and laws) and the naturality mnat of the map
+-- (w, b) |-> (s w, b) of the total presheaves, moved to problems over G
+-- (no composition needed: also used to pull problems back, GLocal).
+module MorP (D G : PCtx) (s : PSub[D, G]) (A : PTy[G])
+  (hB : TactTy D (\ I x -> A.tob I (s.nt I x))) (hiB : IdLaw D (\ I x -> A.tob I (s.nt I x)) hB)
+  (hoB : OLaw D (\ I x -> A.tob I (s.nt I x)) hB)
+  (mnat : (J I : Ob) (f : Hom J I) (w : W0.Ix ((extP D (srcTy D G s A hB hiB hoB)).ob I))
+     -> Id (W0.Ix ((extP G A).ob J))
+           (s.nt J ((extP D (srcTy D G s A hB hiB hoB)).act J I f w).1,
+            ((extP D (srcTy D G s A hB hiB hoB)).act J I f w).2)
+           ((extP G A).act J I f (s.nt I w.1, w.2)))
+  (e e' : IPt) {
+  B : PTy[D] = srcTy D G s A hB hiB hoB ;
+  mE : PSub[extP D (srcTy D G s A hB hiB hoB), extP G A] = new PSub[extP D (srcTy D G s A hB hiB hoB), extP G A, \ I w -> (s.nt I w.1, w.2), mnat] ;
+  module FM = GFam[lv] ;
+  module TA = GPR.TyL[G, A] ;
+  module TB = GPR.TyL[D, (srcTy D G s A hB hiB hoB)] ;
+  module CD = CompAtP[FM.famPath, D, (srcTy D G s A hB hiB hoB), e, e'] ;
+  module CG = CompAtP[FM.famPath, G, A, e, e'] ;
+  module KD' = EndKit[FM.famPath, D, (srcTy D G s A hB hiB hoB), e'] ;
+  module KG' = EndKit[FM.famPath, G, A, e'] ;
+  module LD = LevKit[FM.famPath, FM.famConn, D, (srcTy D G s A hB hiB hoB), e] ;
+  module LG = LevKit[FM.famPath, FM.famConn, G, A, e] ;
+  module LD' = LevKit[FM.famPath, FM.famConn, D, (srcTy D G s A hB hiB hoB), e'] ;
+  module LG' = LevKit[FM.famPath, FM.famConn, G, A, e'] ;
+  module MC = FM.FMap[D, G, s] ;
+  module ME = FM.FMap[extP D ((srcTy D G s A hB hiB hoB)), extP G A, mE] ;
+  module FAG = FM.FT[G, A] ;
+
+  -- points over the end e, moved along s
+  tvN (X : Ob) (w : CD.TV.EI X) : CG.TV.EI X = (MC.mapF X w.1, w.2) ;
+
+  tvN-act (Y X : Ob) (h : Hom Y X) (w : CD.TV.EI X) : Id (CG.TV.EI Y) (tvN Y (CD.TV.E.act Y X h w)) (CG.TV.E.act Y X h (tvN X w)) =
+    CG.EK.tv-eq Y (tvN Y (CD.TV.E.act Y X h w)) (CG.TV.E.act Y X h (tvN X w)) (symH (MC.mapF-act Y X h w.1))
+      (calc (TA.EI Y) {
+          (mE).nt Y (CD.EK.endE Y (CD.TV.E.act Y X h w))
+        =< apH ((mE).nt Y) (CD.EK.endE-act Y X h w) >
+          (mE).nt Y (TB.E.act Y X h (CD.EK.endE X w))
+        =< (mE).nt-nat Y X h (CD.EK.endE X w) >
+          TA.E.act Y X h ((mE).nt X (CD.EK.endE X w))
+        =< symH (CG.EK.endE-act Y X h (tvN X w)) >
+          CG.EK.endE Y (CG.TV.E.act Y X h (tvN X w)) }) ;
+
+  tvS : PSub[CD.TV.E, CG.TV.E] = new PSub[CD.TV.E, CG.TV.E, tvN, tvN-act] ;
+
+  -- elements of the fibres, moved along s
+  module TSN (W : Ob) (u : CD.TS.EI W) {
+    lineG : CG.TL.EI W =
+      (MC.mapF W u.1.1, (ME.mapF W u.2.1.1,
+        FAG.FG.fam-eq W (FAG.piL W (ME.mapF W u.2.1.1)) (MC.mapF W u.1.1)
+          (\ W' f i -> apH (s.nt W') (apH (\ q -> q.1 W' f i) u.2.1.2)))) ;
+
+    qN : Id (TA.EI W) (CG.EK.endE W ((FM.famPath.pevA G A e).mE W lineG)) (CG.EK.endE W (tvN W u.1)) =
+      calc (TA.EI W) {
+          CG.EK.endE W ((FM.famPath.pevA G A e).mE W lineG)
+        =< LG.endL-lev W lineG >
+          (mE).nt W (u.2.1.1.1 W (idH W) (ptH W e))
+        =< apH ((mE).nt W) (symH (LD.endL-lev W (u.1.1, u.2.1))) >
+          (mE).nt W (CD.EK.endE W ((FM.famPath.pevA D ((srcTy D G s A hB hiB hoB)) e).mE W (u.1.1, u.2.1)))
+        =< apH (\ z -> (mE).nt W (CD.EK.endE W z)) u.2.2 >
+          CG.EK.endE W (tvN W u.1) } ;
+
+    res : CG.TS.EI W = CG.EK.mkTS W (tvN W u.1) lineG (refl (MC.mapF W u.1.1)) qN ;
+
+    res-lev (W' : Ob) (f : Hom W' W) (i : Hom W' Iv)
+      : Id (TA.EI W') (FM.famConn.levA G A W (CG.EK.lineL W res) W' f i) ((mE).nt W' (u.2.1.1.1 W' f i)) =
+      LG.mkTS-lev W (tvN W u.1) lineG (refl (MC.mapF W u.1.1)) qN W' f i ;
+  } ;
+
+  tsN (W : Ob) (u : CD.TS.EI W) : CG.TS.EI W = TSN[W, u].res ;
+
+  tsN-act (V W : Ob) (g : Hom V W) (u : CD.TS.EI W) : Id (CG.TS.EI V) (CG.TS.E.act V W g (tsN W u)) (tsN V (CD.TS.E.act V W g u)) =
+    LG.ts-ext V (CG.TS.E.act V W g (tsN W u)) (tsN V (CD.TS.E.act V W g u))
+      (transH (apH (CG.TV.E.act V W g) (CG.EK.mkTS-pt W (tvN W u.1) TSN[W, u].lineG (refl (MC.mapF W u.1.1)) TSN[W, u].qN))
+        (transH (symH (tvN-act V W g u.1))
+          (symH (CG.EK.mkTS-pt V (tvN V (CD.TS.E.act V W g u).1) TSN[V, CD.TS.E.act V W g u].lineG
+                   (refl (MC.mapF V (CD.TS.E.act V W g u).1.1)) TSN[V, CD.TS.E.act V W g u].qN))))
+      (\ V' g' j -> transH (LG.line-act V W g (tsN W u) V' g' j)
+                     (transH (TSN[W, u].res-lev V' (compH V' V W g g') j) (symH (TSN[V, CD.TS.E.act V W g u].res-lev V' g' j)))) ;
+
+  module MN = GCF.MapP[CD.TV.E, CG.TV.E, CD.SFm.SF, CG.SFm.SF, tvS, tsN,
+                       \ W u -> CG.EK.mkTS-pt W (tvN W u.1) TSN[W, u].lineG (refl (MC.mapF W u.1.1)) TSN[W, u].qN, tsN-act] ;
+  module MI = GCofEsi[lv].MapIns[CD.TV.E, CG.TV.E, CD.SFm.SF, CG.SFm.SF, tvS, tsN,
+                       \ W u -> CG.EK.mkTS-pt W (tvN W u.1) TSN[W, u].lineG (refl (MC.mapF W u.1.1)) TSN[W, u].qN, tsN-act] ;
+
+} ;
+
+-- MorC: a composition of A over G gives one of B over D (MorP's moved
+-- problems composed in A).
+module MorC (D G : PCtx) (s : PSub[D, G]) (A : PTy[G])
+  (hB : TactTy D (\ I x -> A.tob I (s.nt I x))) (hiB : IdLaw D (\ I x -> A.tob I (s.nt I x)) hB)
+  (hoB : OLaw D (\ I x -> A.tob I (s.nt I x)) hB)
+  (mnat : (J I : Ob) (f : Hom J I) (w : W0.Ix ((extP D (srcTy D G s A hB hiB hoB)).ob I))
+     -> Id (W0.Ix ((extP G A).ob J))
+           (s.nt J ((extP D (srcTy D G s A hB hiB hoB)).act J I f w).1,
+            ((extP D (srcTy D G s A hB hiB hoB)).act J I f w).2)
+           ((extP G A).act J I f (s.nt I w.1, w.2)))
+  (e e' : IPt) (ca : CompAtP[GFam[lv].famPath, G, A, e, e'].CompAt) {
+  module MP = MorP[D, G, s, A, hB, hiB, hoB, mnat, e, e'] ;
+  open MP ;
+
+  ----------------------------------------------------------------------
+  -- the composite
+
+  cop (X : Ob) (w : CD.TV.EI X) (p : CD.PT.Partial[X, w]) : CD.TV'.T X w.1 = ca.cop X (tvN X w) (MN.mapP X w p) ;
+
+  -- points over the end e' of D are compared through their image in A
+  tvD-eq (W : Ob) (z z' : CD.TV'.EI W) (P : Id (W0.Ix ((FM.famPath.pth D).ob W)) z.1 z'.1)
+    (Q : Id (TA.EI W) ((mE).nt W (KD'.endE W z)) ((mE).nt W (KD'.endE W z'))) : Id (CD.TV'.EI W) z z' =
+    idJ (W0.Ix ((FM.famPath.pth D).ob W)) z.1
+      (\ w2 P2 -> (a2 : CD.TV'.T W w2) -> Id (TA.EI W) ((mE).nt W (KD'.endE W z)) ((mE).nt W (KD'.endE W (w2, a2)))
+         -> Id (CD.TV'.EI W) z (w2, a2))
+      (\ a2 Q2 -> apH {CD.TV'.T W z.1} {CD.TV'.EI W} (\ v -> (z.1, v))
+                    (TA.pr-inj W (s.nt W ((FM.famPath.pev D e').nt W z.1)) z.2 a2 Q2))
+      z'.1 P z'.2 Q ;
+
+  cside (X : Ob) (w : CD.TV.EI X) (p : CD.PT.Partial[X, w]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (h : Lands W X (p.ps l).pQ f)
+    : Id (CD.TV'.EI W) (CD.TV'.E.act W X f (w.1, cop X w p)) (CD.endL W ((p.ps l).pv W f h)) =
+    tvD-eq W (CD.TV'.E.act W X f (w.1, cop X w p)) (CD.endL W ((p.ps l).pv W f h)) (symH (apH (\ z -> z.1) ((p.ps l).ppt W f h)))
+      (calc (TA.EI W) {
+          (mE).nt W (KD'.endE W (CD.TV'.E.act W X f (w.1, cop X w p)))
+        =< apH ((mE).nt W) (KD'.endE-act W X f (w.1, cop X w p)) >
+          (mE).nt W (TB.E.act W X f (KD'.endE X (w.1, cop X w p)))
+        =< (mE).nt-nat W X f (KD'.endE X (w.1, cop X w p)) >
+          TA.E.act W X f (KG'.endE X ((tvN X w).1, cop X w p))
+        =< symH (KG'.endE-act W X f ((tvN X w).1, cop X w p)) >
+          KG'.endE W (CG.TV'.E.act W X f ((tvN X w).1, ca.cop X (tvN X w) (MN.mapP X w p)))
+        =< apH (KG'.endE W) (transH (ca.cside X (tvN X w) (MN.mapP X w p) l W f h)
+                                    (apH (CG.endL W) (MN.mapS-pv X w (p.ps l) W f h))) >
+          KG'.endE W (CG.endL W (tsN W ((p.ps l).pv W f h)))
+        =< LG'.endL-lev W (CG.EK.lineL W (tsN W ((p.ps l).pv W f h))) >
+          FM.famConn.levA G A W (CG.EK.lineL W (tsN W ((p.ps l).pv W f h))) W (idH W) (ptH W e')
+        =< TSN[W, (p.ps l).pv W f h].res-lev W (idH W) (ptH W e') >
+          (mE).nt W (((p.ps l).pv W f h).2.1.1.1 W (idH W) (ptH W e'))
+        =< apH ((mE).nt W) (symH (LD'.endL-lev W (CD.EK.lineL W ((p.ps l).pv W f h)))) >
+          (mE).nt W (KD'.endE W (CD.endL W ((p.ps l).pv W f h))) }) ;
+
+  cunif (Y X : Ob) (h : Hom Y X) (w : CD.TV.EI X) (p : CD.PT.Partial[X, w])
+    : Id (CD.TV'.EI Y) (CD.TV'.E.act Y X h (w.1, cop X w p)) ((CD.TV.E.act Y X h w).1, cop Y (CD.TV.E.act Y X h w) (CD.PT.restrictP Y X h w p)) =
+    tvD-eq Y (CD.TV'.E.act Y X h (w.1, cop X w p)) ((CD.TV.E.act Y X h w).1, cop Y (CD.TV.E.act Y X h w) (CD.PT.restrictP Y X h w p))
+      (refl (CD.TV.E.act Y X h w).1)
+      (calc (TA.EI Y) {
+          (mE).nt Y (KD'.endE Y (CD.TV'.E.act Y X h (w.1, cop X w p)))
+        =< apH ((mE).nt Y) (KD'.endE-act Y X h (w.1, cop X w p)) >
+          (mE).nt Y (TB.E.act Y X h (KD'.endE X (w.1, cop X w p)))
+        =< (mE).nt-nat Y X h (KD'.endE X (w.1, cop X w p)) >
+          TA.E.act Y X h (KG'.endE X ((tvN X w).1, cop X w p))
+        =< symH (KG'.endE-act Y X h ((tvN X w).1, cop X w p)) >
+          KG'.endE Y (CG.TV'.E.act Y X h ((tvN X w).1, ca.cop X (tvN X w) (MN.mapP X w p)))
+        =< apH (KG'.endE Y)
+             (transH (ca.cunif Y X h (tvN X w) (MN.mapP X w p))
+               (CG.cop-cong ca Y (CG.TV.E.act Y X h (tvN X w)) (tvN Y (CD.TV.E.act Y X h w)) (symH (tvN-act Y X h w))
+                  (CG.PT.restrictP Y X h (tvN X w) (MN.mapP X w p)) (MN.mapP Y (CD.TV.E.act Y X h w) (CD.PT.restrictP Y X h w p))
+                  (MN.mapP-restr Y X h w p))) >
+          KG'.endE Y ((tvN Y (CD.TV.E.act Y X h w)).1, cop Y (CD.TV.E.act Y X h w) (CD.PT.restrictP Y X h w p))
+        =< refl (KG'.endE Y ((tvN Y (CD.TV.E.act Y X h w)).1, cop Y (CD.TV.E.act Y X h w) (CD.PT.restrictP Y X h w p))) >
+          (mE).nt Y (KD'.endE Y ((CD.TV.E.act Y X h w).1, cop Y (CD.TV.E.act Y X h w) (CD.PT.restrictP Y X h w p))) }) ;
+
+  compAt : CD.CompAt = new CD.CompAt[cop, cside, cunif] ;
+
+  cesi (ce : CG.CESI ca) : CD.CESI compAt = \ X w k p p' ins ->
+    ce X (tvN X w) k (MN.mapP X w p) (MN.mapP X w p') (MI.mapIns X w k p p' ins) ;
+} ;
+
+-- substitution: the action of subTy, the naturality of liftP
+module SubC (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (e e' : IPt)
+  (ca : CompAtP[GFam[lv].famPath, G, A, e, e'].CompAt) {
+  module M = MorC[D, G, s, A, (subTy D G A s).tact, (subTy D G A s).tact-id, (subTy D G A s).tact-o,
+                  (liftP D G A s).nt-nat, e, e', ca] ;
+  compAt : M.MP.CD.CompAt = M.compAt ;
+  cesi (ce : M.MP.CG.CESI ca) : M.MP.CD.CESI compAt = M.cesi ce ;
+} ;
+
+-- fibrant types are stable under substitution
+module SubF (D G : PCtx) (s : PSub[D, G]) (F : GFibE[lv].FibEL G) {
+  module S0 = SubC[D, G, s, F.1, e0, e1, F.2.1.1] ;
+  module S1 = SubC[D, G, s, F.1, e1, e0, F.2.1.2] ;
+  res : GFibE[lv].FibEL D = (srcTy D G s F.1 (subTy D G F.1 s).tact (subTy D G F.1 s).tact-id (subTy D G F.1 s).tact-o, ((S0.compAt, S1.compAt), (S0.cesi F.2.2.1, S1.cesi F.2.2.2))) ;
+} ;
+
+subFibEL (D G : PCtx) (s : PSub[D, G]) (F : GFibE[lv].FibEL G) : GFibE[lv].FibEL D = SubF[D, G, s, F].res ;
+

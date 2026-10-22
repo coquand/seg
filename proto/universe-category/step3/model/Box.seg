@@ -1,0 +1,452 @@
+-- Box.seg: MODEL/Lv/Box.agda (MODEL/Poset/Box.agda is its instance at
+-- lzero).  Open boxes, composition and horn filling ([S] section 1).
+--
+-- A cofibration on X is a finite list of decidable subsets Q_j of X.  A
+-- side of an open box over X is a section of B over the sieve Q_j * [1]
+-- of X * [1]: an element of B at (W , psi^* rho) for every
+-- psi : W -> X * [1] with image in Q_j * [1], natural in W.  So the
+-- restriction of a box along h : Y -> X is just the inverse image of each
+-- Q_j, and restriction is functorial on the nose (restrict-o).
+-- Compatibility of two sides is equality in a single fibre, and
+-- compatibility with the lid is an equation in the total presheaf.
+--
+--   Box[eS, X]     open box with its lid at the end point eS
+--   restrict       restriction of a box along a map
+--   restrict-o     restriction along g then h is restriction along h g
+--   CompOp[eS, eT] a uniform composition operation from eS to eT
+--   HornOp         horn filling on [m+1] at a vertex k, by faces
+--
+-- The records Side, Box, CompOp are segment types; a side's reading in E
+-- (Agda's svE X rho s) is its member s.svE.  Posets at a, presheaves at l.
+
+level a l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+open Axioms[l+].FunExtLemmas[fe @(l+)] ;
+module W0 = V[l] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[l] ;
+open PR.PS ;
+
+------------------------------------------------------------------------
+-- The lid read on trees: (lid_X e o phi) s = (phi s, e), first component phi s
+
+pr1-lid (W X : Ob) (e : El Iv) (phi : Hom W X) (s : El W)
+  : Id Tree (pr1T (app W (prodP X Iv) (compH W X (prodP X Iv) (lid X e) phi) s).1) (app W X phi s).1 =
+  apH pr1T (transH (app-compH1 W X (prodP X Iv) (lid X e) phi s) (app-lid1 X e (app W X phi s))) ;
+
+------------------------------------------------------------------------
+-- Sides and boxes
+
+module Boxes (G : PCtx) (B : PTy[G]) {
+  open PR.TyL[G, B] ;
+  module GL = PR.PshL[G] ;
+
+  XI (X : Ob) : Ob = prodP X Iv ;
+
+  -- the type of the values of a side, and of its naturality
+  SvTy (X : Ob) (rho : Pt (XI X)) (Q : Subset X) : U l =
+    (W : Ob) (psi : Hom W (XI X)) -> InQ W X Q psi -> T W (G.act W (XI X) psi rho) ;
+
+  SnTy (X : Ob) (rho : Pt (XI X)) (Q : Subset X) (v : SvTy X rho Q) : U l =
+    (W' W : Ob) (chi : Hom W' W) (psi : Hom W (XI X)) (i : InQ W X Q psi)
+    (i' : InQ W' X Q (compH W' W (XI X) psi chi))
+    -> Id (EI W') (E.act W' W chi (G.act W (XI X) psi rho, v W psi i))
+                  (G.act W' (XI X) (compH W' W (XI X) psi chi) rho, v W' (compH W' W (XI X) psi chi) i') ;
+
+  module Side (X : Ob) (rho : Pt (XI X)) {
+    sQ : Subset X ;
+    sv : SvTy X rho sQ ;
+    snat : SnTy X rho sQ sv ;
+
+    -- the side read in E
+    svE (W : Ob) (psi : Hom W (XI X)) (i : InQ W X sQ psi) : EI W = (G.act W (XI X) psi rho, sv W psi i) ;
+
+    -- a side does not depend on the presentation of the map
+    pw (W : Ob) (psi psi' : Hom W (XI X)) (p : PW W (XI X) psi psi') (i : InQ W X sQ psi) (i' : InQ W X sQ psi')
+      : Id (EI W) (svE W psi i) (svE W psi' i') =
+      idJ (Hom W (XI X)) psi (\ q Pq -> (j : InQ W X sQ q) -> Id (EI W) (svE W psi i) (svE W q j))
+          (\ j -> apH (\ k -> svE W psi k) (isProp-InQ W X sQ psi i j))
+          psi' (hom-eq W (XI X) psi psi' p) i' ;
+  } ;
+
+  -- a side read along equal maps gives equal values
+  svE-eq (X : Ob) (rho : Pt (XI X)) (s : Side[X, rho]) (W : Ob) (psi psi' : Hom W (XI X))
+    (e : Id (Hom W (XI X)) psi psi') (i : InQ W X s.sQ psi) (i' : InQ W X s.sQ psi')
+    : Id (EI W) (s.svE W psi i) (s.svE W psi' i') =
+    s.pw W psi psi' (\ w -> apH (\ k -> (app W (XI X) k w).1) e) i i' ;
+
+  -- the one constructor of sides (records are compared by name)
+  mkSide (X : Ob) (rho : Pt (XI X)) (Q : Subset X) (v : SvTy X rho Q) (n : SnTy X rho Q v) : Side[X, rho] =
+    new Side[X, rho, Q, v, n] ;
+
+  LidT (eS : El Iv) (X : Ob) (rho : Pt (XI X)) : U l = T X (G.act X (XI X) (lid X eS) rho) ;
+
+  -- lid of a box read in E
+  lidE (eS : El Iv) (X : Ob) (rho : Pt (XI X)) (u : LidT eS X rho) : EI X = (G.act X (XI X) (lid X eS) rho, u) ;
+
+  CsTy (X : Ob) (rho : Pt (XI X)) (r : Nat) (S : Fin r -> Side[X, rho]) : U l =
+    (j k : Fin r) (W : Ob) (psi : Hom W (XI X)) (i : InQ W X (S j).sQ psi) (i' : InQ W X (S k).sQ psi)
+    -> Id (T W (G.act W (XI X) psi rho)) ((S j).sv W psi i) ((S k).sv W psi i') ;
+
+  CbTy (eS : El Iv) (X : Ob) (rho : Pt (XI X)) (u : LidT eS X rho) (r : Nat) (S : Fin r -> Side[X, rho]) : U l =
+    (j : Fin r) (W : Ob) (phi : Hom W X) (i : InQ W X (S j).sQ (compH W X (XI X) (lid X eS) phi))
+    -> Id (EI W) (E.act W X phi (lidE eS X rho u)) ((S j).svE W (compH W X (XI X) (lid X eS) phi) i) ;
+
+  module Box (eS : El Iv) (X : Ob) {
+    brho : Pt (XI X) ;
+    bu   : LidT eS X brho ;
+    br   : Nat ;
+    bs   : Fin br -> Side[X, brho] ;
+    -- two sides agree where both are defined
+    bcs  : CsTy X brho br bs ;
+    -- a side agrees with the lid
+    bcb  : CbTy eS X brho bu br bs ;
+  } ;
+
+  -- the one constructor of boxes
+  mkBox (eS : El Iv) (X : Ob) (rho : Pt (XI X)) (u : LidT eS X rho) (r : Nat) (S : Fin r -> Side[X, rho])
+    (cs : CsTy X rho r S) (cb : CbTy eS X rho u r S) : Box[eS, X] = new Box[eS, X, rho, u, r, S, cs, cb] ;
+
+  ----------------------------------------------------------------------
+  -- Restriction along h : Y -> X
+
+  module Restrict (eS : El Iv) (Y X : Ob) (h : Hom Y X) {
+
+    cyl : Hom (XI Y) (XI X) = cylH Y X h ;
+
+    rrho (rho : Pt (XI X)) : Pt (XI Y) = G.act (XI Y) (XI X) cyl rho ;
+
+    eqL (rho : Pt (XI X)) : Id (Pt Y) (G.act Y X h (G.act X (XI X) (lid X eS) rho)) (G.act Y (XI Y) (lid Y eS) (rrho rho)) =
+      GL.actSq Y X (XI Y) (XI X) (lid X eS) h cyl (lid Y eS) (hom-eq Y (XI X) (compH Y X (XI X) (lid X eS) h) (compH Y (XI Y) (XI X) cyl (lid Y eS)) (pw-lid Y X h eS)) rho ;
+
+    eqW (rho : Pt (XI X)) (W : Ob) (psi : Hom W (XI Y))
+      : Id (Pt W) (G.act W (XI X) (compH W (XI Y) (XI X) cyl psi) rho) (G.act W (XI Y) psi (rrho rho)) =
+      G.act-o W (XI Y) (XI X) cyl psi rho ;
+
+    -- The components of a restricted box are opaque, with their defining
+    -- equations as lemmas: two ways of writing the same restricted box are
+    -- then compared without unfolding them.
+    rsv (rho : Pt (XI X)) (s : Side[X, rho]) : SvTy Y (rrho rho) (pre Y X h s.sQ) = \ W psi i ->
+      coeT W _ _ (eqW rho W psi) (s.sv W (compH W (XI Y) (XI X) cyl psi) (inQ-cyl W Y X h s.sQ psi i)) ;
+
+    rsvE (rho : Pt (XI X)) (s : Side[X, rho]) (W : Ob) (psi : Hom W (XI Y)) (i : InQ W Y (pre Y X h s.sQ) psi)
+      : Id (EI W) (G.act W (XI Y) psi (rrho rho), rsv rho s W psi i)
+                  (s.svE W (compH W (XI Y) (XI X) cyl psi) (inQ-cyl W Y X h s.sQ psi i)) =
+      symH (pr-coe W _ _ (eqW rho W psi) (s.sv W (compH W (XI Y) (XI X) cyl psi) (inQ-cyl W Y X h s.sQ psi i))) ;
+
+    -- naturality of s along chi, read through (cyl psi) chi = cyl (psi chi)
+    rsnat (rho : Pt (XI X)) (s : Side[X, rho]) : SnTy Y (rrho rho) (pre Y X h s.sQ) (rsv rho s) = \ W' W chi psi i i' ->
+      calc (EI W') {
+          E.act W' W chi (G.act W (XI Y) psi (rrho rho), rsv rho s W psi i)
+        =< apH (E.act W' W chi) (rsvE rho s W psi i) >
+          E.act W' W chi (s.svE W (compH W (XI Y) (XI X) cyl psi) (inQ-cyl W Y X h s.sQ psi i))
+        =< s.snat W' W chi (compH W (XI Y) (XI X) cyl psi) (inQ-cyl W Y X h s.sQ psi i)
+             (substH (\ k -> InQ W' X s.sQ k) (symH (comp-assoc W' W (XI Y) (XI X) cyl psi chi))
+                     (inQ-cyl W' Y X h s.sQ (compH W' W (XI Y) psi chi) i')) >
+          s.svE W' (compH W' W (XI X) (compH W (XI Y) (XI X) cyl psi) chi)
+             (substH (\ k -> InQ W' X s.sQ k) (symH (comp-assoc W' W (XI Y) (XI X) cyl psi chi))
+                     (inQ-cyl W' Y X h s.sQ (compH W' W (XI Y) psi chi) i'))
+        =< svE-eq X rho s W' _ _ (comp-assoc W' W (XI Y) (XI X) cyl psi chi) _
+             (inQ-cyl W' Y X h s.sQ (compH W' W (XI Y) psi chi) i') >
+          s.svE W' (compH W' (XI Y) (XI X) cyl (compH W' W (XI Y) psi chi))
+             (inQ-cyl W' Y X h s.sQ (compH W' W (XI Y) psi chi) i')
+        =< symH (rsvE rho s W' (compH W' W (XI Y) psi chi) i') >
+          (G.act W' (XI Y) (compH W' W (XI Y) psi chi) (rrho rho), rsv rho s W' (compH W' W (XI Y) psi chi) i') } ;
+
+    ru (rho : Pt (XI X)) (u : LidT eS X rho) : LidT eS Y (rrho rho) =
+      B.tact Y X h (G.act X (XI X) (lid X eS) rho) (G.act Y (XI Y) (lid Y eS) (rrho rho)) (eqL rho) u ;
+
+    ruE (rho : Pt (XI X)) (u : LidT eS X rho) : Id (EI Y) (lidE eS Y (rrho rho) (ru rho u)) (E.act Y X h (lidE eS X rho u)) =
+      symH (pr-tact Y X h (G.act X (XI X) (lid X eS) rho) (G.act Y (XI Y) (lid Y eS) (rrho rho)) (eqL rho) u) ;
+
+    opaque rsv ; opaque rsvE ; opaque rsnat ; opaque ru ; opaque ruE ;
+
+    rside (rho : Pt (XI X)) (s : Side[X, rho]) : Side[Y, rrho rho] =
+      (mkSide Y (rrho rho) (pre Y X h s.sQ) (rsv rho s) (rsnat rho s)) ;
+
+    rS (b : Box[eS, X]) (j : Fin b.br) : Side[Y, rrho b.brho] = rside b.brho (b.bs j) ;
+
+    rcs (b : Box[eS, X]) : CsTy Y (rrho b.brho) b.br (rS b) = \ j k W psi i i' ->
+      pr-inj W _ _ _
+        (transH (rsvE b.brho (b.bs j) W psi i)
+          (transH (apH {T W (G.act W (XI X) (compH W (XI Y) (XI X) cyl psi) b.brho)}
+                       (\ v -> (G.act W (XI X) (compH W (XI Y) (XI X) cyl psi) b.brho, v))
+                       (b.bcs j k W (compH W (XI Y) (XI X) cyl psi) (inQ-cyl W Y X h (b.bs j).sQ psi i)
+                              (inQ-cyl W Y X h (b.bs k).sQ psi i')))
+                  (symH (rsvE b.brho (b.bs k) W psi i')))) ;
+
+    -- a point of the inverse image under the lid, read in X
+    inLid (b : Box[eS, X]) (j : Fin b.br) (W : Ob) (phi : Hom W Y)
+      (i : InQ W Y (pre Y X h (b.bs j).sQ) (compH W Y (XI Y) (lid Y eS) phi))
+      : InQ W X (b.bs j).sQ (compH W X (XI X) (lid X eS) (compH W Y X h phi)) =
+      -- phi lands in the inverse image, so h phi lands in sQ
+      lands-inQ-lid W X (b.bs j).sQ eS (compH W Y X h phi)
+        (lands-pre W Y X h (b.bs j).sQ phi (inQ-lid-lands W Y (pre Y X h (b.bs j).sQ) eS phi i)) ;
+
+    -- lid_X (h phi) = (lid_X h) phi = (cyl lid_Y) phi = cyl (lid_Y phi)
+    lid-cyl-comp (W : Ob) (phi : Hom W Y)
+      : Id (Hom W (XI X)) (compH W X (XI X) (lid X eS) (compH W Y X h phi))
+                          (compH W (XI Y) (XI X) cyl (compH W Y (XI Y) (lid Y eS) phi)) =
+      calc (Hom W (XI X)) {
+          compH W X (XI X) (lid X eS) (compH W Y X h phi)
+        =< symH (comp-assoc W Y X (XI X) (lid X eS) h phi) >
+          compH W Y (XI X) (compH Y X (XI X) (lid X eS) h) phi
+        =< apH (\ k -> compH W Y (XI X) k phi) (symH (cyl-lid Y X h eS)) >
+          compH W Y (XI X) (compH Y (XI Y) (XI X) cyl (lid Y eS)) phi
+        =< comp-assoc W Y (XI Y) (XI X) cyl (lid Y eS) phi >
+          compH W (XI Y) (XI X) cyl (compH W Y (XI Y) (lid Y eS) phi) } ;
+
+    rcb (b : Box[eS, X]) : CbTy eS Y (rrho b.brho) (ru b.brho b.bu) b.br (rS b) = \ j W phi i ->
+      transH (apH (E.act W Y phi) (ruE b.brho b.bu))
+       (transH (PE.actC W Y X h phi (lidE eS X b.brho b.bu))
+        (transH (b.bcb j W (compH W Y X h phi) (inLid b j W phi i))
+         (transH (svE-eq X b.brho (b.bs j) W _ _ (lid-cyl-comp W phi)
+                     (inLid b j W phi i)
+                     (inQ-cyl W Y X h (b.bs j).sQ (compH W Y (XI Y) (lid Y eS) phi) i))
+                 (symH (rsvE b.brho (b.bs j) W (compH W Y (XI Y) (lid Y eS) phi) i))))) ;
+
+    opaque rcs ; opaque rcb ;
+
+    rbox (b : Box[eS, X]) : Box[eS, Y] = (mkBox eS Y (rrho b.brho) (ru b.brho b.bu) b.br (rS b) (rcs b) (rcb b)) ;
+  } ;
+
+  restrict (eS : El Iv) (Y X : Ob) (h : Hom Y X) (b : Box[eS, X]) : Box[eS, Y] = Restrict[eS, Y, X, h].rbox b ;
+
+  ----------------------------------------------------------------------
+  -- Equality of sides and boxes
+
+  isProp-Sn (X : Ob) (rho : Pt (XI X)) (Q : Subset X) (v : SvTy X rho Q) : isProp (SnTy X rho Q v) =
+    isProp-Pi Ob (\ W' -> (W : Ob) (chi : Hom W' W) (psi : Hom W (XI X)) (i : InQ W X Q psi)
+      (i' : InQ W' X Q (compH W' W (XI X) psi chi))
+      -> Id (EI W') (E.act W' W chi (G.act W (XI X) psi rho, v W psi i))
+                    (G.act W' (XI X) (compH W' W (XI X) psi chi) rho, v W' (compH W' W (XI X) psi chi) i')) (\ W' ->
+    isProp-Pi Ob (\ W -> (chi : Hom W' W) (psi : Hom W (XI X)) (i : InQ W X Q psi)
+      (i' : InQ W' X Q (compH W' W (XI X) psi chi))
+      -> Id (EI W') (E.act W' W chi (G.act W (XI X) psi rho, v W psi i))
+                    (G.act W' (XI X) (compH W' W (XI X) psi chi) rho, v W' (compH W' W (XI X) psi chi) i')) (\ W ->
+    isProp-Pi (Hom W' W) (\ chi -> (psi : Hom W (XI X)) (i : InQ W X Q psi)
+      (i' : InQ W' X Q (compH W' W (XI X) psi chi))
+      -> Id (EI W') (E.act W' W chi (G.act W (XI X) psi rho, v W psi i))
+                    (G.act W' (XI X) (compH W' W (XI X) psi chi) rho, v W' (compH W' W (XI X) psi chi) i')) (\ chi ->
+    isProp-Pi (Hom W (XI X)) (\ psi -> (i : InQ W X Q psi) (i' : InQ W' X Q (compH W' W (XI X) psi chi))
+      -> Id (EI W') (E.act W' W chi (G.act W (XI X) psi rho, v W psi i))
+                    (G.act W' (XI X) (compH W' W (XI X) psi chi) rho, v W' (compH W' W (XI X) psi chi) i')) (\ psi ->
+    isProp-Pi (InQ W X Q psi) (\ i -> (i' : InQ W' X Q (compH W' W (XI X) psi chi))
+      -> Id (EI W') (E.act W' W chi (G.act W (XI X) psi rho, v W psi i))
+                    (G.act W' (XI X) (compH W' W (XI X) psi chi) rho, v W' (compH W' W (XI X) psi chi) i')) (\ i ->
+    isProp-Pi (InQ W' X Q (compH W' W (XI X) psi chi)) (\ i'
+      -> Id (EI W') (E.act W' W chi (G.act W (XI X) psi rho, v W psi i))
+                    (G.act W' (XI X) (compH W' W (XI X) psi chi) rho, v W' (compH W' W (XI X) psi chi) i')) (\ i' ->
+      W0.isSetIx (E.ob W') _ _)))))) ;
+
+  sv-funext (X : Ob) (rho : Pt (XI X)) (Q : Subset X) (v v' : SvTy X rho Q)
+    (ev : (W : Ob) (psi : Hom W (XI X)) (i : InQ W X Q psi) -> Id (T W (G.act W (XI X) psi rho)) (v W psi i) (v' W psi i))
+    : Id (SvTy X rho Q) v v' =
+    funext Ob (\ W -> (psi : Hom W (XI X)) -> InQ W X Q psi -> T W (G.act W (XI X) psi rho)) v v' (\ W ->
+      funext (Hom W (XI X)) (\ psi -> InQ W X Q psi -> T W (G.act W (XI X) psi rho)) (v W) (v' W) (\ psi ->
+        funext (InQ W X Q psi) (\ i -> T W (G.act W (XI X) psi rho)) (v W psi) (v' W psi) (ev W psi))) ;
+
+  sideExt (X : Ob) (rho : Pt (XI X)) (s s' : Side[X, rho])
+    (eQ : Id (Subset X) s.sQ s'.sQ)
+    (ev : (W : Ob) (psi : Hom W (XI X)) (i : InQ W X s.sQ psi) (i' : InQ W X s'.sQ psi)
+          -> Id (T W (G.act W (XI X) psi rho)) (s.sv W psi i) (s'.sv W psi i'))
+    : Id (Side[X, rho]) s s' =
+    idJ (Subset X) s.sQ
+      (\ Q PQ -> (v' : SvTy X rho Q) (n' : SnTy X rho Q v')
+         -> ((W : Ob) (psi : Hom W (XI X)) (i : InQ W X s.sQ psi) (i' : InQ W X Q psi)
+             -> Id (T W (G.act W (XI X) psi rho)) (s.sv W psi i) (v' W psi i'))
+         -> Id (Side[X, rho]) s ((mkSide X rho Q v' n')))
+      (\ v' n' ev1 ->
+         idJ (SvTy X rho s.sQ) s.sv
+           (\ v1 Pv -> (n1 : SnTy X rho s.sQ v1) -> Id (Side[X, rho]) s ((mkSide X rho s.sQ v1 n1)))
+           (\ n1 -> apH {_} {Side[X, rho]} (\ n2 -> (mkSide X rho s.sQ s.sv n2)) (isProp-Sn X rho s.sQ s.sv s.snat n1))
+           v' (sv-funext X rho s.sQ s.sv v' (\ W psi i -> ev1 W psi i i)) n')
+      s'.sQ eQ s'.sv s'.snat ev ;
+
+  isProp-Cs (X : Ob) (rho : Pt (XI X)) (r : Nat) (S : Fin r -> Side[X, rho]) : isProp (CsTy X rho r S) =
+    isProp-Pi (Fin r) (\ j -> (k : Fin r) (W : Ob) (psi : Hom W (XI X)) (i : InQ W X (S j).sQ psi) (i' : InQ W X (S k).sQ psi)
+      -> Id (T W (G.act W (XI X) psi rho)) ((S j).sv W psi i) ((S k).sv W psi i')) (\ j ->
+    isProp-Pi (Fin r) (\ k -> (W : Ob) (psi : Hom W (XI X)) (i : InQ W X (S j).sQ psi) (i' : InQ W X (S k).sQ psi)
+      -> Id (T W (G.act W (XI X) psi rho)) ((S j).sv W psi i) ((S k).sv W psi i')) (\ k ->
+    isProp-Pi Ob (\ W -> (psi : Hom W (XI X)) (i : InQ W X (S j).sQ psi) (i' : InQ W X (S k).sQ psi)
+      -> Id (T W (G.act W (XI X) psi rho)) ((S j).sv W psi i) ((S k).sv W psi i')) (\ W ->
+    isProp-Pi (Hom W (XI X)) (\ psi -> (i : InQ W X (S j).sQ psi) (i' : InQ W X (S k).sQ psi)
+      -> Id (T W (G.act W (XI X) psi rho)) ((S j).sv W psi i) ((S k).sv W psi i')) (\ psi ->
+    isProp-Pi (InQ W X (S j).sQ psi) (\ i -> (i' : InQ W X (S k).sQ psi)
+      -> Id (T W (G.act W (XI X) psi rho)) ((S j).sv W psi i) ((S k).sv W psi i')) (\ i ->
+    isProp-Pi (InQ W X (S k).sQ psi) (\ i'
+      -> Id (T W (G.act W (XI X) psi rho)) ((S j).sv W psi i) ((S k).sv W psi i')) (\ i' ->
+      W0.isSetIx (B.tob W (G.act W (XI X) psi rho)) _ _)))))) ;
+
+  isProp-Cb (eS : El Iv) (X : Ob) (rho : Pt (XI X)) (u : LidT eS X rho) (r : Nat) (S : Fin r -> Side[X, rho])
+    : isProp (CbTy eS X rho u r S) =
+    isProp-Pi (Fin r) (\ j -> (W : Ob) (phi : Hom W X) (i : InQ W X (S j).sQ (compH W X (XI X) (lid X eS) phi))
+      -> Id (EI W) (E.act W X phi (lidE eS X rho u)) ((S j).svE W (compH W X (XI X) (lid X eS) phi) i)) (\ j ->
+    isProp-Pi Ob (\ W -> (phi : Hom W X) (i : InQ W X (S j).sQ (compH W X (XI X) (lid X eS) phi))
+      -> Id (EI W) (E.act W X phi (lidE eS X rho u)) ((S j).svE W (compH W X (XI X) (lid X eS) phi) i)) (\ W ->
+    isProp-Pi (Hom W X) (\ phi -> (i : InQ W X (S j).sQ (compH W X (XI X) (lid X eS) phi))
+      -> Id (EI W) (E.act W X phi (lidE eS X rho u)) ((S j).svE W (compH W X (XI X) (lid X eS) phi) i)) (\ phi ->
+    isProp-Pi (InQ W X (S j).sQ (compH W X (XI X) (lid X eS) phi)) (\ i
+      -> Id (EI W) (E.act W X phi (lidE eS X rho u)) ((S j).svE W (compH W X (XI X) (lid X eS) phi) i)) (\ i ->
+      W0.isSetIx (E.ob W) _ _)))) ;
+
+  -- Agda's boxExt: same number of sides, equal rho, lid and sides
+  box-ext (eS : El Iv) (X : Ob) (rho rho' : Pt (XI X)) (u : LidT eS X rho) (u' : LidT eS X rho')
+    (r : Nat) (S : Fin r -> Side[X, rho]) (S' : Fin r -> Side[X, rho'])
+    (cs : CsTy X rho r S) (cs' : CsTy X rho' r S') (cb : CbTy eS X rho u r S) (cb' : CbTy eS X rho' u' r S')
+    (erho : Id (Pt (XI X)) rho rho')
+    (eu : Id (EI X) (lidE eS X rho u) (lidE eS X rho' u'))
+    (eQ : (j : Fin r) -> Id (Subset X) (S j).sQ (S' j).sQ)
+    (ev : (j : Fin r) (W : Ob) (psi : Hom W (XI X)) (i : InQ W X (S j).sQ psi) (i' : InQ W X (S' j).sQ psi)
+          -> Id (EI W) ((S j).svE W psi i) ((S' j).svE W psi i'))
+    : Id (Box[eS, X]) ((mkBox eS X rho u r S cs cb)) ((mkBox eS X rho' u' r S' cs' cb')) =
+    idJ (Pt (XI X)) rho
+      (\ rho1 P1 -> (u1 : LidT eS X rho1) (S1 : Fin r -> Side[X, rho1]) (cs1 : CsTy X rho1 r S1) (cb1 : CbTy eS X rho1 u1 r S1)
+         -> Id (EI X) (lidE eS X rho u) (lidE eS X rho1 u1)
+         -> ((j : Fin r) -> Id (Subset X) (S j).sQ (S1 j).sQ)
+         -> ((j : Fin r) (W : Ob) (psi : Hom W (XI X)) (i : InQ W X (S j).sQ psi) (i' : InQ W X (S1 j).sQ psi)
+             -> Id (EI W) ((S j).svE W psi i) ((S1 j).svE W psi i'))
+         -> Id (Box[eS, X]) ((mkBox eS X rho u r S cs cb)) ((mkBox eS X rho1 u1 r S1 cs1 cb1)))
+      (\ u1 S1 cs1 cb1 eu1 eQ1 ev1 ->
+         box-ext0 eS X rho u u1 r S S1 cs cs1 cb cb1 (pr-inj X _ u u1 eu1)
+           (funext (Fin r) (\ j -> Side[X, rho]) S S1 (\ j ->
+              sideExt X rho (S j) (S1 j) (eQ1 j) (\ W psi i i' -> pr-inj W _ _ _ (ev1 j W psi i i')))))
+      rho' erho u' S' cs' cb' eu eQ ev ;
+
+  box-ext0 (eS : El Iv) (X : Ob) (rho : Pt (XI X)) (u u1 : LidT eS X rho) (r : Nat) (S S1 : Fin r -> Side[X, rho])
+    (cs : CsTy X rho r S) (cs1 : CsTy X rho r S1) (cb : CbTy eS X rho u r S) (cb1 : CbTy eS X rho u1 r S1)
+    (pu : Id (LidT eS X rho) u u1) (pS : Id (Fin r -> Side[X, rho]) S S1)
+    : Id (Box[eS, X]) ((mkBox eS X rho u r S cs cb)) ((mkBox eS X rho u1 r S1 cs1 cb1)) =
+    idJ (LidT eS X rho) u
+      (\ u2 P2 -> (S2 : Fin r -> Side[X, rho]) -> Id (Fin r -> Side[X, rho]) S S2
+         -> (cs2 : CsTy X rho r S2) (cb2 : CbTy eS X rho u2 r S2)
+         -> Id (Box[eS, X]) ((mkBox eS X rho u r S cs cb)) ((mkBox eS X rho u2 r S2 cs2 cb2)))
+      (\ S2 pS2 ->
+         idJ (Fin r -> Side[X, rho]) S
+           (\ S3 P3 -> (cs3 : CsTy X rho r S3) (cb3 : CbTy eS X rho u r S3)
+              -> Id (Box[eS, X]) ((mkBox eS X rho u r S cs cb)) ((mkBox eS X rho u r S3 cs3 cb3)))
+           (\ cs3 cb3 ->
+              transH {Box[eS, X]} {_} {(mkBox eS X rho u r S cs3 cb)} {(mkBox eS X rho u r S cs3 cb3)}
+                     (apH {_} {Box[eS, X]} (\ c -> (mkBox eS X rho u r S c cb)) (isProp-Cs X rho r S cs cs3))
+                     (apH {_} {Box[eS, X]} (\ c -> (mkBox eS X rho u r S cs3 c)) (isProp-Cb eS X rho u r S cb cb3)))
+           S2 pS2)
+      u1 pu S1 pS cs1 cb1 ;
+
+  ----------------------------------------------------------------------
+  -- Restriction is functorial, on the nose
+
+  module RO (eS : El Iv) (Z Y X : Ob) (g : Hom Z Y) (h : Hom Y X) {
+   module RXY = Restrict[eS, Y, X, h] ;
+   module RYZ = Restrict[eS, Z, Y, g] ;
+   module RXZ = Restrict[eS, Z, X, compH Z Y X h g] ;
+
+   restrict-o (b : Box[eS, X])
+    : Id (Box[eS, Z]) (restrict eS Z Y g (restrict eS Y X h b)) (restrict eS Z X (compH Z Y X h g) b) =
+    box-ext eS Z _ _ _ _ b.br _ _ _ _ _ _
+      (GL.actTri (XI Z) (XI Y) (XI X) (cylH Y X h) (cylH Z Y g) (cylH Z X (compH Z Y X h g)) (hom-eq (XI Z) (XI X) (compH (XI Z) (XI Y) (XI X) (cylH Y X h) (cylH Z Y g)) (cylH Z X (compH Z Y X h g)) (pw-cyl-comp Z Y X h g)) b.brho)
+      (transH (RYZ.ruE (RXY.rrho b.brho) (RXY.ru b.brho b.bu))
+       (transH (apH (E.act Z Y g) (RXY.ruE b.brho b.bu))
+        (transH (PE.actC Z Y X h g (lidE eS X b.brho b.bu))
+                (symH (RXZ.ruE b.brho b.bu)))))
+      (\ j -> pre-comp Z Y X g h (b.bs j).sQ)
+      (\ j W psi i i' ->
+        transH (RYZ.rsvE (RXY.rrho b.brho) (RXY.rside b.brho (b.bs j)) W psi i)
+         (transH (RXY.rsvE b.brho (b.bs j) W (compH W (XI Z) (XI Y) (cylH Z Y g) psi)
+                    (inQ-cyl W Z Y g (pre Y X h (b.bs j).sQ) psi i))
+          (transH (svE-eq X b.brho (b.bs j) W _ _
+                     -- cyl_h (cyl_g psi) = (cyl_h cyl_g) psi = cyl_(h g) psi
+                     (transH (symH (comp-assoc W (XI Z) (XI Y) (XI X) (cylH Y X h) (cylH Z Y g) psi))
+                             (apH (\ k -> compH W (XI Z) (XI X) k psi)
+                                  (hom-eq (XI Z) (XI X) _ _ (pw-cyl-comp Z Y X h g))))
+                     (inQ-cyl W Y X h (b.bs j).sQ (compH W (XI Z) (XI Y) (cylH Z Y g) psi)
+                        (inQ-cyl W Z Y g (pre Y X h (b.bs j).sQ) psi i))
+                     (inQ-cyl W Z X (compH Z Y X h g) (b.bs j).sQ psi i'))
+                  (symH (RXZ.rsvE b.brho (b.bs j) W psi i'))))) ;
+
+   opaque restrict-o ;
+  } ;
+
+  restrict-o (eS : El Iv) (Z Y X : Ob) (g : Hom Z Y) (h : Hom Y X) (b : Box[eS, X])
+    : Id (Box[eS, Z]) (restrict eS Z Y g (restrict eS Y X h b)) (restrict eS Z X (compH Z Y X h g) b) =
+    RO[eS, Z, Y, X, g, h].restrict-o b ;
+
+  -- the map underneath does not matter, only its values
+  restrict-pw (eS : El Iv) (Y X : Ob) (h h' : Hom Y X) (p : PW Y X h h') (b : Box[eS, X])
+    : Id (Box[eS, Y]) (restrict eS Y X h b) (restrict eS Y X h' b) =
+    apH (\ k -> restrict eS Y X k b) (hom-eq Y X h h' p) ;
+
+  ----------------------------------------------------------------------
+  -- Composition operations
+
+  -- the upper lid of a box, read in E
+  topE (eT : El Iv) (X : Ob) (rho : Pt (XI X)) (u : LidT eT X rho) : EI X = (G.act X (XI X) (lid X eT) rho, u) ;
+
+  module CompOp (eS eT : El Iv) {
+    cop (X : Ob) (b : Box[eS, X]) : LidT eT X b.brho ;
+    -- the result is compatible with each side
+    cside (X : Ob) (b : Box[eS, X]) (j : Fin b.br) (W : Ob) (phi : Hom W X)
+      (i : InQ W X (b.bs j).sQ (compH W X (XI X) (lid X eT) phi))
+      : Id (EI W) (E.act W X phi (topE eT X b.brho (cop X b))) ((b.bs j).svE W (compH W X (XI X) (lid X eT) phi) i) ;
+    -- and uniform
+    cunif (Y X : Ob) (h : Hom Y X) (b : Box[eS, X])
+      : Id (EI Y) (E.act Y X h (topE eT X b.brho (cop X b)))
+                  (topE eT Y (restrict eS Y X h b).brho (cop Y (restrict eS Y X h b))) ;
+  } ;
+
+  -- the one constructor of composition operations
+  mkCompOp (eS eT : El Iv) (cop : (X : Ob) (b : Box[eS, X]) -> LidT eT X b.brho)
+    (cside : (X : Ob) (b : Box[eS, X]) (j : Fin b.br) (W : Ob) (phi : Hom W X)
+      (i : InQ W X (b.bs j).sQ (compH W X (XI X) (lid X eT) phi))
+      -> Id (EI W) (E.act W X phi (topE eT X b.brho (cop X b))) ((b.bs j).svE W (compH W X (XI X) (lid X eT) phi) i))
+    (cunif : (Y X : Ob) (h : Hom Y X) (b : Box[eS, X])
+      -> Id (EI Y) (E.act Y X h (topE eT X b.brho (cop X b)))
+                   (topE eT Y (restrict eS Y X h b).brho (cop Y (restrict eS Y X h b))))
+    : CompOp[eS, eT] = new CompOp[eS, eT, cop, cside, cunif] ;
+
+  -- comp(G , B): composition in both directions
+  Comp : U l+ = CompOp[e0, e1] * CompOp[e1, e0] ;
+} ;
+
+------------------------------------------------------------------------
+-- Horn filling
+-- A horn at the vertex k of [m+1] is a compatible family on the faces
+-- delta_y, y /= k.  The faces delta_y and delta_{z+1}, y <= z, meet in
+-- delta_{z+1} delta_y = delta_y delta_z.  As in [S], no uniformity.
+
+module Horns (G : PCtx) (A : PTy[G]) {
+  open PR.TyL[G, A] ;
+
+  Faces (m k : Nat) (tau : Pt (lin (suc m))) : U l =
+    (y : Nat) -> IsT (leb y (suc m)) -> IsT (not (eqN y k)) -> T (lin m) (G.act (lin m) (lin (suc m)) (dl m y) tau) ;
+
+  fE (m k : Nat) (tau : Pt (lin (suc m))) (F : Faces m k tau)
+    (y : Nat) (hy : IsT (leb y (suc m))) (ky : IsT (not (eqN y k))) : EI (lin m) =
+    (G.act (lin m) (lin (suc m)) (dl m y) tau, F y hy ky) ;
+
+  HCompat : (m k : Nat) (tau : Pt (lin (suc m))) (F : Faces m k tau) -> U l = split {
+    zero -> \ k tau F -> Top ;
+    suc m -> \ k tau F -> (y z : Nat) -> IsT (leb y z)
+      -> (hy : IsT (leb y (suc (suc m)))) (hz : IsT (leb (suc z) (suc (suc m))))
+      -> (ky : IsT (not (eqN y k))) (kz : IsT (not (eqN (suc z) k)))
+      -> Id (EI (lin m)) (E.act (lin m) (lin (suc m)) (dl m z) (fE (suc m) k tau F y hy ky))
+                         (E.act (lin m) (lin (suc m)) (dl m y) (fE (suc m) k tau F (suc z) hz kz)) } ;
+
+  Filler (m k : Nat) (tau : Pt (lin (suc m))) (F : Faces m k tau) : U l =
+    (a0 : T (lin (suc m)) tau) *
+      ((y : Nat) (hy : IsT (leb y (suc m))) (ky : IsT (not (eqN y k)))
+        -> Id (EI (lin m)) (E.act (lin m) (lin (suc m)) (dl m y) (tau, a0)) (fE m k tau F y hy ky)) ;
+
+  -- horn(G , A)
+  HornOp : U l = (m k : Nat) -> IsT (leb k (suc m)) -> (tau : Pt (lin (suc m)))
+    -> (F : Faces m k tau) -> HCompat m k tau F -> Filler m k tau F ;
+} ;

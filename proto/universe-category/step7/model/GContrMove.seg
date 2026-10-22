@@ -1,0 +1,121 @@
+-- GContrMove.seg (inside IvBase, any base, levels k l): a contractibility
+-- structure moves along a map of types.  C over D (level l), C0 over D0
+-- (level k), a map of points s : D -> D0 and a map of totals mV over it,
+-- natural and injective over equal points, with a lift back bk of the
+-- fibres (mV (x , bk u) = (s x , u)).  A partial element of C is moved to
+-- C0 (mapP), extended by k0 there, and the extension lifted back:
+--
+--   kop / kside / kunif   the moved structure (contr)
+--   kesi                  it does not see an inserted empty side if k0 does
+--   unique                a structure whose extensions move to k0's is it
+--
+-- Instances: line fillers (GTransfer.TrF, TrivFib) and equivalence
+-- structures (GTransferEq.TrEq, EquivOp) moved along fibrewise
+-- isomorphisms, across levels.
+
+level k l m ;
+constraint a <= k ;
+constraint a <= l ;
+constraint k <= m ;
+constraint l <= m ;
+open Base ;
+open Prelude[m+] ;
+open Paths[m+] ;
+open Trees[a] ;
+open Arith[a] ;
+module W0 = V[k] ;
+module W1 = V[l] ;
+module P0 = GPre[k] ;
+module P1 = GPre[l] ;
+
+module Mv (D : P1.PS.PCtx) (C : P1.PS.PTy[D]) (D0 : P0.PS.PCtx) (C0 : P0.PS.PTy[D0])
+  (s : (W : Ob) -> W1.Ix (D.ob W) -> W0.Ix (D0.ob W))
+  (s-nat : (V W : Ob) (g : Hom V W) (d : W1.Ix (D.ob W)) -> Id (W0.Ix (D0.ob V)) (s V (D.act V W g d)) (D0.act V W g (s W d)))
+  (mV : (W : Ob) -> P1.TyL[D, C].EI W -> P0.TyL[D0, C0].EI W)
+  (mpt : (W : Ob) (v : P1.TyL[D, C].EI W) -> Id (W0.Ix (D0.ob W)) (mV W v).1 (s W v.1))
+  (mnat : (V W : Ob) (g : Hom V W) (v : P1.TyL[D, C].EI W)
+     -> Id (P0.TyL[D0, C0].EI V) (P0.TyL[D0, C0].E.act V W g (mV W v)) (mV V (P1.TyL[D, C].E.act V W g v)))
+  (minj : (W : Ob) (v v' : P1.TyL[D, C].EI W) (P : Id (W1.Ix (D.ob W)) v.1 v'.1) (Q : Id (P0.TyL[D0, C0].EI W) (mV W v) (mV W v'))
+     -> Id (P1.TyL[D, C].EI W) v v')
+  (bk : (X : Ob) (x : W1.Ix (D.ob X)) (u : W0.Ix (C0.tob X (s X x))) -> W1.Ix (C.tob X x))
+  (bkMv : (X : Ob) (x : W1.Ix (D.ob X)) (u : W0.Ix (C0.tob X (s X x))) -> Id (P0.TyL[D0, C0].EI X) (mV X (x, bk X x u)) (s X x, u))
+  (k0 : GCofib[k].Partials[D0, C0].ContrOp) {
+  module T1 = P1.TyL[D, C] ;
+  module T0 = P0.TyL[D0, C0] ;
+  module PD = GCofib[l].Partials[D, C] ;
+  module PG = GCofib[k].Partials[D0, C0] ;
+  module PED = GCofEsi[l].PartialsEsi[D, C] ;
+  module PEG = GCofEsi[k].PartialsEsi[D0, C0] ;
+
+  ----------------------------------------------------------------------
+  -- partial elements moved
+
+  mside (X : Ob) (x : W1.Ix (D.ob X)) (sd : PD.PSide[X, x]) : PG.PSide[X, s X x] =
+    new PG.PSide[X, s X x, sd.pQ, \ W f i -> mV W (sd.pv W f i),
+      \ W f i -> transH (mpt W (sd.pv W f i)) (transH (apH (s W) (sd.ppt W f i)) (s-nat W X f x)),
+      \ W' W chi f i i' -> transH (mnat W' W chi (sd.pv W f i)) (apH (mV W') (sd.pnat W' W chi f i i'))] ;
+
+  mapP (X : Ob) (x : W1.Ix (D.ob X)) (p : PD.Partial[X, x]) : PG.Partial[X, s X x] =
+    new PG.Partial[X, s X x, p.pr, \ j -> mside X x (p.ps j), \ j j' W f i i' -> apH (mV W) (p.pcs j j' W f i i')] ;
+
+  mapP-restr (Y X : Ob) (h : Hom Y X) (x : W1.Ix (D.ob X)) (p : PD.Partial[X, x])
+    : Id (PG.Partial[Y, s Y (D.act Y X h x)])
+         (subst (W0.Ix (D0.ob Y)) (\ z -> PG.Partial[Y, z]) (D0.act Y X h (s X x)) (s Y (D.act Y X h x))
+            (symH (s-nat Y X h x)) (PG.restrictP Y X h (s X x) (mapP X x p)))
+         (mapP Y (D.act Y X h x) (PD.restrictP Y X h x p)) =
+    PG.partExtH Y (D0.act Y X h (s X x)) (s Y (D.act Y X h x)) (symH (s-nat Y X h x))
+      (PG.restrictP Y X h (s X x) (mapP X x p)) (mapP Y (D.act Y X h x) (PD.restrictP Y X h x p)) (refl p.pr)
+      (\ j -> refl (pre Y X h (p.ps j).pQ))
+      (\ j W g i i' -> apH (mV W) (PD.pv-irr X x (p.ps j) W (compH W Y X h g)
+                                    (lands-pre W Y X h (p.ps j).pQ g i) (lands-pre W Y X h (p.ps j).pQ g i'))) ;
+
+  mapIns (X : Ob) (x : W1.Ix (D.ob X)) (n : Nat) (p p' : PD.Partial[X, x]) (ins : PED.InsP[X, x, n, p, p'])
+    : PEG.InsP[X, s X x, n, mapP X x p, mapP X x p'] =
+    new PEG.InsP[X, s X x, n, mapP X x p, mapP X x p', ins.insp-r, ins.insp-k, ins.insp-e, ins.insp-Q,
+      \ n2 h1 h' W f i i' -> apH (mV W) (ins.insp-v n2 h1 h' W f i i')] ;
+
+  opaque mapP-restr ;
+
+  ----------------------------------------------------------------------
+  -- the moved structure
+
+  kop (X : Ob) (x : W1.Ix (D.ob X)) (p : PD.Partial[X, x]) : W1.Ix (C.tob X x) = bk X x (k0.kop X (s X x) (mapP X x p)) ;
+
+  kopMv (X : Ob) (x : W1.Ix (D.ob X)) (p : PD.Partial[X, x]) : Id (T0.EI X) (mV X (x, kop X x p)) (s X x, k0.kop X (s X x) (mapP X x p)) =
+    bkMv X x (k0.kop X (s X x) (mapP X x p)) ;
+
+  kside (X : Ob) (x : W1.Ix (D.ob X)) (p : PD.Partial[X, x]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (h : Lands W X (p.ps l).pQ f)
+    : Id (T1.EI W) (T1.E.act W X f (x, kop X x p)) ((p.ps l).pv W f h) =
+    minj W (T1.E.act W X f (x, kop X x p)) ((p.ps l).pv W f h) (symH ((p.ps l).ppt W f h))
+      (transH (symH (mnat W X f (x, kop X x p)))
+        (transH (apH (T0.E.act W X f) (kopMv X x p)) (k0.kside X (s X x) (mapP X x p) l W f h))) ;
+
+  kunif (Y X : Ob) (h : Hom Y X) (x : W1.Ix (D.ob X)) (p : PD.Partial[X, x])
+    : Id (T1.EI Y) (T1.E.act Y X h (x, kop X x p)) (D.act Y X h x, kop Y (D.act Y X h x) (PD.restrictP Y X h x p)) =
+    minj Y (T1.E.act Y X h (x, kop X x p)) (D.act Y X h x, kop Y (D.act Y X h x) (PD.restrictP Y X h x p))
+      (refl (D.act Y X h x))
+      (transH (symH (mnat Y X h (x, kop X x p)))
+       (transH (apH (T0.E.act Y X h) (kopMv X x p))
+        (transH (k0.kunif Y X h (s X x) (mapP X x p))
+         (transH (PG.kop-cong k0 Y (D0.act Y X h (s X x)) (s Y (D.act Y X h x)) (symH (s-nat Y X h x))
+                    (PG.restrictP Y X h (s X x) (mapP X x p)) (mapP Y (D.act Y X h x) (PD.restrictP Y X h x p)) (mapP-restr Y X h x p))
+                 (symH (kopMv Y (D.act Y X h x) (PD.restrictP Y X h x p))))))) ;
+
+  opaque kside ; opaque kunif ;
+
+  contr : PD.ContrOp = new PD.ContrOp[kop, kside, kunif] ;
+
+  -- KESI moves
+  kesi (ke0 : PEG.KESI k0) : PED.KESI contr = \ X x n p p' ins ->
+    apH (bk X x) (ke0 X (s X x) n (mapP X x p) (mapP X x p') (mapIns X x n p p' ins)) ;
+
+  -- a structure whose extensions move to k0's is the moved one
+  unique (k' : PD.ContrOp)
+    (H : (X : Ob) (x : W1.Ix (D.ob X)) (p : PD.Partial[X, x]) -> Id (T0.EI X) (mV X (x, k'.kop X x p)) (s X x, k0.kop X (s X x) (mapP X x p)))
+    : Id (PD.ContrOp) k' contr =
+    PD.contr-ext k' contr (\ X x p ->
+      T1.pr-inj X x (k'.kop X x p) (kop X x p)
+        (minj X (x, k'.kop X x p) (x, kop X x p) (refl x) (transH (H X x p) (symH (kopMv X x p))))) ;
+
+  opaque unique ;
+} ;

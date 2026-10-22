@@ -1,0 +1,122 @@
+-- PosetEquiv.seg: the poset fibres of a map (Equiv.FibTy: a path is an
+-- element of A at X * [1]) and the generic ones (GEquiv.HFib: a path is a
+-- natural family of elements over (f , i) : W -> X * Iv) are isomorphic
+-- over E_A, by the exponential law of posets (tininess: PosetConn's
+-- PosetLevA, levAP / lamAP); so equivalence structures move both ways
+-- (GCofib.ContrRet).
+--
+--   r : box fibre -> generic fibre   the line of p is levAP X p
+--   s : generic fibre -> box fibre   the path of a line is its value at
+--                                    the generic point (pr1 , pr2)
+--   toGen / fromGen                  EquivOp, both ways
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+open BaseP.GLine[a] ;
+open Equiv[a] ;
+open PosetConn[a] ;
+
+module FibIso (D : PCtx) (B A : PTy[D]) (al : PMap[D, B, A]) {
+  module BX = FibTy[D, B, A, al] ;
+  module HG = BaseP.GEquiv[a].HFib[D, B, A, al] ;
+  module LA = PosetLevA[D, A] ;
+  module TA = PR.TyL[D, A] ;
+  module TB = PR.TyL[D, B] ;
+  module GL = PR.PshL[D] ;
+
+  -- the line of a path at X * [1] lies over x f
+  levPt (X : Ob) (x : W0.Ix (D.ob X)) (p : TA.T (prodP X Iv) (BX.pXO X x)) (W : Ob) (f : Hom W X) (i : Hom W Iv)
+    : Id (W0.Ix (D.ob W)) (LA.levAP X (BX.pXO X x, p) W f i).1 (D.act W X f x) =
+    GL.actTri W (prodP X Iv) X (pX X) (pairH X Iv W f i) f (pr1-pair X Iv W f i) x ;
+
+  ----------------------------------------------------------------------
+  -- box -> generic
+
+  r (X : Ob) (v : BX.TF.EI X) : HG.TF.EI X =
+    HG.mkFib X v.1 v.2.1 (LA.levAP X (BX.fibP X v)) (LA.levAP-nat X (BX.fibP X v)) (levPt X v.1.1 v.2.2.1)
+      (BX.fibP-0 X v) (BX.fibP-1 X v) ;
+
+  rnat (V X : Ob) (g : Hom V X) (v : BX.TF.EI X)
+    : Id (HG.TF.EI V) (HG.TF.E.act V X g (r X v)) (r V (BX.TF.E.act V X g v)) =
+    HG.fibE-eq V (HG.TF.E.act V X g (r X v)) (r V (BX.TF.E.act V X g v)) (refl (TA.E.act V X g v.1))
+      (transH (HG.fibB-act V X g (r X v)) (symH (BX.fibB-act V X g v)))
+      (\ W f i -> symH (transH (apH (\ z -> LA.levAP V z W f i) (BX.fibP-act V X g v))
+                               (LA.levAP-act V X g (BX.fibP X v) W f i))) ;
+
+  ----------------------------------------------------------------------
+  -- generic -> box
+
+  pE (X : Ob) (u : HG.TF.EI X) : TA.EI (prodP X Iv) = HG.fibL X u (prodP X Iv) (pr1 X Iv) (pr2 X Iv) ;
+
+  -- the end of the path at e is the value of the line at (id , e)
+  pEnd (X : Ob) (u : HG.TF.EI X) (e : El Iv)
+    : Id (TA.EI X) (TA.E.act X (prodP X Iv) (lid X e) (pE X u)) (HG.fibL X u X (idH X) (ptH X e)) =
+    transH (HG.fibL-nat X u X (prodP X Iv) (lid X e) (pr1 X Iv) (pr2 X Iv))
+           (fam-pair (\ V -> TA.EI V) X X (HG.fibL X u) (idH X) (ptH X e)) ;
+
+  s (X : Ob) (u : HG.TF.EI X) : BX.TF.EI X =
+    BX.mkFibE X u.1 (HG.fibB X u) (pE X u) (refl u.1.1) (HG.fibL-pt X u (prodP X Iv) (pr1 X Iv) (pr2 X Iv))
+      (transH (pEnd X u e0) (HG.fibL-0 X u)) (transH (pEnd X u e1) (HG.fibL-1 X u)) ;
+
+  spt (X : Ob) (u : HG.TF.EI X) : Id (TA.EI X) (s X u).1 u.1 =
+    BX.mkFibE-pt X u.1 (HG.fibB X u) (pE X u) (refl u.1.1) (HG.fibL-pt X u (prodP X Iv) (pr1 X Iv) (pr2 X Iv))
+      (transH (pEnd X u e0) (HG.fibL-0 X u)) (transH (pEnd X u e1) (HG.fibL-1 X u)) ;
+
+  sB (X : Ob) (u : HG.TF.EI X) : Id (TB.EI X) (BX.fibB X (s X u)) (HG.fibB X u) =
+    BX.mkFibE-B X u.1 (HG.fibB X u) (pE X u) (refl u.1.1) (HG.fibL-pt X u (prodP X Iv) (pr1 X Iv) (pr2 X Iv))
+      (transH (pEnd X u e0) (HG.fibL-0 X u)) (transH (pEnd X u e1) (HG.fibL-1 X u)) ;
+
+  sP (X : Ob) (u : HG.TF.EI X) : Id (TA.EI (prodP X Iv)) (BX.fibP X (s X u)) (pE X u) =
+    BX.mkFibE-P X u.1 (HG.fibB X u) (pE X u) (refl u.1.1) (HG.fibL-pt X u (prodP X Iv) (pr1 X Iv) (pr2 X Iv))
+      (transH (pEnd X u e0) (HG.fibL-0 X u)) (transH (pEnd X u e1) (HG.fibL-1 X u)) ;
+
+  opaque s ;
+
+  -- the path of a restricted line
+  pE-act (V X : Ob) (g : Hom V X) (u : HG.TF.EI X)
+    : Id (TA.EI (prodP V Iv)) (TA.E.act (prodP V Iv) (prodP X Iv) (cylH V X g) (pE X u)) (pE V (HG.TF.E.act V X g u)) =
+    transH (HG.fibL-nat X u (prodP V Iv) (prodP X Iv) (cylH V X g) (pr1 X Iv) (pr2 X Iv))
+           (fam-pair (\ W -> TA.EI W) X (prodP V Iv) (HG.fibL X u) (compH (prodP V Iv) V X g (pr1 V Iv)) (pr2 V Iv)) ;
+
+  snat (V X : Ob) (g : Hom V X) (u : HG.TF.EI X)
+    : Id (BX.TF.EI V) (BX.TF.E.act V X g (s X u)) (s V (HG.TF.E.act V X g u)) =
+    BX.fibE-eq V (BX.TF.E.act V X g (s X u)) (s V (HG.TF.E.act V X g u))
+      (transH (apH (TA.E.act V X g) (spt X u)) (symH (spt V (HG.TF.E.act V X g u))))
+      (transH (BX.fibB-act V X g (s X u))
+        (transH (apH (TB.E.act V X g) (sB X u))
+          (transH (symH (HG.fibB-act V X g u)) (symH (sB V (HG.TF.E.act V X g u))))))
+      (transH (BX.fibP-act V X g (s X u))
+        (transH (apH (TA.E.act (prodP V Iv) (prodP X Iv) (cylH V X g)) (sP X u))
+          (transH (pE-act V X g u) (symH (sP V (HG.TF.E.act V X g u)))))) ;
+
+  ----------------------------------------------------------------------
+  -- the two round trips
+
+  rs (X : Ob) (u : HG.TF.EI X) : Id (HG.TF.EI X) (r X (s X u)) u =
+    HG.fibE-eq X (r X (s X u)) u (spt X u) (sB X u)
+      (\ W f i -> transH (apH (\ z -> LA.levAP X z W f i) (sP X u))
+                    (transH (HG.fibL-nat X u W (prodP X Iv) (pairH X Iv W f i) (pr1 X Iv) (pr2 X Iv))
+                            (fam-pair (\ V -> TA.EI V) X W (HG.fibL X u) f i))) ;
+
+  sr (X : Ob) (v : BX.TF.EI X) : Id (BX.TF.EI X) (s X (r X v)) v =
+    BX.fibE-eq X (s X (r X v)) v (spt X (r X v)) (sB X (r X v))
+      (transH (sP X (r X v)) (LA.levAP-gen X (BX.fibP X v))) ;
+
+  ----------------------------------------------------------------------
+  -- equivalence structures, both ways
+
+  toGen (k : EquivOp D B A al) : BaseP.GEquiv[a].EquivOp D B A al =
+    BaseP.GCofib[a].ContrRet[extP D A, BX.FibT, HG.FibT, r, \ W v -> refl v.1, rnat, s, spt, snat, rs, k].contr ;
+
+  fromGen (k : BaseP.GEquiv[a].EquivOp D B A al) : EquivOp D B A al =
+    BaseP.GCofib[a].ContrRet[extP D A, HG.FibT, BX.FibT, s, spt, snat, r, \ W v -> refl v.1, rnat, sr, k].contr ;
+} ;

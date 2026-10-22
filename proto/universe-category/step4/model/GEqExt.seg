@@ -1,0 +1,175 @@
+-- GEqExt.seg (inside IvBase, any base): extensionality for equivalence
+-- data (step G2 of the univalence plan).
+--
+--   EqDat      Tri = (B , A , al), EqOn t = an equivalence structure on al
+--              with its KESI.  Along a path P : t = t2 of triples, the
+--              points (Psi) and the fibre elements (PhiF) are moved back
+--              by transport (the identity at refl); two data (t , e),
+--              (t2 , e2) are equal as soon as e2's extension, moved back
+--              by PhiF, is e's extension of the moved partial element
+--              (Hyp).  The moves preserve what is read off a fibre
+--              element (point, B part, line values): GEqLaws uses this.
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+open Axioms[lv+].FunExtLemmas[fe @(lv+)] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+module GCF = GCofib[lv] ;
+module GCE = GCofEsi[lv] ;
+module GQ = GEquiv[lv] ;
+
+------------------------------------------------------------------------
+-- triples and equivalence data
+
+module EqDat (G : PCtx) {
+  Tri : U lv+ = (B : PTy[G]) * ((A : PTy[G]) * PMap[G, B, A]) ;
+
+  EqOn (t : Tri) : U lv+ =
+    (e : GQ.EquivOp G t.1 t.2.1 t.2.2) * GCE.PartialsEsi[GQ.HFib[G, t.1, t.2.1, t.2.2].EA, GQ.HFib[G, t.1, t.2.1, t.2.2].FibT].KESI e ;
+
+  -- the moves back along a path of triples
+  Psi (t t2 : Tri) (P : Id Tri t t2) (X : Ob) (w : GPR.TyL[G, t2.2.1].EI X) : GPR.TyL[G, t.2.1].EI X =
+    idJ Tri t (\ u Q -> GPR.TyL[G, u.2.1].EI X -> GPR.TyL[G, t.2.1].EI X) (\ w2 -> w2) t2 P w ;
+
+  PhiF (t t2 : Tri) (P : Id Tri t t2) (X : Ob) (v : GQ.HFib[G, t2.1, t2.2.1, t2.2.2].TF.EI X) : GQ.HFib[G, t.1, t.2.1, t.2.2].TF.EI X =
+    idJ Tri t (\ u Q -> GQ.HFib[G, u.1, u.2.1, u.2.2].TF.EI X -> GQ.HFib[G, t.1, t.2.1, t.2.2].TF.EI X) (\ v2 -> v2) t2 P v ;
+
+  Psi-nat (t t2 : Tri) (P : Id Tri t t2) (V W : Ob) (g : Hom V W) (w : GPR.TyL[G, t2.2.1].EI W)
+    : Id (GPR.TyL[G, t.2.1].EI V) (Psi t t2 P V (GPR.TyL[G, t2.2.1].E.act V W g w)) (GPR.TyL[G, t.2.1].E.act V W g (Psi t t2 P W w)) =
+    idJ Tri t
+      (\ u Q -> (w2 : GPR.TyL[G, u.2.1].EI W)
+         -> Id (GPR.TyL[G, t.2.1].EI V) (Psi t u Q V (GPR.TyL[G, u.2.1].E.act V W g w2)) (GPR.TyL[G, t.2.1].E.act V W g (Psi t u Q W w2)))
+      (\ w2 -> refl (GPR.TyL[G, t.2.1].E.act V W g w2)) t2 P w ;
+
+  PsiS (t t2 : Tri) (P : Id Tri t t2) : PSub[GQ.HFib[G, t2.1, t2.2.1, t2.2.2].EA, GQ.HFib[G, t.1, t.2.1, t.2.2].EA] =
+    new PSub[GQ.HFib[G, t2.1, t2.2.1, t2.2.2].EA, GQ.HFib[G, t.1, t.2.1, t.2.2].EA, Psi t t2 P, \ V W g w -> Psi-nat t t2 P V W g w] ;
+
+  PhiF-pt (t t2 : Tri) (P : Id Tri t t2) (W : Ob) (v : GQ.HFib[G, t2.1, t2.2.1, t2.2.2].TF.EI W)
+    : Id (GPR.TyL[G, t.2.1].EI W) (PhiF t t2 P W v).1 (Psi t t2 P W v.1) =
+    idJ Tri t
+      (\ u Q -> (v2 : GQ.HFib[G, u.1, u.2.1, u.2.2].TF.EI W) -> Id (GPR.TyL[G, t.2.1].EI W) (PhiF t u Q W v2).1 (Psi t u Q W v2.1))
+      (\ v2 -> refl v2.1) t2 P v ;
+
+  PhiF-nat (t t2 : Tri) (P : Id Tri t t2) (V W : Ob) (g : Hom V W) (v : GQ.HFib[G, t2.1, t2.2.1, t2.2.2].TF.EI W)
+    : Id (GQ.HFib[G, t.1, t.2.1, t.2.2].TF.EI V) (GQ.HFib[G, t.1, t.2.1, t.2.2].TF.E.act V W g (PhiF t t2 P W v))
+                                                (PhiF t t2 P V (GQ.HFib[G, t2.1, t2.2.1, t2.2.2].TF.E.act V W g v)) =
+    idJ Tri t
+      (\ u Q -> (v2 : GQ.HFib[G, u.1, u.2.1, u.2.2].TF.EI W)
+         -> Id (GQ.HFib[G, t.1, t.2.1, t.2.2].TF.EI V) (GQ.HFib[G, t.1, t.2.1, t.2.2].TF.E.act V W g (PhiF t u Q W v2))
+                                                     (PhiF t u Q V (GQ.HFib[G, u.1, u.2.1, u.2.2].TF.E.act V W g v2)))
+      (\ v2 -> refl (GQ.HFib[G, t.1, t.2.1, t.2.2].TF.E.act V W g v2)) t2 P v ;
+
+  -- partial elements moved back
+  mvP (t t2 : Tri) (P : Id Tri t t2) (X : Ob) (w : GPR.TyL[G, t2.2.1].EI X)
+    (p : GCF.Partials[GQ.HFib[G, t2.1, t2.2.1, t2.2.2].EA, GQ.HFib[G, t2.1, t2.2.1, t2.2.2].FibT].Partial[X, w])
+    : GCF.Partials[GQ.HFib[G, t.1, t.2.1, t.2.2].EA, GQ.HFib[G, t.1, t.2.1, t.2.2].FibT].Partial[X, Psi t t2 P X w] =
+    GCF.MapP[GQ.HFib[G, t2.1, t2.2.1, t2.2.2].EA, GQ.HFib[G, t.1, t.2.1, t.2.2].EA,
+             GQ.HFib[G, t2.1, t2.2.1, t2.2.2].FibT, GQ.HFib[G, t.1, t.2.1, t.2.2].FibT,
+             PsiS t t2 P, PhiF t t2 P, PhiF-pt t t2 P, PhiF-nat t t2 P].mapP X w p ;
+
+  Hyp (t t2 : Tri) (P : Id Tri t t2) (e : EqOn t) (e2 : EqOn t2) : U lv+ =
+    (X : Ob) (w : GPR.TyL[G, t2.2.1].EI X)
+    (p : GCF.Partials[GQ.HFib[G, t2.1, t2.2.1, t2.2.2].EA, GQ.HFib[G, t2.1, t2.2.1, t2.2.2].FibT].Partial[X, w])
+    -> Id (GQ.HFib[G, t.1, t.2.1, t.2.2].TF.EI X) (PhiF t t2 P X (w, e2.1.kop X w p))
+          (Psi t t2 P X w, e.1.kop X (Psi t t2 P X w) (mvP t t2 P X w p)) ;
+
+  -- at refl the moved partial element is the partial element
+  mvId (t : Tri) (X : Ob) (w : GPR.TyL[G, t.2.1].EI X)
+    (p : GCF.Partials[GQ.HFib[G, t.1, t.2.1, t.2.2].EA, GQ.HFib[G, t.1, t.2.1, t.2.2].FibT].Partial[X, w])
+    : Id (GCF.Partials[GQ.HFib[G, t.1, t.2.1, t.2.2].EA, GQ.HFib[G, t.1, t.2.1, t.2.2].FibT].Partial[X, w])
+         (subst (GPR.TyL[G, t.2.1].EI X) (\ z -> GCF.Partials[GQ.HFib[G, t.1, t.2.1, t.2.2].EA, GQ.HFib[G, t.1, t.2.1, t.2.2].FibT].Partial[X, z]) w w (refl w) p)
+         (mvP t t (refl t) X w p) =
+    GCF.Partials[GQ.HFib[G, t.1, t.2.1, t.2.2].EA, GQ.HFib[G, t.1, t.2.1, t.2.2].FibT].partExtH X w w (refl w) p (mvP t t (refl t) X w p)
+      (refl p.pr) (\ l -> refl (p.ps l).pQ)
+      (\ l W f i i' -> GCF.Partials[GQ.HFib[G, t.1, t.2.1, t.2.2].EA, GQ.HFib[G, t.1, t.2.1, t.2.2].FibT].pv-irr X w (p.ps l) W f i i') ;
+
+  -- at refl: the moved partial element is the partial element
+  module AtRefl (t : Tri) (e : EqOn t) (e2 : EqOn t) (H : Hyp t t (refl t) e e2) {
+    module HF = GQ.HFib[G, t.1, t.2.1, t.2.2] ;
+    module CP = GCF.Partials[HF.EA, HF.FibT] ;
+    module CPE = GCE.PartialsEsi[HF.EA, HF.FibT] ;
+    module CTC = GPR.TyL[HF.EA, HF.FibT] ;
+
+    mv-id (X : Ob) (w : HF.TA.EI X) (p : CP.Partial[X, w])
+      : Id (CP.Partial[X, w]) (subst (CTC.Pt X) (\ z -> CP.Partial[X, z]) w w (refl w) p) (mvP t t (refl t) X w p) = mvId t X w p ;
+
+    kop-eq (X : Ob) (w : HF.TA.EI X) (p : CP.Partial[X, w]) : Id (CTC.T X w) (e.1.kop X w p) (e2.1.kop X w p) =
+      CTC.pr-inj X w (e.1.kop X w p) (e2.1.kop X w p)
+        (transH (CP.kop-cong e.1 X w w (refl w) p (mvP t t (refl t) X w p) (mv-id X w p)) (symH (H X w p))) ;
+
+    eq : Id (EqOn t) e e2 =
+      Sigma-eq (GQ.EquivOp G t.1 t.2.1 t.2.2) (\ k -> GCE.PartialsEsi[HF.EA, HF.FibT].KESI k) e.1 e2.1 e.2 e2.2
+        (CP.contr-ext e.1 e2.1 kop-eq) (CPE.isProp-KESI e2.1) ;
+  } ;
+
+  ext (t t2 : Tri) (P : Id Tri t t2) (e : EqOn t) (e2 : EqOn t2) (H : Hyp t t2 P e e2)
+    : Id ((u : Tri) * EqOn u) (t, e) (t2, e2) =
+    idJ Tri t (\ u Q -> (e3 : EqOn u) -> Hyp t u Q e e3 -> Id ((u' : Tri) * EqOn u') (t, e) (u, e3))
+      (\ e3 H3 -> apH {EqOn t} {(u' : Tri) * EqOn u'} (\ z -> (t, z)) (AtRefl[t, e, e3, H3].eq))
+      t2 P e2 H ;
+
+  -- the converse: equal data satisfy Hyp along the induced path of triples
+  ext-inv (t t2 : Tri) (e : EqOn t) (e2 : EqOn t2) (Q : Id ((u : Tri) * EqOn u) (t, e) (t2, e2))
+    : Hyp t t2 (ap ((u : Tri) * EqOn u) Tri (\ z -> z.1) (t, e) (t2, e2) Q) e e2 =
+    idJ ((u : Tri) * EqOn u) (t, e)
+      (\ z Q2 -> Hyp t z.1 (ap ((u : Tri) * EqOn u) Tri (\ z' -> z'.1) (t, e) z Q2) e z.2)
+      (\ X w p -> GCF.Partials[GQ.HFib[G, t.1, t.2.1, t.2.2].EA, GQ.HFib[G, t.1, t.2.1, t.2.2].FibT].kop-cong e.1 X w w (refl w) p
+                       (mvP t t (refl t) X w p) (mvId t X w p))
+      (t2, e2) Q ;
+
+  ----------------------------------------------------------------------
+  -- the moves preserve what is read off: the point, the B part, the lines
+  -- (read through Psi, its analogue PsiB on B, and Psi on the lines)
+
+  PsiB (t t2 : Tri) (P : Id Tri t t2) (X : Ob) (w : GPR.TyL[G, t2.1].EI X) : GPR.TyL[G, t.1].EI X =
+    idJ Tri t (\ u Q -> GPR.TyL[G, u.1].EI X -> GPR.TyL[G, t.1].EI X) (\ w2 -> w2) t2 P w ;
+
+  PhiF-B (t t2 : Tri) (P : Id Tri t t2) (X : Ob) (v : GQ.HFib[G, t2.1, t2.2.1, t2.2.2].TF.EI X)
+    : Id (GPR.TyL[G, t.1].EI X) (GQ.HFib[G, t.1, t.2.1, t.2.2].fibB X (PhiF t t2 P X v))
+                               (PsiB t t2 P X (GQ.HFib[G, t2.1, t2.2.1, t2.2.2].fibB X v)) =
+    idJ Tri t
+      (\ u Q -> (v2 : GQ.HFib[G, u.1, u.2.1, u.2.2].TF.EI X)
+         -> Id (GPR.TyL[G, t.1].EI X) (GQ.HFib[G, t.1, t.2.1, t.2.2].fibB X (PhiF t u Q X v2))
+                                     (PsiB t u Q X (GQ.HFib[G, u.1, u.2.1, u.2.2].fibB X v2)))
+      (\ v2 -> refl (GQ.HFib[G, t.1, t.2.1, t.2.2].fibB X v2)) t2 P v ;
+
+  PhiF-L (t t2 : Tri) (P : Id Tri t t2) (X : Ob) (v : GQ.HFib[G, t2.1, t2.2.1, t2.2.2].TF.EI X) (W : Ob) (f : Hom W X) (i : Hom W Iv)
+    : Id (GPR.TyL[G, t.2.1].EI W) (GQ.HFib[G, t.1, t.2.1, t.2.2].fibL X (PhiF t t2 P X v) W f i)
+                                 (Psi t t2 P W (GQ.HFib[G, t2.1, t2.2.1, t2.2.2].fibL X v W f i)) =
+    idJ Tri t
+      (\ u Q -> (v2 : GQ.HFib[G, u.1, u.2.1, u.2.2].TF.EI X)
+         -> Id (GPR.TyL[G, t.2.1].EI W) (GQ.HFib[G, t.1, t.2.1, t.2.2].fibL X (PhiF t u Q X v2) W f i)
+                                       (Psi t u Q W (GQ.HFib[G, u.1, u.2.1, u.2.2].fibL X v2 W f i)))
+      (\ v2 -> refl (GQ.HFib[G, t.1, t.2.1, t.2.2].fibL X v2 W f i)) t2 P v ;
+
+  -- Psi and PsiB are transports along the objects parts; a loop there
+  -- (objects parts equal on the nose) does nothing
+  EIo (X : Ob) (o : TOb G) : U lv+ = W0.Ix (W0.SigV (G.ob X) (\ x -> o X x)) ;
+
+  Psi-tob (t t2 : Tri) (P : Id Tri t t2) (X : Ob) (w : GPR.TyL[G, t2.2.1].EI X)
+    : Id (GPR.TyL[G, t.2.1].EI X) (Psi t t2 P X w)
+         (subst (TOb G) (EIo X) t2.2.1.tob t.2.1.tob (apH (\ u -> u.2.1.tob) (symH P)) w) =
+    idJ Tri t
+      (\ u Q -> (w2 : GPR.TyL[G, u.2.1].EI X)
+         -> Id (GPR.TyL[G, t.2.1].EI X) (Psi t u Q X w2) (subst (TOb G) (EIo X) u.2.1.tob t.2.1.tob (apH (\ u' -> u'.2.1.tob) (symH Q)) w2))
+      (\ w2 -> refl w2) t2 P w ;
+
+  PsiB-tob (t t2 : Tri) (P : Id Tri t t2) (X : Ob) (w : GPR.TyL[G, t2.1].EI X)
+    : Id (GPR.TyL[G, t.1].EI X) (PsiB t t2 P X w)
+         (subst (TOb G) (EIo X) t2.1.tob t.1.tob (apH (\ u -> u.1.tob) (symH P)) w) =
+    idJ Tri t
+      (\ u Q -> (w2 : GPR.TyL[G, u.1].EI X)
+         -> Id (GPR.TyL[G, t.1].EI X) (PsiB t u Q X w2) (subst (TOb G) (EIo X) u.1.tob t.1.tob (apH (\ u' -> u'.1.tob) (symH Q)) w2))
+      (\ w2 -> refl w2) t2 P w ;
+
+  substLoop (X : Ob) (o : TOb G) (q : Id (TOb G) o o) (w : EIo X o) : Id (EIo X o) (subst (TOb G) (EIo X) o o q w) w =
+    apH (\ q' -> subst (TOb G) (EIo X) o o q' w) (isSet-tob G o o q (refl o)) ;
+} ;

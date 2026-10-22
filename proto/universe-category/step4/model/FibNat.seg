@@ -1,0 +1,195 @@
+-- FibNat.seg: MODEL/Lv/FibNat.agda (MODEL/Poset/FibNat.agda is its
+-- instance at lzero).  Discrete types (constant presheaves) are fibrant;
+-- Nat is one.  So is Unit.
+--
+-- The composite of a box is its lid.  It agrees with every side, because a
+-- side of a constant presheaf is constant: its value at psi : W -> X * [1]
+-- is its value at the point psi(w) (restrict along [0] -> W), which is its
+-- value along the whole segment {x} * [1] (x lies in the subset), hence its
+-- value at (x , eS), which is the lid.  Uniformity is immediate: the action
+-- is the identity.
+--
+-- Posets at a, presheaves at l (Level1 takes l = a+).  The where-block of constV is the
+-- segment CV.
+
+level a l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+module W0 = V[l] ;
+open Trees[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[l] ;
+open PR.PS ;
+module BXm = Box[a, l] ;
+module PF = PresheafFormers[a, l].PFormers[BaseP.BC] ;
+
+------------------------------------------------------------------------
+-- Discrete types
+
+DiscP (G : PCtx) (S : W0.V) : PTy[G] =
+  (mkTy G (\ I x -> S) (\ J I f x y e a -> a) (\ I x e a -> refl a) (\ K J I f g x y z e1 e2 e3 a -> refl a)) ;
+
+DiscP-nat (D G : PCtx) (S : W0.V) (s : PSub[D, G]) : Id (PTy[D]) (subTy D G (DiscP G S) s) (DiscP D S) =
+  ty-ext2 D (subTy D G (DiscP G S) s) (DiscP D S) (refl (\ I x -> S)) (\ J I f x y e a -> refl a) ;
+
+opaque DiscP-nat ;
+
+NatP (G : PCtx) : PTy[G] = DiscP G W0.natV ;
+
+pairEq {A B : U l} {x x' : A} {a a' : B} (p : Id A x x') (q : Id B a a') : Id (A * B) (x, a) (x', a') =
+  transH (apH {A} {A * B} (\ z -> (z, a)) p) (apH {B} {A * B} (\ z -> (x', z)) q) ;
+
+-- the point [0] -> W
+cpt (W : Ob) : Hom (lin zero) W = constH (lin zero) W (pt W, pt-car W) ;
+
+module DiscComp (G : PCtx) (S : W0.V) (eS eT : El Iv) {
+  open PR.TyL[G, DiscP G S] ;
+  module BX = BXm.Boxes[G, DiscP G S] ;
+  open BX ;
+
+  Z0 : Ob = lin zero ;
+
+  -- the segment {x} * [1]
+  seg (X : Ob) (x : El X) : Hom Iv (prodP X Iv) = pairH X Iv Iv (constH Iv X x) (idH Iv) ;
+
+  module SideConst (X : Ob) (b : BX.Box[eS, X]) (j0 : Arith[a].Fin b.br) {
+
+    rho : Pt (prodP X Iv) = b.brho ;
+
+    s : Side[X, rho] = b.bs j0 ;
+
+    Q : Subset X = s.sQ ;
+
+    -- the value of the side at a map [0] -> X * [1] only depends on its value
+    at0 (psi psi' : Hom Z0 (prodP X Iv)) (p : PW Z0 (prodP X Iv) psi psi') (i : InQ Z0 X Q psi) (i' : InQ Z0 X Q psi')
+      : Id (W0.Ix S) (s.sv Z0 psi i) (s.sv Z0 psi' i') = apH (\ z -> z.2) (s.pw Z0 psi psi' p i i') ;
+
+    -- restriction does not change the value
+    resV (W' W : Ob) (chi : Hom W' W) (psi : Hom W (prodP X Iv)) (i : InQ W X Q psi)
+      (i' : InQ W' X Q (compH W' W (prodP X Iv) psi chi))
+      : Id (W0.Ix S) (s.sv W psi i) (s.sv W' (compH W' W (prodP X Iv) psi chi) i') = apH (\ z -> z.2) (s.snat W' W chi psi i i') ;
+
+    -- a map whose points all lie over t, with t in Q, lies in Q
+    inQ-at (W : Ob) (psi : Hom W (prodP X Iv)) (t : El X) (ht : IsT (Q t))
+      (e : (a : El W) -> Id Tree (pr1T (app W (prodP X Iv) psi a).1) t.1) : InQ W X Q psi =
+      \ a -> transH (apH Q (el-eq X (app W X (compH W (prodP X Iv) X (pX X) psi) a) t
+                       (transH (app-compH1 W (prodP X Iv) X (pX X) psi a) (transH (pr1-T X (app W (prodP X Iv) psi a)) (e a))))) ht ;
+
+    -- the segment at x lies over x
+    segAll (x : El X) (hx : IsT (Q x)) : InQ Iv X Q (seg X x) = inQ-at Iv (seg X x) x hx (\ a -> refl x.1) ;
+
+    -- (seg x) j = (x , j) and (lid e) x = (x , e) lie over x
+    segIn (x : El X) (hx : IsT (Q x)) (j : El Iv) : InQ Z0 X Q (compH Z0 Iv (prodP X Iv) (seg X x) (constH Z0 Iv j)) =
+      inQ-at Z0 (compH Z0 Iv (prodP X Iv) (seg X x) (constH Z0 Iv j)) x hx (\ a ->
+        apH pr1T (app-compH1 Z0 Iv (prodP X Iv) (seg X x) (constH Z0 Iv j) a)) ;
+
+    lidIn (x : El X) (hx : IsT (Q x)) : InQ Z0 X Q (compH Z0 X (prodP X Iv) (lid X eS) (constH Z0 X x)) =
+      inQ-at Z0 (compH Z0 X (prodP X Iv) (lid X eS) (constH Z0 X x)) x hx (\ a ->
+        transH (apH pr1T (app-compH1 Z0 X (prodP X Iv) (lid X eS) (constH Z0 X x) a)) (apH pr1T (app-lid1 X eS x))) ;
+
+    -- the segment at eS is the lid at x:  (seg x) eS = (x , eS) = (lid eS) x
+    seg-lid (x : El X) : PW Z0 (prodP X Iv) (compH Z0 Iv (prodP X Iv) (seg X x) (constH Z0 Iv eS))
+                                           (compH Z0 X (prodP X Iv) (lid X eS) (constH Z0 X x)) = \ a ->
+      calc Tree {
+          (app Z0 (prodP X Iv) (compH Z0 Iv (prodP X Iv) (seg X x) (constH Z0 Iv eS)) a).1
+        =< app-compH1 Z0 Iv (prodP X Iv) (seg X x) (constH Z0 Iv eS) a >
+          node x.1 (app Iv Iv (idH Iv) eS).1
+        =< node-eq x.1 (app Iv Iv (idH Iv) eS).1 x.1 eS.1 (refl x.1) (app-idH1 Iv eS) >
+          node x.1 eS.1
+        =< symH (app-lid1 X eS x) >
+          (app X (prodP X Iv) (lid X eS) x).1
+        =< symH (app-compH1 Z0 X (prodP X Iv) (lid X eS) (constH Z0 X x) a) >
+          (app Z0 (prodP X Iv) (compH Z0 X (prodP X Iv) (lid X eS) (constH Z0 X x)) a).1 } ;
+
+    -- along a segment in the subset, the value is the lid
+    segV (x : El X) (hx : IsT (Q x)) (j : El Iv)
+      (i : InQ Z0 X Q (compH Z0 Iv (prodP X Iv) (seg X x) (constH Z0 Iv j)))
+      : Id (W0.Ix S) (s.sv Z0 (compH Z0 Iv (prodP X Iv) (seg X x) (constH Z0 Iv j)) i) b.bu =
+      calc (W0.Ix S) {
+          s.sv Z0 (compH Z0 Iv (prodP X Iv) (seg X x) (constH Z0 Iv j)) i
+        =< symH (resV Z0 Iv (constH Z0 Iv j) (seg X x) (segAll x hx) i) >
+          s.sv Iv (seg X x) (segAll x hx)
+        =< resV Z0 Iv (constH Z0 Iv eS) (seg X x) (segAll x hx) (segIn x hx eS) >
+          s.sv Z0 (compH Z0 Iv (prodP X Iv) (seg X x) (constH Z0 Iv eS)) (segIn x hx eS)
+        =< at0 (compH Z0 Iv (prodP X Iv) (seg X x) (constH Z0 Iv eS)) (compH Z0 X (prodP X Iv) (lid X eS) (constH Z0 X x))
+               (seg-lid x) (segIn x hx eS) (lidIn x hx) >
+          s.sv Z0 (compH Z0 X (prodP X Iv) (lid X eS) (constH Z0 X x)) (lidIn x hx)
+        =< symH (apH (\ z -> z.2) (b.bcb j0 Z0 (constH Z0 X x) (lidIn x hx))) >
+          b.bu } ;
+
+    module CV (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X Q psi) {
+      w : El (prodP X Iv) = app W (prodP X Iv) psi (pt W, pt-car W) ;
+
+      x : El X = app (prodP X Iv) X (pr1 X Iv) w ;
+
+      j : El Iv = app (prodP X Iv) Iv (pr2 X Iv) w ;
+
+      hx : IsT (Q x) = transH (apH Q (symH (app-compH W (prodP X Iv) X (pX X) psi (pt W, pt-car W)))) (i (pt W, pt-car W)) ;
+
+      -- psi at the point is w = (x , j) = (seg x) j
+      pw : PW Z0 (prodP X Iv) (compH Z0 W (prodP X Iv) psi (cpt W)) (compH Z0 Iv (prodP X Iv) (seg X x) (constH Z0 Iv j)) = \ a ->
+        calc Tree {
+            (app Z0 (prodP X Iv) (compH Z0 W (prodP X Iv) psi (cpt W)) a).1
+          =< app-compH1 Z0 W (prodP X Iv) psi (cpt W) a >
+            w.1
+          =< symH (prod-eta X Iv w) >
+            node x.1 j.1
+          =< node-eq x.1 j.1 x.1 (app Iv Iv (idH Iv) j).1 (refl x.1) (symH (app-idH1 Iv j)) >
+            node x.1 (app Iv Iv (idH Iv) j).1
+          =< symH (app-compH1 Z0 Iv (prodP X Iv) (seg X x) (constH Z0 Iv j) a) >
+            (app Z0 (prodP X Iv) (compH Z0 Iv (prodP X Iv) (seg X x) (constH Z0 Iv j)) a).1 } ;
+
+      -- psi at the point lies in Q
+      iPt : InQ Z0 X Q (compH Z0 W (prodP X Iv) psi (cpt W)) = inQ-comp Z0 W X Q psi (cpt W) i ;
+
+      res : Id (W0.Ix S) (s.sv W psi i) b.bu =
+        calc (W0.Ix S) {
+            s.sv W psi i
+          =< resV Z0 W (cpt W) psi i iPt >
+            s.sv Z0 (compH Z0 W (prodP X Iv) psi (cpt W)) iPt
+          =< at0 (compH Z0 W (prodP X Iv) psi (cpt W)) (compH Z0 Iv (prodP X Iv) (seg X x) (constH Z0 Iv j)) pw iPt (segIn x hx j) >
+            s.sv Z0 (compH Z0 Iv (prodP X Iv) (seg X x) (constH Z0 Iv j)) (segIn x hx j)
+          =< segV x hx j (segIn x hx j) >
+            b.bu } ;
+    } ;
+
+    -- every value of the side is the lid
+    constV (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X Q psi) : Id (W0.Ix S) (s.sv W psi i) b.bu = CV[W, psi, i].res ;
+  } ;
+
+  -- the composition: the lid
+  cside (X : Ob) (b : BX.Box[eS, X]) (j : Arith[a].Fin b.br) (W : Ob) (phi : Hom W X)
+    (i : InQ W X (b.bs j).sQ (compH W X (prodP X Iv) (lid X eT) phi))
+    : Id (EI W) (E.act W X phi (topE eT X b.brho b.bu)) ((b.bs j).svE W (compH W X (prodP X Iv) (lid X eT) phi) i) =
+    pairEq (GL.actC W X (prodP X Iv) (lid X eT) phi b.brho)
+           (symH (SideConst[X, b, j].constV W (compH W X (prodP X Iv) (lid X eT) phi) i)) ;
+
+  cunif (Y X : Ob) (h : Hom Y X) (b : BX.Box[eS, X])
+    : Id (EI Y) (E.act Y X h (topE eT X b.brho b.bu)) (topE eT Y (restrict eS Y X h b).brho (restrict eS Y X h b).bu) =
+    pairEq {Pt Y} {W0.Ix S} (Restrict[eT, Y, X, h].eqL b.brho) (symH (apH (\ z -> z.2) (Restrict[eS, Y, X, h].ruE b.brho b.bu))) ;
+
+  discComp : CompOp[eS, eT] = (mkCompOp eS eT (\ X b -> b.bu) cside cunif) ;
+} ;
+
+discCompC (G : PCtx) (S : W0.V) : BXm.Boxes[G, DiscP G S].Comp = (DiscComp[G, S, e0, e1].discComp, DiscComp[G, S, e1, e0].discComp) ;
+
+natCompC (G : PCtx) : BXm.Boxes[G, NatP G].Comp = discCompC G W0.natV ;
+
+------------------------------------------------------------------------
+-- Unit: its fibres have one element, on the nose
+
+module UnitComp (G : PCtx) (eS eT : El Iv) {
+  open PR.TyL[G, PF.Un[G].T] ;
+  open BXm.Boxes[G, PF.Un[G].T] ;
+
+  unitComp : CompOp[eS, eT] = (mkCompOp eS eT (\ X b -> tt) (\ X b j W phi i -> pairEq (GL.actC W X (prodP X Iv) (lid X eT) phi b.brho) (isTop tt ((b.bs j).sv W (compH W X (prodP X Iv) (lid X eT) phi) i))) (\ Y X h b -> pairEq (Restrict[eT, Y, X, h].eqL b.brho) (isTop tt tt))) ;
+} ;
+
+unitCompC (G : PCtx) : BXm.Boxes[G, PF.Un[G].T].Comp = (UnitComp[G, e0, e1].unitComp, UnitComp[G, e1, e0].unitComp) ;

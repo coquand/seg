@@ -1,0 +1,229 @@
+-- ExtSide.seg: MODEL/Poset/ExtSide.agda.  The univalence operation from Ext,
+-- part 1: the type and its restriction to the extent (UnivOp.uop / uside).
+--
+--   uopE X A d     (Ext(beta) , extComp , esiExt)  in U0 X
+--   usideE         along f : W -> X in the extent, uAct f (uopE) is B
+--                  restricted along fullSub f.
+-- uside by FibExtV.fibExtV: the fibres of Ext along f are those of B only
+-- propositionally (extOb-B: a case on the extent), the transport is toB
+-- (extOb-B-sub), it commutes with the actions (toB-act, segment HS), and the
+-- composites agree by extComp-fullC (on a full line the composite of Ext is
+-- B's composite on the box read in B), once the box pushed along fullSub is
+-- identified with beta of the box pushed along y f (boxEq, segment H2D).
+--
+-- Under the name rule, FibExtV takes the type T' = Ext along y f as a
+-- parameter (FEV[G, A, A']), so no copy of it is built.  Agda's anonymous
+-- module over (W f q) is the segment UW.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module ES = Esi[a, a] ;
+module FS = FibSub[a, a] ;
+module ESS = EsiSub[a, a] ;
+open Conn[a] ;
+open BaseP.GYon[a] ;
+open UnivCtx[a].PU ;
+module CF = Cofib[a] ;
+open CF ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open BaseP.GCofEsi[a] ;
+open UnivOp[a] ;
+open ExtThm7[a] ;
+
+module USide (X : Ob) (A : PTy[yP X]) (cA : BXm.Boxes[yP X, A].Comp) (eA : ES.EsiDef[yP X, A].ESIC cA) (ps : GP.Cof[yP X])
+  (B : PTy[GP.CofL[yP X, ps].resCtx]) (cB : BXm.Boxes[GP.CofL[yP X, ps].resCtx, B].Comp)
+  (esB : ES.EsiDef[GP.CofL[yP X, ps].resCtx, B].ESIC cB)
+  (al : PMap[GP.CofL[yP X, ps].resCtx, B, subTy (GP.CofL[yP X, ps].resCtx) (yP X) A (GP.CofL[yP X, ps].inclR)])
+  (eal : EquivOp (GP.CofL[yP X, ps].resCtx) B (subTy (GP.CofL[yP X, ps].resCtx) (yP X) A (GP.CofL[yP X, ps].inclR)) al)
+  (kesi : PartialsEsi[extP (GP.CofL[yP X, ps].resCtx) (subTy (GP.CofL[yP X, ps].resCtx) (yP X) A (GP.CofL[yP X, ps].inclR)),
+            FibTy[GP.CofL[yP X, ps].resCtx, B, subTy (GP.CofL[yP X, ps].resCtx) (yP X) A (GP.CofL[yP X, ps].inclR), al].FibT].KESI eal) {
+  open GP.CofL[yP X, ps] ;
+  open BaseP.GExt[a].ExtDef[yP X, A, ps] ;
+  open ExtB[B, al] ;
+  open BaseP.GExt2[a].ExtB2[yP X, A, ps, B, al] ;
+  open BaseP.GExt3[a].ExtB3[yP X, A, ps, B, al] ;
+
+  module BXg = BXm.Boxes[yP X, ExtT] ;
+  module BBg = BXm.Boxes[resCtx, B] ;
+
+  fA : FibM.FillB[yP X, A].Fill = FibM.FillB[yP X, A].comp-to-fill cA ;
+
+  fB : FibM.FillB[resCtx, B].Fill = FibM.FillB[resCtx, B].comp-to-fill cB ;
+
+  module TM = Thm7[yP X, A, ps] ;
+
+  extCompE : BXg.Comp = TM.Main[B, al, fA, fB, eal].extComp ;
+
+  esiExtE : ES.EsiDef[yP X, ExtT].ESIC extCompE = TM.MainE[B, al, cA, cB, eA, esB, eal, kesi].esiExt ;
+
+  uopE : U0 X = (ExtT, (extCompE, esiExtE)) ;
+
+  module UW (W : Ob) (f : Hom W X) (q : IsT (full W f)) {
+    s : PSub[yP W, resCtx] = fullSub X ps W f q ;
+
+    sx : PSub[yP W, yP X] = yH W X f ;
+
+    T' : PTy[yP W] = subTy (yP W) (yP X) ExtT sx ;
+
+    TB' : PTy[yP W] = subTy (yP W) resCtx B s ;
+
+    module FV = FibExtV[a].FEV[yP W, TB', T'] ;
+
+    Po : FV.PoTy = \ I g -> extOb-B I (compH I W X f g) (full-act I W g f q) ;
+
+    -- transport commutes with the actions
+    module HS (J I : Ob) (k : Hom J I) (x : Hom I W) (y : Hom J W) (e : Id (Hom J W) ((yP W).act J I k x) y)
+      (w : W0.Ix (T'.tob I x)) {
+      pJ2 : IsT (full J (compH J I X (compH I W X f x) k)) = full-act J I k (compH I W X f x) (full-act I W x f q) ;
+
+      res : Id (W0.Ix (TB'.tob J y)) (FV.V0.trIx (T'.tob J y) (TB'.tob J y) (Po J y) (T'.tact J I k x y e w))
+                                     (TB'.tact J I k x y e (FV.V0.trIx (T'.tob I x) (TB'.tob I x) (Po I x) w)) =
+        TB.pr-inj J (s.nt J y) (FV.V0.trIx (T'.tob J y) (TB'.tob J y) (Po J y) (T'.tact J I k x y e w))
+                               (TB'.tact J I k x y e (FV.V0.trIx (T'.tob I x) (TB'.tob I x) (Po I x) w))
+          (transH {TB.EI J}
+             (apH {TB.T J (s.nt J y)} {TB.EI J} (\ z -> (s.nt J y, z))
+                  (extOb-B-sub J (compH J W X f y) (full-act J W y f q) (T'.tact J I k x y e w)))
+           (transH {TB.EI J}
+              (toB-cong J (compH J W X f y, T'.tact J I k x y e w) (EX.act J I k (compH I W X f x, w))
+                 (symH {TX.EI J} (TX.pr-tact J I k (compH I W X f x) (compH J W X f y) (ntEq (yP W) (yP X) sx J I k x y e) w))
+                 (full-act J W y f q) pJ2)
+            (transH {TB.EI J} (toB-act J I k (compH I W X f x, w) (full-act I W x f q) pJ2)
+             (transH {TB.EI J}
+                (apH {TB.EI I} {TB.EI J} (EB.act J I k)
+                   (symH {TB.EI I} (apH {TB.T I (s.nt I x)} {TB.EI I} (\ z -> (s.nt I x, z))
+                                       (extOb-B-sub I (compH I W X f x) (full-act I W x f q) w))))
+                (TB.pr-tact J I k (s.nt I x) (s.nt J y) (ntEq (yP W) resCtx s J I k x y e)
+                   (FV.V0.trIx (T'.tob I x) (TB'.tob I x) (Po I x) w)))))) ;
+    } ;
+
+    H1 : FV.H1Ty Po = \ J I k x y e w -> HS[J, I, k, x, y, e, w].res ;
+
+    opaque H1 ;
+
+    module TT' = PR.TyL[yP W, T'] ;
+    module TTB = PR.TyL[yP W, TB'] ;
+
+    -- the two pushings to the base: along y f (Ext) and along fullSub f (B)
+    LsX (I : Ob) (w : TT'.EI I) : TX.EI I = (sx.nt I w.1, w.2) ;
+
+    LsB (I : Ob) (w : TTB.EI I) : TB.EI I = (s.nt I w.1, w.2) ;
+
+    mOf-toB (I : Ob) (w : TT'.EI I) : Id (TB.EI I) (LsB I (FV.mOfE Po H1 I w)) (toB I (LsX I w) (full-act I W w.1 f q)) =
+      apH {TB.T I (s.nt I w.1)} {TB.EI I} (\ z -> (s.nt I w.1, z)) (extOb-B-sub I (compH I W X f w.1) (full-act I W w.1 f q) w.2) ;
+
+    opaque mOf-toB ;
+
+    ------------------------------------------------------------------
+    -- The composites agree (one direction)
+
+    module H2D (dd : Bool) (fAS : FibM.FillDef[yP X, A].FillOp[src dd]) (fBS : FibM.FillDef[resCtx, B].FillOp[src dd])
+      (coB : BBg.CompOp[src dd, tgt dd]) (coX : BXg.CompOp[src dd, tgt dd])
+      (fullC : (Z : Ob) (c : BXg.Box[src dd, Z]) (p : IsT (full (prodP Z Iv) c.brho))
+        -> Id (TX.EI Z) (BXg.topE (tgt dd) Z c.brho (coX.cop Z c))
+              (fromB Z (BBg.topE (tgt dd) Z (ExtComp1[a].C1[yP X, A, ps, B, al, dd, fAS, fBS].beta Z c p).brho
+                          (coB.cop Z (ExtComp1[a].C1[yP X, A, ps, B, al, dd, fAS, fBS].beta Z c p))))) {
+
+      module D1' = ExtComp1[a].C1[yP X, A, ps, B, al, dd, fAS, fBS] ;
+      module SB = FS.SubComp[yP W, resCtx, B, s, src dd, tgt dd, coB] ;
+      module SX = FS.SubComp[yP W, yP X, ExtT, sx, src dd, tgt dd, coX] ;
+      module B2 = BXm.Boxes[yP W, T'] ;
+      module BTB = BXm.Boxes[yP W, TB'] ;
+      module MBx = ExtBox[a].MapBox[yP W, T', TB', FV.mOf Po H1, src dd] ;
+
+      module HB (Z : Ob) (b : B2.Box[src dd, Z]) {
+        module M1 = SB.MB[src dd, Z, MBx.mapB Z b] ;
+        module MX = SX.MB[src dd, Z, b] ;
+        module Bt = D1'.Beta[Z, MX.box, full-act (prodP Z Iv) W b.brho f q] ;
+
+        eu : Id (TB.EI Z) (BBg.lidE (src dd) Z M1.rho M1.u) (BBg.lidE (src dd) Z Bt.box.brho Bt.box.bu) =
+          transH {TB.EI Z} (SB.KGE.fromE-eq Z (resCtx.act Z (prodP Z Iv) (lid Z (src dd)) M1.rho) M1.uE M1.upt)
+           (transH {TB.EI Z} (apH {TTB.EI Z} {TB.EI Z} (LsB Z) (MBx.mapB-lid Z b))
+            (transH {TB.EI Z} (mOf-toB Z (B2.lidE (src dd) Z b.brho b.bu))
+                    (toB-cong Z (LsX Z (B2.lidE (src dd) Z b.brho b.bu)) (BXg.lidE (src dd) Z MX.box.brho MX.box.bu)
+                       (symH {TX.EI Z} (SX.KGE.fromE-eq Z ((yP X).act Z (prodP Z Iv) (lid Z (src dd)) MX.rho) MX.uE MX.upt))
+                       (full-act Z W (B2.lidE (src dd) Z b.brho b.bu).1 f q) (Bt.qOf Z (lid Z (src dd)))))) ;
+
+        ev (l : Fin b.br) (V : Ob) (psi' : Hom V (prodP Z Iv)) (i : InQ V Z (b.bs l).sQ psi') (i' : InQ V Z (b.bs l).sQ psi')
+          : Id (TB.EI V) ((M1.S l).svE V psi' i) ((Bt.box.bs l).svE V psi' i') =
+          transH {TB.EI V} (M1.S-E l V psi' i)
+           (transH {TB.EI V} (apH {TTB.EI V} {TB.EI V} (LsB V) (MBx.mapB-sv Z b l V psi' i))
+            (transH {TB.EI V} (mOf-toB V ((b.bs l).svE V psi' i))
+             (transH {TB.EI V}
+                (toB-cong V (LsX V ((b.bs l).svE V psi' i)) ((MX.box.bs l).svE V psi' i')
+                   (transH {TX.EI V} (apH {InQ V Z (b.bs l).sQ psi'} {TX.EI V} (\ z -> LsX V ((b.bs l).svE V psi' z))
+                                         (isProp-InQ V Z (b.bs l).sQ psi' i i'))
+                                     (symH {TX.EI V} (MX.S-E l V psi' i')))
+                   (full-act V W ((b.bs l).svE V psi' i).1 f q) (Bt.qOf V psi'))
+                (symH {TB.EI V} (Bt.S-E l V psi' i'))))) ;
+
+        boxEq : Id (BBg.Box[src dd, Z]) M1.box Bt.box =
+          -- compared at D1''s own name eS of the source end (= src dd), so that the
+          -- conditions on the lids match Bt's by name (compH is locked)
+          BBg.box-ext D1'.eS Z M1.rho Bt.box.brho M1.u Bt.box.bu b.br M1.S Bt.box.bs M1.cs Bt.box.bcs M1.cb Bt.box.bcb
+            (res-eq (prodP Z Iv) M1.rho Bt.box.brho (refl (compH (prodP Z Iv) W X f b.brho)))
+            eu (\ l -> refl ((b.bs l).sQ)) ev ;
+
+        opaque eu ; opaque ev ; opaque boxEq ;
+
+        -- the B-top of the boxes, read in E
+        wB : TB.EI Z = BBg.topE (tgt dd) Z Bt.box.brho (coB.cop Z Bt.box) ;
+
+        pT : IsT (full Z ((yP X).act Z (prodP Z Iv) (lid Z (tgt dd)) MX.box.brho)) =
+          full-act Z (prodP Z Iv) (lid Z (tgt dd)) MX.box.brho (full-act (prodP Z Iv) W b.brho f q) ;
+
+        h2 : Id (TTB.EI Z) (BTB.topE (tgt dd) Z b.brho (SB.subComp.cop Z (MBx.mapB Z b)))
+                           (FV.mOfE Po H1 Z (B2.topE (tgt dd) Z b.brho (SX.subComp.cop Z b))) =
+          SB.Ls-inj Z (BTB.topE (tgt dd) Z b.brho (SB.subComp.cop Z (MBx.mapB Z b)))
+                      (FV.mOfE Po H1 Z (B2.topE (tgt dd) Z b.brho (SX.subComp.cop Z b)))
+                      (refl ((yP W).act Z (prodP Z Iv) (lid Z (tgt dd)) b.brho))
+            (transH {TB.EI Z} (SB.copS-E Z (MBx.mapB Z b))
+             (transH {TB.EI Z} (apH {BBg.Box[src dd, Z]} {TB.EI Z} (\ bb -> BBg.topE (tgt dd) Z bb.brho (coB.cop Z bb)) boxEq)
+              (transH {TB.EI Z} (symH {TB.EI Z} (toB-fromB Z wB))
+               (transH {TB.EI Z} (toB-cong Z (fromB Z wB) (BXg.topE (tgt dd) Z MX.box.brho (coX.cop Z MX.box))
+                                    (symH {TX.EI Z} (fullC Z MX.box (full-act (prodP Z Iv) W b.brho f q))) wB.1.2 pT)
+                (transH {TB.EI Z} (toB-cong Z (BXg.topE (tgt dd) Z MX.box.brho (coX.cop Z MX.box))
+                                     (LsX Z (B2.topE (tgt dd) Z b.brho (SX.subComp.cop Z b)))
+                                     (symH {TX.EI Z} (SX.copS-E Z b)) pT
+                                     (full-act Z W (B2.topE (tgt dd) Z b.brho (SX.subComp.cop Z b)).1 f q))
+                        (symH {TB.EI Z} (mOf-toB Z (B2.topE (tgt dd) Z b.brho (SX.subComp.cop Z b))))))))) ;
+
+        opaque h2 ;
+      } ;
+    } ;
+
+    ------------------------------------------------------------------
+    -- uside
+
+    module H01 = H2D[true, fA.1, fB.1, cB.1, TM.Main[B, al, fA, fB, eal].comp01,
+                     TM.MainC[B, al, cA, cB, esB.1, esB.2, eal].extComp-fullC01] ;
+    module H10 = H2D[false, fA.2, fB.2, cB.2, TM.Main[B, al, fA, fB, eal].comp10,
+                     TM.MainC[B, al, cA, cB, esB.1, esB.2, eal].extComp-fullC10] ;
+
+    h01 : FV.H2Ty Po H1 e0 e1 (FS.subCompC (yP W) resCtx B s cB).1 (FS.subCompC (yP W) (yP X) ExtT sx extCompE).1 =
+      \ Z b -> H01.HB[Z, b].h2 ;
+
+    h10 : FV.H2Ty Po H1 e1 e0 (FS.subCompC (yP W) resCtx B s cB).2 (FS.subCompC (yP W) (yP X) ExtT sx extCompE).2 =
+      \ Z b -> H10.HB[Z, b].h2 ;
+
+    usideE : Id (U0 W) (uAct W X f uopE) (subFibE (yP W) resCtx (B, (cB, esB)) s) =
+      FV.fibExtV Po H1
+        (FS.subCompC (yP W) resCtx B s cB) (ESS.esiSubC (yP W) resCtx B s cB esB)
+        (FS.subCompC (yP W) (yP X) ExtT sx extCompE) (ESS.esiSubC (yP W) (yP X) ExtT sx extCompE esiExtE)
+        h01 h10 ;
+  } ;
+} ;

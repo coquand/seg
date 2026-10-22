@@ -1,0 +1,218 @@
+-- GEquivSub2.seg (inside IvBase, any base): equivalence structures along a
+-- substitution s : D -> G (step G1 of the univalence plan).
+--
+-- The fibre of al[s] at (d , a) and the fibre of al at (s d , a) have the
+-- same B part; their lines differ only by the points of the context (D
+-- versus G), which the line conditions determine.  So the substituted
+-- fibre type C = (HFib al)[liftP s] and the fibre type C' = HFib (al[s])
+-- are isomorphic over E_{A[s]} (FibIso: r, s', rs, sr; no equivalence
+-- structure needed); the structure on C is ContrSub's, moved to C' by
+-- ContrRet.
+--
+--   EqSub[D, G, s, B, A, al, eal].eqSub : EquivOp D B[s] A[s] al[s]
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+module GCF = GCofib[lv] ;
+module GQ = GEquiv[lv] ;
+module GSB = GEquivSub[lv] ;
+
+module FibIso (D G : PCtx) (s : PSub[D, G]) (B A : PTy[G]) (al : PMap[G, B, A]) {
+  module SM = GSB.SubMap[D, G, s, B, A, al] ;
+  module SA = SM.SA ;
+  module SB = SM.SB ;
+
+  B' : PTy[D] = subTy D G B s ;
+  A' : PTy[D] = subTy D G A s ;
+  al' : PMap[D, B', A'] = SM.subMap ;
+
+  module HG = GQ.HFib[G, B, A, al] ;
+  module HD = GQ.HFib[D, B', A', al'] ;
+
+  ls : PSub[HD.EA, HG.EA] = liftP D G A s ;
+
+  module SC = GCF.SubE[HD.EA, HG.EA, ls, HG.FibT] ;
+  module TCi = SC.TS ;
+
+  C : PTy[HD.EA] = subTy HD.EA HG.EA HG.FibT ls ;
+
+  -- an element of C, read in the fibre of al
+  vG (W : Ob) (v : TCi.EI W) : HG.TF.EI W = SC.mV W v ;
+
+  ----------------------------------------------------------------------
+  -- r : C -> HFib (al[s])
+
+  tR (W : Ob) (v : TCi.EI W) (W' : Ob) (f : Hom W' W) (i : Hom W' Iv) : HD.TA.EI W' =
+    (D.act W' W f v.1.1,
+     SA.TC.fromE W' (s.nt W' (D.act W' W f v.1.1)) (HG.fibL W (vG W v) W' f i)
+       (transH (HG.fibL-pt W (vG W v) W' f i) (symH (s.nt-nat W' W f v.1.1)))) ;
+
+  tR-V (W : Ob) (v : TCi.EI W) (W' : Ob) (f : Hom W' W) (i : Hom W' Iv)
+    : Id (SA.TC.EI W') (SA.mV W' (tR W v W' f i)) (HG.fibL W (vG W v) W' f i) =
+    SA.TC.fromE-eq W' (s.nt W' (D.act W' W f v.1.1)) (HG.fibL W (vG W v) W' f i)
+      (transH (HG.fibL-pt W (vG W v) W' f i) (symH (s.nt-nat W' W f v.1.1))) ;
+
+  tR-n (W : Ob) (v : TCi.EI W) (V W' : Ob) (g : Hom V W') (f : Hom W' W) (i : Hom W' Iv)
+    : Id (HD.TA.EI V) (HD.TA.E.act V W' g (tR W v W' f i)) (tR W v V (compH V W' W f g) (compH V W' Iv i g)) =
+    SA.mV-inj V (HD.TA.E.act V W' g (tR W v W' f i)) (tR W v V (compH V W' W f g) (compH V W' Iv i g))
+      (symH (D.act-o V W' W f g v.1.1))
+      (calc (SA.TC.EI V) {
+          SA.mV V (HD.TA.E.act V W' g (tR W v W' f i))
+        =< SA.mV-nat V W' g (tR W v W' f i) >
+          SA.TC.E.act V W' g (SA.mV W' (tR W v W' f i))
+        =< apH (SA.TC.E.act V W' g) (tR-V W v W' f i) >
+          SA.TC.E.act V W' g (HG.fibL W (vG W v) W' f i)
+        =< HG.fibL-nat W (vG W v) V W' g f i >
+          HG.fibL W (vG W v) V (compH V W' W f g) (compH V W' Iv i g)
+        =< symH (tR-V W v V (compH V W' W f g) (compH V W' Iv i g)) >
+          SA.mV V (tR W v V (compH V W' W f g) (compH V W' Iv i g)) }) ;
+
+  tR-0 (W : Ob) (v : TCi.EI W) : Id (HD.TA.EI W) (tR W v W (idH W) (ptH W e0)) (al'.mE W (v.1.1, v.2.1)) =
+    SA.mV-inj W (tR W v W (idH W) (ptH W e0)) (al'.mE W (v.1.1, v.2.1)) (D.act-id W v.1.1)
+      (transH (tR-V W v W (idH W) (ptH W e0))
+        (transH (HG.fibL-0 W (vG W v)) (symH (SM.mE-V W (v.1.1, v.2.1))))) ;
+
+  tR-1 (W : Ob) (v : TCi.EI W) : Id (HD.TA.EI W) (tR W v W (idH W) (ptH W e1)) v.1 =
+    SA.mV-inj W (tR W v W (idH W) (ptH W e1)) v.1 (D.act-id W v.1.1)
+      (transH (tR-V W v W (idH W) (ptH W e1)) (HG.fibL-1 W (vG W v))) ;
+
+  opaque tR-n ; opaque tR-0 ; opaque tR-1 ;
+
+  r (W : Ob) (v : TCi.EI W) : HD.TF.EI W =
+    HD.mkFib W v.1 v.2.1 (tR W v) (tR-n W v) (\ W' f i -> refl (D.act W' W f v.1.1)) (tR-0 W v) (tR-1 W v) ;
+
+  rnat (V W : Ob) (g : Hom V W) (v : TCi.EI W) : Id (HD.TF.EI V) (HD.TF.E.act V W g (r W v)) (r V (TCi.E.act V W g v)) =
+    HD.fibE-eq V (HD.TF.E.act V W g (r W v)) (r V (TCi.E.act V W g v)) (refl (HD.EA.act V W g v.1))
+      (transH (HD.fibB-act V W g (r W v))
+        (SB.mV-inj V (HD.TB.E.act V W g (HD.fibB W (r W v))) (HD.fibB V (r V (TCi.E.act V W g v))) (refl (D.act V W g v.1.1))
+          (calc (SB.TC.EI V) {
+              SB.mV V (HD.TB.E.act V W g (HD.fibB W (r W v)))
+            =< SB.mV-nat V W g (HD.fibB W (r W v)) >
+              SB.TC.E.act V W g (HG.fibB W (vG W v))
+            =< symH (HG.fibB-act V W g (vG W v)) >
+              HG.fibB V (HG.TF.E.act V W g (vG W v))
+            =< apH (HG.fibB V) (symH (SC.mV-nat V W g v)) >
+              HG.fibB V (vG V (TCi.E.act V W g v)) })))
+      (\ W' f i -> SA.mV-inj W' (tR W v W' (compH W' V W g f) i) (tR V (TCi.E.act V W g v) W' f i)
+         (D.act-o W' V W g f v.1.1)
+         (calc (SA.TC.EI W') {
+             SA.mV W' (tR W v W' (compH W' V W g f) i)
+           =< tR-V W v W' (compH W' V W g f) i >
+             HG.fibL W (vG W v) W' (compH W' V W g f) i
+           =< apH (\ z -> HG.fibL V z W' f i) (symH (SC.mV-nat V W g v)) >
+             HG.fibL V (vG V (TCi.E.act V W g v)) W' f i
+           =< symH (tR-V V (TCi.E.act V W g v) W' f i) >
+             SA.mV W' (tR V (TCi.E.act V W g v) W' f i) })) ;
+
+  ----------------------------------------------------------------------
+  -- s' : HFib (al[s]) -> C
+
+  tS (W : Ob) (v : HD.TF.EI W) (W' : Ob) (f : Hom W' W) (i : Hom W' Iv) : HG.TA.EI W' = SA.mV W' (HD.fibL W v W' f i) ;
+
+  tS-n (W : Ob) (v : HD.TF.EI W) (V W' : Ob) (g : Hom V W') (f : Hom W' W) (i : Hom W' Iv)
+    : Id (HG.TA.EI V) (HG.TA.E.act V W' g (tS W v W' f i)) (tS W v V (compH V W' W f g) (compH V W' Iv i g)) =
+    transH (symH (SA.mV-nat V W' g (HD.fibL W v W' f i))) (apH (SA.mV V) (HD.fibL-nat W v V W' g f i)) ;
+
+  tS-p (W : Ob) (v : HD.TF.EI W) (W' : Ob) (f : Hom W' W) (i : Hom W' Iv)
+    : Id (W0.Ix (G.ob W')) (tS W v W' f i).1 (G.act W' W f (s.nt W v.1.1)) =
+    transH (apH (s.nt W') (HD.fibL-pt W v W' f i)) (s.nt-nat W' W f v.1.1) ;
+
+  tS-0 (W : Ob) (v : HD.TF.EI W) : Id (HG.TA.EI W) (tS W v W (idH W) (ptH W e0)) (al.mE W (s.nt W v.1.1, v.2.1)) =
+    transH (apH (SA.mV W) (HD.fibL-0 W v)) (SM.mE-V W (HD.fibB W v)) ;
+
+  tS-1 (W : Ob) (v : HD.TF.EI W) : Id (HG.TA.EI W) (tS W v W (idH W) (ptH W e1)) (ls.nt W v.1) =
+    apH (SA.mV W) (HD.fibL-1 W v) ;
+
+  opaque tS-n ; opaque tS-p ; opaque tS-0 ; opaque tS-1 ;
+
+  sG (W : Ob) (v : HD.TF.EI W) : HG.TF.EI W =
+    HG.mkFib W (ls.nt W v.1) v.2.1 (tS W v) (tS-n W v) (tS-p W v) (tS-0 W v) (tS-1 W v) ;
+
+  s' (W : Ob) (v : HD.TF.EI W) : TCi.EI W = (v.1, (sG W v).2) ;
+
+  snat (V W : Ob) (g : Hom V W) (v : HD.TF.EI W) : Id (TCi.EI V) (TCi.E.act V W g (s' W v)) (s' V (HD.TF.E.act V W g v)) =
+    SC.mV-inj V (TCi.E.act V W g (s' W v)) (s' V (HD.TF.E.act V W g v)) (refl (HD.EA.act V W g v.1))
+      (transH (SC.mV-nat V W g (s' W v))
+        (HG.fibE-eq V (HG.TF.E.act V W g (sG W v)) (sG V (HD.TF.E.act V W g v)) (symH (ls.nt-nat V W g v.1))
+           (calc (HG.TB.EI V) {
+               HG.fibB V (HG.TF.E.act V W g (sG W v))
+             =< HG.fibB-act V W g (sG W v) >
+               SB.TC.E.act V W g (SB.mV W (HD.fibB W v))
+             =< symH (SB.mV-nat V W g (HD.fibB W v)) >
+               SB.mV V (HD.TB.E.act V W g (HD.fibB W v))
+             =< apH (SB.mV V) (symH (HD.fibB-act V W g v)) >
+               HG.fibB V (sG V (HD.TF.E.act V W g v)) })
+           (\ W' f i -> refl (SA.mV W' (HD.fibL W v W' (compH W' V W g f) i))))) ;
+
+  rs (W : Ob) (v : HD.TF.EI W) : Id (HD.TF.EI W) (r W (s' W v)) v =
+    HD.fibE-eq W (r W (s' W v)) v (refl v.1) (refl (HD.fibB W v))
+      (\ W' f i -> SA.mV-inj W' (tR W (s' W v) W' f i) (HD.fibL W v W' f i) (symH (HD.fibL-pt W v W' f i))
+         (tR-V W (s' W v) W' f i)) ;
+
+  -- the other composite: C is a retract of HFib (al[s]) too (an iso)
+  sr (W : Ob) (v : TCi.EI W) : Id (TCi.EI W) (s' W (r W v)) v =
+    SC.mV-inj W (s' W (r W v)) v (refl v.1)
+      (HG.fibE-eq W (sG W (r W v)) (vG W v) (refl (vG W v).1) (refl (HG.fibB W (vG W v)))
+         (\ W' f i -> tR-V W v W' f i)) ;
+
+  -- the lift of r c is the lift of c; the lift is injective over a point
+  sG-r (W : Ob) (c : TCi.EI W) : Id (HG.TF.EI W) (sG W (r W c)) (SC.mV W c) = apH (SC.mV W) (sr W c) ;
+
+  lam-inj (W : Ob) (v v' : HD.TF.EI W) (P : Id (HD.TA.EI W) v.1 v'.1) (Q : Id (HG.TF.EI W) (sG W v) (sG W v')) : Id (HD.TF.EI W) v v' =
+    transH (symH (rs W v)) (transH (apH (r W) (SC.mV-inj W (s' W v) (s' W v') P Q)) (rs W v')) ;
+
+  opaque rnat ; opaque snat ; opaque rs ; opaque sr ; opaque sG-r ; opaque lam-inj ;
+} ;
+
+module EqSub (D G : PCtx) (s : PSub[D, G]) (B A : PTy[G]) (al : PMap[G, B, A]) (eal : GQ.EquivOp G B A al) {
+  module FI = FibIso[D, G, s, B, A, al] ;
+  module SM = FI.SM ;
+  module SA = FI.SA ;
+  module SB = FI.SB ;
+  module HG = FI.HG ;
+  module HD = FI.HD ;
+  module TCi = FI.TCi ;
+
+  B' : PTy[D] = FI.B' ;
+  A' : PTy[D] = FI.A' ;
+  al' : PMap[D, B', A'] = FI.al' ;
+  ls : PSub[HD.EA, HG.EA] = FI.ls ;
+  C : PTy[HD.EA] = FI.C ;
+
+  module CS = GCF.ContrSub[HD.EA, HG.EA, ls, HG.FibT, eal] ;
+
+  vG (W : Ob) (v : TCi.EI W) : HG.TF.EI W = FI.vG W v ;
+  r (W : Ob) (v : TCi.EI W) : HD.TF.EI W = FI.r W v ;
+  s' (W : Ob) (v : HD.TF.EI W) : TCi.EI W = FI.s' W v ;
+  rnat (V W : Ob) (g : Hom V W) (v : TCi.EI W) : Id (HD.TF.EI V) (HD.TF.E.act V W g (r W v)) (r V (TCi.E.act V W g v)) = FI.rnat V W g v ;
+  snat (V W : Ob) (g : Hom V W) (v : HD.TF.EI W) : Id (TCi.EI V) (TCi.E.act V W g (s' W v)) (s' V (HD.TF.E.act V W g v)) = FI.snat V W g v ;
+  rs (W : Ob) (v : HD.TF.EI W) : Id (HD.TF.EI W) (r W (s' W v)) v = FI.rs W v ;
+
+  module CR = GCF.ContrRet[HD.EA, C, HD.FibT, r, \ W v -> refl v.1, rnat, s', \ W v -> refl v.1, snat, rs, CS.contr] ;
+
+  eqSub : GQ.EquivOp D B' A' al' = CR.contr ;
+
+  ----------------------------------------------------------------------
+  -- what the moved extension reads: its lines and its B part are those
+  -- of eal's extension of the doubly moved partial element (read in A, B)
+
+  qP (X : Ob) (x : HD.TA.EI X) (p : GCF.Partials[HD.EA, HD.FibT].Partial[X, x])
+    : GCF.Partials[HG.EA, HG.FibT].Partial[X, ls.nt X x] = CS.MP.mapP X x (CR.MS.mapP X x p) ;
+
+  kopL (X : Ob) (x : HD.TA.EI X) (p : GCF.Partials[HD.EA, HD.FibT].Partial[X, x]) (W : Ob) (f : Hom W X) (i : Hom W Iv)
+    : Id (SA.TC.EI W) (SA.mV W (HD.fibL X (x, eqSub.kop X x p) W f i)) (HG.fibL X (ls.nt X x, eal.kop X (ls.nt X x) (qP X x p)) W f i) =
+    transH (apH (\ z -> SA.mV W (HD.fibL X z W f i)) (CR.kop-E X x p)) (FI.tR-V X (x, CS.kop X x (CR.MS.mapP X x p)) W f i) ;
+
+  kopB (X : Ob) (x : HD.TA.EI X) (p : GCF.Partials[HD.EA, HD.FibT].Partial[X, x])
+    : Id (SB.TC.EI X) (SB.mV X (HD.fibB X (x, eqSub.kop X x p))) (HG.fibB X (ls.nt X x, eal.kop X (ls.nt X x) (qP X x p))) =
+    apH (\ z -> SB.mV X (HD.fibB X z)) (CR.kop-E X x p) ;
+} ;

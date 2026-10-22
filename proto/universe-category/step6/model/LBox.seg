@@ -1,0 +1,433 @@
+-- LBox.seg: MODEL/Univ/LBox.agda.  Boxes given by families of cylinder
+-- elements, over an ARBITRARY line and with the lid at either end
+-- (ExtKit.LineBox has a constant line and the lid at e1; the code follows
+-- it, and so does this port of it).
+--
+-- Data over X: a line rhoL in G(X * [1]), a lid lw in E(X) over
+-- rhoL (lid eS), and two families of sides: for f : W -> X landing in
+-- Q_l, an element fP l W f of E(W * [1]) over rhoL (f * [1]), natural in
+-- W, agreeing with lw at the lid eS, and pairwise compatible.  The side
+-- value at psi : W -> X * [1] is fP (pX psi) at evm psi.  FE D is the
+-- filler, in E(X * [1]), with FE-pt, FE-lid, FE-side1, FE-side2, FE-cong(H),
+-- FE-unif; the filler value fopA is opaque.  Only a FillOp in direction
+-- eS is needed.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module CN = Conn[a] ;
+open Cofib[a] ; open GP ;
+
+open ExtKit[a] ;
+
+-- evm followed by (pX psi) * [1] is psi  (= ExtBox.pw-cyl-evm)
+pw-evm-psi (X W : Ob) (psi : Hom W (prodP X Iv))
+  : PW W (prodP X Iv) (compH W (prodP W Iv) (prodP X Iv) (cylH W X (compH W (prodP X Iv) X (pX X) psi)) (evm X W psi)) psi = \ s ->
+  calc Tree {
+      (app W (prodP X Iv) (compH W (prodP W Iv) (prodP X Iv) (cylH W X (compH W (prodP X Iv) X (pX X) psi)) (evm X W psi)) s).1
+    =< app-compH1 W (prodP W Iv) (prodP X Iv) (cylH W X (compH W (prodP X Iv) X (pX X) psi)) (evm X W psi) s >
+      (app (prodP W Iv) (prodP X Iv) (cylH W X (compH W (prodP X Iv) X (pX X) psi)) (ev s)).1
+    =< app-cylH1 W X (compH W (prodP X Iv) X (pX X) psi) (ev s) >
+      node (app W X (compH W (prodP X Iv) X (pX X) psi) (p1 W Iv (ev s))).1 (p2 W Iv (ev s)).1
+    =< node-eq (app W X (compH W (prodP X Iv) X (pX X) psi) (p1 W Iv (ev s))).1 (p2 W Iv (ev s)).1
+               (p1 X Iv (app W (prodP X Iv) psi s)).1 (p2 X Iv (app W (prodP X Iv) psi s)).1
+         (transH (apH (\ y -> (app W X (compH W (prodP X Iv) X (pX X) psi) y).1) (p1-evm X W psi s))
+                 (app-compH1 W (prodP X Iv) X (pX X) psi s))
+         (p2-evm1 X W psi s) >
+      node (p1 X Iv (app W (prodP X Iv) psi s)).1 (p2 X Iv (app W (prodP X Iv) psi s)).1
+    =< prod-eta X Iv (app W (prodP X Iv) psi s) >
+      (app W (prodP X Iv) psi s).1 }
+ where { ev (s : El W) : El (prodP W Iv) = app W (prodP W Iv) (evm X W psi) s ; } ;
+
+module LBox (G : PCtx) (A : PTy[G]) (eS : El Iv) (fA : FibM.FillDef[G, A].FillOp[eS]) {
+  open PR.TyL[G, A] ;
+  module BX = BXm.Boxes[G, A] ;
+  module K = FibM.Kit[G, A] ;
+  module GL = PR.PshL[G] ;
+
+  module LFam (X : Ob) (rho : Pt (prodP X Iv)) (lw : EI X) (r : Nat) {
+    fQ (l : Fin r) : Subset X ;
+    fP (l : Fin r) (W : Ob) (f : Hom W X) (i : Lands W X (fQ l) f) : EI (prodP W Iv) ;
+    fpt (l : Fin r) (W : Ob) (f : Hom W X) (i : Lands W X (fQ l) f)
+      : Id (Pt (prodP W Iv)) (fP l W f i).1 (G.act (prodP W Iv) (prodP X Iv) (cylH W X f) rho) ;
+    fnat (l : Fin r) (W' W : Ob) (chi : Hom W' W) (f : Hom W X) (i : Lands W X (fQ l) f) (i' : Lands W' X (fQ l) (compH W' W X f chi))
+      : Id (EI (prodP W' Iv)) (fP l W' (compH W' W X f chi) i') (E.act (prodP W' Iv) (prodP W Iv) (cylH W' W chi) (fP l W f i)) ;
+    flid (l : Fin r) (W : Ob) (f : Hom W X) (i : Lands W X (fQ l) f)
+      : Id (EI W) (E.act W (prodP W Iv) (lid W eS) (fP l W f i)) (E.act W X f lw) ;
+  } ;
+
+  module LData (X : Ob) (rho : Pt (prodP X Iv)) (r1 r2 : Nat) {
+    lw : EI X ;
+    lwpt : Id (Pt X) lw.1 (G.act X (prodP X Iv) (lid X eS) rho) ;
+    F1 : LFam[X, rho, lw, r1] ;
+    F2 : LFam[X, rho, lw, r2] ;
+    c11 (l l' : Fin r1) (W : Ob) (f : Hom W X) (i : Lands W X (F1.fQ l) f) (i' : Lands W X (F1.fQ l') f)
+      : Id (EI (prodP W Iv)) (F1.fP l W f i) (F1.fP l' W f i') ;
+    c12 (l : Fin r1) (l' : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (F1.fQ l) f) (i' : Lands W X (F2.fQ l') f)
+      : Id (EI (prodP W Iv)) (F1.fP l W f i) (F2.fP l' W f i') ;
+    c22 (l l' : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (F2.fQ l) f) (i' : Lands W X (F2.fQ l') f)
+      : Id (EI (prodP W Iv)) (F2.fP l W f i) (F2.fP l' W f i') ;
+  } ;
+
+  -- a family does not depend on the presentation of the map
+  fP-map (X : Ob) (rho : Pt (prodP X Iv)) (lw : EI X) (r : Nat) (F : LFam[X, rho, lw, r]) (l : Fin r)
+    (W : Ob) (f g : Hom W X) (E : Id (Hom W X) f g) (i : Lands W X (F.fQ l) f) (i' : Lands W X (F.fQ l) g)
+    : Id (EI (prodP W Iv)) (F.fP l W f i) (F.fP l W g i') =
+    idJ (Hom W X) f (\ g2 E2 -> (i2 : Lands W X (F.fQ l) g2) -> Id (EI (prodP W Iv)) (F.fP l W f i) (F.fP l W g2 i2))
+      (\ i2 -> apH (F.fP l W f) (isProp-Lands W X (F.fQ l) f i i2)) g E i' ;
+
+  fP-pw (X : Ob) (rho : Pt (prodP X Iv)) (lw : EI X) (r : Nat) (F : LFam[X, rho, lw, r]) (l : Fin r)
+    (W : Ob) (f g : Hom W X) (p : PW W X f g) (i : Lands W X (F.fQ l) f) (i' : Lands W X (F.fQ l) g)
+    : Id (EI (prodP W Iv)) (F.fP l W f i) (F.fP l W g i') =
+    fP-map X rho lw r F l W f g (hom-eq W X f g p) i i' ;
+
+  ----------------------------------------------------------------------
+  -- The sides of a family
+
+  module Sides (X : Ob) (rho : Pt (prodP X Iv)) (lw : EI X) (r : Nat) (F : LFam[X, rho, lw, r]) {
+    rho' : Pt (prodP X Iv) = rho ;
+
+    pf (W : Ob) (psi : Hom W (prodP X Iv)) : Hom W X = compH W (prodP X Iv) X (pX X) psi ;
+
+    v (l : Fin r) : K.VTy X (F.fQ l) = \ W psi i ->
+      E.act W (prodP W Iv) (evm X W psi) (F.fP l W (pf W psi) (i)) ;
+
+    vpt (l : Fin r) : K.VPt X rho' (F.fQ l) (v l) = \ W psi i ->
+      transH (apH (G.act W (prodP W Iv) (evm X W psi)) (F.fpt l W (pf W psi) (i)))
+             (GL.actTri W (prodP W Iv) (prodP X Iv) (cylH W X (pf W psi)) (evm X W psi) psi (hom-eq W (prodP X Iv) (compH W (prodP W Iv) (prodP X Iv) (cylH W X (pf W psi)) (evm X W psi)) psi (pw-evm-psi X W psi)) rho) ;
+
+    vnat (l : Fin r) : K.VNat X (F.fQ l) (v l) = \ W' W chi psi i i' ->
+      transH (PE.actSq W' W (prodP W' Iv) (prodP W Iv) (evm X W psi) chi (cylH W' W chi) (evm X W' (compH W' W (prodP X Iv) psi chi)) (hom-eq W' (prodP W Iv) (compH W' W (prodP W Iv) (evm X W psi) chi) (compH W' (prodP W' Iv) (prodP W Iv) (cylH W' W chi) (evm X W' (compH W' W (prodP X Iv) psi chi))) (pw-evm-nat X W' W chi psi)) (F.fP l W (pf W psi) (i)))
+             (apH (E.act W' (prodP W' Iv) (evm X W' (compH W' W (prodP X Iv) psi chi)))
+                  (transH (symH (F.fnat l W' W chi (pf W psi) (i)
+                                   (lands-comp W' W X (F.fQ l) (pf W psi) chi (i))))
+                          (fP-map X rho lw r F l W' (compH W' W X (pf W psi) chi) (pf W' (compH W' W (prodP X Iv) psi chi))
+                             (comp-assoc W' W (prodP X Iv) X (pX X) psi chi)
+                             (lands-comp W' W X (F.fQ l) (pf W psi) chi (i))
+                             (i')))) ;
+
+    side (l : Fin r) : BX.Side[X, rho'] = K.mkSideE X rho' (F.fQ l) (v l) (vpt l) (vnat l) ;
+
+    side-E (l : Fin r) (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X (F.fQ l) psi)
+      : Id (EI W) ((side l).svE W psi i) (v l W psi i) = K.mkSideE-E X rho' (F.fQ l) (v l) (vpt l) (vnat l) W psi i ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- The box
+
+  module Bx (X : Ob) (rho : Pt (prodP X Iv)) (r1 r2 : Nat) (D : LData[X, rho, r1, r2]) {
+    module S1 = Sides[X, rho, D.lw, r1, D.F1] ;
+    module S2 = Sides[X, rho, D.lw, r2, D.F2] ;
+
+    rho' : Pt (prodP X Iv) = S1.rho' ;
+
+    pf (W : Ob) (psi : Hom W (prodP X Iv)) : Hom W X = compH W (prodP X Iv) X (pX X) psi ;
+
+    sideAt : Plus (Fin r1) (Fin r2) -> BX.Side[X, rho'] = split { inl l -> S1.side l ; inr l -> S2.side l } ;
+
+    valAt : (s : Plus (Fin r1) (Fin r2)) -> K.VTy X (sideAt s).sQ = split { inl l -> S1.v l ; inr l -> S2.v l } ;
+
+    valAt-E : (s : Plus (Fin r1) (Fin r2)) (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X (sideAt s).sQ psi)
+      -> Id (EI W) ((sideAt s).svE W psi i) (valAt s W psi i) = split {
+      inl l -> S1.side-E l ;
+      inr l -> S2.side-E l } ;
+
+    sides (l : Fin (plus r1 r2)) : BX.Side[X, rho'] = sideAt (splitF r1 r2 l) ;
+
+    CsG (s s' : Plus (Fin r1) (Fin r2)) : U a = (W : Ob) (psi : Hom W (prodP X Iv))
+      (i : InQ W X (sideAt s).sQ psi) (i' : InQ W X (sideAt s').sQ psi) -> Id (EI W) (valAt s W psi i) (valAt s' W psi i') ;
+
+    cs1 (l : Fin r1) : (s' : Plus (Fin r1) (Fin r2)) -> CsG (inl l) s' = split {
+      inl l' -> \ W psi i i' -> apH (E.act W (prodP W Iv) (evm X W psi))
+                                  (D.c11 l l' W (pf W psi) (i) (i')) ;
+      inr l' -> \ W psi i i' -> apH (E.act W (prodP W Iv) (evm X W psi))
+                                  (D.c12 l l' W (pf W psi) (i) (i')) } ;
+
+    cs2 (l : Fin r2) : (s' : Plus (Fin r1) (Fin r2)) -> CsG (inr l) s' = split {
+      inl l' -> \ W psi i i' -> apH (E.act W (prodP W Iv) (evm X W psi))
+                                  (symH (D.c12 l' l W (pf W psi) (i') (i))) ;
+      inr l' -> \ W psi i i' -> apH (E.act W (prodP W Iv) (evm X W psi))
+                                  (D.c22 l l' W (pf W psi) (i) (i')) } ;
+
+    csS : (s s' : Plus (Fin r1) (Fin r2)) -> CsG s s' = split { inl l -> cs1 l ; inr l -> cs2 l } ;
+
+    pt1 : Id (Pt X) D.lw.1 (G.act X (prodP X Iv) (lid X eS) rho') = D.lwpt ;
+
+    u : T X (G.act X (prodP X Iv) (lid X eS) rho') = FibM.PR.TyL[G, A].fromE X (G.act X (prodP X Iv) (lid X eS) rho') D.lw pt1 ;
+
+    lidE-u : Id (EI X) (BX.lidE eS X rho' u) D.lw = FibM.PR.TyL[G, A].fromE-eq X (G.act X (prodP X Iv) (lid X eS) rho') D.lw pt1 ;
+
+    i0 (r : Nat) (F : LFam[X, rho, D.lw, r]) (l : Fin r) (W : Ob) (phi : Hom W X)
+      (i : InQ W X (F.fQ l) (compH W X (prodP X Iv) (lid X eS) phi)) : Lands W X (F.fQ l) phi =
+      lands-pw W X (F.fQ l) (pf W (compH W X (prodP X Iv) (lid X eS) phi)) phi (pw-pX-lid X W phi eS)
+        (i) ;
+
+    cbF (r : Nat) (F : LFam[X, rho, D.lw, r]) (l : Fin r) (W : Ob) (phi : Hom W X)
+      (i : InQ W X (F.fQ l) (compH W X (prodP X Iv) (lid X eS) phi))
+      : Id (EI W) (E.act W X phi D.lw)
+              (E.act W (prodP W Iv) (evm X W (compH W X (prodP X Iv) (lid X eS) phi))
+                 (F.fP l W (pf W (compH W X (prodP X Iv) (lid X eS) phi)) (i))) =
+      trans (EI W) (E.act W X phi D.lw) (E.act W (prodP W Iv) (lid W eS) (F.fP l W phi (i0 r F l W phi i)))
+         (E.act W (prodP W Iv) (evm X W (compH W X (prodP X Iv) (lid X eS) phi))
+            (F.fP l W (pf W (compH W X (prodP X Iv) (lid X eS) phi)) (i)))
+       (sym (EI W) (E.act W (prodP W Iv) (lid W eS) (F.fP l W phi (i0 r F l W phi i))) (E.act W X phi D.lw) (F.flid l W phi (i0 r F l W phi i)))
+       (trans (EI W) (E.act W (prodP W Iv) (lid W eS) (F.fP l W phi (i0 r F l W phi i)))
+                     (E.act W (prodP W Iv) (lid W eS) (F.fP l W (pf W (compH W X (prodP X Iv) (lid X eS) phi)) (i)))
+                     (E.act W (prodP W Iv) (evm X W (compH W X (prodP X Iv) (lid X eS) phi))
+                        (F.fP l W (pf W (compH W X (prodP X Iv) (lid X eS) phi)) (i)))
+         (ap (EI (prodP W Iv)) (EI W) (E.act W (prodP W Iv) (lid W eS)) (F.fP l W phi (i0 r F l W phi i)) (F.fP l W (pf W (compH W X (prodP X Iv) (lid X eS) phi)) (i))
+              (fP-pw X rho D.lw r F l W phi (pf W (compH W X (prodP X Iv) (lid X eS) phi)) (\ s -> symH (pw-pX-lid X W phi eS s))
+                 (i0 r F l W phi i) (i)))
+         (sym (EI W) (E.act W (prodP W Iv) (evm X W (compH W X (prodP X Iv) (lid X eS) phi)) (F.fP l W (pf W (compH W X (prodP X Iv) (lid X eS) phi)) (i)))
+                     (E.act W (prodP W Iv) (lid W eS) (F.fP l W (pf W (compH W X (prodP X Iv) (lid X eS) phi)) (i)))
+                (PE.actEq W (prodP W Iv) (evm X W (compH W X (prodP X Iv) (lid X eS) phi)) (lid W eS) (hom-eq W (prodP W Iv) (evm X W (compH W X (prodP X Iv) (lid X eS) phi)) (lid W eS) (pw-evm-lid X W phi eS)) (F.fP l W (pf W (compH W X (prodP X Iv) (lid X eS) phi)) (i))))) ;
+
+    cbS : (s : Plus (Fin r1) (Fin r2)) (W : Ob) (phi : Hom W X) (i : InQ W X (sideAt s).sQ (compH W X (prodP X Iv) (lid X eS) phi))
+      -> Id (EI W) (E.act W X phi D.lw) (valAt s W (compH W X (prodP X Iv) (lid X eS) phi) i) = split {
+      inl l -> \ W phi i -> cbF r1 D.F1 l W phi i ;
+      inr l -> \ W phi i -> cbF r2 D.F2 l W phi i } ;
+
+    cs : BX.CsTy X rho' (plus r1 r2) sides = \ j k W psi i i' ->
+      pr-inj W (G.act W (prodP X Iv) psi rho') ((sides j).sv W psi i) ((sides k).sv W psi i')
+        (transH (valAt-E (splitF r1 r2 j) W psi i)
+         (transH (csS (splitF r1 r2 j) (splitF r1 r2 k) W psi i i') (symH (valAt-E (splitF r1 r2 k) W psi i')))) ;
+
+    cb : BX.CbTy eS X rho' u (plus r1 r2) sides = \ j W phi i ->
+      transH (apH (E.act W X phi) lidE-u)
+             (transH (cbS (splitF r1 r2 j) W phi i) (symH (valAt-E (splitF r1 r2 j) W (compH W X (prodP X Iv) (lid X eS) phi) i))) ;
+
+    opaque cs ; opaque cb ;
+
+    box : BX.Box[eS, X] = (BX.mkBox eS X rho' u (plus r1 r2) sides cs cb) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- The filler and its laws
+
+  -- the filler value (opaque below, after its laws)
+  fopA (X : Ob) (rho : Pt (prodP X Iv)) (r1 r2 : Nat) (D : LData[X, rho, r1, r2]) : T (prodP X Iv) rho =
+    fA.fop X Bx[X, rho, r1, r2, D].box ;
+
+  fopA-def (X : Ob) (rho : Pt (prodP X Iv)) (r1 r2 : Nat) (D : LData[X, rho, r1, r2])
+    : Id (T (prodP X Iv) rho) (fopA X rho r1 r2 D) (fA.fop X Bx[X, rho, r1, r2, D].box) = refl (fopA X rho r1 r2 D) ;
+
+  FE (X : Ob) (rho : Pt (prodP X Iv)) (r1 r2 : Nat) (D : LData[X, rho, r1, r2]) : EI (prodP X Iv) = (rho, fopA X rho r1 r2 D) ;
+
+  FE-pt (X : Ob) (rho : Pt (prodP X Iv)) (r1 r2 : Nat) (D : LData[X, rho, r1, r2])
+    : Id (Pt (prodP X Iv)) (FE X rho r1 r2 D).1 rho = refl rho ;
+
+  FE-lid (X : Ob) (rho : Pt (prodP X Iv)) (r1 r2 : Nat) (D : LData[X, rho, r1, r2])
+    : Id (EI X) (E.act X (prodP X Iv) (lid X eS) (FE X rho r1 r2 D)) D.lw =
+    transH (fA.flid X Bx[X, rho, r1, r2, D].box) Bx[X, rho, r1, r2, D].lidE-u ;
+
+  -- a map f landing in Q gives a map f * [1] into Q * [1]
+  cylQ (X W : Ob) (Q : Subset X) (f : Hom W X) (i : Lands W X Q f) : InQ (prodP W Iv) X Q (cylH W X f) =
+    (lands-pw (prodP W Iv) X Q (compH (prodP W Iv) W X f (pX W)) (compH (prodP W Iv) (prodP X Iv) X (pX X) (cylH W X f))
+         (\ s -> symH (CN.Nat[true, W, X, f].pX-cylPW s))
+         (lands-comp (prodP W Iv) W X Q f (pX W) i)) ;
+
+  -- the value of a side along f * [1]
+  vCyl (X : Ob) (rho : Pt (prodP X Iv)) (lw' : EI X) (r : Nat) (F : LFam[X, rho, lw', r]) (l : Fin r) (W : Ob) (f : Hom W X)
+    (i : Lands W X (F.fQ l) f) (i' : InQ (prodP W Iv) X (F.fQ l) (cylH W X f))
+    : Id (EI (prodP W Iv)) (Sides[X, rho, lw', r, F].v l (prodP W Iv) (cylH W X f) i') (F.fP l W f i) =
+    transH (apH (E.act (prodP W Iv) (prodP (prodP W Iv) Iv) (evm X (prodP W Iv) (cylH W X f)))
+              (transH (fP-pw X rho lw' r F l (prodP W Iv) (compH (prodP W Iv) (prodP X Iv) X (pX X) (cylH W X f)) (compH (prodP W Iv) W X f (pX W))
+                         (CN.Nat[true, W, X, f].pX-cylPW) (i')
+                         (lands-comp (prodP W Iv) W X (F.fQ l) f (pX W) i))
+                      (F.fnat l (prodP W Iv) W (pX W) f i (lands-comp (prodP W Iv) W X (F.fQ l) f (pX W) i))))
+     (transH (PE.actC (prodP W Iv) (prodP (prodP W Iv) Iv) (prodP W Iv) (cylH (prodP W Iv) W (pX W)) (evm X (prodP W Iv) (cylH W X f)) (F.fP l W f i))
+             (PE.actId (prodP W Iv) (compH (prodP W Iv) (prodP (prodP W Iv) Iv) (prodP W Iv) (cylH (prodP W Iv) W (pX W)) (evm X (prodP W Iv) (cylH W X f))) (hom-eq (prodP W Iv) (prodP W Iv) (compH (prodP W Iv) (prodP (prodP W Iv) Iv) (prodP W Iv) (cylH (prodP W Iv) W (pX W)) (evm X (prodP W Iv) (cylH W X f))) (idH (prodP W Iv)) (pw-evm-cyl X W f)) (F.fP l W f i))) ;
+
+  module FS1 (X : Ob) (rho : Pt (prodP X Iv)) (r1 r2 : Nat) (D : LData[X, rho, r1, r2]) (l : Fin r1) (W : Ob) (f : Hom W X) (i : Lands W X (D.F1.fQ l) f) {
+    module B = Bx[X, rho, r1, r2, D] ;
+
+    iQ : InQ (prodP W Iv) X (B.sides (finL r1 r2 l)).sQ (cylH W X f) =
+      substH (\ s -> InQ (prodP W Iv) X (B.sideAt s).sQ (cylH W X f)) (symH (splitL r1 r2 l)) (cylQ X W (D.F1.fQ l) f i) ;
+
+    aux (s : Plus (Fin r1) (Fin r2)) (E1 : Id (Plus (Fin r1) (Fin r2)) s (inl l)) (i' : InQ (prodP W Iv) X (B.sideAt s).sQ (cylH W X f))
+      : Id (EI (prodP W Iv)) ((B.sideAt s).svE (prodP W Iv) (cylH W X f) i') (D.F1.fP l W f i) =
+      idJ (Plus (Fin r1) (Fin r2)) (inl l)
+        (\ s2 E2 -> (i2 : InQ (prodP W Iv) X (B.sideAt s2).sQ (cylH W X f)) -> Id (EI (prodP W Iv)) ((B.sideAt s2).svE (prodP W Iv) (cylH W X f) i2) (D.F1.fP l W f i))
+        (\ i2 -> transH (B.valAt-E (inl l) (prodP W Iv) (cylH W X f) i2) (vCyl X rho D.lw r1 D.F1 l W f i i2))
+        s (symH E1) i' ;
+
+    res : Id (EI (prodP W Iv)) (E.act (prodP W Iv) (prodP X Iv) (cylH W X f) (FE X rho r1 r2 D)) (D.F1.fP l W f i) =
+      transH (fA.fside X B.box (finL r1 r2 l) (prodP W Iv) (cylH W X f) iQ) (aux (splitF r1 r2 (finL r1 r2 l)) (splitL r1 r2 l) iQ) ;
+  } ;
+
+  FE-side1 (X : Ob) (rho : Pt (prodP X Iv)) (r1 r2 : Nat) (D : LData[X, rho, r1, r2]) (l : Fin r1) (W : Ob) (f : Hom W X) (i : Lands W X (D.F1.fQ l) f)
+    : Id (EI (prodP W Iv)) (E.act (prodP W Iv) (prodP X Iv) (cylH W X f) (FE X rho r1 r2 D)) (D.F1.fP l W f i) = FS1[X, rho, r1, r2, D, l, W, f, i].res ;
+
+  module FS2 (X : Ob) (rho : Pt (prodP X Iv)) (r1 r2 : Nat) (D : LData[X, rho, r1, r2]) (l : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (D.F2.fQ l) f) {
+    module B = Bx[X, rho, r1, r2, D] ;
+
+    iQ : InQ (prodP W Iv) X (B.sides (finR r1 r2 l)).sQ (cylH W X f) =
+      substH (\ s -> InQ (prodP W Iv) X (B.sideAt s).sQ (cylH W X f)) (symH (splitR r1 r2 l)) (cylQ X W (D.F2.fQ l) f i) ;
+
+    aux (s : Plus (Fin r1) (Fin r2)) (E1 : Id (Plus (Fin r1) (Fin r2)) s (inr l)) (i' : InQ (prodP W Iv) X (B.sideAt s).sQ (cylH W X f))
+      : Id (EI (prodP W Iv)) ((B.sideAt s).svE (prodP W Iv) (cylH W X f) i') (D.F2.fP l W f i) =
+      idJ (Plus (Fin r1) (Fin r2)) (inr l)
+        (\ s2 E2 -> (i2 : InQ (prodP W Iv) X (B.sideAt s2).sQ (cylH W X f)) -> Id (EI (prodP W Iv)) ((B.sideAt s2).svE (prodP W Iv) (cylH W X f) i2) (D.F2.fP l W f i))
+        (\ i2 -> transH (B.valAt-E (inr l) (prodP W Iv) (cylH W X f) i2) (vCyl X rho D.lw r2 D.F2 l W f i i2))
+        s (symH E1) i' ;
+
+    res : Id (EI (prodP W Iv)) (E.act (prodP W Iv) (prodP X Iv) (cylH W X f) (FE X rho r1 r2 D)) (D.F2.fP l W f i) =
+      transH (fA.fside X B.box (finR r1 r2 l) (prodP W Iv) (cylH W X f) iQ) (aux (splitF r1 r2 (finR r1 r2 l)) (splitR r1 r2 l) iQ) ;
+  } ;
+
+  FE-side2 (X : Ob) (rho : Pt (prodP X Iv)) (r1 r2 : Nat) (D : LData[X, rho, r1, r2]) (l : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (D.F2.fQ l) f)
+    : Id (EI (prodP W Iv)) (E.act (prodP W Iv) (prodP X Iv) (cylH W X f) (FE X rho r1 r2 D)) (D.F2.fP l W f i) = FS2[X, rho, r1, r2, D, l, W, f, i].res ;
+
+  -- the filler only depends on the values of the data
+  EvTy (X : Ob) (rho rho' : Pt (prodP X Iv)) (lw lw' : EI X) (r : Nat) (F : LFam[X, rho, lw, r]) (F' : LFam[X, rho', lw', r]) : U a =
+    (l : Fin r) (W : Ob) (f : Hom W X) (i : Lands W X (F.fQ l) f) (i' : Lands W X (F'.fQ l) f) -> Id (EI (prodP W Iv)) (F.fP l W f i) (F'.fP l W f i') ;
+
+  QTy (X : Ob) (rho rho' : Pt (prodP X Iv)) (lw lw' : EI X) (r : Nat) (F : LFam[X, rho, lw, r]) (F' : LFam[X, rho', lw', r]) : U a =
+    (l : Fin r) -> Id (Subset X) (F.fQ l) (F'.fQ l) ;
+
+  module FC (X : Ob) (rho : Pt (prodP X Iv)) (r1 r2 : Nat) (D D' : LData[X, rho, r1, r2]) (ew : Id (EI X) D.lw D'.lw)
+    (eQ1 : QTy X rho rho D.lw D'.lw r1 D.F1 D'.F1) (eQ2 : QTy X rho rho D.lw D'.lw r2 D.F2 D'.F2)
+    (ev1 : EvTy X rho rho D.lw D'.lw r1 D.F1 D'.F1) (ev2 : EvTy X rho rho D.lw D'.lw r2 D.F2 D'.F2) {
+    module B = Bx[X, rho, r1, r2, D] ;
+    module B' = Bx[X, rho, r1, r2, D'] ;
+
+    eQs : (s : Plus (Fin r1) (Fin r2)) -> Id (Subset X) (B.sideAt s).sQ (B'.sideAt s).sQ = split {
+      inl l -> eQ1 l ;
+      inr l -> eQ2 l } ;
+
+    evs : (s : Plus (Fin r1) (Fin r2)) (W : Ob) (psi : Hom W (prodP X Iv))
+      (i : InQ W X (B.sideAt s).sQ psi) (i' : InQ W X (B'.sideAt s).sQ psi) -> Id (EI W) (B.valAt s W psi i) (B'.valAt s W psi i') = split {
+      inl l -> \ W psi i i' -> apH (E.act W (prodP W Iv) (evm X W psi))
+                                 (ev1 l W (B.pf W psi) (i) (i')) ;
+      inr l -> \ W psi i i' -> apH (E.act W (prodP W Iv) (evm X W psi))
+                                 (ev2 l W (B.pf W psi) (i) (i')) } ;
+
+    res : Id (EI (prodP X Iv)) (FE X rho r1 r2 D) (FE X rho r1 r2 D') =
+      apH (\ bb -> (bb.brho, fA.fop X bb))
+        (BX.box-ext eS X B.rho' B'.rho' B.u B'.u (plus r1 r2) B.sides B'.sides B.cs B'.cs B.cb B'.cb
+           (refl B.rho') (transH B.lidE-u (transH ew (symH B'.lidE-u)))
+           (\ j -> eQs (splitF r1 r2 j))
+           (\ j W psi i i' -> transH (B.valAt-E (splitF r1 r2 j) W psi i)
+                                (transH (evs (splitF r1 r2 j) W psi i i') (symH (B'.valAt-E (splitF r1 r2 j) W psi i'))))) ;
+  } ;
+
+  FE-cong (X : Ob) (rho : Pt (prodP X Iv)) (r1 r2 : Nat) (D D' : LData[X, rho, r1, r2]) (ew : Id (EI X) D.lw D'.lw)
+    (eQ1 : QTy X rho rho D.lw D'.lw r1 D.F1 D'.F1) (eQ2 : QTy X rho rho D.lw D'.lw r2 D.F2 D'.F2)
+    (ev1 : EvTy X rho rho D.lw D'.lw r1 D.F1 D'.F1) (ev2 : EvTy X rho rho D.lw D'.lw r2 D.F2 D'.F2)
+    : Id (EI (prodP X Iv)) (FE X rho r1 r2 D) (FE X rho r1 r2 D') = FC[X, rho, r1, r2, D, D', ew, eQ1, eQ2, ev1, ev2].res ;
+
+  ----------------------------------------------------------------------
+  -- Restriction of the data, and uniformity of the filler
+
+  rFam (Y X : Ob) (h : Hom Y X) (rho : Pt (prodP X Iv)) (lw : EI X) (r : Nat) (F : LFam[X, rho, lw, r])
+    : LFam[Y, G.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) rho, E.act Y X h lw, r] =
+    new LFam[Y, G.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) rho, E.act Y X h lw, r,
+      \ l -> pre Y X h (F.fQ l),
+      \ l W g i -> F.fP l W (compH W Y X h g) (lands-pre W Y X h (F.fQ l) g i),
+      \ l W g i -> transH (F.fpt l W (compH W Y X h g) (lands-pre W Y X h (F.fQ l) g i))
+                          (symH (GL.actTri (prodP W Iv) (prodP Y Iv) (prodP X Iv) (cylH Y X h) (cylH W Y g) (cylH W X (compH W Y X h g)) (hom-eq (prodP W Iv) (prodP X Iv) (compH (prodP W Iv) (prodP Y Iv) (prodP X Iv) (cylH Y X h) (cylH W Y g)) (cylH W X (compH W Y X h g)) (pw-cyl-comp W Y X h g)) rho)),
+      -- naturality: h (g chi) = (h g) chi
+      \ l W' W chi g i i' ->
+        transH (fP-map X rho lw r F l W' (compH W' Y X h (compH W' W Y g chi)) (compH W' W X (compH W Y X h g) chi)
+                  (symH (comp-assoc W' W Y X h g chi)) (lands-pre W' Y X h (F.fQ l) (compH W' W Y g chi) i')
+                  (lands-comp W' W X (F.fQ l) (compH W Y X h g) chi (lands-pre W Y X h (F.fQ l) g i)))
+               (F.fnat l W' W chi (compH W Y X h g) (lands-pre W Y X h (F.fQ l) g i)
+                  (lands-comp W' W X (F.fQ l) (compH W Y X h g) chi (lands-pre W Y X h (F.fQ l) g i))),
+      \ l W g i -> transH (F.flid l W (compH W Y X h g) (lands-pre W Y X h (F.fQ l) g i)) (symH (PE.actC W Y X h g lw))] ;
+
+  rLD (Y X : Ob) (h : Hom Y X) (rho : Pt (prodP X Iv)) (r1 r2 : Nat) (D : LData[X, rho, r1, r2]) : LData[Y, G.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) rho, r1, r2] =
+    new LData[Y, G.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) rho, r1, r2, E.act Y X h D.lw, transH (apH (G.act Y X h) D.lwpt) (BX.Restrict[eS, Y, X, h].eqL rho),
+      rFam Y X h rho D.lw r1 D.F1, rFam Y X h rho D.lw r2 D.F2,
+      \ l l' W g i i' -> D.c11 l l' W (compH W Y X h g) (lands-pre W Y X h (D.F1.fQ l) g i) (lands-pre W Y X h (D.F1.fQ l') g i'),
+      \ l l' W g i i' -> D.c12 l l' W (compH W Y X h g) (lands-pre W Y X h (D.F1.fQ l) g i) (lands-pre W Y X h (D.F2.fQ l') g i'),
+      \ l l' W g i i' -> D.c22 l l' W (compH W Y X h g) (lands-pre W Y X h (D.F2.fQ l) g i) (lands-pre W Y X h (D.F2.fQ l') g i')] ;
+
+  module FU (Y X : Ob) (h : Hom Y X) (rho : Pt (prodP X Iv)) (r1 r2 : Nat) (D : LData[X, rho, r1, r2]) {
+    module BXx = Bx[X, rho, r1, r2, D] ;
+    module BY = Bx[Y, G.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) rho, r1, r2, rLD Y X h rho r1 r2 D] ;
+    module R = BX.Restrict[eS, Y, X, h] ;
+
+    YI : Ob = prodP Y Iv ;
+    XI : Ob = prodP X Iv ;
+    cyl : Hom YI XI = cylH Y X h ;
+
+    eQs : (s : Plus (Fin r1) (Fin r2)) -> Id (Subset Y) (pre Y X h (BXx.sideAt s).sQ) (BY.sideAt s).sQ = split {
+      inl l -> refl (pre Y X h (D.F1.fQ l)) ;
+      inr l -> refl (pre Y X h (D.F2.fQ l)) } ;
+
+    pwE (W : Ob) (psi : Hom W YI) : PW W (prodP W Iv) (evm X W (compH W YI XI cyl psi)) (evm Y W psi) =
+      pw-evm-cylpsi Y X W h psi ;
+
+    pwF (W : Ob) (psi : Hom W YI)
+      : PW W X (compH W XI X (pX X) (compH W YI XI cyl psi)) (compH W Y X h (compH W YI Y (pX Y) psi)) =
+      pw-pX-cylpsi Y X W h psi ;
+
+    evs : (s : Plus (Fin r1) (Fin r2)) (W : Ob) (psi : Hom W YI)
+      (i : InQ W X (BXx.sideAt s).sQ (compH W YI XI cyl psi)) (i' : InQ W Y (BY.sideAt s).sQ psi)
+      -> Id (EI W) (BXx.valAt s W (compH W YI XI cyl psi) i) (BY.valAt s W psi i') = split {
+      inl l -> \ W psi i i' ->
+        transH (PE.actEq W (prodP W Iv) (evm X W (compH W YI XI cyl psi)) (evm Y W psi) (hom-eq W (prodP W Iv) (evm X W (compH W YI XI cyl psi)) (evm Y W psi) (pwE W psi)) (D.F1.fP l W (compH W XI X (pX X) (compH W YI XI cyl psi)) (i)))
+               (apH (E.act W (prodP W Iv) (evm Y W psi))
+                  (fP-pw X rho D.lw r1 D.F1 l W (compH W XI X (pX X) (compH W YI XI cyl psi)) (compH W Y X h (compH W YI Y (pX Y) psi)) (pwF W psi)
+                     (i)
+                     (lands-pre W Y X h (D.F1.fQ l) (compH W YI Y (pX Y) psi) (i')))) ;
+      inr l -> \ W psi i i' ->
+        transH (PE.actEq W (prodP W Iv) (evm X W (compH W YI XI cyl psi)) (evm Y W psi) (hom-eq W (prodP W Iv) (evm X W (compH W YI XI cyl psi)) (evm Y W psi) (pwE W psi)) (D.F2.fP l W (compH W XI X (pX X) (compH W YI XI cyl psi)) (i)))
+               (apH (E.act W (prodP W Iv) (evm Y W psi))
+                  (fP-pw X rho D.lw r2 D.F2 l W (compH W XI X (pX X) (compH W YI XI cyl psi)) (compH W Y X h (compH W YI Y (pX Y) psi)) (pwF W psi)
+                     (i)
+                     (lands-pre W Y X h (D.F2.fQ l) (compH W YI Y (pX Y) psi) (i')))) } ;
+
+    res : Id (EI YI) (E.act YI XI cyl (FE X rho r1 r2 D)) (FE Y (G.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) rho) r1 r2 (rLD Y X h rho r1 r2 D)) =
+      trans (EI YI) (E.act YI XI cyl (FE X rho r1 r2 D))
+        ((BX.restrict eS Y X h BXx.box).brho, fA.fop Y (BX.restrict eS Y X h BXx.box))
+        (FE Y (G.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) rho) r1 r2 (rLD Y X h rho r1 r2 D))
+        (fA.funif Y X h BXx.box)
+        (ap (BX.Box[eS, Y]) (EI YI) (\ bb -> (bb.brho, fA.fop Y bb)) (BX.restrict eS Y X h BXx.box) BY.box
+          (BX.box-ext eS Y (R.rrho BXx.rho') BY.rho' (R.ru BXx.rho' BXx.u) BY.u (plus r1 r2) (R.rS BXx.box) BY.sides
+             (R.rcs BXx.box) BY.cs (R.rcb BXx.box) BY.cb
+             (refl (R.rrho BXx.rho'))
+             (transH (R.ruE BXx.rho' BXx.u) (transH (apH (E.act Y X h) BXx.lidE-u) (symH BY.lidE-u)))
+             (\ j -> eQs (splitF r1 r2 j))
+             (\ j W psi i i' ->
+                transH (R.rsvE BXx.rho' (BXx.sides j) W psi i)
+                 (transH (BXx.valAt-E (splitF r1 r2 j) W (compH W YI XI cyl psi) (inQ-cyl W Y X h (BXx.sides j).sQ psi i))
+                  (transH (evs (splitF r1 r2 j) W psi (inQ-cyl W Y X h (BXx.sides j).sQ psi i) i')
+                          (symH (BY.valAt-E (splitF r1 r2 j) W psi i'))))))) ;
+  } ;
+
+  FE-unif (Y X : Ob) (h : Hom Y X) (rho : Pt (prodP X Iv)) (r1 r2 : Nat) (D : LData[X, rho, r1, r2])
+    : Id (EI (prodP Y Iv)) (E.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) (FE X rho r1 r2 D)) (FE Y (G.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) rho) r1 r2 (rLD Y X h rho r1 r2 D)) =
+    FU[Y, X, h, rho, r1, r2, D].res ;
+
+  -- the filler at two equal points
+  FE-congH (X : Ob) (rho rho' : Pt (prodP X Iv)) (r1 r2 : Nat) (P : Id (Pt (prodP X Iv)) rho rho')
+    (D : LData[X, rho, r1, r2]) (D' : LData[X, rho', r1, r2]) (ew : Id (EI X) D.lw D'.lw)
+    (eQ1 : QTy X rho rho' D.lw D'.lw r1 D.F1 D'.F1) (eQ2 : QTy X rho rho' D.lw D'.lw r2 D.F2 D'.F2)
+    (ev1 : EvTy X rho rho' D.lw D'.lw r1 D.F1 D'.F1) (ev2 : EvTy X rho rho' D.lw D'.lw r2 D.F2 D'.F2)
+    : Id (EI (prodP X Iv)) (FE X rho r1 r2 D) (FE X rho' r1 r2 D') =
+    idJ (Pt (prodP X Iv)) rho
+      (\ r3 P3 -> (D2 : LData[X, r3, r1, r2]) -> Id (EI X) D.lw D2.lw
+         -> QTy X rho r3 D.lw D2.lw r1 D.F1 D2.F1 -> QTy X rho r3 D.lw D2.lw r2 D.F2 D2.F2
+         -> EvTy X rho r3 D.lw D2.lw r1 D.F1 D2.F1 -> EvTy X rho r3 D.lw D2.lw r2 D.F2 D2.F2
+         -> Id (EI (prodP X Iv)) (FE X rho r1 r2 D) (FE X r3 r1 r2 D2))
+      (\ D2 ew2 eQ12 eQ22 ev12 ev22 -> FE-cong X rho r1 r2 D D2 ew2 eQ12 eQ22 ev12 ev22)
+      rho' P D' ew eQ1 eQ2 ev1 ev2 ;
+
+  opaque fopA ; opaque fopA-def ;
+  opaque FE-lid ; opaque FE-side1 ; opaque FE-side2 ; opaque FE-cong ; opaque FE-unif ; opaque FE-congH ;
+} ;

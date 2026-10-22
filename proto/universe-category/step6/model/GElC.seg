@@ -1,0 +1,400 @@
+-- GElC.seg (inside IvBase, any base): El along a code map, with its
+-- fibrancy (step G3b of the univalence plan).
+--
+-- For a classifier (GUniv.Univ) with a fibrancy structure (cE , eE) on the
+-- generic family EGen (posets: PElL2.fibEGen; Delta: DeltaElFib.elFibEL),
+-- a level-a context D and a natural code map c : D -> U0
+-- (c Y' (x h) = uAct h (c Y x)):
+--
+--   ElTy      El (GUniv.El, a small type over UCtx) substituted along c
+--             (GSmall.xsub), by definition
+--   fib       its fibration: GSmallFib at El (EGen's compositions moved
+--             DOWN a level along c)
+--
+-- The classifier never gives a fibrancy structure here (Delta's hornToFib
+-- is not natural): every fibrancy used by the univalence construction is
+-- of this form.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+module L1 = GPre[a+].PS ;
+module LP1 = GPre[a+] ;
+open GYon[a] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+open Encode[a, a+] ;
+module GE = GFibE[a] ;
+module GE1 = GFibE[a+] ;
+module GLw = GEqLaws[a] ;
+
+module ElC (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE) {
+  module UU = GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module TE = LP1.TyL[UU.UCtx, UU.EGen] ;
+
+  module SF = GSmallFib.SF[UU.UCtx, UU.El, cE, eE] ;
+
+  -- an element of E_EGen read at two equal codes
+  pairT (V W : Ob) (g : Hom V W) (F : UU.U0 W) (F' : UU.U0 V) (e : Id (UU.U0 V) (UU.uAct V W g F) F') (z : W0.Ix (UU.fib0 W F))
+    : Id (TE.EI V) (F', UU.tactG V W g F F' e z) (UU.uAct V W g F, UU.tactG V W g F (UU.uAct V W g F) (refl (UU.uAct V W g F)) z) =
+    SF.pairT V W g F F' e z ;
+
+  setU0 (Y : Ob) : isSet (UU.U0 Y) = V1.isSetIx (UU.codeU Y) ;
+
+  -- the action of El does not depend on the path of codes
+  tactG-irr (V W : Ob) (g : Hom V W) (F : UU.U0 W) (F' : UU.U0 V) (e e' : Id (UU.U0 V) (UU.uAct V W g F) F') (z : W0.Ix (UU.fib0 W F))
+    : Id (W0.Ix (UU.fib0 V F')) (UU.tactG V W g F F' e z) (UU.tactG V W g F F' e' z) =
+    GSmall.tact-irr UU.UCtx UU.El V W g F F' e e' z ;
+
+  -- ... and moves along paths of the source and target codes
+  tactG-cong (V W : Ob) (g : Hom V W) (F1 F1' : UU.U0 W) (P : Id (UU.U0 W) F1 F1') (F2 F2' : UU.U0 V) (Q : Id (UU.U0 V) F2 F2')
+    (e : Id (UU.U0 V) (UU.uAct V W g F1) F2) (e' : Id (UU.U0 V) (UU.uAct V W g F1') F2') (z : W0.Ix (UU.fib0 W F1))
+    : Id (W0.Ix (UU.fib0 V F2')) (subst (UU.U0 V) (\ G' -> W0.Ix (UU.fib0 V G')) F2 F2' Q (UU.tactG V W g F1 F2 e z))
+                                (UU.tactG V W g F1' F2' e' (subst (UU.U0 W) (\ G' -> W0.Ix (UU.fib0 W G')) F1 F1' P z)) =
+    idJ (UU.U0 W) F1
+      (\ F3 P3 -> (e3 : Id (UU.U0 V) (UU.uAct V W g F3) F2')
+         -> Id (W0.Ix (UU.fib0 V F2')) (subst (UU.U0 V) (\ G' -> W0.Ix (UU.fib0 V G')) F2 F2' Q (UU.tactG V W g F1 F2 e z))
+                                      (UU.tactG V W g F3 F2' e3 (subst (UU.U0 W) (\ G' -> W0.Ix (UU.fib0 W G')) F1 F3 P3 z)))
+      (\ e3 -> idJ (UU.U0 V) F2
+         (\ F4 Q4 -> (e4 : Id (UU.U0 V) (UU.uAct V W g F1) F4)
+            -> Id (W0.Ix (UU.fib0 V F4)) (subst (UU.U0 V) (\ G' -> W0.Ix (UU.fib0 V G')) F2 F4 Q4 (UU.tactG V W g F1 F2 e z))
+                                        (UU.tactG V W g F1 F4 e4 z))
+         (\ e4 -> tactG-irr V W g F1 F2 e e4 z) F2' Q e3)
+      F1' P e' ;
+
+  opaque setU0 ; opaque tactG-cong ;
+
+  -- a natural code map, as a map into UCtx
+  cx (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y)
+    (cnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y)) -> Id (UU.U0 Y') (c Y' (D.act Y' Y h x)) (UU.uAct Y' Y h (c Y x)))
+    : GSmall.XSub[D, UU.UCtx] = new GSmall.XSub[D, UU.UCtx, c, cnat] ;
+
+  -- El along c: El substituted along c, with its fibration (GSmallFib)
+  module Fam (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y)
+    (cnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y)) -> Id (UU.U0 Y') (c Y' (D.act Y' Y h x)) (UU.uAct Y' Y h (c Y x))) {
+    module X = SF.At[D, cx D c cnat] ;
+
+    ep (J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) (y : W0.Ix (D.ob J)) (e : Id (W0.Ix (D.ob J)) (D.act J I f x) y)
+      : Id (UU.U0 J) (UU.uAct J I f (c I x)) (c J y) =
+      GSmall.xntEq D UU.UCtx (cx D c cnat) J I f x y e ;
+
+    ElTy : PTy[D] = X.ElTy ;
+
+    module TB = GPR.TyL[D, ElTy] ;
+
+    PhN (V W : Ob) (g : Hom V W) (w : TB.EI W)
+      : Id (TE.EI V) (c V (TB.E.act V W g w).1, (TB.E.act V W g w).2) (TE.E.act V W g (c W w.1, w.2)) = X.PhN V W g w ;
+
+    module T (e e' : IPt) (c0 : GLine[a+].CompAtP[GFam[a+].famPath, UU.UCtx, UU.EGen, e, e'].CompAt) {
+      module TR = X.T[e, e', c0].TR ;
+    } ;
+
+    fib : GE.FibEL D = X.fib ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- El along codes: substitution, pointwise equal codes, and Yoneda
+
+  -- El along c, substituted along s, is El along c o s
+  elSub (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y)
+    (cnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y)) -> Id (UU.U0 Y') (c Y' (D.act Y' Y h x)) (UU.uAct Y' Y h (c Y x)))
+    (D' : PCtx) (s : PSub[D', D])
+    : Id (PTy[D']) (subTy D' D Fam[D, c, cnat].ElTy s)
+                   Fam[D', \ Y x -> c Y (s.nt Y x), \ Y' Y h x -> transH (apH (c Y') (s.nt-nat Y' Y h x)) (cnat Y' Y h (s.nt Y x))].ElTy =
+    GSmall.xsub-o D' D UU.UCtx UU.El (cx D c cnat) s ;
+
+  -- El along pointwise equal code maps
+  module ElCong (D : PCtx) (c c' : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y)
+    (cnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y)) -> Id (UU.U0 Y') (c Y' (D.act Y' Y h x)) (UU.uAct Y' Y h (c Y x)))
+    (cnat' : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y)) -> Id (UU.U0 Y') (c' Y' (D.act Y' Y h x)) (UU.uAct Y' Y h (c' Y x)))
+    (Pc : (Y : Ob) (x : W0.Ix (D.ob Y)) -> Id (UU.U0 Y) (c Y x) (c' Y x)) {
+    Po (I : Ob) (x : W0.Ix (D.ob I)) : Id W0.V (UU.fib0 I (c I x)) (UU.fib0 I (c' I x)) =
+      ap (UU.U0 I) W0.V (UU.fib0 I) (c I x) (c' I x) (Pc I x) ;
+
+    H1 (J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) (y : W0.Ix (D.ob J)) (e : Id (W0.Ix (D.ob J)) (D.act J I f x) y)
+      (a0 : W0.Ix (UU.fib0 I (c I x)))
+      : Id (W0.Ix (UU.fib0 J (c' J y)))
+           (subst W0.V (\ z -> W0.Ix z) (UU.fib0 J (c J y)) (UU.fib0 J (c' J y)) (Po J y) (Fam[D, c, cnat].ElTy.tact J I f x y e a0))
+           (Fam[D, c', cnat'].ElTy.tact J I f x y e (subst W0.V (\ z -> W0.Ix z) (UU.fib0 I (c I x)) (UU.fib0 I (c' I x)) (Po I x) a0)) =
+      transH (symH (UU.substF J (c J y) (c' J y) (Pc J y) (Fam[D, c, cnat].ElTy.tact J I f x y e a0)))
+        (transH (tactG-cong J I f (c I x) (c' I x) (Pc I x) (c J y) (c' J y) (Pc J y)
+                   (Fam[D, c, cnat].ep J I f x y e) (Fam[D, c', cnat'].ep J I f x y e) a0)
+                (apH (\ z -> Fam[D, c', cnat'].ElTy.tact J I f x y e z) (UU.substF I (c I x) (c' I x) (Pc I x) a0))) ;
+
+    elCong : Id (PTy[D]) Fam[D, c, cnat].ElTy Fam[D, c', cnat'].ElTy = GLw.TyEqPw[D, Fam[D, c, cnat].ElTy, Fam[D, c', cnat'].ElTy, Po, H1].tyEq ;
+  } ;
+
+  -- Yoneda: El along g |-> uAct g F over y Z is F (the same codes)
+  module Yon (Z : Ob) (F : UU.U0 Z)
+    (cYnat : (Y' Y : Ob) (h : Hom Y' Y) (g : Hom Y Z) -> Id (UU.U0 Y') (UU.uAct Y' Z (compH Y' Y Z g h) F) (UU.uAct Y' Y h (UU.uAct Y Z g F))) {
+    cY (Y : Ob) (g : Hom Y Z) : UU.U0 Y = UU.uAct Y Z g F ;
+
+    Po (I : Ob) (x : Hom I Z) : Id W0.V (UU.fib0 I (cY I x)) (F.1.tob I x) = apH (F.1.tob I) (comp-idr I Z x) ;
+
+    H1 (J I : Ob) (f : Hom J I) (x : Hom I Z) (y : Hom J Z) (e : Id (Hom J Z) (compH J I Z x f) y) (a0 : W0.Ix (UU.fib0 I (cY I x)))
+      : Id (W0.Ix (F.1.tob J y))
+           (subst W0.V (\ z -> W0.Ix z) (UU.fib0 J (cY J y)) (F.1.tob J y) (Po J y) (Fam[yP Z, cY, cYnat].ElTy.tact J I f x y e a0))
+           (F.1.tact J I f x y e (subst W0.V (\ z -> W0.Ix z) (UU.fib0 I (cY I x)) (F.1.tob I x) (Po I x) a0)) =
+      calc (W0.Ix (F.1.tob J y)) {
+          subst W0.V (\ z -> W0.Ix z) (UU.fib0 J (cY J y)) (F.1.tob J y) (Po J y)
+            (UU.tactG J I f (cY I x) (cY J y) e' a0)
+        =< apH (subst W0.V (\ z -> W0.Ix z) (UU.fib0 J (cY J y)) (F.1.tob J y) (Po J y))
+             (transH (UU.substF J (UU.uAct J I f (cY I x)) (cY J y) e' t)
+               (UU.fib-move (Hom J Z) (F.1.tob J) y1 y0 pH (ap (UU.U0 J) W0.V (UU.fib0 J) (UU.uAct J I f (cY I x)) (cY J y) e') t)) >
+          subst W0.V (\ z -> W0.Ix z) (F.1.tob J y0) (F.1.tob J y) (Po J y)
+            (subst (Hom J Z) (\ k -> W0.Ix (F.1.tob J k)) y1 y0 pH t)
+        =< apH (subst W0.V (\ z -> W0.Ix z) (F.1.tob J y0) (F.1.tob J y) (Po J y))
+             (UU.tact-move (yP Z) F.1 J I f x0 y1 y0 n (transH n pH) pH a0) >
+          subst W0.V (\ z -> W0.Ix z) (F.1.tob J y0) (F.1.tob J y) (Po J y) (F.1.tact J I f x0 y0 (transH n pH) a0)
+        =< UU.fib-move (Hom J Z) (F.1.tob J) y0 y (comp-idr J Z y) (Po J y) (F.1.tact J I f x0 y0 (transH n pH) a0) >
+          subst (Hom J Z) (\ k -> W0.Ix (F.1.tob J k)) y0 y (comp-idr J Z y) (F.1.tact J I f x0 y0 (transH n pH) a0)
+        =< UU.tact-move (yP Z) F.1 J I f x0 y0 y (transH n pH) eY (comp-idr J Z y) a0 >
+          F.1.tact J I f x0 y eY a0
+        =< symH (UU.tact-src-move (yP Z) F.1 J I f x0 x y (comp-idr I Z x) e eY a0) >
+          F.1.tact J I f x y e (subst (Hom I Z) (\ k -> W0.Ix (F.1.tob I k)) x0 x (comp-idr I Z x) a0)
+        =< apH (F.1.tact J I f x y e) (symH (UU.fib-move (Hom I Z) (F.1.tob I) x0 x (comp-idr I Z x) (Po I x) a0)) >
+          F.1.tact J I f x y e (subst W0.V (\ z -> W0.Ix z) (UU.fib0 I (cY I x)) (F.1.tob I x) (Po I x) a0) }
+     where {
+       x0 : Hom I Z = compH I I Z x (idH I) ;
+       y1 : Hom J Z = compH J I Z x (compH J J I f (idH J)) ;
+       y0 : Hom J Z = compH J J Z y (idH J) ;
+       n : Id (Hom J Z) (compH J I Z x0 f) y1 =
+         ntEq (yP I) (yP Z) (yH I Z x) J I f (idH I) (compH J J I f (idH J)) (UU.idf-eq J I f) ;
+       pH : Id (Hom J Z) y1 y0 =
+         transH (apH (compH J I Z x) (comp-idr J I f)) (transH e (symH (comp-idr J Z y))) ;
+       eY : Id (Hom J Z) (compH J I Z x0 f) y = transH (transH n pH) (comp-idr J Z y) ;
+       e' : Id (UU.U0 J) (UU.uAct J I f (cY I x)) (cY J y) = Fam[yP Z, cY, cYnat].ep J I f x y e ;
+       t : W0.Ix (F.1.tob J y1) = F.1.tact J I f x0 y1 n a0 ; } ;
+
+    elYon : Id (PTy[yP Z]) Fam[yP Z, cY, cYnat].ElTy F.1 = GLw.TyEqPw[yP Z, Fam[yP Z, cY, cYnat].ElTy, F.1, Po, H1].tyEq ;
+  } ;
+
+  -- El does not depend on the naturality proof of the codes
+  elCnat (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y)
+    (cnat cnat' : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y)) -> Id (UU.U0 Y') (c Y' (D.act Y' Y h x)) (UU.uAct Y' Y h (c Y x)))
+    : Id (PTy[D]) Fam[D, c, cnat].ElTy Fam[D, c, cnat'].ElTy =
+    ty-ext2 D Fam[D, c, cnat].ElTy Fam[D, c, cnat'].ElTy (refl (\ I x -> UU.fib0 I (c I x)))
+      (\ J I f x y e b -> tactG-irr J I f (c I x) (c J y) (Fam[D, c, cnat].ep J I f x y e) (Fam[D, c, cnat'].ep J I f x y e) b) ;
+
+  opaque elCnat ;
+} ;
+
+------------------------------------------------------------------------
+-- fillers of El along a code map: El's universal fillers (kU0 , kU1, from
+-- the instance's connections: GFibFill on (cE , eE)) moved down by
+-- GTransfer.TrF, as the compositions are by Tr
+
+module ElF (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE) 
+  (kU0 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e0)
+  (kU1 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e1)
+  (kU0e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].SFm.SF].KESI kU0)
+  (kU1e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].SFm.SF].KESI kU1) {
+  module EC = ElC[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE] ;
+  module UU = EC.UU ;
+  module PP = EC.SF.PP ;
+
+  module Fam (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y)
+    (cnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y)) -> Id (UU.U0 Y') (c Y' (D.act Y' Y h x)) (UU.uAct Y' Y h (c Y x))) {
+    module FC = EC.Fam[D, c, cnat] ;
+    module F0 = GTransfer[a+, a, a+].TrF[D, FC.ElTy, UU.UCtx, UU.EGen, c, cnat,
+        \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, FC.PhN, e0, kU0, kU0e] ;
+    module F1 = GTransfer[a+, a, a+].TrF[D, FC.ElTy, UU.UCtx, UU.EGen, c, cnat,
+        \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, FC.PhN, e1, kU1, kU1e] ;
+
+    k0 : GLine[a].LineFibP[GFam[a].famPath, D, FC.ElTy].FibAt e0 = F0.fibAt ;
+    k1 : GLine[a].LineFibP[GFam[a].famPath, D, FC.ElTy].FibAt e1 = F1.fibAt ;
+    k0e : GCofEsi[a].PartialsEsi[GLine[a].EndKit[GFam[a].famPath, D, FC.ElTy, e0].TV.E, GLine[a].EndKit[GFam[a].famPath, D, FC.ElTy, e0].SFm.SF].KESI k0 = F0.kesi ;
+    k1e : GCofEsi[a].PartialsEsi[GLine[a].EndKit[GFam[a].famPath, D, FC.ElTy, e1].TV.E, GLine[a].EndKit[GFam[a].famPath, D, FC.ElTy, e1].SFm.SF].KESI k1 = F1.kesi ;
+
+    -- if the ends of kU are cE, the ends of El's fillers are El's compositions
+    module End (HU0 : Id (GLine[a+].CompAtP[GFam[a+].famPath, UU.UCtx, UU.EGen, e0, e1].CompAt)
+                         GLine[a+].CompAtP[GFam[a+].famPath, UU.UCtx, UU.EGen, e0, e1].FromFib[kU0].ca cE.1)
+      (HU1 : Id (GLine[a+].CompAtP[GFam[a+].famPath, UU.UCtx, UU.EGen, e1, e0].CompAt)
+                GLine[a+].CompAtP[GFam[a+].famPath, UU.UCtx, UU.EGen, e1, e0].FromFib[kU1].ca cE.2) {
+      module TE0 = GTransferEnd[a+, a, a+].TrFEnd[D, FC.ElTy, UU.UCtx, UU.EGen, c, cnat,
+          \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, FC.PhN, e0, e1, kU0, kU0e] ;
+      module TE1 = GTransferEnd[a+, a, a+].TrFEnd[D, FC.ElTy, UU.UCtx, UU.EGen, c, cnat,
+          \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, FC.PhN, e1, e0, kU1, kU1e] ;
+
+      end0 : Id (GLine[a].CompAtP[GFam[a].famPath, D, FC.ElTy, e0, e1].CompAt)
+                GLine[a].CompAtP[GFam[a].famPath, D, FC.ElTy, e0, e1].FromFib[k0].ca FC.fib.2.1.1 =
+        transH TE0.trEnd (apH (\ z -> FC.T[e0, e1, z].TR.compAt) HU0) ;
+
+      end1 : Id (GLine[a].CompAtP[GFam[a].famPath, D, FC.ElTy, e1, e0].CompAt)
+                GLine[a].CompAtP[GFam[a].famPath, D, FC.ElTy, e1, e0].FromFib[k1].ca FC.fib.2.1.2 =
+        transH TE1.trEnd (apH (\ z -> FC.T[e1, e0, z].TR.compAt) HU1) ;
+    } ;
+  } ;
+
+  -- the fillers of El along c, substituted along s, are the fillers along
+  -- c o s; moved along s they are the moved problems' fillers (compF)
+  module FSub (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y)
+    (cnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y)) -> Id (UU.U0 Y') (c Y' (D.act Y' Y h x)) (UU.uAct Y' Y h (c Y x)))
+    (D' : PCtx) (s : PSub[D', D]) {
+    module FC = EC.Fam[D, c, cnat] ;
+    module C0 = GTransferComp[a+, a, a+].TrFComp[D', subTy D' D FC.ElTy s, D, FC.ElTy, UU.UCtx, UU.EGen,
+        s.nt, s.nt-nat, \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, (liftP D' D FC.ElTy s).nt-nat,
+        c, cnat, \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, FC.PhN, e0, kU0, kU0e] ;
+    module C1 = GTransferComp[a+, a, a+].TrFComp[D', subTy D' D FC.ElTy s, D, FC.ElTy, UU.UCtx, UU.EGen,
+        s.nt, s.nt-nat, \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, (liftP D' D FC.ElTy s).nt-nat,
+        c, cnat, \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, FC.PhN, e1, kU1, kU1e] ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- El's fillers do not depend on the presentation of the type: along
+  -- pointwise-equal codes (famCong), and for another action on the same
+  -- codes (actCong)
+
+  FilT (D : PCtx) (T : PTy[D]) : U a+ =
+    (k0 : GLine[a].LineFibP[GFam[a].famPath, D, T].FibAt e0) * ((k1 : GLine[a].LineFibP[GFam[a].famPath, D, T].FibAt e1) *
+    ((k0e : GCofEsi[a].PartialsEsi[GLine[a].EndKit[GFam[a].famPath, D, T, e0].TV.E, GLine[a].EndKit[GFam[a].famPath, D, T, e0].SFm.SF].KESI k0) *
+     GCofEsi[a].PartialsEsi[GLine[a].EndKit[GFam[a].famPath, D, T, e1].TV.E, GLine[a].EndKit[GFam[a].famPath, D, T, e1].SFm.SF].KESI k1)) ;
+
+  famFil (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y)
+    (cnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y)) -> Id (UU.U0 Y') (c Y' (D.act Y' Y h x)) (UU.uAct Y' Y h (c Y x)))
+    : (T : PTy[D]) * FilT D T =
+    (EC.Fam[D, c, cnat].ElTy, (Fam[D, c, cnat].k0, (Fam[D, c, cnat].k1, (Fam[D, c, cnat].k0e, Fam[D, c, cnat].k1e)))) ;
+
+  CnT (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y) : U a+ = PP.CnT D c ;
+
+  famCong (D : PCtx) (c c' : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y) (cnat : CnT D c) (cnat' : CnT D c')
+    (Pc : (Y : Ob) (x : W0.Ix (D.ob Y)) -> Id (UU.U0 Y) (c Y x) (c' Y x))
+    : Id ((T : PTy[D]) * FilT D T) (famFil D c cnat) (famFil D c' cnat') =
+    idJ ((Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y) c
+      (\ c2 P2 -> (cn2 : CnT D c2) -> Id ((T : PTy[D]) * FilT D T) (famFil D c cnat) (famFil D c2 cn2))
+      (\ cn2 -> apH {CnT D c} {(T : PTy[D]) * FilT D T} (\ k -> famFil D c k) (PP.isProp-CnT D c cnat cn2))
+      c' (funext Ob (\ Y -> W0.Ix (D.ob Y) -> UU.U0 Y) c c' (\ Y -> funext (W0.Ix (D.ob Y)) (\ x -> UU.U0 Y) (c Y) (c' Y) (Pc Y))) cnat' ;
+
+  -- the fillers of another type with El's codes, moved down along c
+  module Act (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y) (cnat : CnT D c) (t : PP.Tau D c)
+    (PhN : PP.PhNT D c t) (l1 l2 : PP.LawT D c) {
+    T : PTy[D] = mkTy D (\ I x -> UU.fib0 I (c I x)) t.1 t.2.1 t.2.2 ;
+    module F0 = GTransfer[a+, a, a+].TrF[D, T, UU.UCtx, UU.EGen, c, cnat,
+        \ W d b -> b, \ W d b -> b, l1, l2, PhN, e0, kU0, kU0e] ;
+    module F1 = GTransfer[a+, a, a+].TrF[D, T, UU.UCtx, UU.EGen, c, cnat,
+        \ W d b -> b, \ W d b -> b, l1, l2, PhN, e1, kU1, kU1e] ;
+    fil : (T' : PTy[D]) * FilT D T' = (T, (F0.fibAt, (F1.fibAt, (F0.kesi, F1.kesi)))) ;
+  } ;
+
+  Tau (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y) : U a+ = PP.Tau D c ;
+
+  filOf (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y) (cn : CnT D c) (t : Tau D c) (PhN : PP.PhNT D c t)
+    (l1 l2 : PP.LawT D c) : (T : PTy[D]) * FilT D T = Act[D, c, cn, t, PhN, l1, l2].fil ;
+
+  tauEq (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y) (t t' : Tau D c) (pt : PtEq D (\ I x -> UU.fib0 I (c I x)) t.1 t'.1)
+    : Id (Tau D c) t t' =
+    idJ (TactTy D (\ I x -> UU.fib0 I (c I x))) t.1
+      (\ h2 P2 -> (l2 : (hi : IdLaw D (\ I x -> UU.fib0 I (c I x)) h2) * OLaw D (\ I x -> UU.fib0 I (c I x)) h2) -> Id (Tau D c) t (h2, l2))
+      (\ l2 -> apH {(hi : IdLaw D (\ I x -> UU.fib0 I (c I x)) t.1) * OLaw D (\ I x -> UU.fib0 I (c I x)) t.1} {Tau D c} (\ z -> (t.1, z))
+         (Sigma-eq (IdLaw D (\ I x -> UU.fib0 I (c I x)) t.1) (\ hi -> OLaw D (\ I x -> UU.fib0 I (c I x)) t.1) t.2.1 l2.1 t.2.2 l2.2
+            (idLaw-prop D (\ I x -> UU.fib0 I (c I x)) t.1 t.2.1 l2.1) (\ q q' -> oLaw-prop D (\ I x -> UU.fib0 I (c I x)) t.1 q q')))
+      t'.1 (tact-funext D (\ I x -> UU.fib0 I (c I x)) t.1 t'.1 pt) t'.2 ;
+
+  actCong (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y) (cnat cnat' : CnT D c) (t t' : Tau D c)
+    (pt : PtEq D (\ I x -> UU.fib0 I (c I x)) t.1 t'.1)
+    (PhN : PP.PhNT D c t) (PhN' : PP.PhNT D c t') (l1 l2 l1' l2' : PP.LawT D c)
+    : Id ((T : PTy[D]) * FilT D T) (filOf D c cnat t PhN l1 l2) (filOf D c cnat' t' PhN' l1' l2') =
+    idJ (Tau D c) t
+      (\ t2 P2 -> (PhN2 : PP.PhNT D c t2) -> Id ((T : PTy[D]) * FilT D T) (filOf D c cnat t PhN l1 l2) (filOf D c cnat' t2 PhN2 l1' l2'))
+      (\ PhN2 -> transH (apH {CnT D c} {(T : PTy[D]) * FilT D T} (\ k -> filOf D c k t PhN l1 l2) (PP.isProp-CnT D c cnat cnat'))
+                  (transH (apH {PP.PhNT D c t} {(T : PTy[D]) * FilT D T} (\ q -> filOf D c cnat' t q l1 l2) (PP.isProp-PhNT D c t PhN PhN2))
+                    (transH (apH {PP.LawT D c} {(T : PTy[D]) * FilT D T} (\ q -> filOf D c cnat' t PhN2 q l2) (PP.isProp-LawT D c l1 l1'))
+                            (apH {PP.LawT D c} {(T : PTy[D]) * FilT D T} (\ q -> filOf D c cnat' t PhN2 l1' q) (PP.isProp-LawT D c l2 l2')))))
+      t' (tauEq D c t t' pt) PhN' ;
+
+  opaque famCong ; opaque tauEq ; opaque actCong ;
+
+  -- fillers: equal operations, and KESI is a proposition
+  filEq (D : PCtx) (T : PTy[D]) (k0 k0' : GLine[a].LineFibP[GFam[a].famPath, D, T].FibAt e0) (k1 k1' : GLine[a].LineFibP[GFam[a].famPath, D, T].FibAt e1) (P0 : Id (GLine[a].LineFibP[GFam[a].famPath, D, T].FibAt e0) k0 k0') (P1 : Id (GLine[a].LineFibP[GFam[a].famPath, D, T].FibAt e1) k1 k1')
+    (ke0 : GCofEsi[a].PartialsEsi[GLine[a].EndKit[GFam[a].famPath, D, T, e0].TV.E, GLine[a].EndKit[GFam[a].famPath, D, T, e0].SFm.SF].KESI k0) (ke0' : GCofEsi[a].PartialsEsi[GLine[a].EndKit[GFam[a].famPath, D, T, e0].TV.E, GLine[a].EndKit[GFam[a].famPath, D, T, e0].SFm.SF].KESI k0') (ke1 : GCofEsi[a].PartialsEsi[GLine[a].EndKit[GFam[a].famPath, D, T, e1].TV.E, GLine[a].EndKit[GFam[a].famPath, D, T, e1].SFm.SF].KESI k1) (ke1' : GCofEsi[a].PartialsEsi[GLine[a].EndKit[GFam[a].famPath, D, T, e1].TV.E, GLine[a].EndKit[GFam[a].famPath, D, T, e1].SFm.SF].KESI k1')
+    : Id (FilT D T) (k0, (k1, (ke0, ke1))) (k0', (k1', (ke0', ke1'))) =
+    idJ (GLine[a].LineFibP[GFam[a].famPath, D, T].FibAt e0) k0
+      (\ j0 Q0 -> (kj0 : GCofEsi[a].PartialsEsi[GLine[a].EndKit[GFam[a].famPath, D, T, e0].TV.E, GLine[a].EndKit[GFam[a].famPath, D, T, e0].SFm.SF].KESI j0) -> Id (FilT D T) (k0, (k1, (ke0, ke1))) (j0, (k1', (kj0, ke1'))))
+      (\ kj0 -> idJ (GLine[a].LineFibP[GFam[a].famPath, D, T].FibAt e1) k1
+         (\ j1 Q1 -> (kj1 : GCofEsi[a].PartialsEsi[GLine[a].EndKit[GFam[a].famPath, D, T, e1].TV.E, GLine[a].EndKit[GFam[a].famPath, D, T, e1].SFm.SF].KESI j1) -> Id (FilT D T) (k0, (k1, (ke0, ke1))) (k0, (j1, (kj0, kj1))))
+         (\ kj1 -> transH (apH {GCofEsi[a].PartialsEsi[GLine[a].EndKit[GFam[a].famPath, D, T, e0].TV.E, GLine[a].EndKit[GFam[a].famPath, D, T, e0].SFm.SF].KESI k0} {FilT D T} (\ z -> (k0, (k1, (z, ke1)))) (GCofEsi[a].PartialsEsi[GLine[a].EndKit[GFam[a].famPath, D, T, e0].TV.E, GLine[a].EndKit[GFam[a].famPath, D, T, e0].SFm.SF].isProp-KESI k0 ke0 kj0))
+                           (apH {GCofEsi[a].PartialsEsi[GLine[a].EndKit[GFam[a].famPath, D, T, e1].TV.E, GLine[a].EndKit[GFam[a].famPath, D, T, e1].SFm.SF].KESI k1} {FilT D T} (\ z -> (k0, (k1, (kj0, z)))) (GCofEsi[a].PartialsEsi[GLine[a].EndKit[GFam[a].famPath, D, T, e1].TV.E, GLine[a].EndKit[GFam[a].famPath, D, T, e1].SFm.SF].isProp-KESI k1 ke1 kj1)))
+         k1' P1 ke1')
+      k0' P0 ke0' ;
+
+  -- El's fillers along c, pulled back along s, are El's fillers along any
+  -- code map equal to c o s (unique + compF, then actCong, then famCong)
+  module PB (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y) (cnat : CnT D c) (D' : PCtx) (s : PSub[D', D])
+    (c' : (Y : Ob) -> W0.Ix (D'.ob Y) -> UU.U0 Y) (cnat' : CnT D' c')
+    (Pc : (Y : Ob) (x : W0.Ix (D'.ob Y)) -> Id (UU.U0 Y) (c Y (s.nt Y x)) (c' Y x)) {
+    module FC = EC.Fam[D, c, cnat] ;
+    module FS = FSub[D, c, cnat, D', s] ;
+    module P0 = GTransfer[a, a, a].TrF[D', subTy D' D FC.ElTy s, D, FC.ElTy, s.nt, s.nt-nat,
+        \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, (liftP D' D FC.ElTy s).nt-nat, e0, Fam[D, c, cnat].k0, Fam[D, c, cnat].k0e] ;
+    module P1 = GTransfer[a, a, a].TrF[D', subTy D' D FC.ElTy s, D, FC.ElTy, s.nt, s.nt-nat,
+        \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, (liftP D' D FC.ElTy s).nt-nat, e1, Fam[D, c, cnat].k1, Fam[D, c, cnat].k1e] ;
+
+    pbFil : (T : PTy[D']) * FilT D' T = (subTy D' D FC.ElTy s, (P0.fibAt, (P1.fibAt, (P0.kesi, P1.kesi)))) ;
+
+    -- the pulled-back fillers are the composite ones
+    k0Eq : Id (GLine[a].LineFibP[GFam[a].famPath, D', subTy D' D FC.ElTy s].FibAt e0) P0.fibAt FS.C0.F12.fibAt =
+      symH (P0.PC.contr-ext FS.C0.F12.fibAt P0.fibAt (P0.unique FS.C0.F12.fibAt FS.C0.compF)) ;
+    k1Eq : Id (GLine[a].LineFibP[GFam[a].famPath, D', subTy D' D FC.ElTy s].FibAt e1) P1.fibAt FS.C1.F12.fibAt =
+      symH (P1.PC.contr-ext FS.C1.F12.fibAt P1.fibAt (P1.unique FS.C1.F12.fibAt FS.C1.compF)) ;
+
+    compFil : (T : PTy[D']) * FilT D' T = (subTy D' D FC.ElTy s, (FS.C0.F12.fibAt, (FS.C1.F12.fibAt, (FS.C0.F12.kesi, FS.C1.F12.kesi)))) ;
+
+    eq1 : Id ((T : PTy[D']) * FilT D' T) pbFil compFil =
+      apH {FilT D' (subTy D' D FC.ElTy s)} {(T : PTy[D']) * FilT D' T} (\ z -> (subTy D' D FC.ElTy s, z))
+        (filEq D' (subTy D' D FC.ElTy s) P0.fibAt FS.C0.F12.fibAt P1.fibAt FS.C1.F12.fibAt k0Eq k1Eq
+           P0.kesi FS.C0.F12.kesi P1.kesi FS.C1.F12.kesi) ;
+
+    cs (Y : Ob) (x : W0.Ix (D'.ob Y)) : UU.U0 Y = c Y (s.nt Y x) ;
+    csnat : CnT D' cs = \ Y' Y h x -> transH (apH (c Y') (s.nt-nat Y' Y h x)) (cnat Y' Y h (s.nt Y x)) ;
+    module FC' = EC.Fam[D', cs, csnat] ;
+
+    tS : Tau D' cs = ((subTy D' D FC.ElTy s).tact, ((subTy D' D FC.ElTy s).tact-id, (subTy D' D FC.ElTy s).tact-o)) ;
+    tF : Tau D' cs = (FC'.ElTy.tact, (FC'.ElTy.tact-id, FC'.ElTy.tact-o)) ;
+
+    pt : PtEq D' (\ I x -> UU.fib0 I (cs I x)) tS.1 tF.1 = \ J I f x y e a ->
+      EC.tactG-irr J I f (c I (s.nt I x)) (c J (s.nt J y))
+        (FC.ep J I f (s.nt I x) (s.nt J y) (ntEq D' D s J I f x y e)) (FC'.ep J I f x y e) a ;
+
+    -- the result
+    res : Id ((T : PTy[D']) * FilT D' T) pbFil (famFil D' c' cnat') =
+      transH eq1
+        (transH (actCong D' cs FS.C0.s12-nat csnat tS tF pt FS.C0.PhN12 FC'.PhN FS.C0.ph-ps12 FS.C0.ps-ph12
+                   (\ W d b -> refl b) (\ W d b -> refl b))
+                (famCong D' cs c' csnat cnat' Pc)) ;
+
+    opaque res ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- El's fibration along c, substituted along s, is El's fibration along
+  -- c o s: the generic law (GSmallFib.SF.FibSub) at El
+
+  module FibSub (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> UU.U0 Y) (cnat : CnT D c) (D' : PCtx) (s : PSub[D', D]) {
+    elFibSub : Id (GE.FibEL D') EC.Fam[D', \ Y x -> c Y (s.nt Y x), \ Y' Y h x -> transH (apH (c Y') (s.nt-nat Y' Y h x)) (cnat Y' Y h (s.nt Y x))].fib
+                                (GSubst[a].subFibEL D' D s EC.Fam[D, c, cnat].fib) =
+      EC.SF.FibSub[D, EC.cx D c cnat, D', s].xfibSub ;
+  } ;
+} ;

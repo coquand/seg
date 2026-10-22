@@ -1,0 +1,112 @@
+-- PosetFormers.seg: the composition (with ESI) of Sigma and Pi for posets,
+-- as INSTANCES of the generic proofs (GSig, GPi): the box composites of the
+-- components go to line composition (CompLine.ToCompAt), to the family
+-- path object (GTrans[a].ToFamC), to filling (line MkFill, GFillFib); the
+-- generic former is fibrant; back to the poset path structure
+-- (GTrans[a].FromFam), to line composition (FromFib) and to box composition
+-- (CompLine.ToCompOp).  ESI is carried at every step (cesi / kesi / esi).
+-- Replaces FibSig / EsiSig / FibPi / EsiPi.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+open BaseP.GLine[a] ;
+open FibTriv[a] ;
+open PosetConn[a] ;
+module BXm = Box[a, a] ;
+module ES = Esi[a, a] ;
+
+-- a box composition with ESI, as a filler at the family path object, in
+-- the direction d
+module ToFamFib (G : PCtx) (A : PTy[G]) (d : Bool) (co : BXm.Boxes[G, A].CompOp[src d, tgt d])
+  (es : ES.EsiDef[G, A].ESI (src d) (tgt d) co) {
+  module CL = CompLine[a].CompLine[G, A, src d, tgt d] ;
+  module TC = BaseP.GTrans[a].ToFamC[posetPath, posetConn, G, A, src d, tgt d, CL.ToCompAt[co].ca] ;
+  module FF = PCnB.GFillFib[a].FillLineFib[BaseP.GFam[a].famPath, BaseP.GFam[a].famConn, G, A, d, TC.compAt] ;
+
+  fibAt : LineFibP[BaseP.GFam[a].famPath, G, A].FibAt (src d) = FF.fibAt ;
+
+  kesi : BaseP.GCofEsi[a].PartialsEsi[CompAtP[BaseP.GFam[a].famPath, G, A, src d, tgt d].TV.E,
+                                     CompAtP[BaseP.GFam[a].famPath, G, A, src d, tgt d].SFm.SF].KESI fibAt =
+    FF.Kesi[TC.cesi (CL.ToCompAt[co].cesi es)].kesi ;
+} ;
+
+-- a filler at the family path object with KESI, as a box composition with
+-- ESI from src d to tgt d
+module FromFamFib (G : PCtx) (A : PTy[G]) (d : Bool) (k : LineFibP[BaseP.GFam[a].famPath, G, A].FibAt (src d))
+  (ke : BaseP.GCofEsi[a].PartialsEsi[CompAtP[BaseP.GFam[a].famPath, G, A, src d, tgt d].TV.E,
+                                     CompAtP[BaseP.GFam[a].famPath, G, A, src d, tgt d].SFm.SF].KESI k) {
+  module FT = BaseP.GTrans[a].FromFam[posetPath, posetConn, G, A, src d, k] ;
+  module FC = CompAtP[posetPath, G, A, src d, tgt d].FromFib[FT.fibAt] ;
+  module CL = CompLine[a].CompLine[G, A, src d, tgt d] ;
+
+  co : BXm.Boxes[G, A].CompOp[src d, tgt d] = CL.ToCompOp[FC.ca].co ;
+
+  esi : ES.EsiDef[G, A].ESI (src d) (tgt d) co = CL.ToCompOp[FC.ca].esi (FC.cesi (FT.kesi ke)) ;
+} ;
+
+------------------------------------------------------------------------
+-- Sigma, in the direction d
+
+module SigDir (G : PCtx) (A : PTy[G]) (B : PTy[extP G A]) (d : Bool)
+  (cA : BXm.Boxes[G, A].CompOp[src d, tgt d]) (eA : ES.EsiDef[G, A].ESI (src d) (tgt d) cA)
+  (cB : BXm.Boxes[extP G A, B].CompOp[src d, tgt d]) (eB : ES.EsiDef[extP G A, B].ESI (src d) (tgt d) cB) {
+  module FA = ToFamFib[G, A, d, cA, eA] ;
+  module FB = ToFamFib[extP G A, B, d, cB, eB] ;
+  module S = BaseP.GSig[a].SigFib[G, A, B, src d, FA.fibAt, FB.fibAt] ;
+  module R = FromFamFib[G, S.SG.SigP, d, S.fibAt, S.kesi FA.kesi FB.kesi] ;
+
+  co : BXm.Boxes[G, S.SG.SigP].CompOp[src d, tgt d] = R.co ;
+  esi : ES.EsiDef[G, S.SG.SigP].ESI (src d) (tgt d) co = R.esi ;
+} ;
+
+------------------------------------------------------------------------
+-- a filler at an end point named in two ways (src false = e1 = tgt true)
+
+castFib (G : PCtx) (A : PTy[G]) (e e' : El Iv) (q : Id (El Iv) e e') (k : LineFibP[BaseP.GFam[a].famPath, G, A].FibAt e)
+  : LineFibP[BaseP.GFam[a].famPath, G, A].FibAt e' = subst (El Iv) (\ z -> LineFibP[BaseP.GFam[a].famPath, G, A].FibAt z) e e' q k ;
+
+------------------------------------------------------------------------
+-- Pi, in the direction d: A filled backwards (kA at tgt d), B composed
+
+module PiDir (G : PCtx) (A : PTy[G]) (B : PTy[extP G A]) (d : Bool)
+  (kA : LineFibP[BaseP.GFam[a].famPath, G, A].FibAt (tgt d))
+  (cB : BXm.Boxes[extP G A, B].CompOp[src d, tgt d]) (eB : ES.EsiDef[extP G A, B].ESI (src d) (tgt d) cB) {
+  module FB = ToFamFib[extP G A, B, d, cB, eB] ;
+  module PF = PCnB.GPiFib[a].PiFib[G, A, B, d, kA, FB.TC.compAt] ;
+  module R = FromFamFib[G, PF.PC.PE.P, d, PF.fibAt, PF.kesi (FB.TC.cesi (FB.CL.ToCompAt[cB].cesi eB))] ;
+
+  co : BXm.Boxes[G, PF.PC.PE.P].CompOp[src d, tgt d] = R.co ;
+  esi : ES.EsiDef[G, PF.PC.PE.P].ESI (src d) (tgt d) co = R.esi ;
+} ;
+
+------------------------------------------------------------------------
+-- in the format of FibE: both directions, with ESI
+
+module SigC (G : PCtx) (A : PTy[G]) (B : PTy[extP G A])
+  (cA : BXm.Boxes[G, A].Comp) (eA : ES.EsiDef[G, A].ESIC cA)
+  (cB : BXm.Boxes[extP G A, B].Comp) (eB : ES.EsiDef[extP G A, B].ESIC cB) {
+  module D0 = SigDir[G, A, B, true, cA.1, eA.1, cB.1, eB.1] ;
+  module D1 = SigDir[G, A, B, false, cA.2, eA.2, cB.2, eB.2] ;
+
+  comp : BXm.Boxes[G, D0.S.SG.SigP].Comp = (D0.co, D1.co) ;
+  esic : ES.EsiDef[G, D0.S.SG.SigP].ESIC comp = (D0.esi, D1.esi) ;
+} ;
+
+module PiC (G : PCtx) (A : PTy[G]) (B : PTy[extP G A])
+  (cA : BXm.Boxes[G, A].Comp) (eA : ES.EsiDef[G, A].ESIC cA)
+  (cB : BXm.Boxes[extP G A, B].Comp) (eB : ES.EsiDef[extP G A, B].ESIC cB) {
+  module D0 = PiDir[G, A, B, true, castFib G A (src false) (tgt true) (refl e1) ToFamFib[G, A, false, cA.2, eA.2].fibAt, cB.1, eB.1] ;
+  module D1 = PiDir[G, A, B, false, castFib G A (src true) (tgt false) (refl e0) ToFamFib[G, A, true, cA.1, eA.1].fibAt, cB.2, eB.2] ;
+
+  comp : BXm.Boxes[G, D0.PF.PC.PE.P].Comp = (D0.co, D1.co) ;
+  esic : ES.EsiDef[G, D0.PF.PC.PE.P].ESIC comp = (D0.esi, D1.esi) ;
+} ;

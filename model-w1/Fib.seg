@@ -1,0 +1,472 @@
+-- Fib.seg: MODEL/Lv/Fib.agda (MODEL/Poset/Fib.agda is its instance at
+-- lzero).  Fibrant types (M2): fillers from compositions.
+--
+-- * Kit[G, B]: elements given in the total presheaf E, turned into elements
+--   of a fibre (fromE, opaque, with its equation fromE-eq), and sides of
+--   boxes given by E-valued families (mkSideE).
+-- * FillOp[eS]: a uniform filler of open boxes with lid at eS: an element
+--   of the whole cylinder X * [1] which restricts to the lid at X * eS and
+--   to the sides on Q_l * [1].
+-- * MkFill[G, A, d, co]: a FillOp from a CompOp, in the direction d.  A box
+--   b over X gives the box fbox over X * [1] along the connection
+--   (x , i , j) |-> (x , c i j): the old sides pulled back along
+--   X * [1] -> X, and one more side on i = src d, given by the lid.  Its
+--   composite, at X * [1] * tgt d, lies over X * [1] itself.
+--
+-- Posets at a, presheaves at l.  Matches on (zero , h) / (suc n , h) : Fin r
+-- are helpers splitting the first component.
+
+level a l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+module W0 = V[l] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, l] ;
+open PR.PS ;
+open Conn[a] ;
+module BXm = Box[a, l] ;
+
+------------------------------------------------------------------------
+-- Generalities
+
+pre-pw (Y X : Ob) (f g : Hom Y X) (Q : Subset X) (p : PW Y X f g) (t : Tree)
+  : Id Bool (pre Y X f Q t) (pre Y X g Q t) = apH (\ k -> pre Y X k Q t) (hom-eq Y X f g p) ;
+
+-- a map into the inverse image along X * [1] -> X, followed by kq
+inQ-kq (W X : Ob) (Q : Subset X) (psi : Hom W (prodP (prodP X Iv) Iv))
+  (i : InQ W (prodP X Iv) (pre (prodP X Iv) X (pX X) Q) psi) (s : El W)
+  : IsT (Q (app W X (compH W (prodP (prodP X Iv) Iv) X (kq X) psi) s).1) =
+  -- (kq psi) s = pX (pX (psi s)), and pX (psi s) lies in the inverse image of Q
+  calc Bool {
+      Q (app W X (compH W (prodP (prodP X Iv) Iv) X (kq X) psi) s).1
+    =< apH Q (app-compH1 W (prodP (prodP X Iv) Iv) X (kq X) psi s) >
+      Q (app (prodP (prodP X Iv) Iv) X (kq X) w).1
+    =< apH Q (app-compH1 (prodP (prodP X Iv) Iv) (prodP X Iv) X (pX X) (pX (prodP X Iv)) w) >
+      Q (app (prodP X Iv) X (pX X) w1).1
+    =< symH (Pre[prodP X Iv, X, pX X, Q].pre-el w1) >
+      pre (prodP X Iv) X (pX X) Q w1.1
+    =< apH (pre (prodP X Iv) X (pX X) Q) (pr1-T (prodP X Iv) w) >
+      pre (prodP X Iv) X (pX X) Q (pr1T w.1)
+    =< i s >
+      true }
+ where {
+  w : El (prodP (prodP X Iv) Iv) = app W (prodP (prodP X Iv) Iv) psi s ;
+  w1 : El (prodP X Iv) = app (prodP (prodP X Iv) Iv) (prodP X Iv) (pX (prodP X Iv)) w ;
+ } ;
+
+------------------------------------------------------------------------
+-- Elements and sides given in the total presheaf
+
+module Kit (G : PCtx) (B : PTy[G]) {
+  open PR.TyL[G, B] ;
+  open BXm.Boxes[G, B] ;
+
+  fromE (I : Ob) (x : Pt I) (w : EI I) (p : Id (Pt I) w.1 x) : T I x = coeT I _ _ p w.2 ;
+
+  fromE-eq (I : Ob) (x : Pt I) (w : EI I) (p : Id (Pt I) w.1 x) : Id (EI I) (x, fromE I x w p) w =
+    symH (pr-coe I _ _ p w.2) ;
+
+  opaque fromE ; opaque fromE-eq ;
+
+  VTy (X : Ob) (Q : Subset X) : U l = (W : Ob) (psi : Hom W (XI X)) -> InQ W X Q psi -> EI W ;
+
+  VPt (X : Ob) (rho : Pt (XI X)) (Q : Subset X) (v : VTy X Q) : U l =
+    (W : Ob) (psi : Hom W (XI X)) (i : InQ W X Q psi) -> Id (Pt W) (v W psi i).1 (G.act W (XI X) psi rho) ;
+
+  VNat (X : Ob) (Q : Subset X) (v : VTy X Q) : U l =
+    (W' W : Ob) (chi : Hom W' W) (psi : Hom W (XI X)) (i : InQ W X Q psi)
+    (i' : InQ W' X Q (compH W' W (XI X) psi chi))
+    -> Id (EI W') (E.act W' W chi (v W psi i)) (v W' (compH W' W (XI X) psi chi) i') ;
+
+  mkSideE (X : Ob) (rho : Pt (XI X)) (Q : Subset X) (v : VTy X Q) (vp : VPt X rho Q v) (vn : VNat X Q v) : Side[X, rho] =
+    (mkSide X rho Q (\ W psi i -> fromE W (G.act W (XI X) psi rho) (v W psi i) (vp W psi i)) (\ W' W chi psi i i' ->
+        transH (apH (E.act W' W chi) (fromE-eq W (G.act W (XI X) psi rho) (v W psi i) (vp W psi i)))
+               (transH (vn W' W chi psi i i')
+                       (symH (fromE-eq W' (G.act W' (XI X) (compH W' W (XI X) psi chi) rho)
+                                       (v W' (compH W' W (XI X) psi chi) i') (vp W' (compH W' W (XI X) psi chi) i')))))) ;
+
+  mkSideE-E (X : Ob) (rho : Pt (XI X)) (Q : Subset X) (v : VTy X Q) (vp : VPt X rho Q v) (vn : VNat X Q v)
+    (W : Ob) (psi : Hom W (XI X)) (i : InQ W X Q psi)
+    : Id (EI W) ((mkSideE X rho Q v vp vn).svE W psi i) (v W psi i) =
+    fromE-eq W (G.act W (XI X) psi rho) (v W psi i) (vp W psi i) ;
+} ;
+
+------------------------------------------------------------------------
+-- Filling operations
+
+module FillDef (G : PCtx) (A : PTy[G]) {
+  open PR.TyL[G, A] ;
+  module BX = BXm.Boxes[G, A] ;
+  open BX ;
+
+  module FillOp (eS : El Iv) {
+    fop (X : Ob) (b : BX.Box[eS, X]) : T (XI X) b.brho ;
+    -- the filler extends the lid
+    flid (X : Ob) (b : BX.Box[eS, X])
+      : Id (EI X) (E.act X (XI X) (lid X eS) (b.brho, fop X b)) (lidE eS X b.brho b.bu) ;
+    -- and the sides
+    fside (X : Ob) (b : BX.Box[eS, X]) (j : Fin b.br) (W : Ob) (psi : Hom W (XI X)) (i : InQ W X (b.bs j).sQ psi)
+      : Id (EI W) (E.act W (XI X) psi (b.brho, fop X b)) ((b.bs j).svE W psi i) ;
+    -- and is uniform
+    funif (Y X : Ob) (h : Hom Y X) (b : BX.Box[eS, X])
+      : Id (EI (XI Y)) (E.act (XI Y) (XI X) (cylH Y X h) (b.brho, fop X b))
+                       ((restrict eS Y X h b).brho, fop Y (restrict eS Y X h b)) ;
+  } ;
+} ;
+
+------------------------------------------------------------------------
+-- Fillers from compositions
+
+module MkFill (G : PCtx) (A : PTy[G]) (d : Bool) (co : BXm.Boxes[G, A].CompOp[src d, tgt d]) {
+  open PR.TyL[G, A] ;
+  module BX = BXm.Boxes[G, A] ;
+  open BX ;
+  open Kit[G, A] ;
+  open FillDef[G, A] ;
+  module GL = PR.PshL[G] ;
+
+  eS : El Iv = src d ;
+  eT : El Iv = tgt d ;
+
+  module FBox (X : Ob) (b : BX.Box[eS, X]) {
+    Y : Ob = XI X ;
+    YI : Ob = XI Y ;
+    c : Hom YI Y = conn d X ;
+    module LX = Laws[d, X] ;
+
+    rho : Pt Y = b.brho ;
+    rho' : Pt YI = G.act YI Y c rho ;
+
+    uE : EI X = lidE eS X rho b.bu ;
+
+    kOf (W : Ob) (psi : Hom W YI) : Hom W X = compH W YI X (kq X) psi ;
+    cOf (W : Ob) (psi : Hom W YI) : Hom W Y = compH W YI Y c psi ;
+
+    -- the side on i = src d, given by the lid
+    v0 : VTy Y (zQ d X) = \ W psi i -> E.act W X (kOf W psi) uE ;
+
+    -- on i = src d, the connection is the lid after kq
+    v0-pw (W : Ob) (psi : Hom W YI) (i : InQ W Y (zQ d X) psi) : PW W Y (compH W X Y (lid X eS) (kOf W psi)) (cOf W psi) =
+      \ s -> calc Tree {
+          (app W Y (compH W X Y (lid X eS) (kOf W psi)) s).1
+        =< app-compH1 W X Y (lid X eS) (kOf W psi) s >
+          (app X Y (lid X eS) (app W X (kOf W psi) s)).1
+        =< apH (\ z -> (app X Y (lid X eS) z).1) (app-compH W YI X (kq X) psi s) >
+          (app X Y (lid X eS) (app YI X (kq X) (app W YI psi s))).1
+        =< symH (LX.conn-on (app W YI psi s)
+                  (and-r (car Y (pr1T (app W YI psi s).1)) (eqN (ivN (pr2T (pr1T (app W YI psi s).1))) (sN d)) (i s))) >
+          (app YI Y c (app W YI psi s)).1
+        =< symH (app-compH1 W YI Y c psi s) >
+          (app W Y (cOf W psi) s).1 } ;
+
+    v0pt : VPt Y rho' (zQ d X) v0 = \ W psi i ->
+      transH (GL.actC W X Y (lid X eS) (kOf W psi) rho)
+             (transH (GL.actPW W Y (compH W X Y (lid X eS) (kOf W psi)) (cOf W psi) (v0-pw W psi i) rho)
+                     (G.act-o W YI Y c psi rho)) ;
+
+    v0nat : VNat Y (zQ d X) v0 = \ W' W chi psi i i' ->
+      PR.TyL[G, A].PE.actTri W' W X (kOf W psi) chi (kOf W' (compH W' W YI psi chi))
+        (HornFace[a].pw-eq W' X _ _ (comp-assoc W' W YI X (kq X) psi chi)) uE ;
+
+    -- the old sides, pulled back along X * [1] -> X
+    Qs (j : Fin b.br) : Subset Y = pre Y X (pX X) (b.bs j).sQ ;
+
+    -- the connection keeps the first component:  pr1 (c (psi s)) = kq (psi s)
+    inQc (j : Fin b.br) (W : Ob) (psi : Hom W YI) (i : InQ W Y (Qs j) psi) : InQ W X (b.bs j).sQ (cOf W psi) = \ s ->
+      calc Bool {
+          (b.bs j).sQ (pr1T (app W Y (cOf W psi) s).1)
+        =< apH (\ t -> (b.bs j).sQ (pr1T t)) (app-compH1 W YI Y c psi s) >
+          (b.bs j).sQ (pr1T (app YI Y c (app W YI psi s)).1)
+        =< apH (b.bs j).sQ (LX.conn-pr1 (app W YI psi s)) >
+          (b.bs j).sQ (app YI X (kq X) (app W YI psi s)).1
+        =< apH (b.bs j).sQ (symH (app-compH1 W YI X (kq X) psi s)) >
+          (b.bs j).sQ (app W X (kOf W psi) s).1
+        =< inQ-kq W X (b.bs j).sQ psi i s >
+          true } ;
+
+    vs (j : Fin b.br) : VTy Y (Qs j) = \ W psi i -> (b.bs j).svE W (cOf W psi) (inQc j W psi i) ;
+
+    vspt (j : Fin b.br) : VPt Y rho' (Qs j) (vs j) = \ W psi i -> G.act-o W YI Y c psi rho ;
+
+    -- naturality of the side j, read through  (c psi) chi = c (psi chi)
+    vsnat (j : Fin b.br) : VNat Y (Qs j) (vs j) = \ W' W chi psi i i' ->
+      transH ((b.bs j).snat W' W chi (cOf W psi) (inQc j W psi i) (BXm.inQ-comp W' W X (b.bs j).sQ (cOf W psi) chi (inQc j W psi i)))
+             (svE-eq X b.brho (b.bs j) W' _ _ (comp-assoc W' W YI Y c psi chi)
+                     (BXm.inQ-comp W' W X (b.bs j).sQ (cOf W psi) chi (inQc j W psi i)) (inQc j W' (compH W' W YI psi chi) i')) ;
+
+    S'' : (n : Nat) (h : IsT (ltb n (suc b.br))) -> Side[Y, rho'] = split {
+      zero -> \ h -> mkSideE Y rho' (zQ d X) v0 v0pt v0nat ;
+      suc n -> \ h -> mkSideE Y rho' (Qs (n, h)) (vs (n, h)) (vspt (n, h)) (vsnat (n, h)) } ;
+
+    S' (j : Fin (suc b.br)) : Side[Y, rho'] = S'' j.1 j.2 ;
+
+    vAll'' : (n : Nat) (h : IsT (ltb n (suc b.br))) -> VTy Y (S'' n h).sQ = split {
+      zero -> \ h -> v0 ;
+      suc n -> \ h -> vs (n, h) } ;
+
+    vAll (j : Fin (suc b.br)) : VTy Y (S' j).sQ = vAll'' j.1 j.2 ;
+
+    vAllE'' : (n : Nat) (h : IsT (ltb n (suc b.br))) (W : Ob) (psi : Hom W YI) (i : InQ W Y (S'' n h).sQ psi)
+      -> Id (EI W) ((S'' n h).svE W psi i) (vAll'' n h W psi i) = split {
+      zero -> \ h W psi i -> mkSideE-E Y rho' (zQ d X) v0 v0pt v0nat W psi i ;
+      suc n -> \ h W psi i -> mkSideE-E Y rho' (Qs (n, h)) (vs (n, h)) (vspt (n, h)) (vsnat (n, h)) W psi i } ;
+
+    vAll-E (j : Fin (suc b.br)) (W : Ob) (psi : Hom W YI) (i : InQ W Y (S' j).sQ psi)
+      : Id (EI W) ((S' j).svE W psi i) (vAll j W psi i) = vAllE'' j.1 j.2 W psi i ;
+
+    -- compatibility of the sides
+    i0 (j : Fin b.br) (W : Ob) (psi : Hom W YI) (i' : InQ W Y (Qs j) psi)
+      : InQ W X (b.bs j).sQ (compH W X Y (lid X eS) (kOf W psi)) = \ s ->
+      transH (apH (b.bs j).sQ (BXm.pr1-lid W X eS (kOf W psi) s)) (inQ-kq W X (b.bs j).sQ psi i' s) ;
+
+    cs0 (j : Fin b.br) (W : Ob) (psi : Hom W YI) (i : InQ W Y (zQ d X) psi) (i' : InQ W Y (Qs j) psi)
+      : Id (EI W) (v0 W psi i) (vs j W psi i') =
+      transH (b.bcb j W (kOf W psi) (i0 j W psi i'))
+             (svE-eq X b.brho (b.bs j) W _ _ (hom-eq W Y _ _ (v0-pw W psi i)) (i0 j W psi i') (inQc j W psi i')) ;
+
+    csE'' : (n : Nat) (h : IsT (ltb n (suc b.br))) (m : Nat) (h' : IsT (ltb m (suc b.br))) (W : Ob) (psi : Hom W YI)
+      (i : InQ W Y (S'' n h).sQ psi) (i' : InQ W Y (S'' m h').sQ psi) -> Id (EI W) (vAll'' n h W psi i) (vAll'' m h' W psi i') = split {
+      zero -> \ h -> split {
+        zero -> \ h' W psi i i' -> refl (v0 W psi i) ;
+        suc m -> \ h' W psi i i' -> cs0 (m, h') W psi i i' } ;
+      suc n -> \ h -> split {
+        zero -> \ h' W psi i i' -> symH (cs0 (n, h) W psi i' i) ;
+        suc m -> \ h' W psi i i' ->
+          apH {T W (G.act W Y (cOf W psi) rho)} (\ v -> (G.act W Y (cOf W psi) rho, v))
+              (b.bcs (n, h) (m, h') W (cOf W psi) (inQc (n, h) W psi i) (inQc (m, h') W psi i')) } } ;
+
+    cs : CsTy Y rho' (suc b.br) S' = \ j k W psi i i' ->
+      pr-inj W (G.act W YI psi rho') ((S' j).sv W psi i) ((S' k).sv W psi i')
+        (transH (vAll-E j W psi i) (transH (csE'' j.1 j.2 k.1 k.2 W psi i i') (symH (vAll-E k W psi i')))) ;
+
+    -- the lid
+    uE' : EI Y = E.act Y X (pX X) uE ;
+
+    upt : Id (Pt Y) uE'.1 (G.act Y YI (lid Y eS) rho') =
+      transH (GL.actC Y X Y (lid X eS) (pX X) rho)
+       (transH (GL.actPW Y Y (compH Y X Y (lid X eS) (pX X)) (compH Y YI Y c (lid Y eS)) (\ s -> symH (LX.conn-src s)) rho)
+               (G.act-o Y YI Y c (lid Y eS) rho)) ;
+
+    u' : T Y (G.act Y YI (lid Y eS) rho') = fromE Y (G.act Y YI (lid Y eS) rho') uE' upt ;
+
+    i0b (n : Nat) (h : IsT (ltb n b.br)) (W : Ob) (phi : Hom W Y)
+      (i : InQ W Y (Qs (n, h)) (compH W Y YI (lid Y eS) phi))
+      : InQ W X (b.bs (n, h)).sQ (compH W X Y (lid X eS) (compH W Y X (pX X) phi)) = \ s ->
+      calc Bool {
+          (b.bs (n, h)).sQ (pr1T (app W Y (compH W X Y (lid X eS) (compH W Y X (pX X) phi)) s).1)
+        =< apH (b.bs (n, h)).sQ (BXm.pr1-lid W X eS (compH W Y X (pX X) phi) s) >
+          (b.bs (n, h)).sQ (app W X (compH W Y X (pX X) phi) s).1
+        =< apH (b.bs (n, h)).sQ (app-compH1 W Y X (pX X) phi s) >
+          (b.bs (n, h)).sQ (app Y X (pX X) (app W Y phi s)).1
+        =< symH (Pre[Y, X, pX X, (b.bs (n, h)).sQ].pre-el (app W Y phi s)) >
+          Qs (n, h) (app W Y phi s).1
+        =< apH (Qs (n, h)) (symH (BXm.pr1-lid W Y eS phi s)) >
+          Qs (n, h) (pr1T (app W YI (compH W Y YI (lid Y eS) phi) s).1)
+        =< i s >
+          true } ;
+
+    cbE'' : (n : Nat) (h : IsT (ltb n (suc b.br))) (W : Ob) (phi : Hom W Y) (i : InQ W Y (S'' n h).sQ (compH W Y YI (lid Y eS) phi))
+      -> Id (EI W) (E.act W X (compH W Y X (pX X) phi) uE) (vAll'' n h W (compH W Y YI (lid Y eS) phi) i) = split {
+      zero -> \ h W phi i ->
+        -- pX phi = (kq lid) phi = kq (lid phi)
+        PR.TyL[G, A].PE.actPW W X (compH W Y X (pX X) phi) (kOf W (compH W Y YI (lid Y eS) phi))
+          (HornFace[a].pw-eq W X _ _
+             (transH (apH (\ k -> compH W Y X k phi) (symH (LX.kq-lid-eq eS)))
+                     (comp-assoc W Y YI X (kq X) (lid Y eS) phi))) uE ;
+      suc n -> \ h W phi i ->
+        transH (b.bcb (n, h) W (compH W Y X (pX X) phi) (i0b n h W phi i))
+               -- lid (pX phi) = (lid pX) phi = (c lid) phi = c (lid phi)
+               (svE-eq X b.brho (b.bs (n, h)) W _ _
+                  (calc (Hom W Y) {
+                      compH W X Y (lid X eS) (compH W Y X (pX X) phi)
+                    =< symH (comp-assoc W Y X Y (lid X eS) (pX X) phi) >
+                      compH W Y Y (compH Y X Y (lid X eS) (pX X)) phi
+                    =< apH (\ k -> compH W Y Y k phi) (symH (hom-eq Y Y _ _ LX.conn-src)) >
+                      compH W Y Y (compH Y YI Y c (lid Y eS)) phi
+                    =< comp-assoc W Y YI Y c (lid Y eS) phi >
+                      cOf W (compH W Y YI (lid Y eS) phi) })
+                  (i0b n h W phi i) (inQc (n, h) W (compH W Y YI (lid Y eS) phi) i)) } ;
+
+    cb : CbTy eS Y rho' u' (suc b.br) S' = \ j W phi i ->
+      transH (apH (E.act W Y phi) (fromE-eq Y (G.act Y YI (lid Y eS) rho') uE' upt))
+       (transH (PR.TyL[G, A].PE.actC W Y X (pX X) phi uE)
+        (transH (cbE'' j.1 j.2 W phi i) (symH (vAll-E j W (compH W Y YI (lid Y eS) phi) i)))) ;
+
+    fbox : BX.Box[eS, Y] = (BX.mkBox eS Y rho' u' (suc b.br) S' cs cb) ;
+
+    fpt : Id (Pt Y) (G.act Y YI (lid Y eT) rho') rho =
+      transH (symH (G.act-o Y YI Y c (lid Y eT) rho)) (GL.actId Y (compH Y YI Y c (lid Y eT)) LX.conn-tgt rho) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- The filler
+
+  fill (X : Ob) (b : BX.Box[eS, X]) : T (XI X) b.brho =
+    fromE (XI X) b.brho (topE eT (XI X) FBox[X, b].rho' (co.cop (XI X) FBox[X, b].fbox)) FBox[X, b].fpt ;
+
+  fill-E (X : Ob) (b : BX.Box[eS, X])
+    : Id (EI (XI X)) (b.brho, fill X b) (topE eT (XI X) FBox[X, b].rho' (co.cop (XI X) FBox[X, b].fbox)) =
+    fromE-eq (XI X) b.brho (topE eT (XI X) FBox[X, b].rho' (co.cop (XI X) FBox[X, b].fbox)) FBox[X, b].fpt ;
+
+  opaque fill ; opaque fill-E ;
+
+  -- The composite is taken by co, whose end points are  src d , tgt d : the
+  -- maps below are written with  tgt d  (not its abbreviation eT), so that
+  -- they are literally those of co.cside.
+
+  -- the lid at eS, then the lid at tgt d, lands on i = src d:  (x , src d , tgt d)
+  zlid-in (X : Ob) : InQ X (XI X) (zQ d X) (compH X (XI X) (XI (XI X)) (lid (XI X) (tgt d)) (lid X eS)) = \ s ->
+    transH (apH (zQ d X) (transH (BXm.pr1-lid X (XI X) (tgt d) (lid X eS) s) (app-lid1 X eS s))) (zQ-lid d X s) ;
+
+  -- kq (lid_(tgt d) lid_eS) = (kq lid_(tgt d)) lid_eS = id
+  kq-lid2 (X : Ob) : PW X X (compH X (XI (XI X)) X (kq X) (compH X (XI X) (XI (XI X)) (lid (XI X) (tgt d)) (lid X eS))) (idH X) =
+    pw-trans X X (compH X (XI (XI X)) X (kq X) (compH X (XI X) (XI (XI X)) (lid (XI X) (tgt d)) (lid X eS)))
+                 (compH X (XI X) X (compH (XI X) (XI (XI X)) X (kq X) (lid (XI X) (tgt d))) (lid X eS)) (idH X)
+      (HornFace[a].pw-eq X X _ _ (symH (comp-assoc X (XI X) (XI (XI X)) X (kq X) (lid (XI X) (tgt d)) (lid X eS))))
+      (Laws[d, X].kq-lid-lid eS (tgt d)) ;
+
+  -- the filler at eS is the side i = src d of the box, which is the lid
+  flid (X : Ob) (b : BX.Box[eS, X])
+    : Id (EI X) (E.act X (XI X) (lid X eS) (b.brho, fill X b)) (lidE eS X b.brho b.bu) =
+    calc (EI X) {
+        E.act X (XI X) (lid X eS) (b.brho, fill X b)
+      =< apH (E.act X (XI X) (lid X eS)) (fill-E X b) >
+        E.act X (XI X) (lid X eS) (topE (tgt d) (XI X) FBox[X, b].fbox.brho (co.cop (XI X) FBox[X, b].fbox))
+      =< co.cside (XI X) FBox[X, b].fbox (zero, refl true) X (lid X eS) (zlid-in X) >
+        (FBox[X, b].S' (zero, refl true)).svE X (compH X (XI X) (XI (XI X)) (lid (XI X) (tgt d)) (lid X eS)) (zlid-in X)
+      =< FBox[X, b].vAll-E (zero, refl true) X (compH X (XI X) (XI (XI X)) (lid (XI X) (tgt d)) (lid X eS)) (zlid-in X) >
+        E.act X X (compH X (XI (XI X)) X (kq X) (compH X (XI X) (XI (XI X)) (lid (XI X) (tgt d)) (lid X eS))) FBox[X, b].uE
+      =< PR.TyL[G, A].PE.actId X (compH X (XI (XI X)) X (kq X) (compH X (XI X) (XI (XI X)) (lid (XI X) (tgt d)) (lid X eS))) (kq-lid2 X) FBox[X, b].uE >
+        lidE eS X b.brho b.bu } ;
+
+  i1 (X : Ob) (b : BX.Box[eS, X]) (j : Fin b.br) (W : Ob) (psi : Hom W (XI X)) (i : InQ W X (b.bs j).sQ psi)
+    : InQ W (XI X) (pre (XI X) X (pX X) (b.bs j).sQ) (compH W (XI X) (XI (XI X)) (lid (XI X) eT) psi) = \ s ->
+    transH (apH (pre (XI X) X (pX X) (b.bs j).sQ) (BXm.pr1-lid W (XI X) eT psi s))
+     (transH (Pre[XI X, X, pX X, (b.bs j).sQ].pre-el (app W (XI X) psi s))
+             (transH (apH (b.bs j).sQ (pr1-T X (app W (XI X) psi s))) (i s))) ;
+
+  fside (X : Ob) (b : BX.Box[eS, X]) (j : Fin b.br) (W : Ob) (psi : Hom W (XI X)) (i : InQ W X (b.bs j).sQ psi)
+    : Id (EI W) (E.act W (XI X) psi (b.brho, fill X b)) ((b.bs j).svE W psi i) =
+    transH (apH (E.act W (XI X) psi) (fill-E X b))
+     (transH (co.cside (XI X) FBox[X, b].fbox (suc j.1, j.2) W psi (i1 X b j W psi i))
+      (transH (FBox[X, b].vAll-E (suc j.1, j.2) W (compH W (XI X) (XI (XI X)) (lid (XI X) eT) psi) (i1 X b j W psi i))
+              -- c (lid_eT psi) = (c lid_eT) psi = id psi = psi
+              (svE-eq X b.brho (b.bs j) W _ _
+                  (calc (Hom W (XI X)) {
+                      compH W (XI (XI X)) (XI X) (conn d X) (compH W (XI X) (XI (XI X)) (lid (XI X) eT) psi)
+                    =< symH (comp-assoc W (XI X) (XI (XI X)) (XI X) (conn d X) (lid (XI X) eT) psi) >
+                      compH W (XI X) (XI X) (compH (XI X) (XI (XI X)) (XI X) (conn d X) (lid (XI X) eT)) psi
+                    =< apH (\ k -> compH W (XI X) (XI X) k psi) (hom-eq (XI X) (XI X) _ _ Laws[d, X].conn-tgt) >
+                      compH W (XI X) (XI X) (idH (XI X)) psi
+                    =< comp-idl W (XI X) psi >
+                      psi })
+                  (FBox[X, b].inQc j W (compH W (XI X) (XI (XI X)) (lid (XI X) eT) psi) (i1 X b j W psi i)) i))) ;
+
+  ----------------------------------------------------------------------
+  -- Uniformity: the box of a restriction is the restriction of the box
+
+  module FU (Z X : Ob) (h : Hom Z X) (b : BX.Box[eS, X]) {
+    b' : BX.Box[eS, Z] = restrict eS Z X h b ;
+    hh : Hom (XI Z) (XI X) = cylH Z X h ;
+    module BXf = FBox[X, b] ;
+    module BZ = FBox[Z, b'] ;
+    module R = Restrict[eS, XI Z, XI X, hh] ;
+    module Rb = Restrict[eS, Z, X, h] ;
+    module NZ = Conn[a].Nat[d, Z, X, h] ;
+
+    Erho : Id (Pt (XI (XI Z))) (R.rrho BXf.rho') BZ.rho' =
+      GL.actSq (XI (XI Z)) (XI (XI X)) (XI Z) (XI X) (conn d X) (cylH (XI Z) (XI X) hh) hh (conn d Z) NZ.conn-cyl b.brho ;
+
+    Eu : Id (EI (XI Z)) (lidE eS (XI Z) (R.rrho BXf.rho') (R.ru BXf.rho' BXf.u')) (lidE eS (XI Z) BZ.rho' BZ.u') =
+      transH (R.ruE BXf.rho' BXf.u')
+       (transH (apH (E.act (XI Z) (XI X) hh) (fromE-eq (XI X) (G.act (XI X) (XI (XI X)) (lid (XI X) eS) BXf.rho') BXf.uE' BXf.upt))
+        (transH (PR.TyL[G, A].PE.actSq (XI Z) (XI X) Z X (pX X) hh h (pX Z) NZ.pX-cylPW BXf.uE)
+         (transH (apH (E.act (XI Z) Z (pX Z)) (symH (Rb.ruE b.brho b.bu)))
+                 (symH (fromE-eq (XI Z) (G.act (XI Z) (XI (XI Z)) (lid (XI Z) eS) BZ.rho') BZ.uE' BZ.upt))))) ;
+
+    EQ'' : (n : Nat) (hl : IsT (ltb n (suc b.br))) (x : Tree)
+      -> Id Bool (pre (XI Z) (XI X) hh (BXf.S'' n hl).sQ x) ((BZ.S'' n hl).sQ x) = split {
+      zero -> \ hl x -> NZ.zQ-pre x ;
+      suc n -> \ hl x ->
+        transH (pre-comp (XI Z) (XI X) X hh (pX X) (b.bs (n, hl)).sQ x)
+         (transH (pre-pw (XI Z) X (compH (XI Z) (XI X) X (pX X) hh) (compH (XI Z) Z X h (pX Z)) (b.bs (n, hl)).sQ NZ.pX-cylPW x)
+                 (symH (pre-comp (XI Z) Z X (pX Z) h (b.bs (n, hl)).sQ x))) } ;
+
+    EQ (j : Fin (suc b.br)) (x : Tree) : Id Bool (pre (XI Z) (XI X) hh (BXf.S' j).sQ x) ((BZ.S' j).sQ x) = EQ'' j.1 j.2 x ;
+
+    cylW (W : Ob) (psi : Hom W (XI (XI Z))) : Hom W (XI (XI X)) = compH W (XI (XI Z)) (XI (XI X)) (cylH (XI Z) (XI X) hh) psi ;
+
+    EvV'' : (n : Nat) (hl : IsT (ltb n (suc b.br))) (W : Ob) (psi : Hom W (XI (XI Z)))
+      (i : InQ W (XI X) (BXf.S'' n hl).sQ (cylW W psi)) (i' : InQ W (XI Z) (BZ.S'' n hl).sQ psi)
+      -> Id (EI W) (BXf.vAll'' n hl W (cylW W psi) i) (BZ.vAll'' n hl W psi i') = split {
+      zero -> \ hl W psi i i' ->
+        -- kq (cc psi) = (kq cc) psi = (h kq) psi = h (kq psi)
+        transH (PR.TyL[G, A].PE.actPW W X (BXf.kOf W (cylW W psi)) (compH W Z X h (BZ.kOf W psi))
+                  (HornFace[a].pw-eq W X _ _
+                     (calc (Hom W X) {
+                         BXf.kOf W (cylW W psi)
+                       =< symH (comp-assoc W (XI (XI Z)) (XI (XI X)) X (kq X) (cylH (XI Z) (XI X) hh) psi) >
+                         compH W (XI (XI Z)) X (compH (XI (XI Z)) (XI (XI X)) X (kq X) (cylH (XI Z) (XI X) hh)) psi
+                       =< apH (\ k -> compH W (XI (XI Z)) X k psi) (hom-eq (XI (XI Z)) X _ _ NZ.kq-cyl) >
+                         compH W (XI (XI Z)) X (compH (XI (XI Z)) Z X h (kq Z)) psi
+                       =< comp-assoc W (XI (XI Z)) Z X h (kq Z) psi >
+                         compH W Z X h (BZ.kOf W psi) })) BXf.uE)
+         (transH (symH (PR.TyL[G, A].PE.actC W Z X h (BZ.kOf W psi) BXf.uE))
+                 (apH (E.act W Z (BZ.kOf W psi)) (symH (Rb.ruE b.brho b.bu)))) ;
+      suc n -> \ hl W psi i i' ->
+        -- c (cc psi) = (c cc) psi = (hh c) psi = hh (c psi)
+        transH (svE-eq X b.brho (b.bs (n, hl)) W _ _
+                   (calc (Hom W (XI X)) {
+                       BXf.cOf W (cylW W psi)
+                     =< symH (comp-assoc W (XI (XI Z)) (XI (XI X)) (XI X) (conn d X) (cylH (XI Z) (XI X) hh) psi) >
+                       compH W (XI (XI Z)) (XI X) (compH (XI (XI Z)) (XI (XI X)) (XI X) (conn d X) (cylH (XI Z) (XI X) hh)) psi
+                     =< apH (\ k -> compH W (XI (XI Z)) (XI X) k psi) (hom-eq (XI (XI Z)) (XI X) _ _ NZ.conn-cyl) >
+                       compH W (XI (XI Z)) (XI X) (compH (XI (XI Z)) (XI Z) (XI X) hh (conn d Z)) psi
+                     =< comp-assoc W (XI (XI Z)) (XI Z) (XI X) hh (conn d Z) psi >
+                       compH W (XI Z) (XI X) hh (BZ.cOf W psi) })
+                   (BXf.inQc (n, hl) W (cylW W psi) i)
+                   (inQ-cyl W Z X h (b.bs (n, hl)).sQ (BZ.cOf W psi) (BZ.inQc (n, hl) W psi i')))
+               (symH (Rb.rsvE b.brho (b.bs (n, hl)) W (BZ.cOf W psi) (BZ.inQc (n, hl) W psi i'))) } ;
+
+    Ev (j : Fin (suc b.br)) (W : Ob) (psi : Hom W (XI (XI Z)))
+      (i : InQ W (XI Z) (pre (XI Z) (XI X) hh (BXf.S' j).sQ) psi) (i' : InQ W (XI Z) (BZ.S' j).sQ psi)
+      : Id (EI W) ((R.rside BXf.rho' (BXf.S' j)).svE W psi i) ((BZ.S' j).svE W psi i') =
+      transH (R.rsvE BXf.rho' (BXf.S' j) W psi i)
+       (transH (BXf.vAll-E j W (cylW W psi) (inQ-cyl W (XI Z) (XI X) hh (BXf.S' j).sQ psi i))
+        (transH (EvV'' j.1 j.2 W psi (inQ-cyl W (XI Z) (XI X) hh (BXf.S' j).sQ psi i) i')
+                (symH (BZ.vAll-E j W psi i')))) ;
+
+    BE : Id (BX.Box[eS, XI Z]) (restrict eS (XI Z) (XI X) hh BXf.fbox) BZ.fbox =
+      box-ext eS (XI Z) (R.rrho BXf.rho') BZ.rho' (R.ru BXf.rho' BXf.u') BZ.u' (suc b.br)
+        (R.rS BXf.fbox) BZ.S' (R.rcs BXf.fbox) BZ.cs (R.rcb BXf.fbox) BZ.cb Erho Eu EQ Ev ;
+  } ;
+
+  funif (Z X : Ob) (h : Hom Z X) (b : BX.Box[eS, X])
+    : Id (EI (XI Z)) (E.act (XI Z) (XI X) (cylH Z X h) (b.brho, fill X b))
+                     ((restrict eS Z X h b).brho, fill Z (restrict eS Z X h b)) =
+    transH (apH (E.act (XI Z) (XI X) (cylH Z X h)) (fill-E X b))
+     (transH (co.cunif (XI Z) (XI X) (cylH Z X h) FBox[X, b].fbox)
+      (transH (apH {BX.Box[eS, XI Z]} (\ bb -> topE eT (XI Z) bb.brho (co.cop (XI Z) bb)) FU[Z, X, h, b].BE)
+              (symH (fill-E Z (restrict eS Z X h b))))) ;
+
+  fillOp : FillOp[eS] = new FillOp[eS, fill, flid, fside, funif] ;
+} ;
+
+------------------------------------------------------------------------
+-- comp(G , A) gives fillers in both directions
+
+module FillB (G : PCtx) (A : PTy[G]) {
+  open BXm.Boxes[G, A] ;
+  open FillDef[G, A] ;
+
+  Fill : U l+ = FillOp[e0] * FillOp[e1] ;
+
+  comp-to-fill (c : Comp) : Fill = (MkFill[G, A, true, c.1].fillOp, MkFill[G, A, false, c.2].fillOp) ;
+} ;

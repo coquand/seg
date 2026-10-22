@@ -1,0 +1,137 @@
+-- ExtEsi2.seg: MODEL/Poset/ExtEsi2.agda.  ESI of Theorem 7's composite,
+-- part 2: theta.  For c' = c with an empty side inserted at k, the point
+-- wq is the same (rho1 by ins-rho, a1 by ExtEsi1.a1E-ins) and the partial
+-- element PE c' is PE c with an empty side inserted at k (EsiSplitP: the
+-- sides of c come first), so theta is the same when the equivalence
+-- structure eal is KESI.
+-- Agda's C2/C2T + D pair is ONE segment E2; its anonymous modules over
+-- (X k c c' ins) and (q q') are the segments EI2 and EQ.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module ES = Esi[a, a] ;
+module EF = EsiFill[a, a] ;
+open Conn[a] ;
+module CF = Cofib[a] ;
+open CF ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open BaseP.GCofEsi[a] ;
+open ExtKit[a] ;
+open EsiSplit[a] ;
+open EsiSplitP[a] ;
+open ExtEsiBox[a] ;
+
+module E2 (G : PCtx) (A : PTy[G]) (psi : CF.GP.Cof[G]) (B : PTy[CF.GP.CofL[G, psi].resCtx])
+  (al : PMap[CF.GP.CofL[G, psi].resCtx, B, subTy CF.GP.CofL[G, psi].resCtx G A CF.GP.CofL[G, psi].inclR]) (d : Bool)
+  (fAS : FibM.FillDef[G, A].FillOp[src d]) (fBS : FibM.FillDef[CF.GP.CofL[G, psi].resCtx, B].FillOp[src d])
+  (eal : EquivOp CF.GP.CofL[G, psi].resCtx B (subTy CF.GP.CofL[G, psi].resCtx G A CF.GP.CofL[G, psi].inclR) al)
+  (fesiA : EF.FesiDef[G, A].FESI (src d) fAS) (fesiB : EF.FesiDef[CF.GP.CofL[G, psi].resCtx, B].FESI (src d) fBS)
+  (kesi : PartialsEsi[extP CF.GP.CofL[G, psi].resCtx (subTy CF.GP.CofL[G, psi].resCtx G A CF.GP.CofL[G, psi].inclR),
+                      FibTy[CF.GP.CofL[G, psi].resCtx, B, subTy CF.GP.CofL[G, psi].resCtx G A CF.GP.CofL[G, psi].inclR, al].FibT].KESI eal) {
+  open CF.GP.CofL[G, psi] ;
+  open CF.CofD[G, psi] ;
+  open BaseP.GExt[a].ExtDef[G, A, psi] ;
+  open ExtB[B, al] ;
+  open BaseP.GExt2[a].ExtB2[G, A, psi, B, al] ;
+  open BaseP.GExt3[a].ExtB3[G, A, psi, B, al] ;
+  open BaseP.GExt4[a].ExtB4[G, A, psi, B, al] ;
+  open ExtComp1[a].C1[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp1E[a].C1E[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp1b[a].C1b[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp2[a].C2[G, A, psi, B, al, d, fAS, fBS, eal] ;
+  open ExtComp2N[a].C2N[G, A, psi, B, al, d, fAS, fBS, eal] ;
+  open ExtComp2T[a].C2T[G, A, psi, B, al, d, fAS, fBS, eal] ;
+
+  module E1i = ExtEsi1[a].E1[G, A, psi, B, al, d, fAS, fBS, fesiA, fesiB] ;
+  module BXe = BXm.Boxes[G, ExtT] ;
+  module EX' = ES.EsiDef[G, ExtT] ;
+  module FS = FinSide[G, ExtT] ;
+  module FTy = FibTy[resCtx, B, subTy resCtx G A inclR, al] ;
+  module PSI = PSideIns[EA', FTy.FibT] ;
+  module PEs = PartialsEsi[EA', FTy.FibT] ;
+
+  module EI2 (X : Ob) (k : Nat) (c c' : BXe.Box[src d, X]) (ins : EX'.InsE[src d, X, k, c, c']) {
+
+    rho1-ins : Id (W0.Ix (G.ob X)) (rho1 X c') (rho1 X c) = apH (G.act X (prodP X Iv) (lid X (tgt d))) ins.ins-rho ;
+
+    wq-ins (q : IsT (full X (rho1 X c))) (q' : IsT (full X (rho1 X c'))) : Id (TA'.EI X) (wq X c' q') (wq X c q) =
+      toEA-inj X (wq X c' q') (wq X c q)
+        (transH {TA.EI X} (a1T-E X c') (transH {TA.EI X} (E1i.a1E-ins X k c c' ins) (symH {TA.EI X} (a1T-E X c)))) ;
+
+    -- the side values at the top
+    -- side m' of c' is side skip k m of c' (same index), which is side m of c (insertion)
+    sA-ins (m : Fin c.br) (m' : Fin c'.br) (P0 : Id Nat m'.1 (skipN k m.1)) (W : Ob) (f : Hom W X)
+      (i : Lands W X (c'.bs m').sQ f) (i' : Lands W X (c.bs m).sQ f)
+      : Id (TX.EI W) (sA X c' m' W f i) (sA X c m W f i') =
+      transH {TX.EI W} (sA-at X c' m' W f i j1)
+       (transH {TX.EI W} (FS.svE-fin X c'.brho c'.br c'.bs m' (skipN k m.1, finAt c'.br m' (skipN k m.1) P0) P0 W psi j1 j2)
+        (transH {TX.EI W} (ins.ins-v m.1 m.2 (finAt c'.br m' (skipN k m.1) P0) W psi j2 j3)
+                (symH {TX.EI W} (sA-at X c m W f i' j3))))
+     where {
+       psi : Hom W (prodP X Iv) = compH W X (prodP X Iv) (lid X (tgt d)) f ;
+       j1 : InQ W X (c'.bs m').sQ psi = lands-inQ-lid W X (c'.bs m').sQ (tgt d) f i ;
+       j2 : InQ W X (c'.bs (skipN k m.1, finAt c'.br m' (skipN k m.1) P0)).sQ psi =
+         lands-sub W X (c'.bs m').sQ (c'.bs (skipN k m.1, finAt c'.br m' (skipN k m.1) P0)).sQ
+           (FS.sQ-fin X c'.brho c'.br c'.bs m' (skipN k m.1, finAt c'.br m' (skipN k m.1) P0) P0)
+           (compH W (prodP X Iv) X (pX X) psi) j1 ;
+       j3 : InQ W X (c.bs m).sQ psi = lands-inQ-lid W X (c.bs m).sQ (tgt d) f i' ; } ;
+
+    opaque rho1-ins ; opaque wq-ins ; opaque sA-ins ;
+
+    module EQ (q : IsT (full X (rho1 X c))) (q' : IsT (full X (rho1 X c'))) {
+
+      R : PSI.Rel[X, k, c.br, r, ins.ins-k, wq X c q, wq X c' q', PEm[X, c, q].side, c'.br, PEm[X, c', q'].side] =
+        new PSI.Rel[X, k, c.br, r, ins.ins-k, wq X c q, wq X c' q', PEm[X, c, q].side, c'.br, PEm[X, c', q'].side,
+          ins.ins-r,
+          \ m' P0 -> transH (FS.sQ-fin X c'.brho c'.br c'.bs m' (k, finAt c'.br m' k P0) P0) (ins.ins-e (finAt c'.br m' k P0)),
+          \ m m' P0 -> transH (FS.sQ-fin X c'.brho c'.br c'.bs m' (skipN k m.1, finAt c'.br m' (skipN k m.1) P0) P0)
+                                       (ins.ins-Q m.1 m.2 (finAt c'.br m' (skipN k m.1) P0)),
+          \ j -> apH {W0.Ix (G.ob (prodP X Iv))} {Subset X} (\ z -> (dQ X z j)) ins.ins-rho,
+          \ m m' P0 W f i i' ->
+            constFib-eq W (xg X c' q' W f) (xg X c q W f) (bA X c' q' m' W f i) (bA X c q m W f i')
+              (ptA X c' q' m' W f i) (eA X c' q' m' W f i) (ptA X c q m W f i') (eA X c q m W f i')
+              (apH {TA'.EI X} {TA'.EI W} (EA'.act W X f) (wq-ins q q'))
+              (fromB-inj W (bA X c' q' m' W f i) (bA X c q m W f i')
+                 (transH {TX.EI W} (fromB-toB W (sA X c' m' W f i) (qA X c' q' W f))
+                   (transH {TX.EI W} (sA-ins m m' P0 W f i i') (symH {TX.EI W} (fromB-toB W (sA X c m W f i') (qA X c q W f)))))),
+          \ j W f i i' ->
+            constFib-eq W (xg X c' q' W f) (xg X c q W f) (bD X c' j W f i) (bD X c j W f i')
+              (ptD X c' q' j W f i) (eD X c' q' j W f i) (ptD X c q j W f i') (eD X c q j W f i')
+              (apH {TA'.EI X} {TA'.EI W} (EA'.act W X f) (wq-ins q q'))
+              (apH {TB.EI (prodP W Iv)} {TB.EI W} (EB.act W (prodP W Iv) (lid W (tgt d)))
+                 (E1i.FBE-insR W X f k c c' ins (pfull W X f c j i') (pfull W X f c' j i)))] ;
+
+      module SIp = PSI.SI[X, k, c.br, r, ins.ins-k, wq X c q, wq X c' q', PEm[X, c, q].side, c'.br, PEm[X, c', q'].side, R] ;
+
+      PE-ins : PEs.InsPH[X, wq X c q, wq X c' q', k, PEm[X, c, q].PE, PEm[X, c', q'].PE] =
+        new PEs.InsPH[X, wq X c q, wq X c' q', k, PEm[X, c, q].PE, PEm[X, c', q'].PE,
+          apH (\ z -> plus z r) ins.ins-r,
+          leb-plus3 k c.br r ins.ins-k,
+          SIp.insh-e,
+          SIp.insh-Q,
+          SIp.insh-v] ;
+
+      th-ins : Id (FTy.TF.EI X) (th X c' q') (th X c q) =
+        transH {FTy.TF.EI X} (th-def X c' q')
+         (transH {FTy.TF.EI X} (PEs.kesiH eal kesi X (wq X c q) (wq X c' q') (wq-ins q q') k PEm[X, c, q].PE PEm[X, c', q'].PE PE-ins)
+                 (symH {FTy.TF.EI X} (th-def X c q))) ;
+
+      opaque th-ins ;
+    } ;
+  } ;
+} ;

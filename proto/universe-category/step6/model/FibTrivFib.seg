@@ -1,0 +1,253 @@
+-- FibTrivFib.seg: box filling gives fibrancy as a trivial fibration
+-- (CYLINDER.md section 4, plan step 1b); with FibTrivFill, the two notions
+-- are equivalent for the poset instance.  A partial line p over (rho , a)
+-- is a box (ToBox): lid a, and side l at psi : W -> X * Iv the line of p at
+-- pX psi read along cylEv psi (v, locked after v-def / side-E); its filler
+-- is the extension (kop).  kside: (f * Iv) then cylEv (f * Iv) is pX * Iv
+-- (cylEv-pX); kunif: the restricted box is the box of the restricted partial
+-- line (box-ext; cylEv-cyl, pv-hom).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module CF = Cofib[a] ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open FibTriv[a] ;
+
+open FibTrivFill[a] ;
+
+------------------------------------------------------------------------
+-- Conversely, box filling gives fibrancy: a partial line is a box (its
+-- side at psi is the line at pX psi read along cylEv psi), whose filler
+-- extends it.
+
+-- a partial line is a box: lid at the end point, side l at psi the line of
+-- the partial element at pX psi, read along cylEv psi
+module PBox (G : PCtx) (A : PTy[G]) (e : El Iv) {
+  open FTC[G, A, e] ;
+  module KK = FibM.Kit[G, A] ;
+  module GL = PR.PshL[G] ;
+
+  module ToBox (X : Ob) (x : TV.EI X) (p : PT.Partial[X, x]) {
+    rho : W0.Ix (G.ob (prodP X Iv)) = x.1 ;
+
+    module SD (l : Arith[a].Fin p.pr) {
+      s : PT.PSide[X, x] = p.ps l ;
+
+      fOf (W : Ob) (psi : Hom W (prodP X Iv)) : Hom W X = compH W (prodP X Iv) X (pX X) psi ;
+
+      v : KK.VTy X s.pQ = \ W psi i -> TA.E.act W (prodP W Iv) (cylEv W X psi) (lineE W (s.pv W (fOf W psi) i)) ;
+
+      vpt : KK.VPt X rho s.pQ v = \ W psi i ->
+        transH (apH (\ z -> G.act W (prodP W Iv) (cylEv W X psi) z.1) (s.ppt W (fOf W psi) i))
+          (transH (GL.actC W (prodP W Iv) (prodP X Iv) (cylH W X (fOf W psi)) (cylEv W X psi) rho)
+                  (GL.actEq W (prodP X Iv) _ psi (symH (cyl-evm W X psi)) rho)) ;
+
+      -- the line at f, restricted along chi * Iv, is the line at f chi
+      lineNat (W' W : Ob) (chi : Hom W' W) (f : Hom W X) (g : Hom W' X) (q : Id (Hom W' X) (compH W' W X f chi) g)
+        (i : Lands W X s.pQ f) (i' : Lands W' X s.pQ g)
+        : Id (TA.EI (prodP W' Iv)) (TA.E.act (prodP W' Iv) (prodP W Iv) (cylH W' W chi) (lineE W (s.pv W f i)))
+             (lineE W' (s.pv W' g i')) =
+        transH (symH (lineE-act W' W chi (s.pv W f i)))
+          (transH (apH (lineE W') (s.pnat W' W chi f i (lands-comp W' W X s.pQ f chi i)))
+                  (apH (lineE W') (PT.pv-hom X x s W' (compH W' W X f chi) g q (lands-comp W' W X s.pQ f chi i) i'))) ;
+
+      vnat : KK.VNat X s.pQ v = \ W' W chi psi i i' ->
+        calc (TA.EI W') {
+            TA.E.act W' W chi (v W psi i)
+          =< TA.PE.actC W' W (prodP W Iv) (cylEv W X psi) chi (lineE W (s.pv W (fOf W psi) i)) >
+            TA.E.act W' (prodP W Iv) (compH W' W (prodP W Iv) (cylEv W X psi) chi) (lineE W (s.pv W (fOf W psi) i))
+          =< TA.PE.actEq W' (prodP W Iv) _ _ (cylEv-nat W' W X psi chi) (lineE W (s.pv W (fOf W psi) i)) >
+            TA.E.act W' (prodP W Iv) (compH W' (prodP W' Iv) (prodP W Iv) (cylH W' W chi) (cylEv W' X (compH W' W (prodP X Iv) psi chi)))
+              (lineE W (s.pv W (fOf W psi) i))
+          =< symH (TA.PE.actC W' (prodP W' Iv) (prodP W Iv) (cylH W' W chi) (cylEv W' X (compH W' W (prodP X Iv) psi chi))
+                    (lineE W (s.pv W (fOf W psi) i))) >
+            TA.E.act W' (prodP W' Iv) (cylEv W' X (compH W' W (prodP X Iv) psi chi))
+              (TA.E.act (prodP W' Iv) (prodP W Iv) (cylH W' W chi) (lineE W (s.pv W (fOf W psi) i)))
+          =< apH (TA.E.act W' (prodP W' Iv) (cylEv W' X (compH W' W (prodP X Iv) psi chi)))
+                 (lineNat W' W chi (fOf W psi) (fOf W' (compH W' W (prodP X Iv) psi chi))
+                    (comp-assoc W' W (prodP X Iv) X (pX X) psi chi) i i') >
+            v W' (compH W' W (prodP X Iv) psi chi) i' } ;
+
+      side : BX.Side[X, rho] = KK.mkSideE X rho s.pQ v vpt vnat ;
+
+      v-def (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X s.pQ psi)
+        : Id (TA.EI W) (v W psi i) (TA.E.act W (prodP W Iv) (cylEv W X psi) (lineE W (s.pv W (fOf W psi) i))) =
+        refl (v W psi i) ;
+
+      side-E (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X s.pQ psi)
+        : Id (TA.EI W) (side.svE W psi i) (TA.E.act W (prodP W Iv) (cylEv W X psi) (lineE W (s.pv W (fOf W psi) i))) =
+        transH (KK.mkSideE-E X rho s.pQ v vpt vnat W psi i) (v-def W psi i) ;
+
+      opaque v ; opaque vpt ; opaque vnat ;
+    } ;
+
+    cs : BX.CsTy X rho p.pr (\ l -> SD[l].side) = \ l j W psi i i' ->
+      TA.pr-inj W (G.act W (prodP X Iv) psi rho) _ _
+        (transH (SD[l].side-E W psi i)
+          (transH (apH (\ u -> TA.E.act W (prodP W Iv) (cylEv W X psi) (lineE W u))
+                       (p.pcs l j W (compH W (prodP X Iv) X (pX X) psi) i i'))
+                  (symH (SD[j].side-E W psi i')))) ;
+
+    module CB (j : Arith[a].Fin p.pr) (W : Ob) (phi : Hom W X) (i : InQ W X (SD[j].side).sQ (compH W X (BX.XI X) (lid X e) phi)) {
+      psi : Hom W (prodP X Iv) = compH W X (prodP X Iv) (lid X e) phi ;
+      g : Hom W X = SD[j].fOf W psi ;
+      u : TS.EI W = (p.ps j).pv W g i ;
+
+      s1 : Id (TA.EI W) ((SD[j].side).svE W psi i) (TA.E.act W (prodP W Iv) (cylEv W X psi) (lineE W u)) =
+        SD[j].side-E W psi i ;
+      s2 : Id (TA.EI W) (TA.E.act W (prodP W Iv) (cylEv W X psi) (lineE W u)) (TA.E.act W (prodP W Iv) (lid W e) (lineE W u)) =
+        TA.PE.actEq W (prodP W Iv) (cylEv W X psi) (lid W e) (cylEv-lid W X e phi) (lineE W u) ;
+      s3 : Id (TA.EI W) (TA.E.act W (prodP W Iv) (lid W e) (lineE W u)) (endPt W (TV.E.act W X g x)) =
+        transH (endLine W u) (apH (endPt W) ((p.ps j).ppt W g i)) ;
+      s4 : Id (TA.EI W) (endPt W (TV.E.act W X g x)) (TA.E.act W X phi (endPt X x)) =
+        transH (endPt-act W X g x) (TA.PE.actEq W X g phi (pX-lid-comp W X e phi) (endPt X x)) ;
+
+      res : Id (TA.EI W) (TA.E.act W X phi (BX.lidE e X rho x.2)) ((SD[j].side).svE W (compH W X (BX.XI X) (lid X e) phi) i) =
+        symH (transH s1 (transH s2 (transH s3 s4))) ;
+    } ;
+
+    cb : BX.CbTy e X rho x.2 p.pr (\ l -> SD[l].side) = \ j W phi i -> CB[j, W, phi, i].res ;
+
+    b : BX.Box[e, X] = BX.mkBox e X rho x.2 p.pr (\ l -> SD[l].side) cs cb ;
+  } ;
+
+  -- the restricted box is the box of the restricted partial line
+  module BoxR (Y X : Ob) (h : Hom Y X) (x : TV.EI X) (p : PT.Partial[X, x]) {
+    module R = BX.Restrict[e, Y, X, h] ;
+
+    eu : Id (TA.EI Y) (BX.lidE e Y (R.rrho x.1) (R.ru x.1 x.2)) (BX.lidE e Y (TV.E.act Y X h x).1 (TV.E.act Y X h x).2) =
+      transH (R.ruE x.1 x.2) (symH (endPt-act Y X h x)) ;
+
+    -- pX ((h * Iv) psi) = h (pX psi)
+    mapEq (W : Ob) (psi : Hom W (prodP Y Iv))
+      : Id (Hom W X) (compH W (prodP X Iv) X (pX X) (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi))
+                     (compH W Y X h (compH W (prodP Y Iv) Y (pX Y) psi)) =
+      calc (Hom W X) {
+          compH W (prodP X Iv) X (pX X) (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi)
+        =< symH (comp-assoc W (prodP Y Iv) (prodP X Iv) X (pX X) (cylH Y X h) psi) >
+          compH W (prodP Y Iv) X (compH (prodP Y Iv) (prodP X Iv) X (pX X) (cylH Y X h)) psi
+        =< apH (\ u -> compH W (prodP Y Iv) X u psi) (pX-cyl Y X h) >
+          compH W (prodP Y Iv) X (compH (prodP Y Iv) Y X h (pX Y)) psi
+        =< comp-assoc W (prodP Y Iv) Y X h (pX Y) psi >
+          compH W Y X h (compH W (prodP Y Iv) Y (pX Y) psi) } ;
+
+    ev (j : Arith[a].Fin p.pr) (W : Ob) (psi : Hom W (prodP Y Iv)) (i : InQ W Y (R.rS ToBox[X, x, p].b j).sQ psi) (i' : InQ W Y (ToBox[Y, (TV.E.act Y X h x), (PT.restrictP Y X h x p)].SD[j].side).sQ psi)
+      : Id (TA.EI W) ((R.rS ToBox[X, x, p].b j).svE W psi i) ((ToBox[Y, (TV.E.act Y X h x), (PT.restrictP Y X h x p)].SD[j].side).svE W psi i') =
+      calc (TA.EI W) {
+          (R.rS ToBox[X, x, p].b j).svE W psi i
+        =< R.rsvE x.1 (ToBox[X, x, p].SD[j].side) W psi i >
+          (ToBox[X, x, p].SD[j].side).svE W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi) (inQ-cyl W Y X h (ToBox[X, x, p].SD[j].side).sQ psi i)
+        =< ToBox[X, x, p].SD[j].side-E W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi) (inQ-cyl W Y X h (ToBox[X, x, p].SD[j].side).sQ psi i) >
+          TA.E.act W (prodP W Iv) (cylEv W X (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi))
+            (lineE W ((p.ps j).pv W (ToBox[X, x, p].SD[j].fOf W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi))
+                                    (inQ-cyl W Y X h (ToBox[X, x, p].SD[j].side).sQ psi i)))
+        =< TA.PE.actEq W (prodP W Iv) _ _ (cylEv-cyl W Y X h psi)
+             (lineE W ((p.ps j).pv W (ToBox[X, x, p].SD[j].fOf W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi))
+                                     (inQ-cyl W Y X h (ToBox[X, x, p].SD[j].side).sQ psi i))) >
+          TA.E.act W (prodP W Iv) (cylEv W Y psi)
+            (lineE W ((p.ps j).pv W (ToBox[X, x, p].SD[j].fOf W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi))
+                                    (inQ-cyl W Y X h (ToBox[X, x, p].SD[j].side).sQ psi i)))
+        =< apH (\ u -> TA.E.act W (prodP W Iv) (cylEv W Y psi) (lineE W u))
+               (PT.pv-hom X x (p.ps j) W _ _ (mapEq W psi) (inQ-cyl W Y X h (ToBox[X, x, p].SD[j].side).sQ psi i)
+                  (lands-pre W Y X h (p.ps j).pQ (compH W (prodP Y Iv) Y (pX Y) psi) i')) >
+          TA.E.act W (prodP W Iv) (cylEv W Y psi) (lineE W (((PT.restrictP Y X h x p).ps j).pv W (ToBox[Y, (TV.E.act Y X h x), (PT.restrictP Y X h x p)].SD[j].fOf W psi) i'))
+        =< symH (ToBox[Y, (TV.E.act Y X h x), (PT.restrictP Y X h x p)].SD[j].side-E W psi i') >
+          (ToBox[Y, (TV.E.act Y X h x), (PT.restrictP Y X h x p)].SD[j].side).svE W psi i' } ;
+
+    boxEq : Id (BX.Box[e, Y]) (BX.restrict e Y X h ToBox[X, x, p].b) ToBox[Y, (TV.E.act Y X h x), (PT.restrictP Y X h x p)].b =
+      BX.box-ext e Y (R.rrho x.1) (TV.E.act Y X h x).1 (R.ru x.1 x.2) (TV.E.act Y X h x).2 p.pr (R.rS ToBox[X, x, p].b) (\ l -> ToBox[Y, (TV.E.act Y X h x), (PT.restrictP Y X h x p)].SD[l].side) (R.rcs ToBox[X, x, p].b) ToBox[Y, (TV.E.act Y X h x), (PT.restrictP Y X h x p)].cs
+        (R.rcb ToBox[X, x, p].b) ToBox[Y, (TV.E.act Y X h x), (PT.restrictP Y X h x p)].cb (refl (R.rrho x.1)) eu (\ l -> refl (pre Y X h (p.ps l).pQ)) ev ;
+
+  } ;
+} ;
+
+module ToFib (G : PCtx) (A : PTy[G]) (e : El Iv) (fo : FibM.FillDef[G, A].FillOp[e]) {
+  open FTC[G, A, e] ;
+  module PB = PBox[G, A, e] ;
+  module KK = FibM.Kit[G, A] ;
+  module GL = PR.PshL[G] ;
+
+  module ToBox (X : Ob) (x : TV.EI X) (p : PT.Partial[X, x]) {
+    open PB.ToBox[X, x, p] ;
+
+    line : TA.T (prodP X Iv) rho = fo.fop X b ;
+
+    endOk : Id (TV.EI X) (EV.mE X (rho, line)) x =
+      apH {TV.T X rho} {TV.EI X} (\ z -> (rho, z))
+        (TA.pr-inj X (G.act X (prodP X Iv) (lid X e) rho) _ _ (transH (EV.endT-E X rho line) (fo.flid X b))) ;
+
+    kop : TS.T X x = (line, endOk) ;
+  } ;
+
+  kside (X : Ob) (x : TV.EI X) (p : PT.Partial[X, x]) (l : Arith[a].Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+    : Id (TS.EI W) (TS.E.act W X f (x, ToBox[X, x, p].kop)) ((p.ps l).pv W f i) =
+    ts-eq W (TS.E.act W X f (x, ToBox[X, x, p].kop)) ((p.ps l).pv W f i) (symH ((p.ps l).ppt W f i))
+      (calc (TA.EI (prodP W Iv)) {
+          lineE W (TS.E.act W X f (x, ToBox[X, x, p].kop))
+        =< lineE-act W X f (x, ToBox[X, x, p].kop) >
+          TA.E.act (prodP W Iv) (prodP X Iv) (cylH W X f) (x.1, ToBox[X, x, p].line)
+        =< fo.fside X PB.ToBox[X, x, p].b l (prodP W Iv) (cylH W X f) iC >
+          (PB.ToBox[X, x, p].SD[l].side).svE (prodP W Iv) (cylH W X f) iC
+        =< PB.ToBox[X, x, p].SD[l].side-E (prodP W Iv) (cylH W X f) iC >
+          TA.E.act (prodP W Iv) (prodP (prodP W Iv) Iv) (cylEv (prodP W Iv) X (cylH W X f))
+            (lineE (prodP W Iv) ((p.ps l).pv (prodP W Iv) (compH (prodP W Iv) (prodP X Iv) X (pX X) (cylH W X f)) iC))
+        =< apH (TA.E.act (prodP W Iv) (prodP (prodP W Iv) Iv) (cylEv (prodP W Iv) X (cylH W X f)))
+               (symH (PB.ToBox[X, x, p].SD[l].lineNat (prodP W Iv) W (pX W) f (compH (prodP W Iv) (prodP X Iv) X (pX X) (cylH W X f))
+                        (symH (pX-cyl W X f)) i iC)) >
+          TA.E.act (prodP W Iv) (prodP (prodP W Iv) Iv) (cylEv (prodP W Iv) X (cylH W X f))
+            (TA.E.act (prodP (prodP W Iv) Iv) (prodP W Iv) (cylH (prodP W Iv) W (pX W)) (lineE W ((p.ps l).pv W f i)))
+        =< TA.PE.actTri (prodP W Iv) (prodP (prodP W Iv) Iv) (prodP W Iv) (cylH (prodP W Iv) W (pX W))
+             (cylEv (prodP W Iv) X (cylH W X f)) (idH (prodP W Iv)) (cylEv-pX W X f) (lineE W ((p.ps l).pv W f i)) >
+          TA.E.act (prodP W Iv) (prodP W Iv) (idH (prodP W Iv)) (lineE W ((p.ps l).pv W f i))
+        =< TA.E.act-id (prodP W Iv) (lineE W ((p.ps l).pv W f i)) >
+          lineE W ((p.ps l).pv W f i) })
+   where {
+     iC : InQ (prodP W Iv) X (p.ps l).pQ (cylH W X f) =
+       lands-eq (prodP W Iv) X (p.ps l).pQ (compH (prodP W Iv) W X f (pX W))
+         (compH (prodP W Iv) (prodP X Iv) X (pX X) (cylH W X f)) (symH (pX-cyl W X f))
+         (lands-comp (prodP W Iv) W X (p.ps l).pQ f (pX W) i) ; } ;
+
+  module KU (Y X : Ob) (h : Hom Y X) (x : TV.EI X) (p : PT.Partial[X, x]) {
+    module B = ToBox[X, x, p] ;
+    module B' = ToBox[Y, (TV.E.act Y X h x), (PT.restrictP Y X h x p)] ;
+    module BR = PB.BoxR[Y, X, h, x, p] ;
+
+    res : Id (TS.EI Y) (TS.E.act Y X h (x, ToBox[X, x, p].kop))
+                       (TV.E.act Y X h x, ToBox[Y, TV.E.act Y X h x, PT.restrictP Y X h x p].kop) =
+      ts-eq Y (TS.E.act Y X h (x, B.kop)) ((TV.E.act Y X h x), B'.kop) (refl (TV.E.act Y X h x))
+        (transH (lineE-act Y X h (x, B.kop))
+          (transH (fo.funif Y X h PB.ToBox[X, x, p].b)
+                  (apH {BX.Box[e, Y]} {TA.EI (prodP Y Iv)} (\ c -> (c.brho, fo.fop Y c)) BR.boxEq))) ;
+  } ;
+
+  -- box filling at e gives fibrancy at e
+  fibAt : LF.FibAt e = new PT.ContrOp[\ X x p -> ToBox[X, x, p].kop, kside, \ Y X h x p -> KU[Y, X, h, x, p].res] ;
+} ;
+
+------------------------------------------------------------------------
+-- Composition and fibrancy as trivial fibrations, through filling
+-- (CompFill: filling <-> composition, comp-fill-comp given ESI)
+
+module CompFib (G : PCtx) (A : PTy[G]) {
+  module CFl = CompFill[a, a].CompFill[G, A] ;
+  module FB = FibM.FillB[G, A] ;
+
+  comp-to-fib (c : BXm.Boxes[G, A].Comp) : LineFib[G, A].FibAt e0 * LineFib[G, A].FibAt e1 =
+    (ToFib[G, A, e0, (FB.comp-to-fill c).1].fibAt, ToFib[G, A, e1, (FB.comp-to-fill c).2].fibAt) ;
+
+  fib-to-comp (k : LineFib[G, A].FibAt e0 * LineFib[G, A].FibAt e1) : BXm.Boxes[G, A].Comp =
+    CFl.fill-to-comp (ToFill[G, A, e0, k.1].fillOp, ToFill[G, A, e1, k.2].fillOp) ;
+} ;

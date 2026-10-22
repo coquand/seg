@@ -1,0 +1,175 @@
+-- ExtComp4.seg: MODEL/Poset/ExtComp4.agda, first half.  Theorem 7, part
+-- 4: per box c (segment L), the composite out = glue (a0 , ...) at the
+-- full points (out-full: the B-part of theta), on the sides (side-out, by
+-- ext-det), and the CompOp side law cside3.  ExtComp4U: uniformity
+-- (cunif3) and the full-line case (cop3-full).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module CN = Conn[a] ;
+open CN ;
+open VCode[a] ;
+module CF = Cofib[a] ;
+open CF ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open ExtKit[a] ;
+open ExtComp1E[a] ;
+
+module C4 (G : PCtx) (A : PTy[G]) (psi : CF.GP.Cof[G]) (B : PTy[CF.GP.CofL[G, psi].resCtx])
+  (al : PMap[CF.GP.CofL[G, psi].resCtx, B, subTy CF.GP.CofL[G, psi].resCtx G A CF.GP.CofL[G, psi].inclR]) (d : Bool)
+  (fAS : FibM.FillDef[G, A].FillOp[src d]) (fBS : FibM.FillDef[CF.GP.CofL[G, psi].resCtx, B].FillOp[src d])
+  (eal : EquivOp CF.GP.CofL[G, psi].resCtx B (subTy CF.GP.CofL[G, psi].resCtx G A CF.GP.CofL[G, psi].inclR) al)
+  (fA1 : FibM.FillDef[G, A].FillOp[e1]) {
+  open CF.GP.CofL[G, psi] ;
+  open BaseP.GExt.ExtDef[G, A, psi] ;
+  open ExtB[B, al] ;
+  open BaseP.GExt2.ExtB2[G, A, psi, B, al] ;
+  open BaseP.GExt3.ExtB3[G, A, psi, B, al] ;
+  open BaseP.GExt4.ExtB4[G, A, psi, B, al] ;
+  open ExtComp1[a].C1[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp1E[a].C1E[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp1b[a].C1b[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp2[a].C2[G, A, psi, B, al, d, fAS, fBS, eal] ;
+  open ExtComp2T[a].C2T[G, A, psi, B, al, d, fAS, fBS, eal] ;
+  open ExtComp3[a].C3[G, A, psi, B, al, d, fAS, fBS, eal, fA1] ;
+
+  -- the B-part of a pair depends only on the map, not on the presentation
+  pb-hom-eq (X : Ob) (rho : W0.Ix (G.ob X)) (u : Pairs X rho) (W : Ob) (g f : Hom W X) (P : Id (Hom W X) g f)
+    (qg : IsT (full W (G.act W X g rho))) (qf : IsT (full W (G.act W X f rho)))
+    : Id (TB.EI W) (pb X rho u W g qg) (pb X rho u W f qf) =
+    idJ (Hom W X) g (\ f2 P2 -> (q2 : IsT (full W (G.act W X f2 rho))) -> Id (TB.EI W) (pb X rho u W g qg) (pb X rho u W f2 q2))
+      (\ q2 -> apH (pb X rho u W g) (isProp-IsT' (full W (G.act W X g rho)) qg q2)) f P qf ;
+
+  module L (X : Ob) (c : BX.Box[eS, X]) {
+    module F3 = Fin3[X, c] ;
+
+    out : TX.EI X = F3.outE ;
+
+    out-pt : Id (W0.Ix (G.ob X)) out.1 F3.r1 = glue-pt X F3.r1 F3.u ;
+
+    module OF (W : Ob) (f : Hom W X) (q : IsT (full W (G.act W X f F3.r1))) {
+      module PAc = PAct[W, X, f, F3.r1, G.act W X f F3.r1, refl (G.act W X f F3.r1)] ;
+      qI : IsT (full W (G.act W W (idH W) (G.act W X f F3.r1))) = qId W (G.act W X f F3.r1) q ;
+      -- f out is glue of the pairs u along f; its B-part at the identity is the B-part of u at f id = f
+      res : Id (TX.EI W) (EX.act W X f out) (fromB W (F3.bE W f q)) =
+        calc (TX.EI W) {
+          EX.act W X f out
+            =< glue-act W X f F3.r1 F3.u >
+          glue W (G.act W X f F3.r1) (PAc.pact F3.u)
+            =< glue-B W (G.act W X f F3.r1) (PAc.pact F3.u) q qI >
+          fromB W (pb W (G.act W X f F3.r1) (PAc.pact F3.u) W (idH W) qI)
+            =< apH (fromB W)
+                 (calc (TB.EI W) {
+                    pb W (G.act W X f F3.r1) (PAc.pact F3.u) W (idH W) qI
+                      =< PAc.pact-b F3.u W (idH W) qI >
+                    pb X F3.r1 F3.u W (compH W W X f (idH W)) (PAc.qTr W (idH W) qI)
+                      =< pb-hom-eq X F3.r1 F3.u W (compH W W X f (idH W)) f (comp-idr W X f) (PAc.qTr W (idH W) qI) q >
+                    pb X F3.r1 F3.u W f q
+                      =< F3.u-b W f q >
+                    F3.bE W f q }) >
+          fromB W (F3.bE W f q) } ;
+    } ;
+
+    -- at a full point, the composite is the B-part of theta
+    out-full (W : Ob) (f : Hom W X) (q : IsT (full W (G.act W X f F3.r1)))
+      : Id (TX.EI W) (EX.act W X f out) (fromB W (F3.bE W f q)) = OF[W, f, q].res ;
+
+    module BS (W : Ob) (f : Hom W X) (q : IsT (full W (G.act W X f F3.r1))) (l : Fin c.br) (i : Lands W X (c.bs l).sQ f) {
+      iQ : Lands W W (pre W X f (c.bs l).sQ) (idH W) = lands-pre-id W X (c.bs l).sQ f i ;
+
+      -- f id = f, so f id lands in Q, and the sides along f id and along f agree
+      fI : PW W X f (compH W W X f (idH W)) = pw-of-eq W X f (compH W W X f (idH W)) (symH (comp-idr W X f)) ;
+      i0 : Lands W X (c.bs l).sQ (compH W W X f (idH W)) = lands-pw W X (c.bs l).sQ f (compH W W X f (idH W)) fI i ;
+
+      res : Id (TX.EI W) (fromB W (F3.bE W f q)) (sA X c l W f i) =
+        trans (TX.EI W) (fromB W (F3.bE W f q)) (fromB W (FA.fibB W (PEm[W, (BX.restrict eS W X f c), (qR W X f c q)].vAt (inl l) W (idH W) iQ))) (sA X c l W f i)
+          (ap (FA.TF.EI W) (TX.EI W) (\ z -> fromB W (FA.fibB W z)) (thF W X f c q) (PEm[W, (BX.restrict eS W X f c), (qR W X f c q)].vAt (inl l) W (idH W) iQ) (th-full W (BX.restrict eS W X f c) (qR W X f c q) (inl l) iQ))
+          (trans (TX.EI W) (fromB W (FA.fibB W (PEm[W, (BX.restrict eS W X f c), (qR W X f c q)].vAt (inl l) W (idH W) iQ))) (fromB W (bA W (BX.restrict eS W X f c) (qR W X f c q) l W (idH W) iQ)) (sA X c l W f i)
+            (ap (TB.EI W) (TX.EI W) (fromB W) (FA.fibB W (PEm[W, (BX.restrict eS W X f c), (qR W X f c q)].vAt (inl l) W (idH W) iQ)) (bA W (BX.restrict eS W X f c) (qR W X f c q) l W (idH W) iQ) (constFib-B W (xg W (BX.restrict eS W X f c) (qR W X f c q) W (idH W)) (bA W (BX.restrict eS W X f c) (qR W X f c q) l W (idH W) iQ) (ptA W (BX.restrict eS W X f c) (qR W X f c q) l W (idH W) iQ) (eA W (BX.restrict eS W X f c) (qR W X f c q) l W (idH W) iQ)))
+            (trans (TX.EI W) (fromB W (bA W (BX.restrict eS W X f c) (qR W X f c q) l W (idH W) iQ)) (sA W (BX.restrict eS W X f c) l W (idH W) iQ) (sA X c l W f i)
+              (fromB-toB W (sA W (BX.restrict eS W X f c) l W (idH W) iQ) (qA W (BX.restrict eS W X f c) (qR W X f c q) W (idH W)))
+              (symH (transH (sA-pw X c l W f (compH W W X f (idH W)) fI i i0) (sA-restr W X f c l W (idH W) i0 iQ))))) ;
+    } ;
+
+    -- on a side, the B-part of theta is the side
+    bE-side (W : Ob) (f : Hom W X) (q : IsT (full W (G.act W X f F3.r1))) (l : Fin c.br) (i : Lands W X (c.bs l).sQ f)
+      : Id (TX.EI W) (fromB W (F3.bE W f q)) (sA X c l W f i) = BS[W, f, q, l, i].res ;
+
+    -- a0 on a side is a1
+    a0-side (W : Ob) (f : Hom W X) (l : Fin c.br) (i : Lands W X (c.bs l).sQ f)
+      : Id (TA.EI W) (EA.act W X f F3.a0E) (EA.act W X f (a1E X c)) =
+      trans (TA.EI W) (EA.act W X f F3.a0E) (EA.act W (prodP W Iv) (lid W e0) (EA.act (prodP W Iv) (prodP X Iv) (cylH W X f) F3.F)) (EA.act W X f (a1E X c))
+        (sym (TA.EI W) (EA.act W (prodP W Iv) (lid W e0) (EA.act (prodP W Iv) (prodP X Iv) (cylH W X f) F3.F)) (EA.act W X f F3.a0E) (F3.F-lid0 W f))
+        (trans (TA.EI W) (EA.act W (prodP W Iv) (lid W e0) (EA.act (prodP W Iv) (prodP X Iv) (cylH W X f) F3.F)) (EA.act W (prodP W Iv) (lid W e0) (cst X c W f)) (EA.act W X f (a1E X c))
+          (ap (TA.EI (prodP W Iv)) (TA.EI W) (EA.act W (prodP W Iv) (lid W e0)) (EA.act (prodP W Iv) (prodP X Iv) (cylH W X f) F3.F) (cst X c W f) (LB.FE-side1 X F3.r1 c.br r F3.LD l W f i))
+          ((cst-lid X c W f e0))) ;
+
+    -- the point along f
+    out-ptf (V W : Ob) (f : Hom W X) (g : Hom V W)
+      : Id (W0.Ix (G.ob V)) (G.act V W g (EX.act W X f out).1) (G.act V X (compH V W X f g) F3.r1) =
+      transH (apH (\ z -> G.act V W g (G.act W X f z)) out-pt) (GL.actC V W X f g F3.r1) ;
+
+    opaque out-pt ; opaque out-full ; opaque bE-side ; opaque a0-side ; opaque out-ptf ;
+
+    module SO (l : Fin c.br) (W : Ob) (phi : Hom W X) (i : Lands W X (c.bs l).sQ phi) {
+      q1 (V : Ob) (g : Hom V W) (q : IsT (full V (G.act V W g (EX.act W X phi out).1))) : IsT (full V (G.act V X (compH V W X phi g) F3.r1)) =
+        full-eq V (G.act V W g (EX.act W X phi out).1) (G.act V X (compH V W X phi g) F3.r1) (out-ptf V W phi g) q ;
+
+      res : Id (TX.EI W) (EX.act W X phi out) (sA X c l W phi i) =
+        ext-det W (EX.act W X phi out) (sA X c l W phi i)
+          (trans (W0.Ix (G.ob W)) (EX.act W X phi out).1 (G.act W X phi F3.r1) (sA X c l W phi i).1
+            (ap (W0.Ix (G.ob X)) (W0.Ix (G.ob W)) (G.act W X phi) out.1 F3.r1 out-pt)
+            ((GL.actC W X (prodP X Iv) (lid X eT) phi c.brho)))
+          (trans (TA.EI W) (extE W (EX.act W X phi out)) (EA.act W X phi (extE X out)) (extE W (sA X c l W phi i))
+            (extE-nat W X phi out)
+            (trans (TA.EI W) (EA.act W X phi (extE X out)) (EA.act W X phi F3.a0E) (extE W (sA X c l W phi i))
+              (ap (TA.EI X) (TA.EI W) (EA.act W X phi) (extE X out) F3.a0E F3.u-ext)
+              (trans (TA.EI W) (EA.act W X phi F3.a0E) (EA.act W X phi (a1E X c)) (extE W (sA X c l W phi i))
+                (a0-side W phi l i)
+                (a1-side X c l W phi (lands-inQ-lid W X (c.bs l).sQ eT phi i)))))
+          (\ V g q -> trans (TX.EI V) (EX.act V W g (EX.act W X phi out)) (EX.act V X (compH V W X phi g) out) (EX.act V W g (sA X c l W phi i))
+              (TX.PE.actC V W X phi g out)
+              (trans (TX.EI V) (EX.act V X (compH V W X phi g) out) (fromB V (F3.bE V (compH V W X phi g) (q1 V g q))) (EX.act V W g (sA X c l W phi i))
+                (out-full V (compH V W X phi g) (q1 V g q))
+                (trans (TX.EI V) (fromB V (F3.bE V (compH V W X phi g) (q1 V g q))) (sA X c l V (compH V W X phi g) (lands-comp V W X (c.bs l).sQ phi g i)) (EX.act V W g (sA X c l W phi i))
+                  (bE-side V (compH V W X phi g) (q1 V g q) l (lands-comp V W X (c.bs l).sQ phi g i))
+                  ((sym (TX.EI V) (EX.act V W g (sA X c l W phi i)) (sA X c l V (compH V W X phi g) (lands-comp V W X (c.bs l).sQ phi g i)) (sA-nat X c l V W g phi i (lands-comp V W X (c.bs l).sQ phi g i))))))) ;
+    } ;
+
+    side-out (l : Fin c.br) (W : Ob) (phi : Hom W X) (i : Lands W X (c.bs l).sQ phi)
+      : Id (TX.EI W) (EX.act W X phi out) (sA X c l W phi i) = SO[l, W, phi, i].res ;
+
+    opaque side-out ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- The CompOp side law
+
+  cside3 (X : Ob) (c : BX.Box[eS, X]) (l : Fin c.br) (W : Ob) (phi : Hom W X)
+    (i : InQ W X (c.bs l).sQ (compH W X (prodP X Iv) (lid X eT) phi))
+    : Id (TX.EI W) (EX.act W X phi (BX.topE eT X c.brho (cop3 X c))) ((c.bs l).svE W (compH W X (prodP X Iv) (lid X eT) phi) i) =
+    trans (TX.EI W) (EX.act W X phi (BX.topE eT X c.brho (cop3 X c))) (EX.act W X phi L[X, c].out) ((c.bs l).svE W (compH W X (prodP X Iv) (lid X eT) phi) i)
+      (ap (TX.EI X) (TX.EI W) (EX.act W X phi) (BX.topE eT X c.brho (cop3 X c)) L[X, c].out (cop3-E X c))
+      (transH (L[X, c].side-out l W phi (inQ-lid-lands W X (c.bs l).sQ eT phi i))
+              (apH ((c.bs l).svE W (compH W X (prodP X Iv) (lid X eT) phi))
+                   (isProp-InQ W X (c.bs l).sQ (compH W X (prodP X Iv) (lid X eT) phi)
+                      (lands-inQ-lid W X (c.bs l).sQ eT phi (inQ-lid-lands W X (c.bs l).sQ eT phi i)) i))) ;
+
+  opaque cside3 ;
+} ;

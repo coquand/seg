@@ -1,0 +1,215 @@
+-- GExtComp2.seg (inside IvBase.FaU, any base; line form of ExtComp1E /
+-- ExtComp1b).  Theorem 7, part 2: the A-filling.
+--
+-- For a problem (x , p) of Ext(alpha) at X (line gamma = x.1):
+--   * delta = forall of the UNION of psi along gamma: the lines Lk of the
+--     generators cQ (gamma (f , j)) k, and dl = forallU X r Lk (one sieve on
+--     Delta, the per-generator foralls on posets).  Along f landing in
+--     delta, gamma f is full everywhere (flAt), so beta gives a B-filler
+--     (BW, GExtComp1).
+--   * the unglued problem (xA , pA): x and p moved along ext(alpha)
+--     (GMapLine.MapLine);
+--   * ONE partial line in A: the sides of pA, and on each generator of
+--     delta the lines alpha (B-filler) (GMapLine.LineSide, GCofib.Join);
+--     kA fills it: FAv.
+--   F-S1  on the sides, the filler is ext of the sides;
+--   F-S2  on delta, it is alpha of the B-filler;
+--   FA-start  at (id , eS) it is ext of x.
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[lv] ;
+open PR.PS ;
+module GP = GCofib[lv] ;
+open GLine[lv] ;
+
+module C2 (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (eS : IPt) (kAS : LineFibP[GFam[lv].famPath, G, A].FibAt eS)
+  (kBS : LineFibP[GFam[lv].famPath, GP.CofL[G, psi].resCtx, B].FibAt eS) {
+  open GP.CofL[G, psi] ;
+  open GExt[lv].ExtDef[G, A, psi] ;
+  open ExtB[B, al] ;
+  open GExt2[lv].ExtB2[G, A, psi, B, al] ;
+  open GExt3[lv].ExtB3[G, A, psi, B, al] ;
+  open GExt4[lv].ExtB4[G, A, psi, B, al] ;
+  open GExtComp1[lv].C1[G, A, psi, B, al, eS, kBS] ;
+
+  module KA = EndKit[FM.famPath, G, A, eS] ;
+  module LA = LevKit[FM.famPath, FM.famConn, G, A, eS] ;
+  module ML = GMapLine[lv].MapLine[FM.famPath, FM.famConn, G, ExtT, A, extMap, eS] ;
+  module GL = PR.PshL[G] ;
+
+  -- alpha of a value of B read in Ext is ext of that value
+  aB-ext (W : Ob) (z : TX.EI W) (q : IsT (full W z.1)) : Id (TA.EI W) (toEA W (al.mE W (toB W z q))) (extE W z) =
+    transH (symH (extE-B W (toB W z q))) (apH (extE W) (fromB-toB W z q)) ;
+
+  module Pb (X : Ob) (x : KX.TV.EI X) (p : KX.PT.Partial[X, x]) {
+
+    ------------------------------------------------------------------
+    -- delta: where the line is full everywhere
+
+    Lk (k : Fin r) : PhiL X =
+      (\ W f j -> Q W (x.1.1 W f j) k,
+       \ V W g f j -> transH (symH (psi.cnat V W g (x.1.1 W f j) k)) (apH (\ z -> Q V z k) (x.1.2 V W g f j))) ;
+
+    dl (d : Fin (forallUn r)) : Phi X = forallU X r Lk d ;
+
+    flAt (W : Ob) (f : Hom W X) (h : HoldsU X r Lk W f) : FlTy W (KX.TV.E.act W X f x) =
+      \ V g j -> full-of-id V (x.1.1 V (compH V W X f g) j) (h V g j) ;
+
+    hOf (d : Fin (forallUn r)) (W : Ob) (f : Hom W X) (i : Lands W X (dl d) f) : HoldsU X r Lk W f = landsU-forall W X r Lk f (d, i) ;
+
+    -- the B-filler along f in delta
+    module BW (d : Fin (forallUn r)) (W : Ob) (f : Hom W X) (i : Lands W X (dl d) f) {
+      module BB = Beta[W, KX.TV.E.act W X f x, KX.PT.restrictP W X f x p, flAt W f (hOf d W f i)] ;
+    } ;
+
+    ------------------------------------------------------------------
+    -- the unglued problem
+
+    xA : KA.TV.EI X = ML.tvM X x ;
+
+    pA : KA.PT.Partial[X, xA] = ML.MP.mapP X x p ;
+
+    -- along f chi: the B-filler of the restriction (BR) of the problem
+    -- restricted along f (FBv-cong: f chi versus f then chi)
+    FBv-tr (d : Fin (forallUn r)) (V' V : Ob) (chi : Hom V' V) (f : Hom V X) (i : Lands V X (dl d) f)
+      (i' : Lands V' X (dl d) (compH V' V X f chi)) (W : Ob) (g : Hom W V') (j : Hom W Iv)
+      : Id (TB.EI W) (BW[d, V', compH V' V X f chi, i'].BB.FBv W g j) (BW[d, V, f, i].BB.FBv W (compH W V' V chi g) j) =
+      transH (FBv-cong V' (KX.TV.E.act V' X (compH V' V X f chi) x) (KX.TV.E.act V' V chi (KX.TV.E.act V X f x))
+                (KX.TV.E.act-o V' V X f chi x)
+                (KX.PT.restrictP V' X (compH V' V X f chi) x p) (KX.PT.restrictP V' V chi (KX.TV.E.act V X f x) (KX.PT.restrictP V X f x p))
+                (KX.PT.restrictP-o V' V X chi f x p)
+                (flAt V' (compH V' V X f chi) (hOf d V' (compH V' V X f chi) i'))
+                (\ W2 f2 j2 -> flAt V f (hOf d V f i) W2 (compH W2 V' V chi f2) j2) W g j)
+             (symH (BR[V', V, chi, KX.TV.E.act V X f x, KX.PT.restrictP V X f x p, flAt V f (hOf d V f i)].FBv-R W g j)) ;
+
+    ------------------------------------------------------------------
+    -- the sides on delta: alpha of the B-filler
+
+    module SD (d : Fin (forallUn r)) {
+      t (V : Ob) (f : Hom V X) (i : Lands V X (dl d) f) (W : Ob) (g : Hom W V) (j : Hom W Iv) : TA.EI W =
+        toEA W (al.mE W (BW[d, V, f, i].BB.FBv W g j)) ;
+
+      tp (V : Ob) (f : Hom V X) (i : Lands V X (dl d) f) (W : Ob) (g : Hom W V) (j : Hom W Iv)
+        : Id (W0.Ix (G.ob W)) (t V f i W g j).1 (x.1.1 W (compH W V X f g) j) =
+        transH (apH (\ z -> z.1) (al.mpt W (BW[d, V, f, i].BB.FBv W g j)))
+               (apH (\ y -> (y.1 W g j).1) BW[d, V, f, i].BB.fillB.1.2) ;
+
+      tn (V : Ob) (f : Hom V X) (i : Lands V X (dl d) f) (W' W : Ob) (g' : Hom W' W) (g : Hom W V) (j : Hom W Iv)
+        : Id (TA.EI W') (TA.E.act W' W g' (t V f i W g j)) (t V f i W' (compH W' W V g g') (compH W' W Iv j g')) =
+        apH (toEA W') (transH (symH (al.mnat W' W g' (BW[d, V, f, i].BB.FBv W g j)))
+                              (apH (al.mE W') (BW[d, V, f, i].BB.fillB.1.1.2 W' W g' g j))) ;
+
+      t1 (V : Ob) (f : Hom V X) (i : Lands V X (dl d) f)
+        : Id (TA.EI V) (t V f i V (idH V) (ptH V eS)) (KA.endE V (KA.TV.E.act V X f xA)) =
+        calc (TA.EI V) {
+            toEA V (al.mE V (BW[d, V, f, i].BB.FBv V (idH V) (ptH V eS)))
+          =< apH (\ z -> toEA V (al.mE V z)) BW[d, V, f, i].BB.FB-start >
+            toEA V (al.mE V (toB V (KX.endE V (KX.TV.E.act V X f x)) (flAt V f (hOf d V f i) V (idH V) (ptH V eS))))
+          =< aB-ext V (KX.endE V (KX.TV.E.act V X f x)) (flAt V f (hOf d V f i) V (idH V) (ptH V eS)) >
+            extE V (KX.endE V (KX.TV.E.act V X f x))
+          =< apH (extE V) (KX.endE-act V X f x) >
+            extE V (TX.E.act V X f (KX.endE X x))
+          =< extE-nat V X f (KX.endE X x) >
+            TA.E.act V X f (extE X (KX.endE X x))
+          =< apH (TA.E.act V X f) (symH (ML.tvM-E X x)) >
+            TA.E.act V X f (KA.endE X xA)
+          =< symH (KA.endE-act V X f xA) >
+            KA.endE V (KA.TV.E.act V X f xA) } ;
+
+      tr (V' V : Ob) (chi : Hom V' V) (f : Hom V X) (i : Lands V X (dl d) f) (i' : Lands V' X (dl d) (compH V' V X f chi))
+        (W : Ob) (g : Hom W V') (j : Hom W Iv)
+        : Id (TA.EI W) (t V' (compH V' V X f chi) i' W g j) (t V f i W (compH W V' V chi g) j) =
+        apH (\ z -> toEA W (al.mE W z)) (FBv-tr d V' V chi f i i' W g j) ;
+
+      module LS = GMapLine[lv].LineSide[FM.famPath, FM.famConn, G, A, eS, X, xA, dl d, t, tp, tn, t1, tr] ;
+    } ;
+
+    ------------------------------------------------------------------
+    -- the joined partial line in A and its filler
+
+    -- the side l of p at (V , f) is the side l of p f at (V , id)
+    i0 (l : Fin p.pr) (V : Ob) (f : Hom V X) (i : Lands V X (p.ps l).pQ f) : Lands V V (pre V X f (p.ps l).pQ) (idH V) =
+      pre-lands V V X f (p.ps l).pQ (idH V) (lands-eq V X (p.ps l).pQ f (compH V V X f (idH V)) (symH (comp-idr V X f)) i) ;
+
+    pv-id (l : Fin p.pr) (V : Ob) (f : Hom V X) (i : Lands V X (p.ps l).pQ f)
+      : Id (KX.TS.EI V) (((KX.PT.restrictP V X f x p).ps l).pv V (idH V) (i0 l V f i)) ((p.ps l).pv V f i) =
+      KX.PT.pv-hom X x (p.ps l) V (compH V V X f (idH V)) f (comp-idr V X f) (lands-pre V V X f (p.ps l).pQ (idH V) (i0 l V f i)) i ;
+
+    -- on a side of p, alpha of the B-filler is ext of the side
+    aFB (l : Fin p.pr) (d : Fin (forallUn r)) (V : Ob) (f : Hom V X) (i : Lands V X (p.ps l).pQ f) (i' : Lands V X (dl d) f)
+      (W : Ob) (g : Hom W V) (j : Hom W Iv)
+      : Id (TA.EI W) (SD[d].t V f i' W g j) (extE W (lvX V ((p.ps l).pv V f i) W g j)) =
+      transH (apH (\ z -> toEA W (al.mE W z))
+                (transH (apH (\ k -> BW[d, V, f, i'].BB.FBv W k j) (symH (comp-idl W V g)))
+                        (BW[d, V, f, i'].BB.FB-side l V (idH V) (i0 l V f i) W g j)))
+        (transH (aB-ext W (lvX V (((KX.PT.restrictP V X f x p).ps l).pv V (idH V) (i0 l V f i)) W g j)
+                   (BW[d, V, f, i'].BB.SV[V, idH V, ((KX.PT.restrictP V X f x p).ps l).pv V (idH V) (i0 l V f i),
+                                          ((KX.PT.restrictP V X f x p).ps l).ppt V (idH V) (i0 l V f i)].qv W g j))
+                (apH (\ u -> extE W (lvX V u W g j)) (pv-id l V f i))) ;
+
+    c12 (l : Fin pA.pr) (d : Fin (forallUn r)) (V : Ob) (f : Hom V X) (i : Lands V X (pA.ps l).pQ f) (i' : Lands V X (dl d) f)
+      : Id (KA.TS.EI V) ((pA.ps l).pv V f i) (SD[d].LS.sv V f i') =
+      LA.ts-ext V ((pA.ps l).pv V f i) (SD[d].LS.sv V f i')
+        (transH (ML.tsM-pt V ((p.ps l).pv V f i))
+          (transH (apH (ML.tvM V) ((p.ps l).ppt V f i))
+            (transH (ML.tvM-act V X f x) (symH (SD[d].LS.sv-pt V f i')))))
+        (\ W g j -> transH (ML.tsM-lev V ((p.ps l).pv V f i) W g j)
+                     (transH (symH (aFB l d V f i i' W g j)) (symH (SD[d].LS.sv-lev V f i' W g j)))) ;
+
+    c22 : KA.PT.PCsTy X xA (forallUn r) (\ d -> SD[d].LS.side) = \ d d' V f i i' ->
+      LA.ts-ext V (SD[d].LS.sv V f i) (SD[d'].LS.sv V f i')
+        (transH (SD[d].LS.sv-pt V f i) (symH (SD[d'].LS.sv-pt V f i')))
+        (\ W g j -> transH (SD[d].LS.sv-lev V f i W g j)
+           (transH (apH (\ z -> toEA W (al.mE W z))
+                      (FBv-cong V (KX.TV.E.act V X f x) (KX.TV.E.act V X f x) (refl (KX.TV.E.act V X f x))
+                         (KX.PT.restrictP V X f x p) (KX.PT.restrictP V X f x p) (refl (KX.PT.restrictP V X f x p))
+                         (flAt V f (hOf d V f i)) (flAt V f (hOf d' V f i')) W g j))
+                   (symH (SD[d'].LS.sv-lev V f i' W g j)))) ;
+
+    module J = KA.PT.Join[X, xA, pA.pr, (forallUn r), \ l -> pA.ps l, \ d -> SD[d].LS.side, pA.pcs, c12, c22] ;
+
+    fill : W0.Ix (KA.SFm.SF.tob X xA) = kAS.kop X xA J.part ;
+
+    FAv (W : Ob) (f : Hom W X) (j : Hom W Iv) : TA.EI W = fill.1.1.1 W f j ;
+
+    FAn (V W : Ob) (g : Hom V W) (f : Hom W X) (j : Hom W Iv)
+      : Id (TA.EI V) (TA.E.act V W g (FAv W f j)) (FAv V (compH V W X f g) (compH V W Iv j g)) = fill.1.1.2 V W g f j ;
+
+    FApt (W : Ob) (f : Hom W X) (j : Hom W Iv) : Id (W0.Ix (G.ob W)) (FAv W f j).1 (x.1.1 W f j) =
+      apH (\ y -> y.1 W f j) fill.1.2 ;
+
+    Fside (l : Fin J.part.pr) (V : Ob) (f : Hom V X) (i : Lands V X (J.part.ps l).pQ f) (W : Ob) (g : Hom W V) (j : Hom W Iv)
+      : Id (TA.EI W) (FAv W (compH W V X f g) j) (FM.famConn.levA G A V (KA.lineL V ((J.part.ps l).pv V f i)) W g j) =
+      transH (symH (LA.line-act V X f (xA, fill) W g j))
+             (apH (\ u -> FM.famConn.levA G A V (KA.lineL V u) W g j) (kAS.kside X xA J.part l V f i)) ;
+
+    -- F1: on the sides, the filler is ext of the sides
+    F-S1 (l : Fin p.pr) (V : Ob) (f : Hom V X) (i : Lands V X (p.ps l).pQ f) (W : Ob) (g : Hom W V) (j : Hom W Iv)
+      : Id (TA.EI W) (FAv W (compH W V X f g) j) (extE W (lvX V ((p.ps l).pv V f i) W g j)) =
+      transH (Fside (finL pA.pr (forallUn r) l) V f (J.landL l V f i) W g j)
+        (transH (apH (\ u -> FM.famConn.levA G A V (KA.lineL V u) W g j) (J.atL l V f (J.landL l V f i) i))
+                (ML.tsM-lev V ((p.ps l).pv V f i) W g j)) ;
+
+    -- F2: on delta, the filler is alpha of the B-filler
+    F-S2 (d : Fin (forallUn r)) (V : Ob) (f : Hom V X) (i : Lands V X (dl d) f) (W : Ob) (g : Hom W V) (j : Hom W Iv)
+      : Id (TA.EI W) (FAv W (compH W V X f g) j) (SD[d].t V f i W g j) =
+      transH (Fside (finR pA.pr (forallUn r) d) V f (J.landR d V f i) W g j)
+        (transH (apH (\ u -> FM.famConn.levA G A V (KA.lineL V u) W g j) (J.atR d V f (J.landR d V f i) i))
+                (SD[d].LS.sv-lev V f i W g j)) ;
+
+    -- at (id , eS) the filler is ext of x
+    FA-start : Id (TA.EI X) (FAv X (idH X) (ptH X eS)) (extE X (KX.endE X x)) =
+      transH (symH (FM.FT[G, A].Ev[eS].endB-E X (xA.1, fill.1))) (transH (apH (KA.endE X) fill.2) (ML.tvM-E X x)) ;
+
+    opaque Fside ; opaque F-S1 ; opaque F-S2 ; opaque FA-start ;
+  } ;
+} ;

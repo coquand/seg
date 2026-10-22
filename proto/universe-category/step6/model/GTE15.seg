@@ -1,0 +1,128 @@
+-- GTE15.seg (inside IvBase.Cn): transport along a line, part 15: the
+-- equivalence is empty-side invariant (KESI; TranspKesi in line form).  An
+-- empty side inserted in p is an empty side inserted in the B-problem
+-- (insB), whose filler (KESI of the reverse filler, revKe) does not see
+-- it; so bnew and the path problem's point are unchanged (xhK), and an
+-- empty side is inserted in the path problem (insP2), whose composite
+-- (line ESI of the composition of paths over a point, from ca's) does not
+-- see it.
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+-- KESI of the filler at tgt d from the reverse composition (by cases on d)
+revKe (G : PCtx) (A : PTy[G]) : (d : Bool) (cb : CompAtP[GFam[lv].famPath, G, A, tgt d, src d].CompAt)
+  -> CompAtP[GFam[lv].famPath, G, A, tgt d, src d].CESI cb
+  -> GCofEsi[lv].PartialsEsi[EndKit[GFam[lv].famPath, G, A, tgt d].TV.E, EndKit[GFam[lv].famPath, G, A, tgt d].SFm.SF].KESI
+       (GTE5[lv].revK G A d cb) = split {
+  true -> \ cb ce -> GFillFib[lv].FillLineFib[GFam[lv].famPath, GFam[lv].famConn, G, A, false, cb].Kesi[ce].kesi ;
+  false -> \ cb ce -> GFillFib[lv].FillLineFib[GFam[lv].famPath, GFam[lv].famConn, G, A, true, cb].Kesi[ce].kesi } ;
+
+module KE (G : PCtx) (A : PTy[G]) (d : Bool) (ca : CompAtP[GFam[lv].famPath, G, A, src d, tgt d].CompAt)
+  (cb : CompAtP[GFam[lv].famPath, G, A, tgt d, src d].CompAt)
+  (c01 : CompAtP[GFam[lv].famPath, G, A, e0, e1].CompAt)
+  (D : PCtx) (ln : PSub[D, GFam[lv].famPath.pth G])
+  (cea : CompAtP[GFam[lv].famPath, G, A, src d, tgt d].CESI ca)
+  (ceb : CompAtP[GFam[lv].famPath, G, A, tgt d, src d].CESI cb) {
+  module FM = GFam[lv] ;
+  module TE = GTE14[lv].TrE[G, A, d, ca, cb, c01, D, ln] ;
+  module EX = TE.EX ;
+  module PN = EX.PN ;
+  module B = EX.B ;
+  module T1 = EX.T1 ;
+  module HF = EX.HF ;
+  module TA = EX.TA ;
+  module KP = EX.KP ;
+  module CP2 = EX.CP2 ;
+  module FPE = GCofEsi[lv].PartialsEsi[HF.EA, HF.FibT] ;
+  module BPE = GCofEsi[lv].PartialsEsi[B.EKt.TV.E, B.EKt.SFm.SF] ;
+  module PPE = GCofEsi[lv].PartialsEsi[CP2.TV.E, CP2.SFm.SF] ;
+
+  kbe : BPE.KESI B.kb = revKe G A d cb ceb ;
+
+  module Ins (X : Ob) (w : HF.TA.EI X) (k : Nat) (p p' : B.FP.Partial[X, w]) (ins : FPE.InsP[X, w, k, p, p']) {
+    module BP = B.Box[X, w, p] ;
+    module BQ = B.Box[X, w, p'] ;
+    module NP = PN.Bx[X, w, p] ;
+    module NQ = PN.Bx[X, w, p'] ;
+    module QP = NP.PX ;
+    module QQ = NQ.PX ;
+
+    -- the B-problem of p' is that of p with an empty side inserted
+    insB : BPE.InsP[X, BP.zt, k, BP.pB, BQ.pB] =
+      new BPE.InsP[X, BP.zt, k, BP.pB, BQ.pB, ins.insp-r, ins.insp-k, \ hk -> ins.insp-e hk, \ n h h' -> ins.insp-Q n h h',
+        \ n h h' W f i i' ->
+          B.LT.ts-ext W (BQ.SD[(skipN k n, h')].pv W f i) (BP.SD[(n, h)].pv W f i')
+            (transH (BQ.SD[(skipN k n, h')].pv-pt W f i) (symH (BP.SD[(n, h)].pv-pt W f i')))
+            (\ V g j -> transH (BQ.SD[(skipN k n, h')].pv-lev W f i V g j)
+               (transH (apH (\ z -> B.O.W[W, z].omE.2.1.1 V g j) (ins.insp-v n h h' W f i i'))
+                       (symH (BP.SD[(n, h)].pv-lev W f i' V g j))))] ;
+
+    FbK0 : Id (B.EKt.TS.T X BP.zt) (B.kb.kop X BP.zt BQ.pB) (B.kb.kop X BP.zt BP.pB) = kbe X BP.zt k BP.pB BQ.pB insB ;
+
+    FbK : Id (B.EKt.TS.EI X) BQ.FbS BP.FbS = apH {B.EKt.TS.T X BP.zt} {B.EKt.TS.EI X} (\ z -> (BP.zt, z)) FbK0 ;
+
+    xbK : Id (HF.TB.EI X) QQ.xbn QP.xbn =
+      apH {B.EKt.TS.T X BP.zt} {HF.TB.EI X} (\ c -> (w.1, ((FM.famPath.pevA G A (src d)).mE X (B.EKt.lineL X (BP.zt, c))).2)) FbK0 ;
+
+    -- the path problem's point is unchanged
+    ellK : Id (W0.Ix (KP.FK2.ob X)) QQ.ell2 QP.ell2 =
+      KP.FK2.fam-eq X QQ.ell2 QP.ell2 (\ W f i ->
+        KP.k2Ext W (QQ.L3.v3 W f i) (QP.L3.v3 W f i)
+          (apH (\ z -> FM.famConn.levA G A X (B.E0.lineL X (T1.uF X z)) W f i) xbK)
+          (transH (KP.mk3-b W (QQ.u W f i) (QQ.u' W f i) (QQ.P W f i))
+            (transH (apH (\ z -> FM.famConn.levA G A X (B.EKt.lineL X z) W f i) FbK)
+                    (symH (KP.mk3-b W (QP.u W f i) (QP.u' W f i) (QP.P W f i)))))) ;
+
+    xhK : Id (CP2.TV.EI X) QQ.xh2 QP.xh2 =
+      CP2.EK.tv-eq X QQ.xh2 QP.xh2 ellK
+        (KP.PT2.tp-ext X (CP2.EK.endE X QQ.xh2) (CP2.EK.endE X QP.xh2) (apH (\ z -> (KP.FK2.ev (src d)).nt X z) ellK)
+           (\ W f j -> apH (\ z -> TA.E.act W X f (B.E0.endE X (T1.LB.nt X z))) xbK)) ;
+
+    -- the path problem of p' is that of p with an empty side inserted
+    insP2 : PPE.InsPH[X, QP.xh2, QQ.xh2, k, NP.pS, NQ.pS] =
+      new PPE.InsPH[X, QP.xh2, QQ.xh2, k, NP.pS, NQ.pS, ins.insp-r, ins.insp-k, \ hk -> ins.insp-e hk, \ n h h' -> ins.insp-Q n h h',
+        \ n h h' W f i i' ->
+          PN.L2K.ts-ext W NQ.SL[(skipN k n, h'), W, f, i].pv NP.SL[(n, h), W, f, i'].pv
+            (transH NQ.SL[(skipN k n, h'), W, f, i].pv-pt
+              (transH (apH (CP2.TV.E.act W X f) xhK) (symH NP.SL[(n, h), W, f, i'].pv-pt)))
+            (\ W' g j ->
+               transH (NQ.SL[(skipN k n, h'), W, f, i].pv-lev W' g j)
+                 (transH
+                   (KP.PT2.tp-ext W' (NQ.SL[(skipN k n, h'), W, f, i].tt W' g j) (NP.SL[(n, h), W, f, i'].tt W' g j)
+                      (apH (\ z -> z.1 W' (compH W' W X f g) j) ellK)
+                      (\ W'' g'' j' ->
+                         apH (\ z -> (FM.famConn.levA PN.KK.K PN.KK.PT.PathP W (PN.KK.PC.CP.EK.lineL W PN.O.W[W, z].omSq) W''
+                                        (compH W'' W' W g g'') j').2.1.1 W'' (idH W'') (compH W'' W' Iv j g''))
+                             (ins.insp-v n h h' W f i i')))
+                   (symH (NP.SL[(n, h), W, f, i'].pv-lev W' g j))))] ;
+
+    pnK : Id (CP2.TV'.EI X) (QQ.xh2.1, NQ.pnew) (QP.xh2.1, NP.pnew) =
+      transH (apH {CP2.TV'.T X QQ.xh2.1} {CP2.TV'.EI X} (\ z -> (QQ.xh2.1, z)) NQ.pnew-eq)
+        (transH (CP2.cesiH KP.PC2.compAt (KP.PC2.cesi cea) X QP.xh2 QQ.xh2 xhK k NP.pS NQ.pS insP2)
+                (apH {CP2.TV'.T X QP.xh2.1} {CP2.TV'.EI X} (\ z -> (QP.xh2.1, z)) (symH NP.pnew-eq))) ;
+
+    -- the extension is unchanged
+    ql (W : Ob) (f : Hom W X) (i : Hom W Iv) : Id (HF.TA.EI W) (EX.Bx[X, w, p'].t W f i) (EX.Bx[X, w, p].t W f i) =
+      EX.saInj W (EX.Bx[X, w, p'].t W f i) (EX.Bx[X, w, p].t W f i) (refl (D.act W X f w.1))
+        (transH (EX.Bx[X, w, p'].t-rd W f i)
+          (transH (apH (\ z -> z.2.1.1 W f i) pnK) (symH (EX.Bx[X, w, p].t-rd W f i)))) ;
+
+    res : Id (HF.TF.T X w) (TE.kop X w p') (TE.kop X w p) =
+      HF.TF.pr-inj X w (TE.kop X w p') (TE.kop X w p)
+        (HF.fibE-eq X (w, TE.kop X w p') (w, TE.kop X w p) (refl w) xbK ql) ;
+
+    opaque insB ; opaque FbK0 ; opaque ellK ; opaque xhK ; opaque insP2 ; opaque pnK ; opaque ql ;
+  } ;
+
+  trKesi : FPE.KESI TE.trEquiv = \ X w k p p' ins -> Ins[X, w, k, p, p', ins].res ;
+} ;

@@ -1,0 +1,213 @@
+-- ExtRelA.seg: MODEL/Poset/ExtRelA.agda.  Naturality of Ext for related
+-- data, the CORE, part A (uunif: the two extents have the same
+-- presentation, rcr / rcQ): the A-side of the composite of Ext
+-- (ExtComp1, steps (1)-(2)).  For a box c' of Ext(d') and c = mapBox Phi c':
+--   ungEq     the unglued box of c', mapped along mapA, is that of c
+--   dQ-rel    the delta subsets agree (rcQ)
+--   P2-rel    the paths alpha (B-filler) on delta correspond (H3, FBE-rel)
+--   FAp-rel   the A-fillers of the extended boxes correspond (BoxPlusOver)
+--   a1-rel    mapA (a1 c') = a1 c
+-- RA0 (without rcr / rcQ) and RA are segments; RA uses RA0 as A0.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module FibM = Fib[a, a] ;
+open Conn[a] ;
+open Yon[a] ;
+open Cofib[a] ;
+open Equiv[a] ;
+open ExtKit[a] ;
+open UMapOver[a] ;
+open UnivOp[a] ;
+open ExtRelObj[a] ;
+open ExtRelObj2[a] ;
+open ExtRelB[a] ;
+open BoxPlusOver[a] ;
+
+module RA0 (Y X : Ob) (h : Hom Y X) (A'' : PTy[yP Y]) (A : PTy[yP X]) (PoA : PoATy Y X h A'' A) (PoAH : PoAHTy Y X h A'' A PoA)
+  (d' : UData[Y, A'']) (d : UData[X, A]) (mAof : MAofTy Y X h A'' A d' d) (mAofE : MAofETy Y X h A'' A PoA d' d mAof)
+  (R : RelG[Y, X, h, A'', A, d', d, mAof].URelB) (dd : Bool)
+  (fAS'' : FibM.FillDef[yP Y, A''].FillOp[src dd]) (fAS : FibM.FillDef[yP X, A].FillOp[src dd])
+  (fBS' : FibM.FillDef[CofL[yP Y, d'.psi].resCtx, d'.Bf.1].FillOp[src dd])
+  (fBS : FibM.FillDef[CofL[yP X, d.psi].resCtx, d.Bf.1].FillOp[src dd])
+  (FRB : MapOverR[a].MOR[CofL[yP Y, d'.psi].resCtx, CofL[yP X, d.psi].resCtx, RelPre[Y, X, h, d'.psi, d.psi].sR R.rf,
+                         d'.Bf.1, d.Bf.1, RO[Y, X, h, A'', A, PoA, PoAH, d', d, mAof, mAofE, R].mBM].FillRel (src dd) fBS' fBS)
+  (FRA : MapOverR[a].MOR[yP Y, yP X, yH Y X h, A'', A, RO[Y, X, h, A'', A, PoA, PoAH, d', d, mAof, mAofE, R].mapAM].FillRel
+           (src dd) fAS'' fAS) {
+
+  module R0 = RO[Y, X, h, A'', A, PoA, PoAH, d', d, mAof, mAofE, R] ;
+  module R2 = RO2[Y, X, h, A'', A, PoA, PoAH, d', d, mAof, mAofE, R] ;
+  module RBi = RB[Y, X, h, A'', A, PoA, PoAH, d', d, mAof, mAofE, R, dd, fAS'', fAS, fBS', fBS, FRB] ;
+  module CY = CofL[yP Y, d'.psi] ;
+  module CX = CofL[yP X, d.psi] ;
+  module EY = Ext[a].ExtDef[yP Y, A'', d'.psi] ;
+  module EX = Ext[a].ExtDef[yP X, A, d.psi] ;
+  module EYB = EY.ExtB[d'.Bf.1, d'.beta] ;
+  module EXB = EX.ExtB[d.Bf.1, d.beta] ;
+  module EYB2 = Ext2[a].ExtB2[yP Y, A'', d'.psi, d'.Bf.1, d'.beta] ;
+  module EXB2 = Ext2[a].ExtB2[yP X, A, d.psi, d.Bf.1, d.beta] ;
+  module EYB4 = Ext4[a].ExtB4[yP Y, A'', d'.psi, d'.Bf.1, d'.beta] ;
+  module EXB4 = Ext4[a].ExtB4[yP X, A, d.psi, d.Bf.1, d.beta] ;
+  module DY = ExtComp1[a].C1[yP Y, A'', d'.psi, d'.Bf.1, d'.beta, dd, fAS'', fBS'] ;
+  module DX = ExtComp1[a].C1[yP X, A, d.psi, d.Bf.1, d.beta, dd, fAS, fBS] ;
+  module DYE = ExtComp1E[a].C1E[yP Y, A'', d'.psi, d'.Bf.1, d'.beta, dd, fAS'', fBS'] ;
+  module DXE = ExtComp1E[a].C1E[yP X, A, d.psi, d.Bf.1, d.beta, dd, fAS, fBS] ;
+  module MX = MapOver[yP Y, yP X, yH Y X h, EYB2.ExtT, EXB2.ExtT, R2.PhiM] ;
+  module MA = MapOver[yP Y, yP X, yH Y X h, A'', A, R0.mapAM] ;
+  module MXR = MapOverR[a].MOR[yP Y, yP X, yH Y X h, EYB2.ExtT, EXB2.ExtT, R2.PhiM] ;
+  module MBY = ExtBox[a].MapBox[yP Y, EYB2.ExtT, A'', EYB4.extMap, src dd] ;
+  module MBX = ExtBox[a].MapBox[yP X, EXB2.ExtT, A, EXB4.extMap, src dd] ;
+  module BPA = BoxPlusOver[a].BPO[yP Y, yP X, yH Y X h, A'', A, R0.mapAM, src dd, fAS'', fAS, FRA] ;
+
+  module UE (Z : Ob) (c' : DY.BX.Box[src dd, Z]) {
+    module M1 = MA.MB[src dd, Z, DYE.ung Z c'] ;
+    module MU = MBX.MB[Z, RBi.mc Z c'] ;
+    module MC = MX.MB[src dd, Z, c'] ;
+
+    eu : Id (W0.Ix (EX.EA.ob Z)) (DX.BA.lidE (src dd) Z M1.rho M1.u) (DX.BA.lidE (src dd) Z MU.rho MU.u) =
+      transH {W0.Ix (EX.EA.ob Z)} M1.u-E
+       (transH {W0.Ix (EX.EA.ob Z)} (apH {W0.Ix (EY.EA.ob Z)} {W0.Ix (EX.EA.ob Z)} (R0.mapA Z) (MBY.mapB-lid Z c'))
+        (transH {W0.Ix (EX.EA.ob Z)} (symH {W0.Ix (EX.EA.ob Z)} (R2.Phi-ext Z (DY.BX.lidE (src dd) Z c'.brho c'.bu)))
+         (transH {W0.Ix (EX.EA.ob Z)} (apH {W0.Ix (Ext3[a].ExtB3[yP X, A, d.psi, d.Bf.1, d.beta].EX.ob Z)} {W0.Ix (EX.EA.ob Z)}
+                                         (EXB4.extE Z) (symH {W0.Ix (Ext3[a].ExtB3[yP X, A, d.psi, d.Bf.1, d.beta].EX.ob Z)} MC.u-E))
+                 (symH {W0.Ix (EX.EA.ob Z)} (MBX.mapB-lid Z (RBi.mc Z c')))))) ;
+
+    ev (l : Fin c'.br) (W : Ob) (psi' : Hom W (prodP Z Iv)) (i : InQ W Z (M1.Sd l).sQ psi') (i' : InQ W Z (MU.S l).sQ psi')
+      : Id (W0.Ix (EX.EA.ob W)) ((M1.Sd l).svE W psi' i) ((MU.S l).svE W psi' i') =
+      transH {W0.Ix (EX.EA.ob W)} (M1.S-E l W psi' i)
+       (transH {W0.Ix (EX.EA.ob W)} (apH {W0.Ix (EY.EA.ob W)} {W0.Ix (EX.EA.ob W)} (R0.mapA W) (MBY.mapB-sv Z c' l W psi' i))
+        (transH {W0.Ix (EX.EA.ob W)} (symH {W0.Ix (EX.EA.ob W)} (R2.Phi-ext W ((c'.bs l).svE W psi' i)))
+         (transH {W0.Ix (EX.EA.ob W)} (apH {W0.Ix (Ext3[a].ExtB3[yP X, A, d.psi, d.Bf.1, d.beta].EX.ob W)} {W0.Ix (EX.EA.ob W)}
+                                         (EXB4.extE W) (symH {W0.Ix (Ext3[a].ExtB3[yP X, A, d.psi, d.Bf.1, d.beta].EX.ob W)} (MC.S-E l W psi' i)))
+          (transH {W0.Ix (EX.EA.ob W)} (symH {W0.Ix (EX.EA.ob W)} (MBX.mapB-sv Z (RBi.mc Z c') l W psi' i))
+                  (apH {InQ W Z (MU.S l).sQ psi'} {W0.Ix (EX.EA.ob W)} (\ z -> (MU.S l).svE W psi' z)
+                       (isProp-InQ W Z (MU.S l).sQ psi' i i')))))) ;
+
+    ungEq : Id (DX.BA.Box[src dd, Z]) (MA.mapBox (src dd) Z (DYE.ung Z c')) (DXE.ung Z (RBi.mc Z c')) =
+      DX.BA.box-ext (src dd) Z M1.rho MU.rho M1.u MU.u c'.br M1.Sd MU.S M1.cs MU.cs M1.cb MU.cb
+        (refl M1.rho) eu (\ l t -> refl ((M1.Sd l).sQ t)) ev ;
+  } ;
+
+  ungEq (Z : Ob) (c' : DY.BX.Box[src dd, Z]) : Id (DX.BA.Box[src dd, Z]) (MA.mapBox (src dd) Z (DYE.ung Z c')) (DXE.ung Z (RBi.mc Z c')) =
+    UE[Z, c'].ungEq ;
+
+  -- the relation's lemmas restated once at variables with this module's names
+  mapA-actL (V W : Ob) (k : Hom V W) (w : W0.Ix (EY.EA.ob W))
+    : Id (W0.Ix (EX.EA.ob V)) (R0.mapA V (EY.EA.act V W k w)) (EX.EA.act V W k (R0.mapA W w)) = R0.mapA-act V W k w ;
+
+  alRel (W : Ob) (w : W0.Ix (EYB.EB.ob W))
+    : Id (W0.Ix (EX.EA.ob W)) (R0.mapA W (EY.toEA W (d'.beta.mE W w))) (EX.toEA W (d.beta.mE W (R0.mBE W w))) =
+    transH {W0.Ix (EX.EA.ob W)} (symH {W0.Ix (EX.EA.ob W)} (R0.toEA-mA W (d'.beta.mE W w)))
+           (apH {W0.Ix (EX.EA'.ob W)} {W0.Ix (EX.EA.ob W)} (EX.toEA W) (R0.H3w W w)) ;
+
+  FBE-relL (Z : Ob) (c' : DY.BX.Box[src dd, Z]) (p' : IsT (CY.full (prodP Z Iv) c'.brho))
+    : Id (W0.Ix (EXB.EB.ob (prodP Z Iv))) (R0.mBE (prodP Z Iv) (DY.FBE Z c' p')) (DX.FBE Z (RBi.mc Z c') (RBi.pfX Z c' p')) =
+    RBi.FBE-rel Z c' p' ;
+
+  a1Y (Z : Ob) (c' : DY.BX.Box[src dd, Z])
+    : Id (W0.Ix (EY.EA.ob Z)) (DYE.a1E Z c') (EY.EA.act Z (prodP Z Iv) (lid Z (tgt dd)) (DYE.FAp Z c')) = DYE.a1E-def Z c' ;
+
+  a1X (Z : Ob) (c : DX.BX.Box[src dd, Z])
+    : Id (W0.Ix (EX.EA.ob Z)) (DXE.a1E Z c) (EX.EA.act Z (prodP Z Iv) (lid Z (tgt dd)) (DXE.FAp Z c)) = DXE.a1E-def Z c ;
+
+  -- P2v unfolded, at variables
+  P2v-Y (Z : Ob) (c' : DY.BX.Box[src dd, Z]) (k : Fin d'.psi.cr) (W : Ob) (f : Hom W Z)
+    (i : Lands W Z (nrm Z (CY.dQ Z c'.brho k)) f)
+    : Id (W0.Ix (EY.EA.ob (prodP W Iv))) ((DYE.P2F Z c').pPv k W f i)
+         (EY.toEA (prodP W Iv) (d'.beta.mE (prodP W Iv) (DY.FBE W (DY.BX.restrict (src dd) W Z f c') (DYE.pfull W Z f c' k i)))) =
+    refl ((DYE.P2F Z c').pPv k W f i) ;
+
+  P2v-X (Z : Ob) (c : DX.BX.Box[src dd, Z]) (k : Fin d.psi.cr) (W : Ob) (f : Hom W Z)
+    (i : Lands W Z (nrm Z (CX.dQ Z c.brho k)) f)
+    : Id (W0.Ix (EX.EA.ob (prodP W Iv))) ((DXE.P2F Z c).pPv k W f i)
+         (EX.toEA (prodP W Iv) (d.beta.mE (prodP W Iv) (DX.FBE W (DX.BX.restrict (src dd) W Z f c) (DXE.pfull W Z f c k i)))) =
+    refl ((DXE.P2F Z c).pPv k W f i) ;
+
+  opaque ungEq ; opaque mapA-actL ; opaque alRel ; opaque FBE-relL ; opaque a1Y ; opaque a1X ; opaque P2v-Y ; opaque P2v-X ;
+
+  -- the paths on delta correspond
+  P2-rel (Z : Ob) (c' : DY.BX.Box[src dd, Z]) (k : Fin d'.psi.cr) (W : Ob) (f : Hom W Z)
+    (i : Lands W Z (nrm Z (CY.dQ Z c'.brho k)) f)
+    (k2 : Fin d.psi.cr) (i2 : Lands W Z (nrm Z (CX.dQ Z (RBi.mc Z c').brho k2)) f)
+    : Id (W0.Ix (EX.EA.ob (prodP W Iv))) (R0.mapAM.mE (prodP W Iv) ((DYE.P2F Z c').pPv k W f i)) ((DXE.P2F Z (RBi.mc Z c')).pPv k2 W f i2) =
+    transH {W0.Ix (EX.EA.ob (prodP W Iv))}
+      (apH {W0.Ix (EY.EA.ob (prodP W Iv))} {W0.Ix (EX.EA.ob (prodP W Iv))} (R0.mapA (prodP W Iv)) (P2v-Y Z c' k W f i))
+     (transH {W0.Ix (EX.EA.ob (prodP W Iv))} (alRel (prodP W Iv) (DY.FBE W (DY.BX.restrict (src dd) W Z f c') (DYE.pfull W Z f c' k i)))
+      (transH {W0.Ix (EX.EA.ob (prodP W Iv))}
+        (apH {W0.Ix (EXB.EB.ob (prodP W Iv))} {W0.Ix (EX.EA.ob (prodP W Iv))} (\ z -> EX.toEA (prodP W Iv) (d.beta.mE (prodP W Iv) z))
+          (transH {W0.Ix (EXB.EB.ob (prodP W Iv))} (FBE-relL W (DY.BX.restrict (src dd) W Z f c') (DYE.pfull W Z f c' k i))
+                  (DX.FBE-cong W (RBi.mc W (DY.BX.restrict (src dd) W Z f c')) (DX.BX.restrict (src dd) W Z f (RBi.mc Z c'))
+                     (MXR.mapBox-restr (src dd) W Z f c') (RBi.pfX W (DY.BX.restrict (src dd) W Z f c') (DYE.pfull W Z f c' k i))
+                     (DXE.pfull W Z f (RBi.mc Z c') k2 i2))))
+              (symH {W0.Ix (EX.EA.ob (prodP W Iv))} (P2v-X Z (RBi.mc Z c') k2 W f i2)))) ;
+
+  opaque P2-rel ;
+} ;
+
+module RA (Y X : Ob) (h : Hom Y X) (A'' : PTy[yP Y]) (A : PTy[yP X]) (PoA : PoATy Y X h A'' A) (PoAH : PoAHTy Y X h A'' A PoA)
+  (d' : UData[Y, A'']) (d : UData[X, A]) (mAof : MAofTy Y X h A'' A d' d) (mAofE : MAofETy Y X h A'' A PoA d' d mAof)
+  (R : RelG[Y, X, h, A'', A, d', d, mAof].URelB) (dd : Bool)
+  (fAS'' : FibM.FillDef[yP Y, A''].FillOp[src dd]) (fAS : FibM.FillDef[yP X, A].FillOp[src dd])
+  (fBS' : FibM.FillDef[CofL[yP Y, d'.psi].resCtx, d'.Bf.1].FillOp[src dd])
+  (fBS : FibM.FillDef[CofL[yP X, d.psi].resCtx, d.Bf.1].FillOp[src dd])
+  (FRB : MapOverR[a].MOR[CofL[yP Y, d'.psi].resCtx, CofL[yP X, d.psi].resCtx, RelPre[Y, X, h, d'.psi, d.psi].sR R.rf,
+                         d'.Bf.1, d.Bf.1, RO[Y, X, h, A'', A, PoA, PoAH, d', d, mAof, mAofE, R].mBM].FillRel (src dd) fBS' fBS)
+  (FRA : MapOverR[a].MOR[yP Y, yP X, yH Y X h, A'', A, RO[Y, X, h, A'', A, PoA, PoAH, d', d, mAof, mAofE, R].mapAM].FillRel
+           (src dd) fAS'' fAS)
+  (rcr : Id Nat d'.psi.cr d.psi.cr)
+  (rcQ : (W : Ob) (g : Hom W Y) (k : Fin d'.psi.cr) (t : Tree)
+    -> Id Bool (d'.psi.cQ W g k t) (d.psi.cQ W (compH W Y X h g) (subst Nat (\ n -> Fin n) d'.psi.cr d.psi.cr rcr k) t)) {
+
+  module A0 = RA0[Y, X, h, A'', A, PoA, PoAH, d', d, mAof, mAofE, R, dd, fAS'', fAS, fBS', fBS, FRB, FRA] ;
+  module R0 = RO[Y, X, h, A'', A, PoA, PoAH, d', d, mAof, mAofE, R] ;
+  module RBi = RB[Y, X, h, A'', A, PoA, PoAH, d', d, mAof, mAofE, R, dd, fAS'', fAS, fBS', fBS, FRB] ;
+  module CY = CofL[yP Y, d'.psi] ;
+  module CX = CofL[yP X, d.psi] ;
+  module EX = Ext[a].ExtDef[yP X, A, d.psi] ;
+  module DY = ExtComp1[a].C1[yP Y, A'', d'.psi, d'.Bf.1, d'.beta, dd, fAS'', fBS'] ;
+  module DYE = ExtComp1E[a].C1E[yP Y, A'', d'.psi, d'.Bf.1, d'.beta, dd, fAS'', fBS'] ;
+  module DXE = ExtComp1E[a].C1E[yP X, A, d.psi, d.Bf.1, d.beta, dd, fAS, fBS] ;
+
+  -- the delta subsets (uunif: same presentation)
+  dQ-rel (Z : Ob) (c' : DY.BX.Box[src dd, Z]) (k : Fin d'.psi.cr) (t : Tree)
+    : Id Bool (nrm Z (CY.dQ Z c'.brho k) t) (nrm Z (CX.dQ Z (RBi.mc Z c').brho (subst Nat (\ n -> Fin n) d'.psi.cr d.psi.cr rcr k)) t) =
+    apH {Subset Z} {Bool} (\ Q -> nrm Z Q t)
+      (funext Tree (\ x -> Bool) (CY.dQ Z c'.brho k) (CX.dQ Z (RBi.mc Z c').brho (subst Nat (\ n -> Fin n) d'.psi.cr d.psi.cr rcr k))
+        (\ x -> transH {Bool}
+           (apH {Bool} {Bool} (\ b -> and b (d'.psi.cQ (prodP Z Iv) c'.brho k (node x (leaf (suc zero)))))
+                (rcQ (prodP Z Iv) c'.brho k (node x (leaf zero))))
+           (apH {Bool} {Bool} (and (d.psi.cQ (prodP Z Iv) (compH (prodP Z Iv) Y X h c'.brho) (subst Nat (\ n -> Fin n) d'.psi.cr d.psi.cr rcr k)
+                                      (node x (leaf zero))))
+                (rcQ (prodP Z Iv) c'.brho k (node x (leaf (suc zero))))))) ;
+
+  opaque dQ-rel ;
+
+  FAp-rel (Z : Ob) (c' : DY.BX.Box[src dd, Z])
+    : Id (W0.Ix (EX.EA.ob (prodP Z Iv))) (R0.mapA (prodP Z Iv) (DYE.FAp Z c')) (DXE.FAp Z (RBi.mc Z c')) =
+    A0.BPA.FEp-relG Z (DYE.ung Z c') (DXE.ung Z (RBi.mc Z c')) (A0.ungEq Z c') d'.psi.cr d.psi.cr rcr
+      (DYE.P2F Z c') (DXE.P2F Z (RBi.mc Z c')) (dQ-rel Z c')
+      (\ k W f i -> A0.P2-rel Z c' k W f i (subst Nat (\ n -> Fin n) d'.psi.cr d.psi.cr rcr k)
+         (landsE W Z (nrm Z (CY.dQ Z c'.brho k))
+            (nrm Z (CX.dQ Z (RBi.mc Z c').brho (subst Nat (\ n -> Fin n) d'.psi.cr d.psi.cr rcr k))) (dQ-rel Z c' k) f i)) ;
+
+  a1-rel (Z : Ob) (c' : DY.BX.Box[src dd, Z])
+    : Id (W0.Ix (EX.EA.ob Z)) (R0.mapA Z (DYE.a1E Z c')) (DXE.a1E Z (RBi.mc Z c')) =
+    transH {W0.Ix (EX.EA.ob Z)} (apH {W0.Ix (Ext[a].ExtDef[yP Y, A'', d'.psi].EA.ob Z)} {W0.Ix (EX.EA.ob Z)} (R0.mapA Z) (A0.a1Y Z c'))
+     (transH {W0.Ix (EX.EA.ob Z)} (A0.mapA-actL Z (prodP Z Iv) (lid Z (tgt dd)) (DYE.FAp Z c'))
+      (transH {W0.Ix (EX.EA.ob Z)}
+         (apH {W0.Ix (EX.EA.ob (prodP Z Iv))} {W0.Ix (EX.EA.ob Z)} (EX.EA.act Z (prodP Z Iv) (lid Z (tgt dd))) (FAp-rel Z c'))
+         (symH {W0.Ix (EX.EA.ob Z)} (A0.a1X Z (RBi.mc Z c'))))) ;
+
+  opaque FAp-rel ; opaque a1-rel ;
+} ;

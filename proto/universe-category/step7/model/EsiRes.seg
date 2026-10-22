@@ -1,0 +1,41 @@
+-- EsiRes.seg: MODEL/Lv/EsiRes.agda.  Inserting an empty side commutes
+-- with restriction: if b' is b with an empty side inserted at k, then so
+-- is (restrict h b') with respect to (restrict h b).
+
+level a l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+open Trees[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[l] ;
+open PR.PS ;
+module BXm = Box[a, l] ;
+module ES = Esi[a, l] ;
+
+module EsiRes (G : PCtx) (A : PTy[G]) {
+  open PR.TyL[G, A] ;
+  module BX = BXm.Boxes[G, A] ;
+  module ED = ES.EsiDef[G, A] ;
+
+  insRes (eS : El Iv) (Y X : Ob) (h : Hom Y X) (k : Nat) (b b' : BX.Box[eS, X]) (ins : ED.InsE[eS, X, k, b, b'])
+    : ED.InsE[eS, Y, k, BX.restrict eS Y X h b, BX.restrict eS Y X h b'] =
+    new ED.InsE[eS, Y, k, BX.restrict eS Y X h b, BX.restrict eS Y X h b',
+      ins.ins-r,
+      ins.ins-k,
+      apH (BX.Restrict[eS, Y, X, h].rrho) ins.ins-rho,
+      transH (BX.Restrict[eS, Y, X, h].ruE b'.brho b'.bu)
+       (transH (apH (E.act Y X h) ins.ins-lid) (symH (BX.Restrict[eS, Y, X, h].ruE b.brho b.bu))),
+      \ hk -> transH (apH (pre Y X (h)) (ins.ins-e hk)) (pre-empty Y X (h)),
+      \ n hn hn' -> apH (pre Y X h) (ins.ins-Q n hn hn'),
+      \ n hn hn' W psi i i' ->
+        transH (BX.Restrict[eS, Y, X, h].rsvE b'.brho (b'.bs (Arith[l].skipN k n, hn')) W psi i)
+         (transH (ins.ins-v n hn hn' W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi)
+                    (inQ-cyl W Y X h (b'.bs (Arith[l].skipN k n, hn')).sQ psi i) (inQ-cyl W Y X h (b.bs (n, hn)).sQ psi i'))
+                 (symH (BX.Restrict[eS, Y, X, h].rsvE b.brho (b.bs (n, hn)) W psi i')))] ;
+} ;

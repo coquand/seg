@@ -1,0 +1,48 @@
+-- PElL2.seg: El of the poset universe U_L is fibrant, part 2: the local
+-- compositions are coherent (GLocal3's coh), hence El has a line
+-- composition with ESI (fibEGen).
+--
+-- The composite of the pullback along l at the restricted diagonal h* delta
+-- is F_X's composite of a problem over y (X * Iv); that of the pullback
+-- along h* l at delta is F_Y's.  F_Y = F_X along h * Iv (R: naturality of
+-- l), and F_X along h * Iv composes by moving problems along h * Iv (MorC).
+-- After J on R both are F_X's composites of two problems which agree
+-- pointwise (ProbEq): their values are the same El elements, read in F_X
+-- at (h f , j) and at (h * Iv) (f , j) (VAL, by cyl-pair).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosS[a] ; open PSB ; open PSCyl ;
+module W0 = V[a] ;
+open Arith[a] ;
+module V1 = V[a+] ;
+module BaseP = PosS[a].PSB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module L1 = BaseP.GPre[a+] ;
+open BaseP.GYon[a] ;
+module UL = BaseP.GUnivL.UL ;
+module PE0 = PElL[a] ;
+module PC = PElL2a[a] ;
+
+module ElFib (e e' : BaseP.IPt) (sel : (Z : Ob) (F : UL.U0 Z) -> BaseP.GLine[a].CompAtP[BaseP.GFam[a].famPath, yP Z, F.1, e, e'].CompAt)
+  (selEq : (Z' Z : Ob) (g : Hom Z' Z) (F : UL.U0 Z)
+     -> Id (BaseP.GLine[a].CompAtP[BaseP.GFam[a].famPath, yP Z', (UL.uAct Z' Z g F).1, e, e'].CompAt)
+           (sel Z' (UL.uAct Z' Z g F)) (BaseP.GSubst[a].SubC[yP Z', yP Z, yH Z' Z g, F.1, e, e', sel Z F].compAt)) {
+  module LCm = BaseP.GLocal3[a+].LocComp[UL.UCtx, UL.EGen, e, e', PE0.cl e e' sel,
+    \ Y X h l y q1 q2 p -> PC.Coh[e, e', sel, selEq, Y, X, h, l, y, q1, q2, p].coh] ;
+  compAt : BaseP.GLine[a+].CompAtP[BaseP.GFam[a+].famPath, UL.UCtx, UL.EGen, e, e'].CompAt = LCm.compAt ;
+} ;
+
+module F01 = ElFib[e0, e1, PE0.sel01, \ Z' Z g F -> refl (PE0.sel01 Z' (UL.uAct Z' Z g F))] ;
+module F10 = ElFib[e1, e0, PE0.sel10, \ Z' Z g F -> refl (PE0.sel10 Z' (UL.uAct Z' Z g F))] ;
+
+-- with ESI: the local compositions are ESI since F's are
+fibEGen : BaseP.GFibE[a+].FibEL UL.UCtx =
+  (UL.EGen, ((F01.compAt, F10.compAt),
+    (F01.LCm.cesi (\ X l -> PE0.ElP[X, l, PE0.FC X l, PE0.QdC X l].T[e0, e1, PE0.sel01 (prodP X Iv) (PE0.FC X l)].TR.cesi (PE0.FC X l).2.2.1),
+     F10.LCm.cesi (\ X l -> PE0.ElP[X, l, PE0.FC X l, PE0.QdC X l].T[e1, e0, PE0.sel10 (prodP X Iv) (PE0.FC X l)].TR.cesi (PE0.FC X l).2.2.2)))) ;

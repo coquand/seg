@@ -1,0 +1,86 @@
+-- ElFam2.seg: MODEL/Univ/ElFam.agda, continued (split to keep each check
+-- well under the ten-second cap): TBox commutes with restriction.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module W0 = V[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module ES0 = Esi[a, a] ;
+module FE = FibExt[a, a] ;
+module CN = Conn[a] ;
+open Yon[a] ;
+open UAct[a] ;
+open UnivCtx[a] ;
+open EGenComp[a] ;
+module EG3 = EGenComp3[a] ;
+module GEs = EGenEsi[a] ;
+open ElFam[a] ;
+
+
+module ElF2 (D : PCtx) (Fm : (W : Ob) -> W0.Ix (D.ob W) -> U0 W)
+  (nat : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D.ob W)) -> Id (U0 W') (uAct W' W g (Fm W x)) (Fm W' (D.act W' W g x))) {
+  open ElF[D, Fm, nat] ;
+  module TR (eS : El Iv) (Y X : Ob) (h : Hom Y X) (b : BE.Box[eS, X]) {
+    module Tx = TB[eS, X, b] ;
+    module Ty = TB[eS, Y, BE.restrict eS Y X h b] ;
+    module RU = BU.Restrict[eS, Y, X, h] ;
+    module RE = BE.Restrict[eS, Y, X, h] ;
+
+
+    bb : BU.Box[eS, Y] = BU.restrict eS Y X h (TBox eS X b) ;
+    bb' : BU.Box[eS, Y] = TBox eS Y (BE.restrict eS Y X h b) ;
+
+    -- the lids: restriction of a lid, kappa undone, iota natural, kappa again
+    Elid : Id (EU Y) (BU.lidE eS Y bb.brho bb.bu) (BU.lidE eS Y bb'.brho bb'.bu) =
+      calc (EU Y) {
+          BU.lidE eS Y bb.brho bb.bu
+        =< RU.ruE Tx.F Tx.uU >
+          TU.E.act Y X h (BU.lidE eS X Tx.F Tx.uU)
+        =< apH (TU.E.act Y X h) (symH (Tx.ik X (lid X eS) b.bu)) >
+          TU.E.act Y X h (iota X (BE.lidE eS X b.brho b.bu))
+        =< symH (iotaAct Y X h (BE.lidE eS X b.brho b.bu)) >
+          iota Y (TE.E.act Y X h (BE.lidE eS X b.brho b.bu))
+        =< apH (iota Y) (symH (RE.ruE b.brho b.bu)) >
+          iota Y (BE.lidE eS Y (BE.restrict eS Y X h b).brho (BE.restrict eS Y X h b).bu)
+        =< Ty.ik Y (lid Y eS) (BE.restrict eS Y X h b).bu >
+          BU.lidE eS Y bb'.brho bb'.bu } ;
+
+    module EvS (j : Fin b.br) (W : Ob) (psi : Hom W (BE.XI Y)) (i : InQ W Y (bb.bs j).sQ psi) (i' : InQ W Y (bb'.bs j).sQ psi) {
+      ic : InQ W X (b.bs j).sQ (compH W (BE.XI Y) (BE.XI X) RE.cyl psi) = inQ-cyl W Y X h (b.bs j).sQ psi i' ;
+      v0 : W0.Ix (fib0 W (Fm W (D.act W (BE.XI X) (compH W (BE.XI Y) (BE.XI X) RE.cyl psi) b.brho))) = (b.bs j).sv W (compH W (BE.XI Y) (BE.XI X) RE.cyl psi) ic ;
+      Q0 : EU W = (bb.bs j).svE W psi i ;
+      Q1 : EU W = (bb.bs j).svE W psi i' ;
+      Q2 : EU W = (Tx.sideU j).svE W (compH W (BE.XI Y) (BE.XI X) RE.cyl psi) ic ;
+      Q3 : EU W = iota W ((b.bs j).svE W (compH W (BE.XI Y) (BE.XI X) RE.cyl psi) ic) ;
+      Q4 : EU W = iota W (((BE.restrict eS Y X h b).bs j).svE W psi i') ;
+      Q5 : EU W = (bb'.bs j).svE W psi i' ;
+      e01 : Id (EU W) Q0 Q1 = apH (\ k -> (bb.bs j).svE W psi k) (isProp-InQ W Y (bb.bs j).sQ psi i i') ;
+      e12 : Id (EU W) Q1 Q2 = RU.rsvE Tx.F (Tx.sideU j) W psi i' ;
+      e23 : Id (EU W) Q2 Q3 = symH (Tx.ik W (compH W (BE.XI Y) (BE.XI X) RE.cyl psi) v0) ;
+      e34 : Id (EU W) Q3 Q4 = apH {TE.EI W} {EU W} (iota W) {(b.bs j).svE W (compH W (BE.XI Y) (BE.XI X) RE.cyl psi) ic} {((BE.restrict eS Y X h b).bs j).svE W psi i'}
+        (symH (RE.rsvE b.brho (b.bs j) W psi i')) ;
+      e45 : Id (EU W) Q4 Q5 = Ty.ik W psi (((BE.restrict eS Y X h b).bs j).sv W psi i') ;
+      res : Id (EU W) Q0 Q5 = trans (EU W) Q0 Q1 Q5 e01 (trans (EU W) Q1 Q2 Q5 e12 (trans (EU W) Q2 Q3 Q5 e23 (trans (EU W) Q3 Q4 Q5 e34 e45))) ;
+    } ;
+
+    Ev (j : Fin b.br) (W : Ob) (psi : Hom W (BE.XI Y)) (i : InQ W Y (bb.bs j).sQ psi) (i' : InQ W Y (bb'.bs j).sQ psi)
+      : Id (EU W) ((bb.bs j).svE W psi i) ((bb'.bs j).svE W psi i') = EvS[j, W, psi, i, i'].res ;
+
+    res : Id (BU.Box[eS, Y]) bb bb' =
+      BU.box-ext eS Y bb.brho bb'.brho bb.bu bb'.bu b.br bb.bs bb'.bs bb.bcs bb'.bcs bb.bcb bb'.bcb
+        (nat (BE.XI Y) (BE.XI X) RE.cyl b.brho) Elid (\ j x -> refl ((bb.bs j).sQ x)) Ev ;
+
+    opaque res ;
+  } ;
+
+  TBox-restr (eS : El Iv) (Y X : Ob) (h : Hom Y X) (b : BE.Box[eS, X])
+    : Id (BU.Box[eS, Y]) (BU.restrict eS Y X h (TBox eS X b)) (TBox eS Y (BE.restrict eS Y X h b)) = TR[eS, Y, X, h, b].res ;
+
+} ;

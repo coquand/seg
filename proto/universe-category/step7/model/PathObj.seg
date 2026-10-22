@@ -1,0 +1,89 @@
+-- PathObj.seg: the path objects of contexts and types (survey-slides,
+-- "Fibrancy"; CYLINDER.md section 4).  For a context G and a type A over G:
+--
+--   GI       the context of lines in G:  GI(X) = G(X * Iv), acting along f * Iv
+--   ev e     evaluation at the end point e: a substitution GI -> G
+--   AI       the type of lines in A over GI:  AI(X , x) = A(X * Iv , x)
+--
+-- In the poset instance X * Iv is an object of the base; in simplicial sets
+-- GI(X) is to be read as the natural families on y X * Delta[1].  The laws
+-- of GI and AI are the functoriality of the cylinder (CylCat cyl-id,
+-- cyl-comp); those of AI are read in the total presheaf E of A.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+
+module PathCtx (G : PCtx) {
+  module GL = PR.PshL[G] ;
+
+  ----------------------------------------------------------------------
+  -- lines in G
+
+  giAct (J I : Ob) (f : Hom J I) (x : W0.Ix (G.ob (prodP I Iv))) : W0.Ix (G.ob (prodP J Iv)) =
+    G.act (prodP J Iv) (prodP I Iv) (cylH J I f) x ;
+
+  giId (I : Ob) (x : W0.Ix (G.ob (prodP I Iv))) : Id (W0.Ix (G.ob (prodP I Iv))) (giAct I I (idH I) x) x =
+    GL.actId (prodP I Iv) (cylH I I (idH I)) (cyl-id I) x ;
+
+  giO (K J I : Ob) (f : Hom J I) (g : Hom K J) (x : W0.Ix (G.ob (prodP I Iv)))
+    : Id (W0.Ix (G.ob (prodP K Iv))) (giAct K I (compH K J I f g) x) (giAct K J g (giAct J I f x)) =
+    transH (GL.actEq (prodP K Iv) (prodP I Iv) (cylH K I (compH K J I f g))
+              (compH (prodP K Iv) (prodP J Iv) (prodP I Iv) (cylH J I f) (cylH K J g)) (cyl-comp K J I f g) x)
+           (G.act-o (prodP K Iv) (prodP J Iv) (prodP I Iv) (cylH J I f) (cylH K J g) x) ;
+
+  GI : PCtx = new PCtx[\ X -> G.ob (prodP X Iv), giAct, giId, giO] ;
+
+  ----------------------------------------------------------------------
+  -- evaluation at an end point: (f * Iv) (lid e) = (lid e) f
+
+  evNat (e : El Iv) (J I : Ob) (f : Hom J I) (x : W0.Ix (G.ob (prodP I Iv)))
+    : Id (W0.Ix (G.ob J)) (G.act J (prodP J Iv) (lid J e) (giAct J I f x)) (G.act J I f (G.act I (prodP I Iv) (lid I e) x)) =
+    GL.actSq J (prodP J Iv) I (prodP I Iv) (cylH J I f) (lid J e) (lid I e) f (cyl-lid J I f e) x ;
+
+  ev (e : El Iv) : PSub[GI, G] = new PSub[GI, G, \ X x -> G.act X (prodP X Iv) (lid X e) x, evNat e] ;
+
+} ;
+
+module PathObj (G : PCtx) (A : PTy[G]) {
+  module TA = PR.TyL[G, A] ;
+  module PC = PathCtx[G] ;
+
+  ----------------------------------------------------------------------
+  -- lines in A
+
+  aiOb (X : Ob) (x : W0.Ix (G.ob (prodP X Iv))) : W0.V = A.tob (prodP X Iv) x ;
+
+  aiAct : TactTy PC.GI aiOb = \ J I f x y e a -> A.tact (prodP J Iv) (prodP I Iv) (cylH J I f) x y e a ;
+
+  aiId : IdLaw PC.GI aiOb aiAct = \ I x e a ->
+    TA.pr-inj (prodP I Iv) x (aiAct I I (idH I) x x e a) a
+      (transH (symH (TA.pr-tact (prodP I Iv) (prodP I Iv) (cylH I I (idH I)) x x e a))
+              (TA.PE.actId (prodP I Iv) (cylH I I (idH I)) (cyl-id I) (x, a))) ;
+
+  aiO : OLaw PC.GI aiOb aiAct = \ K J I f g x y z e1 e2 e3 a ->
+    TA.pr-inj (prodP K Iv) z (aiAct K I (compH K J I f g) x z e3 a) (aiAct K J g y z e2 (aiAct J I f x y e1 a))
+      (calc (TA.EI (prodP K Iv)) {
+          (z, aiAct K I (compH K J I f g) x z e3 a)
+        =< symH (TA.pr-tact (prodP K Iv) (prodP I Iv) (cylH K I (compH K J I f g)) x z e3 a) >
+          TA.E.act (prodP K Iv) (prodP I Iv) (cylH K I (compH K J I f g)) (x, a)
+        =< TA.PE.actEq (prodP K Iv) (prodP I Iv) (cylH K I (compH K J I f g))
+             (compH (prodP K Iv) (prodP J Iv) (prodP I Iv) (cylH J I f) (cylH K J g)) (cyl-comp K J I f g) (x, a) >
+          TA.E.act (prodP K Iv) (prodP I Iv) (compH (prodP K Iv) (prodP J Iv) (prodP I Iv) (cylH J I f) (cylH K J g)) (x, a)
+        =< symH (TA.PE.actC (prodP K Iv) (prodP J Iv) (prodP I Iv) (cylH J I f) (cylH K J g) (x, a)) >
+          TA.E.act (prodP K Iv) (prodP J Iv) (cylH K J g) (TA.E.act (prodP J Iv) (prodP I Iv) (cylH J I f) (x, a))
+        =< apH (TA.E.act (prodP K Iv) (prodP J Iv) (cylH K J g)) (TA.pr-tact (prodP J Iv) (prodP I Iv) (cylH J I f) x y e1 a) >
+          TA.E.act (prodP K Iv) (prodP J Iv) (cylH K J g) (y, aiAct J I f x y e1 a)
+        =< TA.pr-tact (prodP K Iv) (prodP J Iv) (cylH K J g) y z e2 (aiAct J I f x y e1 a) >
+          (z, aiAct K J g y z e2 (aiAct J I f x y e1 a)) }) ;
+
+  AI : PTy[PC.GI] = (mkTy PC.GI aiOb aiAct aiId aiO) ;
+} ;

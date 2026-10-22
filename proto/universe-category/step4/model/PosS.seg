@@ -1,0 +1,193 @@
+-- PosS.seg: posets as an instance of the base interface (IvBase.seg) with
+-- CANONICAL sieves: a sieve on X is a decidable sieve of maps into X
+-- (CSieve), as on Delta (DeltaBase).  Unlike the subsets of Constr.PosB, these
+-- are closed under union, so a cofibration of a representable is ONE sieve
+-- (cours6: Phi(X) is a lattice of decidable sieves) and forall of a list of
+-- lines is one sieve (the cylinder W * [1] is an object: one test).
+--
+--   objects, maps, interval, connections   those of Constr / PosetConn
+--   sieves     CSieve.Sieves at posets; the end points of [1] are the
+--              sieves of the subsets PosetSub.ptS (subS)
+--   forall     PSFa / PSFaU: f lands iff the lines hold at the generic
+--              point (pr1 , pr2) of W * [1] (PrismCov with one test)
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ;
+open PosetConn[a] ;
+
+------------------------------------------------------------------------
+-- the canonical decidable sieves of the category of posets
+
+module SP = CSieve[a].Sieves[obV, homV, idH, compH, comp-assoc] ;
+
+-- the sieve of the maps into W whose composite with k lands in a subset of
+-- the poset Y (decided by searching: allIn)
+isIn (V Y : Ob) (k : Hom V Y) (Q : Subset Y) : Bool = allIn V (PosetSub.pre V Y k Q) ;
+
+isIn-sound (V Y : Ob) (k : Hom V Y) (Q : Subset Y) (h : IsT (isIn V Y k Q)) : PosetSub.Lands V Y Q k =
+  PosB.lands-eq V Y Q (compH V V Y k (idH V)) k (comp-idr V Y k)
+    (PosetSub.lands-pre V V Y k Q (idH V) (PosetSub.allS-sound V (PosetSub.pre V Y k Q) h)) ;
+
+isIn-complete (V Y : Ob) (k : Hom V Y) (Q : Subset Y) (i : PosetSub.Lands V Y Q k) : IsT (isIn V Y k Q) =
+  PosetSub.allS-complete V (PosetSub.pre V Y k Q)
+    (PosetSub.pre-lands V V Y k Q (idH V)
+       (PosB.lands-eq V Y Q k (compH V V Y k (idH V)) (symH (comp-idr V Y k)) i)) ;
+
+subS (W Y : Ob) (k : Hom W Y) (Q : Subset Y) : SP.Phi W =
+  (\ V g -> isIn V Y (compH V W Y k g) Q,
+   \ V' V g g' i -> isIn-complete V' Y (compH V' W Y k (compH V' V W g g')) Q
+       (PosB.lands-eq V' Y Q (compH V' V Y (compH V W Y k g) g') (compH V' W Y k (compH V' V W g g'))
+          (comp-assoc V' V W Y k g g')
+          (PosetSub.lands-comp V' V Y Q (compH V W Y k g) g' (isIn-sound V Y (compH V W Y k g) Q i)))) ;
+
+-- the two end points of [1]
+sptS (e : El Iv) : SP.Phi Iv = subS Iv Iv (idH Iv) (PosetSub.ptS e) ;
+
+slands-pt (W : Ob) (e : El Iv) (g : Hom W Iv) (i : SP.Lands W Iv (sptS e) g) : Id (Hom W Iv) g (constH W Iv e) =
+  transH (symH (comp-idl W Iv g))
+    (PosetSub.lands-pt W e (compH W Iv Iv (idH Iv) g) (isIn-sound W Iv (compH W Iv Iv (idH Iv) g) (PosetSub.ptS e) i)) ;
+
+spt-lands (W : Ob) (e : El Iv) : SP.Lands W Iv (sptS e) (constH W Iv e) =
+  isIn-complete W Iv (compH W Iv Iv (idH Iv) (constH W Iv e)) (PosetSub.ptS e)
+    (PosB.lands-eq W Iv (PosetSub.ptS e) (constH W Iv e) (compH W Iv Iv (idH Iv) (constH W Iv e))
+       (symH (comp-idl W Iv (constH W Iv e))) (PosetSub.pt-lands W e)) ;
+
+spt-disj (W : Ob) (g : Hom W Iv) (i : SP.Lands W Iv (sptS e0) g) (i' : SP.Lands W Iv (sptS e1) g) : Empty =
+  PosetSub.pt-disj W (compH W Iv Iv (idH Iv) g)
+    (isIn-sound W Iv (compH W Iv Iv (idH Iv) g) (PosetSub.ptS e0) i)
+    (isIn-sound W Iv (compH W Iv Iv (idH Iv) g) (PosetSub.ptS e1) i') ;
+
+module PSB = IvBase[a].IvBase[obV, homV, idH, compH, comp-idl, comp-idr, comp-assoc,
+  Iv, El Iv, e0, e1, \ X e -> constH X Iv e, constH-nat,
+  SP.Phi, SP.pre, SP.Lands, SP.isProp-Lands, SP.lands-comp, SP.lands-pre, SP.pre-lands, SP.phi-ext,
+  SP.emptyS, SP.empty-lands,
+  sptS, slands-pt, spt-lands, spt-disj,
+  SP.allS, SP.allS-sound, SP.allS-complete] ;
+
+-- the union of a list of sieves (one sieve: GCofOne's parameter)
+bigU (X : Ob) (r : Nat) (Q : Fin r -> SP.Phi X) : SP.Phi X =
+  (\ W f -> anyF r (\ k -> (Q k).1 W f),
+   \ W' W f g t -> anyF-complete r (\ k -> (Q k).1 W' (compH W' W X f g)) (anyF-sound r (\ k -> (Q k).1 W f) t).1
+                     ((Q (anyF-sound r (\ k -> (Q k).1 W f) t).1).2 W' W f g (anyF-sound r (\ k -> (Q k).1 W f) t).2)) ;
+
+bigU-in (W X : Ob) (r : Nat) (Q : Fin r -> SP.Phi X) (f : Hom W X) (k : Fin r) (i : SP.Lands W X (Q k) f)
+  : SP.Lands W X (bigU X r Q) f = anyF-complete r (\ k' -> (Q k').1 W f) k i ;
+
+bigU-out (W X : Ob) (r : Nat) (Q : Fin r -> SP.Phi X) (f : Hom W X) (i : SP.Lands W X (bigU X r Q) f)
+  : (k : Fin r) * SP.Lands W X (Q k) f = anyF-sound r (\ k -> (Q k).1 W f) i ;
+
+-- the connections of the interval [1]: min / max (PosetConn)
+module PSCn = PSB.Cn[cIp, cIp-nat, cIp-jsrc, cIp-jtgt, cIp-isrc, cIp-itgt] ;
+
+------------------------------------------------------------------------
+-- forall of a list of lines over X: ONE sieve, the maps f : W -> X whose
+-- lines hold at the generic point (pr1 , pr2) of W * [1]; every (g , j)
+-- factors through it (one test)
+
+module SCov (W : Ob) {
+  module C = PSB.PrismCov[W, suc zero, \ k -> prodP W Iv, \ k -> pr1 W Iv, \ k -> pr2 W Iv,
+    \ V g j -> ((zero, refl true), (pairH W Iv V g j, (pr1-pair W Iv V g j, pr2-pair W Iv V g j)))] ;
+} ;
+
+-- the test at f: some line holds at the generic point
+testP (X : Ob) (n : Nat) (Ls : Fin n -> PSB.PhiL X) (W : Ob) (f : Hom W X) : Bool =
+  anyF n (\ l -> SP.allS (prodP W Iv) ((Ls l).1 (prodP W Iv) (compH (prodP W Iv) W X f (pr1 W Iv)) (pr2 W Iv))) ;
+
+module TB (X : Ob) (n : Nat) (Ls : Fin n -> PSB.PhiL X) (W : Ob) (f : Hom W X) {
+  module C = SCov[W].C ;
+
+  P (l : Fin n) : Bool = SP.allS (prodP W Iv) ((Ls l).1 (prodP W Iv) (compH (prodP W Iv) W X f (pr1 W Iv)) (pr2 W Iv)) ;
+
+  toTests (t : IsT (testP X n Ls W f)) : C.AtTests X n Ls f = \ k -> anyF-sound n P t ;
+
+  ofTests (a : C.AtTests X n Ls f) : IsT (testP X n Ls W f) =
+    anyF-complete n P (a (zero, refl true)).1 (a (zero, refl true)).2 ;
+
+  sound (t : IsT (testP X n Ls W f)) : PSB.HoldsU X n Ls W f = C.tests-holdsU X n Ls f (toTests t) ;
+
+  complete (h : PSB.HoldsU X n Ls W f) : IsT (testP X n Ls W f) = ofTests (C.holdsU-tests X n Ls f h) ;
+} ;
+
+-- being covered is stable under precomposition
+holdsU-pre (X : Ob) (n : Nat) (Ls : Fin n -> PSB.PhiL X) (W' W : Ob) (f : Hom W X) (g : Hom W' W)
+  (h : PSB.HoldsU X n Ls W f) : PSB.HoldsU X n Ls W' (compH W' W X f g) = \ V g' j ->
+  ((h V (compH V W' W g g') j).1,
+   substH (\ k -> IsT (((Ls (h V (compH V W' W g g') j).1).1 V k j).1 V (idH V)))
+     (symH (comp-assoc V W' W X f g g')) (h V (compH V W' W g g') j).2) ;
+
+forallS (X : Ob) (n : Nat) (Ls : Fin n -> PSB.PhiL X) : SP.Phi X =
+  (testP X n Ls,
+   \ W' W f g t -> TB[X, n, Ls, W', compH W' W X f g].complete
+                      (holdsU-pre X n Ls W' W f g (TB[X, n, Ls, W, f].sound t))) ;
+
+-- forall commutes with restriction (one sieve on both sides)
+forallS-pre (Y X : Ob) (h : Hom Y X) (n : Nat) (Ls : Fin n -> PSB.PhiL X)
+  : Id (SP.Phi Y) (SP.pre Y X h (forallS X n Ls)) (forallS Y n (\ l -> PSB.restrL Y X h (Ls l))) =
+  SP.phi-ext Y (SP.pre Y X h (forallS X n Ls)) (forallS Y n (\ l -> PSB.restrL Y X h (Ls l)))
+    (\ W g i -> TB[Y, n, \ l -> PSB.restrL Y X h (Ls l), W, g].complete (\ V g' j ->
+       ((TB[X, n, Ls, W, compH W Y X h g].sound i V g' j).1,
+        substH (\ k -> IsT (((Ls (TB[X, n, Ls, W, compH W Y X h g].sound i V g' j).1).1 V k j).1 V (idH V)))
+          (comp-assoc V W Y X h g g') (TB[X, n, Ls, W, compH W Y X h g].sound i V g' j).2)))
+    (\ W g i -> TB[X, n, Ls, W, compH W Y X h g].complete (\ V g' j ->
+       ((TB[Y, n, \ l -> PSB.restrL Y X h (Ls l), W, g].sound i V g' j).1,
+        substH (\ k -> IsT (((Ls (TB[Y, n, \ l -> PSB.restrL Y X h (Ls l), W, g].sound i V g' j).1).1 V k j).1 V (idH V)))
+          (symH (comp-assoc V W Y X h g g')) (TB[Y, n, \ l -> PSB.restrL Y X h (Ls l), W, g].sound i V g' j).2))) ;
+
+-- an everywhere-empty line inserted into the list does not change the sieve
+module FIns (X : Ob) (k j : Nat) (hj : IsT (leb j k)) (Ls : Fin k -> PSB.PhiL X) (Ls' : Fin (suc k) -> PSB.PhiL X)
+  (eE : (h : IsT (ltb j (suc k))) (W : Ob) (f : Hom W X) (i : Hom W Iv) -> Id (SP.Phi W) ((Ls' (j, h)).1 W f i) (SP.emptyS W))
+  (eQ : (n : Nat) (h : IsT (ltb n k)) (h' : IsT (ltb (skipN j n) (suc k))) -> Id (PSB.PhiL X) (Ls' (skipN j n, h')) (Ls (n, h))) {
+
+  LdTy (V : Ob) (fg : Hom V X) (jj : Hom V Iv) (L : PSB.PhiL X) : U a = SP.Lands V V (L.1 V fg jj) (idH V) ;
+
+  -- a line of Ls' holding somewhere is not the empty one: it is one of Ls
+  back (V : Ob) (fg : Hom V X) (jj : Hom V Iv) (l' : Fin (suc k)) (ld : LdTy V fg jj (Ls' l'))
+    : (l : Fin k) * LdTy V fg jj (Ls l) =
+    eqN-dec ((l : Fin k) * LdTy V fg jj (Ls l)) l'.1 j
+      (\ e -> absurd _ (SP.empty-lands V V (idH V)
+         (substH (\ R -> SP.Lands V V R (idH V)) (eE (substH (\ z -> IsT (ltb z (suc k))) e l'.2) V fg jj)
+            (substH (\ z -> LdTy V fg jj (Ls' z)) (fin-eq (suc k) l' (j, substH (\ z -> IsT (ltb z (suc k))) e l'.2) e) ld))))
+      (\ ne -> ((unsk j l'.1, unsk-lt j l'.1 k hj l'.2 ne),
+         substH (\ L -> LdTy V fg jj L)
+           (transH (apH Ls' (fin-eq (suc k) l' (skipN j (unsk j l'.1), skipN-lt j (unsk j l'.1) k hj (unsk-lt j l'.1 k hj l'.2 ne))
+                               (symH (skipN-unsk j l'.1 ne))))
+                   (eQ (unsk j l'.1) (unsk-lt j l'.1 k hj l'.2 ne) (skipN-lt j (unsk j l'.1) k hj (unsk-lt j l'.1 k hj l'.2 ne))))
+           ld)) ;
+
+  fwd (V : Ob) (fg : Hom V X) (jj : Hom V Iv) (l : Fin k) (ld : LdTy V fg jj (Ls l))
+    : (l' : Fin (suc k)) * LdTy V fg jj (Ls' l') =
+    ((skipN j l.1, skipN-lt j l.1 k hj l.2),
+     substH (\ L -> LdTy V fg jj L) (symH (eQ l.1 l.2 (skipN-lt j l.1 k hj l.2))) ld) ;
+
+  S : Id (SP.Phi X) (forallS X (suc k) Ls') (forallS X k Ls) =
+    SP.phi-ext X (forallS X (suc k) Ls') (forallS X k Ls)
+      (\ W f i -> TB[X, k, Ls, W, f].complete (\ V g jj ->
+         back V (compH V W X f g) jj (TB[X, suc k, Ls', W, f].sound i V g jj).1 (TB[X, suc k, Ls', W, f].sound i V g jj).2))
+      (\ W f i -> TB[X, suc k, Ls', W, f].complete (\ V g jj ->
+         fwd V (compH V W X f g) jj (TB[X, k, Ls, W, f].sound i V g jj).1 (TB[X, k, Ls, W, f].sound i V g jj).2)) ;
+
+  res : PSB.GensIns X (suc zero) (\ b -> forallS X k Ls) (suc zero) (\ b -> forallS X (suc k) Ls') =
+    inl (refl (suc zero), \ n h h' -> S) ;
+} ;
+
+module PSFaU = PSB.FaU[\ n -> suc zero, \ X n Ls b -> forallS X n Ls,
+  \ W X n Ls f i -> TB[X, n, Ls, W, f].sound i.2,
+  \ W X n Ls f h -> ((zero, refl true), TB[X, n, Ls, W, f].complete h),
+  \ Y X h n Ls l -> forallS-pre Y X h n Ls,
+  \ X k j hj Ls Ls' eE eQ -> FIns[X, k, j, hj, Ls, Ls', eE, eQ].res] ;
+
+module PSFa = PSB.Fa[\ X L -> forallS X (suc zero) (\ b -> L),
+  \ W X L f i -> \ V g j -> (TB[X, suc zero, \ b -> L, W, f].sound i V g j).2,
+  \ W X L f h -> TB[X, suc zero, \ b -> L, W, f].complete (\ V g j -> ((zero, refl true), h V g j))] ;
+
+-- posets have binary products: the cylinder of the base PSB (as PCyl for PosB)
+module PSCyl = PSB.CylCat.Cyl[prodP, pr1, pr2, pairH, pr1-pair, pr2-pair, pair-eta] ;

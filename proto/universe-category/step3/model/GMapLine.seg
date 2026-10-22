@@ -1,0 +1,158 @@
+-- GMapLine.seg (inside IvBase): partial lines moved along a map of types
+-- al : A -> B over the same context G, for any path structure with the
+-- exponential law.  A point over the end e goes to the image of its value
+-- (tvM); an element of the fibres of evaluation (a line in A ending at the
+-- point) goes to the line of the images of its values (tsM); both commute
+-- with restriction, so partial lines move by GCofib.MapP (MP.mapP).
+-- (Used by Theorem 7's composition to unglue a partial line of Ext(alpha)
+-- along ext(alpha).)
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module MapLine (P : PathStr) (C : PathConn[P]) (G : PCtx) (A B : PTy[G]) (al : PMap[G, A, B]) (e : IPt) {
+  module KA = EndKit[P, G, A, e] ;
+  module KB = EndKit[P, G, B, e] ;
+  module LA = LevKit[P, C, G, A, e] ;
+  module LB = LevKit[P, C, G, B, e] ;
+  module TA = GPR.TyL[G, A] ;
+  module TB = GPR.TyL[G, B] ;
+
+  ----------------------------------------------------------------------
+  -- points over the end
+
+  tvM (W : Ob) (z : KA.TV.EI W) : KB.TV.EI W =
+    (z.1, TB.fromE W ((P.pev G e).nt W z.1) (al.mE W (KA.endE W z)) (al.mpt W (KA.endE W z))) ;
+
+  tvM-E (W : Ob) (z : KA.TV.EI W) : Id (TB.EI W) (KB.endE W (tvM W z)) (al.mE W (KA.endE W z)) =
+    TB.fromE-eq W ((P.pev G e).nt W z.1) (al.mE W (KA.endE W z)) (al.mpt W (KA.endE W z)) ;
+
+  tvM-act (Y X : Ob) (h : Hom Y X) (z : KA.TV.EI X) : Id (KB.TV.EI Y) (tvM Y (KA.TV.E.act Y X h z)) (KB.TV.E.act Y X h (tvM X z)) =
+    KB.tv-eq Y (tvM Y (KA.TV.E.act Y X h z)) (KB.TV.E.act Y X h (tvM X z)) (refl ((P.pth G).act Y X h z.1))
+      (calc (TB.EI Y) {
+          KB.endE Y (tvM Y (KA.TV.E.act Y X h z))
+        =< tvM-E Y (KA.TV.E.act Y X h z) >
+          al.mE Y (KA.endE Y (KA.TV.E.act Y X h z))
+        =< apH (al.mE Y) (KA.endE-act Y X h z) >
+          al.mE Y (TA.E.act Y X h (KA.endE X z))
+        =< al.mnat Y X h (KA.endE X z) >
+          TB.E.act Y X h (al.mE X (KA.endE X z))
+        =< apH (TB.E.act Y X h) (symH (tvM-E X z)) >
+          TB.E.act Y X h (KB.endE X (tvM X z))
+        =< symH (KB.endE-act Y X h (tvM X z)) >
+          KB.endE Y (KB.TV.E.act Y X h (tvM X z)) }) ;
+
+  tvS : PSub[KA.TV.E, KB.TV.E] = new PSub[KA.TV.E, KB.TV.E, tvM, tvM-act] ;
+
+  ----------------------------------------------------------------------
+  -- elements of the fibres: the line of the images of the values
+
+  module Ln (W : Ob) (u : KA.TS.EI W) {
+    t (V : Ob) (g : Hom V W) (j : Hom V Iv) : TB.EI V = al.mE V (C.levA G A W (KA.lineL W u) V g j) ;
+
+    tp : C.FamAPt G B W u.1.1 t = \ V g j -> transH (al.mpt V (C.levA G A W (KA.lineL W u) V g j)) (C.levA-pt G A W (KA.lineL W u) V g j) ;
+
+    tn : C.FamANat G B W t = \ V' V g' g j ->
+      transH (symH (al.mnat V' V g' (C.levA G A W (KA.lineL W u) V g j))) (apH (al.mE V') (C.levA-nat G A W (KA.lineL W u) V' V g' g j)) ;
+
+    L : KB.TL.EI W = (u.1.1, C.lamA G B W u.1.1 t tp tn) ;
+
+    q : Id (TB.EI W) (KB.endE W ((P.pevA G B e).mE W L)) (KB.endE W (tvM W u.1)) =
+      calc (TB.EI W) {
+          KB.endE W ((P.pevA G B e).mE W L)
+        =< LB.endL-lev W L >
+          C.levA G B W L W (idH W) (ptH W e)
+        =< C.levA-lam G B W u.1.1 t tp tn W (idH W) (ptH W e) >
+          al.mE W (C.levA G A W (KA.lineL W u) W (idH W) (ptH W e))
+        =< apH (al.mE W) (symH (LA.endL-lev W (KA.lineL W u))) >
+          al.mE W (KA.endE W ((P.pevA G A e).mE W (KA.lineL W u)))
+        =< apH (\ z -> al.mE W (KA.endE W z)) u.2.2 >
+          al.mE W (KA.endE W u.1)
+        =< symH (tvM-E W u.1) >
+          KB.endE W (tvM W u.1) } ;
+  } ;
+
+  tsM (W : Ob) (u : KA.TS.EI W) : KB.TS.EI W = KB.mkTS W (tvM W u.1) Ln[W, u].L (refl u.1.1) Ln[W, u].q ;
+
+  tsM-pt (W : Ob) (u : KA.TS.EI W) : Id (KB.TV.EI W) (tsM W u).1 (tvM W u.1) =
+    KB.mkTS-pt W (tvM W u.1) Ln[W, u].L (refl u.1.1) Ln[W, u].q ;
+
+  -- the values of the moved line are the images of the values
+  tsM-lev (W : Ob) (u : KA.TS.EI W) (V : Ob) (g : Hom V W) (j : Hom V Iv)
+    : Id (TB.EI V) (C.levA G B W (KB.lineL W (tsM W u)) V g j) (al.mE V (C.levA G A W (KA.lineL W u) V g j)) =
+    transH (LB.mkTS-lev W (tvM W u.1) Ln[W, u].L (refl u.1.1) Ln[W, u].q V g j)
+           (C.levA-lam G B W u.1.1 Ln[W, u].t Ln[W, u].tp Ln[W, u].tn V g j) ;
+
+  opaque tsM-pt ; opaque tsM-lev ;
+
+  tsM-act (V W : Ob) (g : Hom V W) (u : KA.TS.EI W) : Id (KB.TS.EI V) (KB.TS.E.act V W g (tsM W u)) (tsM V (KA.TS.E.act V W g u)) =
+    LB.ts-ext V (KB.TS.E.act V W g (tsM W u)) (tsM V (KA.TS.E.act V W g u))
+      (transH (apH (KB.TV.E.act V W g) (tsM-pt W u))
+        (transH (symH (tvM-act V W g u.1)) (symH (tsM-pt V (KA.TS.E.act V W g u)))))
+      (\ V' g' j -> transH (LB.line-act V W g (tsM W u) V' g' j)
+         (transH (tsM-lev W u V' (compH V' V W g g') j)
+           (transH (apH (al.mE V') (symH (LA.line-act V W g u V' g' j)))
+                   (symH (tsM-lev V (KA.TS.E.act V W g u) V' g' j))))) ;
+
+  module MP = GCofib[lv].MapP[KA.TV.E, KB.TV.E, KA.SFm.SF, KB.SFm.SF, tvS, tsM, tsM-pt, tsM-act] ;
+} ;
+
+------------------------------------------------------------------------
+-- A side of a partial line over the point x (over the end e), from a
+-- natural family of lines t V f i over x f (for f landing in Q) that end
+-- at x f and are natural in the map: its values are the elements of the
+-- fibres of evaluation with lines t V f i (sv), read back by sv-lev.
+
+module LineSide (P : PathStr) (C : PathConn[P]) (G : PCtx) (A : PTy[G]) (e : IPt) (X : Ob)
+  (x : EndKit[P, G, A, e].TV.EI X) (Q : Phi X)
+  (t : (V : Ob) (f : Hom V X) (i : Lands V X Q f) -> C.FamA G A V)
+  (tp : (V : Ob) (f : Hom V X) (i : Lands V X Q f) -> C.FamAPt G A V ((P.pth G).act V X f x.1) (t V f i))
+  (tn : (V : Ob) (f : Hom V X) (i : Lands V X Q f) -> C.FamANat G A V (t V f i))
+  (t1 : (V : Ob) (f : Hom V X) (i : Lands V X Q f)
+        -> Id (GPR.TyL[G, A].EI V) (t V f i V (idH V) (ptH V e)) (EndKit[P, G, A, e].endE V (EndKit[P, G, A, e].TV.E.act V X f x)))
+  (tr : (V' V : Ob) (chi : Hom V' V) (f : Hom V X) (i : Lands V X Q f) (i' : Lands V' X Q (compH V' V X f chi))
+        (W : Ob) (g : Hom W V') (j : Hom W Iv)
+        -> Id (GPR.TyL[G, A].EI W) (t V' (compH V' V X f chi) i' W g j) (t V f i W (compH W V' V chi g) j)) {
+  module KA = EndKit[P, G, A, e] ;
+  module LA = LevKit[P, C, G, A, e] ;
+  module TA = GPR.TyL[G, A] ;
+
+  L (V : Ob) (f : Hom V X) (i : Lands V X Q f) : KA.TL.EI V =
+    ((P.pth G).act V X f x.1, C.lamA G A V ((P.pth G).act V X f x.1) (t V f i) (tp V f i) (tn V f i)) ;
+
+  qE (V : Ob) (f : Hom V X) (i : Lands V X Q f)
+    : Id (TA.EI V) (KA.endE V ((P.pevA G A e).mE V (L V f i))) (KA.endE V (KA.TV.E.act V X f x)) =
+    transH (LA.endL-lev V (L V f i))
+      (transH (C.levA-lam G A V ((P.pth G).act V X f x.1) (t V f i) (tp V f i) (tn V f i) V (idH V) (ptH V e)) (t1 V f i)) ;
+
+  sv (V : Ob) (f : Hom V X) (i : Lands V X Q f) : KA.TS.EI V =
+    KA.mkTS V (KA.TV.E.act V X f x) (L V f i) (refl ((P.pth G).act V X f x.1)) (qE V f i) ;
+
+  sv-pt (V : Ob) (f : Hom V X) (i : Lands V X Q f) : Id (KA.TV.EI V) (sv V f i).1 (KA.TV.E.act V X f x) =
+    KA.mkTS-pt V (KA.TV.E.act V X f x) (L V f i) (refl ((P.pth G).act V X f x.1)) (qE V f i) ;
+
+  sv-lev (V : Ob) (f : Hom V X) (i : Lands V X Q f) (W : Ob) (g : Hom W V) (j : Hom W Iv)
+    : Id (TA.EI W) (C.levA G A V (KA.lineL V (sv V f i)) W g j) (t V f i W g j) =
+    transH (LA.mkTS-lev V (KA.TV.E.act V X f x) (L V f i) (refl ((P.pth G).act V X f x.1)) (qE V f i) W g j)
+           (C.levA-lam G A V ((P.pth G).act V X f x.1) (t V f i) (tp V f i) (tn V f i) W g j) ;
+
+  pnat : KA.PT.PnTy X Q sv = \ V' V chi f i i' ->
+    LA.ts-ext V' (KA.TS.E.act V' V chi (sv V f i)) (sv V' (compH V' V X f chi) i')
+      (transH (apH (KA.TV.E.act V' V chi) (sv-pt V f i))
+        (transH (KA.TV.PE.actC V' V X f chi x) (symH (sv-pt V' (compH V' V X f chi) i'))))
+      (\ W g j -> transH (LA.line-act V' V chi (sv V f i) W g j)
+                   (transH (sv-lev V f i W (compH W V' V chi g) j)
+                     (transH (symH (tr V' V chi f i i' W g j)) (symH (sv-lev V' (compH V' V X f chi) i' W g j))))) ;
+
+  opaque sv-pt ; opaque sv-lev ;
+
+  side : KA.PT.PSide[X, x] = new KA.PT.PSide[X, x, Q, sv, sv-pt, pnat] ;
+} ;

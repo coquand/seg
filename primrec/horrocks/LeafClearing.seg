@@ -1,0 +1,116 @@
+-- One leaf of the formal gcd tree, with monoid S.
+-- A monic local generator h of the row ideal over A_S[X], with
+-- y = h b and h = sum y c, gives d, tau in S and polynomials over A with
+--   p = sum_j y_j z_j,   p = d h over A_S,   tau y_j = p bb_j in A[X].
+level l ; open Ring[l] ; open Presentations[l] ;
+module Over (A : CRing) (setA : Prelude[l].isSet A.R)
+ (n : Nat) (ys : Fin n -> List A.R)
+ (S : A.R -> U l) (one : S A.o) (product : (s t : A.R) -> S s -> S t -> S (A.mul s t)) {
+ module Tr = Truncation[l] ;
+ module Clearing = PolynomialClearing[l].Over[A,setA,S,one,product] ;
+ module L = Clearing.L ;
+ module Change = Clearing.Change ;
+ module B = Clearing.B ;
+ module D = Clearing.D ;
+ module H = HorrocksInterface[l].Over[A,setA] ;
+ module HC = HorrocksInterface[l].Over[L.ring,L.set] ;
+ module SB = FiniteIdeal[l].Sums[B.ring] ;
+ module SD = FiniteIdeal[l].Sums[D.ring] ;
+ module Map = StandardOpens[l].SumMap[B.ring,D.ring,Change.hom] ;
+ hom : B.Carrier -> D.Carrier = Change.hom.1 ;
+ yB (i : Fin n) : B.Carrier = B.include (ys i) ;
+ y (i : Fin n) : D.Carrier = hom (yB i) ;
+ module RR = RingRearrange[l] ;
+ LocalPrincipal : U l = (h-lower : List L.Carrier) * (c b : Fin n -> D.Carrier) *
+  Id D.Carrier (SD.lin n y c) (HC.monic h-lower) *
+  ((i : Fin n) -> Id D.Carrier (y i) (D.mulQ (HC.monic h-lower) (b i))) ;
+ Cleared : U l = (local : LocalPrincipal) * (d : A.R) * S d * (z : Fin n -> B.Carrier) *
+  Id D.Carrier (hom (SB.lin n yB z)) (D.mulQ (Clearing.scalar d) (HC.monic local.1)) *
+  (tau : A.R) * S tau * (bb : Fin n -> B.Carrier) *
+  ((j : Fin n) -> Id B.Carrier (B.mulQ (B.constant tau) (yB j)) (B.mulQ (SB.lin n yB z) (bb j))) ;
+ module FromLocal (local : LocalPrincipal) {
+  h : D.Carrier = HC.monic local.1 ;
+  c : Fin n -> D.Carrier = local.2.1 ;
+  b : Fin n -> D.Carrier = local.2.2.1 ;
+  module Numerator (cl : Clearing.ClearAll n c) {
+   d : A.R = cl.1 ;
+   z : Fin n -> B.Carrier = cl.2.2.1 ;
+   p : B.Carrier = SB.lin n yB z ;
+   image : Id D.Carrier (hom p) (D.mulQ (Clearing.scalar d) h) =
+    trans (Map.combination n yB z)
+     (trans (SD.sum-cong n (\ j -> D.mulQ (y j) (hom (z j)))
+       (\ j -> D.mulQ (y j) (D.mulQ (Clearing.scalar d) (c j))) (\ j -> ap (D.mulQ (y j)) (cl.2.2.2 j)))
+      (trans (SD.lin-scale n y c (Clearing.scalar d)) (ap (D.mulQ (Clearing.scalar d)) local.2.2.2.1))) ;
+   module Factor (fl : Clearing.ClearAll n b) {
+    eps : A.R = fl.1 ;
+    wv : Fin n -> B.Carrier = fl.2.2.1 ;
+    first (j : Fin n) : B.Carrier = B.mulQ (B.constant (A.mul eps d)) (yB j) ;
+    second (j : Fin n) : B.Carrier = B.mulQ p (wv j) ;
+    q (j : Fin n) : B.Carrier = B.addQ (first j) (B.negQ (second j)) ;
+    agree (j : Fin n) : Id D.Carrier (hom (first j)) (hom (second j)) =
+     trans (Clearing.on-scaled (A.mul eps d) (yB j))
+      (trans (cong2 D.Carrier D.mulQ _ _ _ _ (Clearing.scalar-mul eps d) (local.2.2.2.2 j))
+       (trans (RR.four D.ring (Clearing.scalar eps) (Clearing.scalar d) h (b j))
+        (sym (trans (Change.hom.2.2.2 p (wv j)) (cong2 D.Carrier D.mulQ _ _ _ _ image (fl.2.2.2 j)))))) ;
+    vanish (j : Fin n) : Id D.Carrier (hom (q j)) D.zeroQ =
+     trans (Change.hom.2.2.1 (first j) (B.negQ (second j)))
+      (trans (ap (D.addQ (hom (first j))) (RingHom[l].negation B.ring D.ring Change.hom (second j)))
+       (trans (ap (\ t -> D.addQ t (D.negQ (hom (second j)))) (agree j))
+        (D.add-neg (hom (second j))))) ;
+    module Killed (kl : Clearing.KernelAll n q) {
+     kappa : A.R = kl.1 ;
+     tau : A.R = A.mul kappa (A.mul eps d) ;
+     member : S tau = product kappa (A.mul eps d) kl.2.1 (product eps d fl.2.1 cl.2.1) ;
+     bb (j : Fin n) : B.Carrier = B.mulQ (B.constant kappa) (wv j) ;
+     equation (j : Fin n) : Id B.Carrier (B.mulQ (B.constant tau) (yB j)) (B.mulQ p (bb j)) =
+      trans (ap (\ t -> B.mulQ t (yB j)) (B.constant-mul kappa (A.mul eps d)))
+       (trans (sym (B.mul-assoc (B.constant kappa) (B.constant (A.mul eps d)) (yB j)))
+        (trans (RR.cancel-difference B.ring (B.constant kappa) (first j) (second j) (kl.2.2 j))
+         (RL[B.ring].mul-swap (B.constant kappa) p (wv j)))) ;
+     result : Cleared = (local,d,cl.2.1,z,image,tau,member,bb,equation) ;
+    } ;
+    result : Tr.Trunc[Cleared].carrier =
+     Tr.Trunc[Clearing.KernelAll n q].induction @l
+      (\ x -> Tr.Trunc[Cleared].carrier) (\ x -> Tr.Trunc[Cleared].proposition)
+      (\ kl -> Tr.Trunc[Cleared].inc Killed[kl].result)
+      (Clearing.kernel-all n q vanish) ;
+   } ;
+   result : Tr.Trunc[Cleared].carrier =
+    Tr.Trunc[Clearing.ClearAll n b].induction @l
+     (\ x -> Tr.Trunc[Cleared].carrier) (\ x -> Tr.Trunc[Cleared].proposition)
+     (\ fl -> Factor[fl].result) (Clearing.clear-all n b) ;
+  } ;
+  result : Tr.Trunc[Cleared].carrier =
+   Tr.Trunc[Clearing.ClearAll n c].induction @l
+    (\ x -> Tr.Trunc[Cleared].carrier) (\ x -> Tr.Trunc[Cleared].proposition)
+    (\ cl -> Numerator[cl].result) (Clearing.clear-all n c) ;
+ } ;
+ clear (local : LocalPrincipal) : Tr.Trunc[Cleared].carrier = FromLocal[local].result ;
+
+ -- The scalar certificate over A[X], moved to A_S[X].
+ module Certified (lower : List A.R) (power : Nat)
+  (e : Fin n -> Fin n -> B.Carrier) (x : Fin n -> B.Carrier)
+  (xy : (i j : Fin n) -> Id B.Carrier (B.mulQ (x i) (yB j))
+   (B.mulQ (AffinePowers[l].Over[B.ring].power (H.monic lower) power) (e i j)))
+  (contraction : Id B.Carrier (SB.lin n yB x) (AffinePowers[l].Over[B.ring].power (H.monic lower) power)) {
+  module MB = RankOneProjector[l].Over[B.ring] ;
+  module MD = RankOneProjector[l].Over[D.ring] ;
+  t : B.Carrier = AffinePowers[l].Over[B.ring].power (H.monic lower) power ;
+  tC : D.Carrier = AffinePowers[l].Over[D.ring].power (HC.monic (Change.coefficients lower)) power ;
+  w : MB.Size[n].ScalarFactor e t = (x,yB,xy,contraction) ;
+  module Moved = ScalarFactorMap[l].Over[B.ring,D.ring,Change.hom].At[n,e,t,w] ;
+  scalar : Id D.Carrier (hom t) tC = Change.monic-power lower power ;
+  wC : MD.Size[n].ScalarFactor Moved.entries tC =
+   (Moved.x,Moved.y,
+    \ i j -> trans (Moved.factors i j) (ap (\ s -> D.mulQ s (Moved.entries i j)) scalar),
+    trans Moved.contraction scalar) ;
+  module Row = GeneratedIdeal[l].Over[D.ring,n,y] ;
+  module MP = MonicPowers[l].Over[A,setA] ;
+  mp : MP.Witness t = MP.powers lower power ;
+  monic-member : Row.Member (HC.monic (Change.coefficients mp.1)) =
+   Row.equal _ _
+    (trans (sym (Map.combination n yB x))
+     (trans (ap hom contraction) (trans (ap hom (sym mp.2)) (Change.monic mp.1))))
+    (Row.linear-combination n y (\ i -> hom (x i)) Row.generator) ;
+ } ;
+} ;

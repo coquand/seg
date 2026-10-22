@@ -1,0 +1,157 @@
+-- GUaFullT.seg (inside IvBase.FaU, any base, any classifier; Step 3): the
+-- classifier-independent part of smallCl-full.  At a full point x = (w , fu)
+-- of GDr, along yx : y X -> CU.resCtx:
+--
+--   c / Fc / E2   the codes of B along yx, El along them
+--   E1            the small Ext along yd' = inclR o yx (GXsubEq.XE.Bs)
+--   phBR          E1's fibres read in B (GUaFull.FM), natural (PhNphi)
+--   Po / cmp / TP E1 = E2 (along idS), fibrewise by phBR (tyEq; trEv)
+--   c' / codeEq   the codes are B's at x moved (bmap natural)
+--   Qy            the Yoneda map of w is yd'
+--
+-- Posets: GUaFullL1 / GUaFullL; Delta: DSmallFull.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Trees[a] ;
+open Arith[a] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open GLine[a] ;
+module GE1 = GFibE[a+] ;
+module L = GPre[a+].PS ;
+module LP = GPre[a+] ;
+module FMa = GFam[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+
+module FT (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE)
+  (r : Nat)
+  (kU0 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e0)
+  (kU1 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e1)
+  (kU0e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].SFm.SF].KESI kU0)
+  (kU1e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].SFm.SF].KESI kU1)
+  (X : Ob) (w : GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl, r].Pr X) (fu : IsT (GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl, r].CU.full X w)) {
+  module UU = GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module EC = GElC.ElC[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE] ;
+  module LC = GUaLoc.LC[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, r, kU0, kU1, kU0e, kU1e, X, (w, fu)] ;
+  module FMx = LC.FMx ;
+  module UV = LC.UV ;
+  module UB = UV.UB ;
+  module CU = UB.CU ;
+  module XS = UV.XS ;
+  module CM = UV.CM ;
+  module FU = UV.FU ;
+  module E3u = FMx.E3u ;
+
+  yx : GSmall.XSub[yP X, CU.resCtx] = LC.yx ;
+  E1 : PTy[yP X] = FMx.X2.Bs ;
+
+  -- the codes of B along yx
+  c (W : Ob) (f : Hom W X) : UU.U0 W = UB.bmap.nt W (yx.nt W f) ;
+  cnat (Y' Y : Ob) (h : Hom Y' Y) (f : Hom Y X) : Id (UU.U0 Y') (c Y' (compH Y' Y X f h)) (UU.uAct Y' Y h (c Y f)) =
+    transH (apH (UB.bmap.nt Y') (yx.nt-nat Y' Y h f)) (UB.bmap.nt-nat Y' Y h (yx.nt Y f)) ;
+
+  module Fc = EC.Fam[yP X, c, cnat] ;
+  E2 : PTy[yP X] = Fc.ElTy ;
+
+  module TE1 = GPR.TyL[yP X, E1] ;
+  module TE2 = GPR.TyL[yP X, E2] ;
+
+  -- E2 read in El (injective on fibres)
+  module MM = GTransfer[a+, a, a+].TrM[yP X, E2, UU.UCtx, GSmall.up UU.UCtx UU.El, (EC.cx (yP X) c cnat).nt, (EC.cx (yP X) c cnat).nt-nat,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, EC.SF.At[yP X, EC.cx (yP X) c cnat].PhN, e0] ;
+
+  -- phBR is natural, read in E2
+  PhNphi (V W : Ob) (g : Hom V W) (w : TE1.EI W)
+    : Id (TE2.EI V) ((idS (yP X)).nt V (TE1.E.act V W g w).1, FMx.phBR V (TE1.E.act V W g w).1 (TE1.E.act V W g w).2)
+                    (TE2.E.act V W g ((idS (yP X)).nt W w.1, FMx.phBR W w.1 w.2)) =
+    MM.tbEq V ((TE1.E.act V W g w).1, FMx.phBR V (TE1.E.act V W g w).1 (TE1.E.act V W g w).2) (TE2.E.act V W g (w.1, FMx.phBR W w.1 w.2))
+      (transH (apH (\ u -> u.1) (TE1.pr-tact V W g w.1 (compH V W X w.1 g) (refl (compH V W X w.1 g)) w.2))
+              (symH (apH (\ u -> u.1) (TE2.pr-tact V W g w.1 (compH V W X w.1 g) (refl (compH V W X w.1 g)) (FMx.phBR W w.1 w.2)))))
+      (transH (apH (\ u -> (UB.bmap.nt V u.1, u.2)) (FMx.PhNBR V W g w))
+        (transH (FU.PhNB V W g (yx.nt W w.1, FMx.phBR W w.1 w.2))
+                (symH (EC.SF.At[yP X, EC.cx (yP X) c cnat].PhN V W g (w.1, FMx.phBR W w.1 w.2))))) ;
+
+  opaque PhNphi ;
+
+  fu0 (W : Ob) (f : Hom W X) : IsT (CM.At[W, (yx.nt W f).1].DT.CL.full W (idH W)) = CM.At[W, (yx.nt W f).1].fU2D (yx.nt W f).2 ;
+
+  Po (W : Ob) (f : Hom W X) : Id W0.V (E1.tob W f) (E2.tob W f) =
+    transH (CM.At[W, (yx.nt W f).1].E3d.extOb-B W (idH W) (fu0 W f))
+           (apH (UU.fib0 W) (CM.At[W, (yx.nt W f).1].PDU (fu0 W f) (yx.nt W f).2)) ;
+
+  cmp (W : Ob) (f : Hom W X) (b : W0.Ix (E1.tob W f))
+    : Id (W0.Ix (E2.tob W f)) (subst W0.V (\ z -> W0.Ix z) (E1.tob W f) (E2.tob W f) (Po W f) b) (FMx.phBR W f b) =
+    calc (W0.Ix (E2.tob W f)) {
+        subst W0.V (\ z -> W0.Ix z) (E1.tob W f) (E2.tob W f) (Po W f) b
+      =< GUaLoc2.substIxTr (E1.tob W f) (UU.fib0 W (CM.At[W, (yx.nt W f).1].cD (fu0 W f))) (E2.tob W f)
+           (CM.At[W, (yx.nt W f).1].E3d.extOb-B W (idH W) (fu0 W f)) (apH (UU.fib0 W) (CM.At[W, (yx.nt W f).1].PDU (fu0 W f) (yx.nt W f).2)) b >
+        subst W0.V (\ z -> W0.Ix z) (UU.fib0 W (CM.At[W, (yx.nt W f).1].cD (fu0 W f))) (E2.tob W f)
+          (apH (UU.fib0 W) (CM.At[W, (yx.nt W f).1].PDU (fu0 W f) (yx.nt W f).2))
+          (subst W0.V (\ z -> W0.Ix z) (E1.tob W f) (UU.fib0 W (CM.At[W, (yx.nt W f).1].cD (fu0 W f))) (CM.At[W, (yx.nt W f).1].E3d.extOb-B W (idH W) (fu0 W f)) b)
+      =< apH (subst W0.V (\ z -> W0.Ix z) (UU.fib0 W (CM.At[W, (yx.nt W f).1].cD (fu0 W f))) (E2.tob W f)
+               (apH (UU.fib0 W) (CM.At[W, (yx.nt W f).1].PDU (fu0 W f) (yx.nt W f).2)))
+           (CM.At[W, (yx.nt W f).1].E3d.extOb-B-sub W (idH W) (fu0 W f) b) >
+        subst W0.V (\ z -> W0.Ix z) (UU.fib0 W (CM.At[W, (yx.nt W f).1].cD (fu0 W f))) (E2.tob W f)
+          (apH (UU.fib0 W) (CM.At[W, (yx.nt W f).1].PDU (fu0 W f) (yx.nt W f).2)) CM.At[W, (yx.nt W f).1].PF[fu0 W f, (yx.nt W f).2, b].b0
+      =< symH (subst-ap (UU.U0 W) W0.V (UU.fib0 W) (\ z -> W0.Ix z) (CM.At[W, (yx.nt W f).1].cD (fu0 W f)) (c W f)
+                (CM.At[W, (yx.nt W f).1].PDU (fu0 W f) (yx.nt W f).2) CM.At[W, (yx.nt W f).1].PF[fu0 W f, (yx.nt W f).2, b].b0) >
+        GGlueD.GD[Cl, clSub, clSub-id, clSub-o, encCl].trB W (CM.At[W, (yx.nt W f).1].cD (fu0 W f)) (c W f) (CM.At[W, (yx.nt W f).1].PDU (fu0 W f) (yx.nt W f).2)
+          CM.At[W, (yx.nt W f).1].PF[fu0 W f, (yx.nt W f).2, b].b0
+      =< symH CM.At[W, (yx.nt W f).1].PF[fu0 W f, (yx.nt W f).2, b].res >
+        FMx.phBR W f b } ;
+
+  opaque cmp ;
+
+  module MH = GUaLoc2.MvH1[yP X, yP X, E1, E2, idS (yP X), FMx.phBR, PhNphi] ;
+
+  module TP = GEqLaws[a].TyEqPw[yP X, E1, subTy (yP X) (yP X) E2 (idS (yP X)), Po, MH.H1 Po cmp] ;
+
+  -- a point of E1 transported along tyEq is read in E2 by phBR
+  trEv (W : Ob) (d : Hom W X) (b : W0.Ix (E1.tob W d))
+    : Id (GPR.TyL[yP X, subTy (yP X) (yP X) E2 (idS (yP X))].EI W)
+         (GEqLaws[a].TriL[yP X].trE W E1 (subTy (yP X) (yP X) E2 (idS (yP X))) TP.tyEq (d, b)) (d, FMx.phBR W d b) =
+    transH (GEqLaws[a].TriL[yP X].trE-pw W E1 (subTy (yP X) (yP X) E2 (idS (yP X))) TP.tyEq (Po W) TP.P (d, b))
+           (apH {W0.Ix (E2.tob W d)} {GPR.TyL[yP X, subTy (yP X) (yP X) E2 (idS (yP X))].EI W} (\ z -> (d, z)) (cmp W d b)) ;
+
+  opaque trEv ;
+
+  c' (W : Ob) (g : Hom W X) : UU.U0 W = UU.uAct W X g (UB.bmap.nt X (w, fu)) ;
+  cnat' (Y' Y : Ob) (h : Hom Y' Y) (g : Hom Y X) : Id (UU.U0 Y') (c' Y' (compH Y' Y X g h)) (UU.uAct Y' Y h (c' Y g)) =
+    UU.uAct-o Y' Y X g h (UB.bmap.nt X (w, fu)) ;
+
+  CnTy (cc : (Y : Ob) -> Hom Y X -> UU.U0 Y) : U a+ =
+    (Y' Y : Ob) (h : Hom Y' Y) (g : Hom Y X) -> Id (UU.U0 Y') (cc Y' (compH Y' Y X g h)) (UU.uAct Y' Y h (cc Y g)) ;
+
+  isProp-Cn (cc : (Y : Ob) -> Hom Y X -> UU.U0 Y) : isProp (CnTy cc) =
+    isProp-Pi Ob (\ Y' -> (Y : Ob) (h : Hom Y' Y) (g : Hom Y X) -> Id (UU.U0 Y') (cc Y' (compH Y' Y X g h)) (UU.uAct Y' Y h (cc Y g))) (\ Y' ->
+    isProp-Pi Ob (\ Y -> (h : Hom Y' Y) (g : Hom Y X) -> Id (UU.U0 Y') (cc Y' (compH Y' Y X g h)) (UU.uAct Y' Y h (cc Y g))) (\ Y ->
+    isProp-Pi (Hom Y' Y) (\ h -> (g : Hom Y X) -> Id (UU.U0 Y') (cc Y' (compH Y' Y X g h)) (UU.uAct Y' Y h (cc Y g))) (\ h ->
+    isProp-Pi (Hom Y X) (\ g -> Id (UU.U0 Y') (cc Y' (compH Y' Y X g h)) (UU.uAct Y' Y h (cc Y g))) (\ g ->
+      EC.setU0 Y' (cc Y' (compH Y' Y X g h)) (UU.uAct Y' Y h (cc Y g)))))) ;
+
+  -- the codes along yx are B's at x moved
+  codeEq : Id ((Y : Ob) -> Hom Y X -> UU.U0 Y) c c' =
+    funext Ob (\ Y -> Hom Y X -> UU.U0 Y) c c' (\ Y -> funext (Hom Y X) (\ g -> UU.U0 Y) (c Y) (c' Y)
+      (\ g -> UB.bmap.nt-nat Y X g (w, fu))) ;
+
+  -- the Yoneda map of w is inclR o yx
+  Qy : Id (GSmall.XSub[yP X, UB.GDr]) (GUaUniv.YD[Cl, clSub, clSub-id, clSub-o, encCl, r].yon X w) FMx.yd' =
+    GXsubEq.xsubExt (yP X) UB.GDr (GUaUniv.YD[Cl, clSub, clSub-id, clSub-o, encCl, r].yon X w) FMx.yd' (\ W f -> refl (UB.actR W X f w)) ;
+} ;

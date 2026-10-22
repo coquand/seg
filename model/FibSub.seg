@@ -1,0 +1,187 @@
+-- FibSub.seg: MODEL/Lv/FibSub.agda (MODEL/Poset/FibSub.agda is its
+-- instance at lzero).  Fibrant types are stable under substitution.
+--
+-- Along s : D -> G, the total presheaf of A [ s ] maps to that of A by
+-- Ls (x , a) = (s x , a) (this is liftP s).  A box for A [ s ] over X is
+-- sent to a box for A (MB: same subsets, values through Ls); the composite
+-- of A is read back in A [ s ], and equations in the total presheaf of
+-- A [ s ] are reflected by Ls once the points agree (Ls-inj).  Uniformity:
+-- MB commutes with restriction (MBR).
+--
+--   FibTy G        (A : PTy G) * Comp G A
+--   subComp        CompOp G A eS eT -> CompOp D (A [ s ]) eS eT
+--   subFib         FibTy G -> PSub D G -> FibTy D
+--
+-- Posets at a, presheaves at l (Level1 takes l = a+).
+
+level a l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+module W0 = V[l] ;
+open Trees[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[l] ;
+open PR.PS ;
+module BXm = Box[a, l] ;
+module FibM = Fib[a, l] ;
+
+-- fibrant types
+FibTy (G : PCtx) : U l+ = (A : PTy[G]) * BXm.Boxes[G, A].Comp ;
+
+module SubComp (D G : PCtx) (A : PTy[G]) (s : PSub[D, G]) (eS eT : El Iv) (co : BXm.Boxes[G, A].CompOp[eS, eT]) {
+
+  A' : PTy[D] = subTy D G A s ;
+
+  module BD = BXm.Boxes[D, A'] ;
+  module BG = BXm.Boxes[G, A] ;
+  module TD = PR.TyL[D, A'] ;
+  module TG = PR.TyL[G, A] ;
+  module KG = FibM.Kit[G, A] ;
+  module KGE = FibM.PR.TyL[G, A] ;
+
+  ED : PCtx = TD.E ;
+  EG : PCtx = TG.E ;
+
+  Ls (I : Ob) (w : TD.EI I) : TG.EI I = (liftP D G A s).nt I w ;
+
+  Ls-nat (J I : Ob) (f : Hom J I) (w : TD.EI I) : Id (TG.EI J) (Ls J (ED.act J I f w)) (EG.act J I f (Ls I w)) =
+    (liftP D G A s).nt-nat J I f w ;
+
+  Ls-inj (I : Ob) (w w' : TD.EI I) (p : Id (TD.Pt I) w.1 w'.1) (q : Id (TG.EI I) (Ls I w) (Ls I w')) : Id (TD.EI I) w w' =
+    idJ (TD.Pt I) w.1
+      (\ x2 p2 -> (a2 : TD.T I x2) -> Id (TG.EI I) (Ls I w) (Ls I (x2, a2)) -> Id (TD.EI I) w (x2, a2))
+      (\ a2 q2 -> apH {TD.T I w.1} (\ v -> (w.1, v)) (TG.pr-inj I (s.nt I w.1) w.2 a2 q2))
+      w'.1 p w'.2 q ;
+
+  ----------------------------------------------------------------------
+  -- Boxes for A [ s ] give boxes for A
+
+  module MB (eS1 : El Iv) (X : Ob) (b : BD.Box[eS1, X]) {
+
+    rhoD : TD.Pt (prodP X Iv) = b.brho ;
+
+    rho : TG.Pt (prodP X Iv) = s.nt (prodP X Iv) rhoD ;
+
+    uE : TG.EI X = Ls X (BD.lidE eS1 X rhoD b.bu) ;
+
+    upt : Id (TG.Pt X) uE.1 (G.act X (prodP X Iv) (lid X eS1) rho) = s.nt-nat X (prodP X Iv) (lid X eS1) rhoD ;
+
+    u : TG.T X (G.act X (prodP X Iv) (lid X eS1) rho) = FibM.PR.TyL[G, A].fromE X (G.act X (prodP X Iv) (lid X eS1) rho) uE upt ;
+
+    v (j : Arith[a].Fin b.br) : KG.VTy X (b.bs j).sQ = \ W psi i -> Ls W ((b.bs j).svE W psi i) ;
+
+    vpt (j : Arith[a].Fin b.br) : KG.VPt X rho (b.bs j).sQ (v j) = \ W psi i -> s.nt-nat W (prodP X Iv) psi rhoD ;
+
+    vnat (j : Arith[a].Fin b.br) : KG.VNat X (b.bs j).sQ (v j) = \ W' W chi psi i i' ->
+      transH (symH (Ls-nat W' W chi ((b.bs j).svE W psi i))) (apH (Ls W') ((b.bs j).snat W' W chi psi i i')) ;
+
+    S (j : Arith[a].Fin b.br) : BG.Side[X, rho] = KG.mkSideE X rho (b.bs j).sQ (v j) (vpt j) (vnat j) ;
+
+    S-E (j : Arith[a].Fin b.br) (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X (b.bs j).sQ psi)
+      : Id (TG.EI W) ((S j).svE W psi i) (v j W psi i) =
+      KG.mkSideE-E X rho (b.bs j).sQ (v j) (vpt j) (vnat j) W psi i ;
+
+    cs : BG.CsTy X rho b.br S = \ j k W psi i i' ->
+      TG.pr-inj W (G.act W (prodP X Iv) psi rho) ((S j).sv W psi i) ((S k).sv W psi i')
+        (transH (S-E j W psi i)
+         (transH (apH (\ z -> Ls W (D.act W (prodP X Iv) psi rhoD, z)) (b.bcs j k W psi i i'))
+                 (symH (S-E k W psi i')))) ;
+
+    cb : BG.CbTy eS1 X rho u b.br S = \ j W phi i ->
+      transH (apH (EG.act W X phi) (FibM.PR.TyL[G, A].fromE-eq X (G.act X (prodP X Iv) (lid X eS1) rho) uE upt))
+       (transH (symH (Ls-nat W X phi (BD.lidE eS1 X rhoD b.bu)))
+        (transH (apH (Ls W) (b.bcb j W phi i)) (symH (S-E j W (compH W X (prodP X Iv) (lid X eS1) phi) i)))) ;
+
+    opaque cs ; opaque cb ;
+
+    box : BG.Box[eS1, X] = (BG.mkBox eS1 X rho u b.br S cs cb) ;
+  } ;
+
+  -- MB commutes with restriction
+  module MBR (Y X : Ob) (h : Hom Y X) (b : BD.Box[eS, X]) {
+
+    b' : BD.Box[eS, Y] = BD.restrict eS Y X h b ;
+
+    module MX = MB[eS, X, b] ;
+    module MY = MB[eS, Y, b'] ;
+    module RG = BG.Restrict[eS, Y, X, h] ;
+    module RD = BD.Restrict[eS, Y, X, h] ;
+
+    Ev (j : Arith[a].Fin b.br) (W : Ob) (psi : Hom W (prodP Y Iv))
+      (i : InQ W Y (pre Y X h (b.bs j).sQ) psi) (i' : InQ W Y (pre Y X h (b.bs j).sQ) psi)
+      : Id (TG.EI W) ((RG.rside MX.rho (MX.S j)).svE W psi i) ((MY.S j).svE W psi i') =
+      transH (RG.rsvE MX.rho (MX.S j) W psi i)
+       (transH (MX.S-E j W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi) (inQ-cyl W Y X h (b.bs j).sQ psi i))
+        (transH (apH (\ k -> Ls W ((b.bs j).svE W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi) k))
+                     (isProp-InQ W X (b.bs j).sQ (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi)
+                                 (inQ-cyl W Y X h (b.bs j).sQ psi i) (inQ-cyl W Y X h (b.bs j).sQ psi i')))
+         (transH (apH (Ls W) (symH (RD.rsvE MX.rhoD (b.bs j) W psi i')))
+                 (symH (MY.S-E j W psi i'))))) ;
+
+    BEq : Id (BG.Box[eS, Y]) (BG.restrict eS Y X h MX.box) MY.box =
+      BG.box-ext eS Y (RG.rrho MX.rho) MY.rho (RG.ru MX.rho MX.u) MY.u b.br (RG.rS MX.box) MY.S
+        (RG.rcs MX.box) MY.cs (RG.rcb MX.box) MY.cb
+        (symH (s.nt-nat (prodP Y Iv) (prodP X Iv) (cylH Y X h) MX.rhoD))
+        (transH (RG.ruE MX.rho MX.u)
+         (transH (apH (EG.act Y X h) (FibM.PR.TyL[G, A].fromE-eq X (G.act X (prodP X Iv) (lid X eS) MX.rho) MX.uE MX.upt))
+          (transH (symH (Ls-nat Y X h (BD.lidE eS X MX.rhoD b.bu)))
+           (transH (apH (Ls Y) (symH (RD.ruE MX.rhoD b.bu)))
+                   (symH (FibM.PR.TyL[G, A].fromE-eq Y (G.act Y (prodP Y Iv) (lid Y eS) MY.rho) MY.uE MY.upt))))))
+        (\ j -> refl (pre Y X h (b.bs j).sQ))
+        Ev ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- The composition
+
+
+  copS (X : Ob) (b : BD.Box[eS, X]) : TD.T X (D.act X (prodP X Iv) (lid X eT) b.brho) =
+    FibM.PR.TyL[G, A].fromE X (s.nt X (D.act X (prodP X Iv) (lid X eT) b.brho))
+      (BG.topE eT X MB[eS, X, b].rho (co.cop X MB[eS, X, b].box))
+      (symH (s.nt-nat X (prodP X Iv) (lid X eT) b.brho)) ;
+
+  copS-E (X : Ob) (b : BD.Box[eS, X])
+    : Id (TG.EI X) (Ls X (BD.topE eT X b.brho (copS X b))) (BG.topE eT X MB[eS, X, b].rho (co.cop X MB[eS, X, b].box)) =
+    FibM.PR.TyL[G, A].fromE-eq X (s.nt X (D.act X (prodP X Iv) (lid X eT) b.brho))
+      (BG.topE eT X MB[eS, X, b].rho (co.cop X MB[eS, X, b].box))
+      (symH (s.nt-nat X (prodP X Iv) (lid X eT) b.brho)) ;
+
+  opaque copS ; opaque copS-E ;
+
+  csideS (X : Ob) (b : BD.Box[eS, X]) (j : Arith[a].Fin b.br) (W : Ob) (phi : Hom W X)
+    (i : InQ W X (b.bs j).sQ (compH W X (prodP X Iv) (lid X eT) phi))
+    : Id (TD.EI W) (ED.act W X phi (BD.topE eT X b.brho (copS X b))) ((b.bs j).svE W (compH W X (prodP X Iv) (lid X eT) phi) i) =
+    Ls-inj W (ED.act W X phi (BD.topE eT X b.brho (copS X b))) ((b.bs j).svE W (compH W X (prodP X Iv) (lid X eT) phi) i)
+      (PR.PshL[D].actC W X (prodP X Iv) (lid X eT) phi b.brho)
+      (transH (Ls-nat W X phi (BD.topE eT X b.brho (copS X b)))
+       (transH (apH (EG.act W X phi) (copS-E X b))
+        (transH (co.cside X MB[eS, X, b].box j W phi i) (MB[eS, X, b].S-E j W (compH W X (prodP X Iv) (lid X eT) phi) i)))) ;
+
+  cunifS (Y X : Ob) (h : Hom Y X) (b : BD.Box[eS, X])
+    : Id (TD.EI Y) (ED.act Y X h (BD.topE eT X b.brho (copS X b)))
+                   (BD.topE eT Y (BD.restrict eS Y X h b).brho (copS Y (BD.restrict eS Y X h b))) =
+    Ls-inj Y (ED.act Y X h (BD.topE eT X b.brho (copS X b)))
+             (BD.topE eT Y (BD.restrict eS Y X h b).brho (copS Y (BD.restrict eS Y X h b)))
+      (BD.Restrict[eT, Y, X, h].eqL b.brho)
+      (transH (Ls-nat Y X h (BD.topE eT X b.brho (copS X b)))
+       (transH (apH (EG.act Y X h) (copS-E X b))
+        (transH (co.cunif Y X h MB[eS, X, b].box)
+         (transH (apH (\ bb -> BG.topE eT Y bb.brho (co.cop Y bb)) MBR[Y, X, h, b].BEq)
+                 (symH (copS-E Y (BD.restrict eS Y X h b))))))) ;
+
+  opaque csideS ; opaque cunifS ;
+
+  subComp : BD.CompOp[eS, eT] = (BD.mkCompOp eS eT copS csideS cunifS) ;
+} ;
+
+subCompC (D G : PCtx) (A : PTy[G]) (s : PSub[D, G]) (c : BXm.Boxes[G, A].Comp) : BXm.Boxes[D, subTy D G A s].Comp =
+  (SubComp[D, G, A, s, e0, e1, c.1].subComp, SubComp[D, G, A, s, e1, e0, c.2].subComp) ;
+
+subFib (D G : PCtx) (F : FibTy G) (s : PSub[D, G]) : FibTy D = (subTy D G F.1 s, subCompC D G F.1 s F.2) ;

@@ -1,0 +1,41 @@
+-- GExtSub4.seg (inside IvBase, any base): the codes of Ext along a
+-- substitution (step (A)): the fibre of Ext(alpha[s]) at d IS the fibre of
+-- Ext(alpha) at s d (extObEq, an Id of codes): by cases on full, the B
+-- codes are the same on the nose, the pairs codes by pairsCodeEq.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+open VCode[a] ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+module S2 = GExtSub2 ;
+module S3 = GExtSub3 ;
+
+module ExtObS (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D'])
+  (fullS : (X : Ob) (d : W0.Ix (D'.ob X)) -> Id Bool (GP.CofL[D', psi'].full X d) (GP.CofL[G, psi].full X (s.nt X d))) {
+  module ES = S2.ExtSub[G, A, psi, B, al, D', s, psi', fullS] ;
+  module E3 = GExt3.ExtB3[G, A, psi, B, al] ;
+  module E3' = GExt3.ExtB3[D', ES.A', ES.psi', ES.B', ES.al'] ;
+  module E2 = GExt2.ExtB2[G, A, psi, B, al] ;
+  module E2' = GExt2.ExtB2[D', ES.A', ES.psi', ES.B', ES.al'] ;
+
+  extObEq (X : Ob) (d : W0.Ix (D'.ob X)) : Id W0.V (E2'.extOb X d) (E2.extOb X (s.nt X d)) =
+    E3'.caseFull X d (Id W0.V (E2'.extOb X d) (E2.extOb X (s.nt X d)))
+      (\ p' -> transH (E3'.extOb-B X d p')
+                 (symH (E3.extOb-B X (s.nt X d) (subst Bool (\ c -> IsT c) (ES.CL'.full X d) (ES.CL.full X (s.nt X d)) (ES.fullS X d) p'))))
+      (\ np' -> transH (E3'.extOb-P X d np')
+                  (transH (ES.EB'.pairsV-mk X d)
+                    (transH (apH GExt.mkPV (S3.LDS[G, A, psi, B, al, D', s, psi', fullS, X, d].pairsCodeEq))
+                      (transH (symH (ES.EB.pairsV-mk X (s.nt X d)))
+                              (symH (E3.extOb-P X (s.nt X d) (transH (symH (ES.fullS X d)) np'))))))) ;
+
+  opaque extObEq ;
+} ;

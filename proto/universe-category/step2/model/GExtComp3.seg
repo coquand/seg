@@ -1,0 +1,236 @@
+-- GExtComp3.seg (inside IvBase.FaU, any base; line form of ExtComp2 /
+-- ExtComp2T / ExtComp3 / ExtComp4).  Theorem 7, part 3: the composite.
+--
+-- w1 = the A-filler at (id , eT).  The partial element P of the fibre of
+-- ext(alpha) over w1 has, with the CONSTANT path at w1 restricted,
+--   on Q_l (the sides of p):  the end at eT of the side, an element of Ext
+--                             whose ext is w1 f (F-S1);
+--   on delta:                 the top of the B-filler read in Ext, whose
+--                             ext is w1 f (F-S2);
+-- and is extended by extEquiv (GExtEquiv3: Theorem 7's equivalence half,
+-- in which the final filling of A at the constant line happens).  The
+-- composite is the B-part of the extension, at the end eT of the line.
+-- cside: on a side, the composite is the end of the side.
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[lv] ;
+open PR.PS ;
+module GP = GCofib[lv] ;
+open GLine[lv] ;
+
+module C3 (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (eS eT : IPt) (kAS : LineFibP[GFam[lv].famPath, G, A].FibAt eS)
+  (kBS : LineFibP[GFam[lv].famPath, GP.CofL[G, psi].resCtx, B].FibAt eS)
+  (kA1 : LineFibP[GFam[lv].famPath, G, A].FibAt e1)
+  (eal : GEquiv[lv].EquivOp GP.CofL[G, psi].resCtx B (subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR) al) {
+  open GP.CofL[G, psi] ;
+  open GExt[lv].ExtDef[G, A, psi] ;
+  open ExtB[B, al] ;
+  open GExt2[lv].ExtB2[G, A, psi, B, al] ;
+  open GExt3[lv].ExtB3[G, A, psi, B, al] ;
+  open GExt4[lv].ExtB4[G, A, psi, B, al] ;
+  open GExtComp1[lv].C1[G, A, psi, B, al, eS, kBS] ;
+  open GExtComp2[lv].C2[G, A, psi, B, al, eS, kAS, kBS] ;
+
+  module FX = GEquiv[lv].HFib[G, ExtT, A, extMap] ;
+  module PX = GP.Partials[EA, FX.FibT] ;
+  module E3 = GExtEquiv3[lv].ExtEq3[G, A, psi, B, al, kA1, eal] ;
+  module KX' = EndKit[FM.famPath, G, ExtT, eT] ;
+  module LX' = LevKit[FM.famPath, FM.famConn, G, ExtT, eT] ;
+
+  -- the fibre element over wf with the constant path, at an element el of
+  -- Ext whose ext is wf
+  cfib (V : Ob) (wf : TA.EI V) (el : TX.EI V) (eq : Id (TA.EI V) wf (extE V el)) : FX.TF.EI V =
+    FX.mkFib V wf (TX.fromE V wf.1 el (transH (symH (extE-pt V el)) (apH (\ z -> z.1) (symH eq))))
+      (\ W g j -> TA.E.act W V g wf)
+      (\ W' W g' g j -> TA.PE.actC W' W V g g' wf)
+      (\ W g j -> refl (G.act W V g wf.1))
+      (transH (TA.E.act-id V wf)
+        (transH eq (apH (extE V) (symH (TX.fromE-eq V wf.1 el (transH (symH (extE-pt V el)) (apH (\ z -> z.1) (symH eq))))))))
+      (TA.E.act-id V wf) ;
+
+  cfib-B (V : Ob) (wf : TA.EI V) (el : TX.EI V) (eq : Id (TA.EI V) wf (extE V el)) : Id (TX.EI V) (FX.fibB V (cfib V wf el eq)) el =
+    TX.fromE-eq V wf.1 el (transH (symH (extE-pt V el)) (apH (\ z -> z.1) (symH eq))) ;
+
+  -- two constant fibre elements over related points with related elements
+  cfib-eq (V : Ob) (wf wf' : TA.EI V) (P : Id (TA.EI V) wf wf') (el el' : TX.EI V) (Q : Id (TX.EI V) el el')
+    (eq : Id (TA.EI V) wf (extE V el)) (eq' : Id (TA.EI V) wf' (extE V el'))
+    : Id (FX.TF.EI V) (cfib V wf el eq) (cfib V wf' el' eq') =
+    FX.fibE-eq V (cfib V wf el eq) (cfib V wf' el' eq') P
+      (transH (cfib-B V wf el eq) (transH Q (symH (cfib-B V wf' el' eq'))))
+      (\ W g j -> apH (TA.E.act W V g) P) ;
+
+  -- the restriction of a constant fibre element
+  cfib-act (V' V : Ob) (chi : Hom V' V) (wf : TA.EI V) (el : TX.EI V) (eq : Id (TA.EI V) wf (extE V el))
+    (el' : TX.EI V') (Q : Id (TX.EI V') (TX.E.act V' V chi el) el') (eq' : Id (TA.EI V') (TA.E.act V' V chi wf) (extE V' el'))
+    : Id (FX.TF.EI V') (FX.TF.E.act V' V chi (cfib V wf el eq)) (cfib V' (TA.E.act V' V chi wf) el' eq') =
+    FX.fibE-eq V' (FX.TF.E.act V' V chi (cfib V wf el eq)) (cfib V' (TA.E.act V' V chi wf) el' eq') (refl (TA.E.act V' V chi wf))
+      (transH (FX.fibB-act V' V chi (cfib V wf el eq))
+        (transH (apH (TX.E.act V' V chi) (cfib-B V wf el eq)) (transH Q (symH (cfib-B V' (TA.E.act V' V chi wf) el' eq')))))
+      (\ W g j -> symH (TA.PE.actC W V' V chi g wf)) ;
+
+  opaque cfib-B ; opaque cfib-eq ; opaque cfib-act ;
+
+
+
+  module Cop (X : Ob) (x : KX.TV.EI X) (p : KX.PT.Partial[X, x]) {
+    module PB = Pb[X, x, p] ;
+
+    w1 : TA.EI X = PB.FAv X (idH X) (ptH X eT) ;
+
+    -- the restriction of w1 along f is the filler at (f , eT)
+    w1-act (V : Ob) (f : Hom V X) : Id (TA.EI V) (TA.E.act V X f w1) (PB.FAv V (compH V V X f (idH V)) (ptH V eT)) =
+      transH (PB.FAn V X f (idH X) (ptH X eT))
+        (transH (apH (\ k -> PB.FAv V k (compH V X Iv (ptH X eT) f)) (transH (comp-idl V X f) (symH (comp-idr V X f))))
+                (apH (\ k -> PB.FAv V (compH V V X f (idH V)) k) (ptH-nat V X f eT))) ;
+
+    ------------------------------------------------------------------
+    -- the sides on Q_l: the ends at eT of the sides of p
+
+    el1 (l : Fin p.pr) (V : Ob) (f : Hom V X) (i : Lands V X (p.ps l).pQ f) : TX.EI V =
+      lvX V ((p.ps l).pv V f i) V (idH V) (ptH V eT) ;
+
+    eq1 (l : Fin p.pr) (V : Ob) (f : Hom V X) (i : Lands V X (p.ps l).pQ f)
+      : Id (TA.EI V) (TA.E.act V X f w1) (extE V (el1 l V f i)) =
+      transH (w1-act V f) (PB.F-S1 l V f i V (idH V) (ptH V eT)) ;
+
+    fe1 (l : Fin p.pr) (V : Ob) (f : Hom V X) (i : Lands V X (p.ps l).pQ f) : FX.TF.EI V =
+      cfib V (TA.E.act V X f w1) (el1 l V f i) (eq1 l V f i) ;
+
+    -- the end at eT, restricted, is the end of the restricted side
+    el1-act (l : Fin p.pr) (V' V : Ob) (chi : Hom V' V) (f : Hom V X) (i : Lands V X (p.ps l).pQ f)
+      (i' : Lands V' X (p.ps l).pQ (compH V' V X f chi))
+      : Id (TX.EI V') (TX.E.act V' V chi (el1 l V f i)) (el1 l V' (compH V' V X f chi) i') =
+      calc (TX.EI V') {
+          TX.E.act V' V chi (el1 l V f i)
+        =< FM.famConn.levA-nat G ExtT V (KX.lineL V ((p.ps l).pv V f i)) V' V chi (idH V) (ptH V eT) >
+          lvX V ((p.ps l).pv V f i) V' (compH V' V V (idH V) chi) (compH V' V Iv (ptH V eT) chi)
+        =< transH (apH (\ k -> lvX V ((p.ps l).pv V f i) V' k (compH V' V Iv (ptH V eT) chi)) (transH (comp-idl V' V chi) (symH (comp-idr V' V chi))))
+                  (apH (\ k -> lvX V ((p.ps l).pv V f i) V' (compH V' V' V chi (idH V')) k) (ptH-nat V' V chi eT)) >
+          lvX V ((p.ps l).pv V f i) V' (compH V' V' V chi (idH V')) (ptH V' eT)
+        =< symH (LX.line-act V' V chi ((p.ps l).pv V f i) V' (idH V') (ptH V' eT)) >
+          lvX V' (KX.TS.E.act V' V chi ((p.ps l).pv V f i)) V' (idH V') (ptH V' eT)
+        =< apH (\ u -> lvX V' u V' (idH V') (ptH V' eT)) ((p.ps l).pnat V' V chi f i i') >
+          el1 l V' (compH V' V X f chi) i' } ;
+
+    S1 (l : Fin p.pr) : PX.PSide[X, w1] =
+      new PX.PSide[X, w1, (p.ps l).pQ, fe1 l, \ V f i -> refl (TA.E.act V X f w1),
+        \ V' V chi f i i' ->
+          transH (cfib-act V' V chi (TA.E.act V X f w1) (el1 l V f i) (eq1 l V f i)
+                    (el1 l V' (compH V' V X f chi) i') (el1-act l V' V chi f i i')
+                    (transH (TA.PE.actC V' V X f chi w1) (eq1 l V' (compH V' V X f chi) i')))
+                 (cfib-eq V' (TA.E.act V' V chi (TA.E.act V X f w1)) (TA.E.act V' X (compH V' V X f chi) w1) (TA.PE.actC V' V X f chi w1)
+                    (el1 l V' (compH V' V X f chi) i') (el1 l V' (compH V' V X f chi) i') (refl (el1 l V' (compH V' V X f chi) i'))
+                    (transH (TA.PE.actC V' V X f chi w1) (eq1 l V' (compH V' V X f chi) i')) (eq1 l V' (compH V' V X f chi) i'))] ;
+
+    ------------------------------------------------------------------
+    -- the sides on delta: the top of the B-filler, read in Ext
+
+    tB (d : Fin (forallUn r)) (V : Ob) (f : Hom V X) (i : Lands V X (PB.dl d) f) : TB.EI V =
+      PB.BW[d, V, f, i].BB.FBv V (idH V) (ptH V eT) ;
+
+    el2 (d : Fin (forallUn r)) (V : Ob) (f : Hom V X) (i : Lands V X (PB.dl d) f) : TX.EI V = fromB V (tB d V f i) ;
+
+    eq2 (d : Fin (forallUn r)) (V : Ob) (f : Hom V X) (i : Lands V X (PB.dl d) f)
+      : Id (TA.EI V) (TA.E.act V X f w1) (extE V (el2 d V f i)) =
+      transH (w1-act V f) (transH (PB.F-S2 d V f i V (idH V) (ptH V eT)) (symH (extE-B V (tB d V f i)))) ;
+
+    fe2 (d : Fin (forallUn r)) (V : Ob) (f : Hom V X) (i : Lands V X (PB.dl d) f) : FX.TF.EI V =
+      cfib V (TA.E.act V X f w1) (el2 d V f i) (eq2 d V f i) ;
+
+    el2-act (d : Fin (forallUn r)) (V' V : Ob) (chi : Hom V' V) (f : Hom V X) (i : Lands V X (PB.dl d) f)
+      (i' : Lands V' X (PB.dl d) (compH V' V X f chi))
+      : Id (TX.EI V') (TX.E.act V' V chi (el2 d V f i)) (el2 d V' (compH V' V X f chi) i') =
+      transH (actX-B V' V chi (tB d V f i))
+        (apH (fromB V')
+          (transH (PB.BW[d, V, f, i].BB.fillB.1.1.2 V' V chi (idH V) (ptH V eT))
+            (transH (transH (apH (\ k -> PB.BW[d, V, f, i].BB.FBv V' k (compH V' V Iv (ptH V eT) chi))
+                                 (transH (comp-idl V' V chi) (symH (comp-idr V' V chi))))
+                            (apH (\ k -> PB.BW[d, V, f, i].BB.FBv V' (compH V' V' V chi (idH V')) k) (ptH-nat V' V chi eT)))
+                    (symH (PB.FBv-tr d V' V chi f i i' V' (idH V') (ptH V' eT)))))) ;
+
+    S2 (d : Fin (forallUn r)) : PX.PSide[X, w1] =
+      new PX.PSide[X, w1, PB.dl d, fe2 d, \ V f i -> refl (TA.E.act V X f w1),
+        \ V' V chi f i i' ->
+          transH (cfib-act V' V chi (TA.E.act V X f w1) (el2 d V f i) (eq2 d V f i)
+                    (el2 d V' (compH V' V X f chi) i') (el2-act d V' V chi f i i')
+                    (transH (TA.PE.actC V' V X f chi w1) (eq2 d V' (compH V' V X f chi) i')))
+                 (cfib-eq V' (TA.E.act V' V chi (TA.E.act V X f w1)) (TA.E.act V' X (compH V' V X f chi) w1) (TA.PE.actC V' V X f chi w1)
+                    (el2 d V' (compH V' V X f chi) i') (el2 d V' (compH V' V X f chi) i') (refl (el2 d V' (compH V' V X f chi) i'))
+                    (transH (TA.PE.actC V' V X f chi w1) (eq2 d V' (compH V' V X f chi) i')) (eq2 d V' (compH V' V X f chi) i'))] ;
+
+    ------------------------------------------------------------------
+    -- compatibilities, and the partial element
+
+    c11 : PX.PCsTy X w1 p.pr S1 = \ l l' V f i i' ->
+      cfib-eq V (TA.E.act V X f w1) (TA.E.act V X f w1) (refl (TA.E.act V X f w1)) (el1 l V f i) (el1 l' V f i')
+        (apH (\ u -> lvX V u V (idH V) (ptH V eT)) (p.pcs l l' V f i i')) (eq1 l V f i) (eq1 l' V f i') ;
+
+    c22 : PX.PCsTy X w1 (forallUn r) S2 = \ d d' V f i i' ->
+      cfib-eq V (TA.E.act V X f w1) (TA.E.act V X f w1) (refl (TA.E.act V X f w1)) (el2 d V f i) (el2 d' V f i')
+        (apH (fromB V)
+           (FBv-cong V (KX.TV.E.act V X f x) (KX.TV.E.act V X f x) (refl (KX.TV.E.act V X f x))
+              (KX.PT.restrictP V X f x p) (KX.PT.restrictP V X f x p) (refl (KX.PT.restrictP V X f x p))
+              (PB.flAt V f (PB.hOf d V f i)) (PB.flAt V f (PB.hOf d' V f i')) V (idH V) (ptH V eT)))
+        (eq2 d V f i) (eq2 d' V f i') ;
+
+    -- on Q_l and delta, the end of the side is the top of the B-filler
+    e12 (l : Fin p.pr) (d : Fin (forallUn r)) (V : Ob) (f : Hom V X) (i : Lands V X (p.ps l).pQ f) (i' : Lands V X (PB.dl d) f)
+      : Id (TX.EI V) (el1 l V f i) (el2 d V f i') =
+      symH (transH (apH (\ z -> fromB V z)
+                      (transH (apH (\ k -> PB.BW[d, V, f, i'].BB.FBv V k (ptH V eT)) (symH (comp-idl V V (idH V))))
+                              (PB.BW[d, V, f, i'].BB.FB-side l V (idH V) (PB.i0 l V f i) V (idH V) (ptH V eT))))
+             (transH (fromB-toB V (lvX V (((KX.PT.restrictP V X f x p).ps l).pv V (idH V) (PB.i0 l V f i)) V (idH V) (ptH V eT))
+                        (PB.BW[d, V, f, i'].BB.SV[V, idH V, ((KX.PT.restrictP V X f x p).ps l).pv V (idH V) (PB.i0 l V f i),
+                                                  ((KX.PT.restrictP V X f x p).ps l).ppt V (idH V) (PB.i0 l V f i)].qv V (idH V) (ptH V eT)))
+                     (apH (\ u -> lvX V u V (idH V) (ptH V eT)) (PB.pv-id l V f i)))) ;
+
+    c12 (l : Fin p.pr) (d : Fin (forallUn r)) (V : Ob) (f : Hom V X) (i : Lands V X (p.ps l).pQ f) (i' : Lands V X (PB.dl d) f)
+      : Id (FX.TF.EI V) (fe1 l V f i) (fe2 d V f i') =
+      cfib-eq V (TA.E.act V X f w1) (TA.E.act V X f w1) (refl (TA.E.act V X f w1)) (el1 l V f i) (el2 d V f i')
+        (e12 l d V f i i') (eq1 l V f i) (eq2 d V f i') ;
+
+    module J2 = PX.Join[X, w1, p.pr, (forallUn r), S1, S2, c11, c12, c22] ;
+
+    ------------------------------------------------------------------
+    -- the extension, and the composite
+
+    kop : FX.TF.T X w1 = E3.extEquiv.kop X w1 J2.part ;
+
+    vE : FX.TF.EI X = (w1, kop) ;
+
+    cop : TX.T X (x.1.1 X (idH X) (ptH X eT)) = TX.fromE X (x.1.1 X (idH X) (ptH X eT)) (FX.fibB X vE) (PB.FApt X (idH X) (ptH X eT)) ;
+
+    cop-E : Id (TX.EI X) (x.1.1 X (idH X) (ptH X eT), cop) (FX.fibB X vE) =
+      TX.fromE-eq X (x.1.1 X (idH X) (ptH X eT)) (FX.fibB X vE) (PB.FApt X (idH X) (ptH X eT)) ;
+
+    -- on a side of p, the composite restricted is the end of the side
+    side-B (l : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+      : Id (TX.EI W) (TX.E.act W X f (x.1.1 X (idH X) (ptH X eT), cop)) (el1 l W f i) =
+      transH (apH (TX.E.act W X f) cop-E)
+       (transH (symH (FX.fibB-act W X f vE))
+        (transH (apH (FX.fibB W) (E3.extEquiv.kside X w1 J2.part (finL p.pr (forallUn r) l) W f (J2.landL l W f i)))
+         (transH (apH (FX.fibB W) (J2.atL l W f (J2.landL l W f i) i))
+                 (cfib-B W (TA.E.act W X f w1) (el1 l W f i) (eq1 l W f i))))) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- the side law of the composition
+
+  module CC = CompAtP[FM.famPath, G, ExtT, eS, eT] ;
+
+  cside (X : Ob) (x : KX.TV.EI X) (p : KX.PT.Partial[X, x]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+    : Id (CC.TV'.EI W) (CC.TV'.E.act W X f (x.1, Cop[X, x, p].cop)) (CC.endL W ((p.ps l).pv W f i)) =
+    KX'.tv-eq W (CC.TV'.E.act W X f (x.1, Cop[X, x, p].cop)) (CC.endL W ((p.ps l).pv W f i))
+      (symH (apH (\ z -> z.1) ((p.ps l).ppt W f i)))
+      (transH (KX'.endE-act W X f (x.1, Cop[X, x, p].cop))
+        (transH (Cop[X, x, p].side-B l W f i) (symH (LX'.endL-lev W (KX.lineL W ((p.ps l).pv W f i)))))) ;
+} ;

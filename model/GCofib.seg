@@ -1,0 +1,667 @@
+-- GCofib.seg: partial elements and contractibility structures over any
+-- base (IvBase), the generic home of Cofib's Partials ([S] section 1):
+-- compatible lists of E-valued sections over the sieves "lands in Q_l";
+-- restriction (restrictP, functorial up to the point); ContrOp = uniform
+-- extension of partial elements to total ones.  Posets: Cofib.GP.
+
+level l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+open Axioms[l+].FunExtLemmas[fe @(l+)] ;
+module W0 = V[l] ;
+open Trees[a] ;
+open Arith[a] ;
+
+  module GPR = GPre[l] ;
+  open GPR.PS ;
+
+  module Partials (D : PCtx) (C : PTy[D]) {
+    open GPR.TyL[D, C] ;
+
+    PvTy (X : Ob) (q : Phi X) : U l = (W : Ob) (f : Hom W X) -> Lands W X q f -> EI W ;
+
+    PptTy (X : Ob) (x : Pt X) (q : Phi X) (v : PvTy X q) : U l =
+      (W : Ob) (f : Hom W X) (i : Lands W X q f) -> Id (Pt W) (v W f i).1 (D.act W X f x) ;
+
+    PnTy (X : Ob) (q : Phi X) (v : PvTy X q) : U l =
+      (W' W : Ob) (chi : Hom W' W) (f : Hom W X) (i : Lands W X q f) (i' : Lands W' X q (compH W' W X f chi))
+      -> Id (EI W') (E.act W' W chi (v W f i)) (v W' (compH W' W X f chi) i') ;
+
+    -- a section over the sieve of maps landing in pQ, read in E
+    module PSide (X : Ob) (x : Pt X) {
+      pQ : Phi X ;
+      pv : PvTy X pQ ;
+      ppt : PptTy X x pQ pv ;
+      pnat : PnTy X pQ pv ;
+    } ;
+
+    PCsTy (X : Ob) (x : Pt X) (r : Nat) (S : Fin r -> PSide[X, x]) : U l =
+      (l j : Fin r) (W : Ob) (f : Hom W X) (i : Lands W X (S l).pQ f) (i' : Lands W X (S j).pQ f)
+      -> Id (EI W) ((S l).pv W f i) ((S j).pv W f i') ;
+
+    module Partial (X : Ob) (x : Pt X) {
+      pr : Nat ;
+      ps : Fin pr -> PSide[X, x] ;
+      pcs : PCsTy X x pr ps ;
+    } ;
+
+    -- a side does not depend on the proof that the map lands
+    pv-irr (X : Ob) (x : Pt X) (s : PSide[X, x]) (W : Ob) (f : Hom W X) (i i' : Lands W X s.pQ f)
+      : Id (EI W) (s.pv W f i) (s.pv W f i') = apH (\ k -> s.pv W f k) (isProp-Lands W X s.pQ f i i') ;
+
+    -- ... nor on the presentation of the map
+    pv-hom (X : Ob) (x : Pt X) (s : PSide[X, x]) (W : Ob) (f g : Hom W X) (E : Id (Hom W X) f g)
+      (i : Lands W X s.pQ f) (i' : Lands W X s.pQ g) : Id (EI W) (s.pv W f i) (s.pv W g i') =
+      idJ (Hom W X) f (\ g2 E2 -> (i2 : Lands W X s.pQ g2) -> Id (EI W) (s.pv W f i) (s.pv W g2 i2))
+        (\ i2 -> pv-irr X x s W f i i2) g E i' ;
+
+    ----------------------------------------------------------------------
+    -- Restriction along h : Y -> X
+
+    module RestrictP (Y X : Ob) (h : Hom Y X) (x : Pt X) {
+      x' : Pt Y = D.act Y X h x ;
+
+      rppt (s : PSide[X, x]) : PptTy Y x' (pre Y X h s.pQ) (\ W g i -> s.pv W (compH W Y X h g) (lands-pre W Y X h s.pQ g i)) =
+        \ W g i -> transH (s.ppt W (compH W Y X h g) (lands-pre W Y X h s.pQ g i)) (D.act-o W Y X h g x) ;
+
+      rpnat (s : PSide[X, x]) : PnTy Y (pre Y X h s.pQ) (\ W g i -> s.pv W (compH W Y X h g) (lands-pre W Y X h s.pQ g i)) =
+        -- naturality of s at h g, and (h g) chi = h (g chi)
+        \ W' W chi g i i' ->
+          transH (s.pnat W' W chi (compH W Y X h g) (lands-pre W Y X h s.pQ g i)
+                    (lands-comp W' W X s.pQ (compH W Y X h g) chi (lands-pre W Y X h s.pQ g i)))
+                 (pv-hom X x s W' (compH W' W X (compH W Y X h g) chi) (compH W' Y X h (compH W' W Y g chi))
+                    (comp-assoc W' W Y X h g chi)
+                    (lands-comp W' W X s.pQ (compH W Y X h g) chi (lands-pre W Y X h s.pQ g i))
+                    (lands-pre W' Y X h s.pQ (compH W' W Y g chi) i')) ;
+
+      opaque rppt ; opaque rpnat ;
+
+      rside (s : PSide[X, x]) : PSide[Y, x'] =
+        new PSide[Y, x', pre Y X h s.pQ, \ W g i -> s.pv W (compH W Y X h g) (lands-pre W Y X h s.pQ g i), rppt s, rpnat s] ;
+
+      rpcs (p : Partial[X, x]) : PCsTy Y x' p.pr (\ l -> rside (p.ps l)) = \ l j W g i i' ->
+        p.pcs l j W (compH W Y X h g) (lands-pre W Y X h (p.ps l).pQ g i) (lands-pre W Y X h (p.ps j).pQ g i') ;
+
+      opaque rpcs ;
+
+      rpart (p : Partial[X, x]) : Partial[Y, x'] = new Partial[Y, x', p.pr, \ l -> rside (p.ps l), rpcs p] ;
+    } ;
+
+    restrictP (Y X : Ob) (h : Hom Y X) (x : Pt X) (p : Partial[X, x]) : Partial[Y, D.act Y X h x] = RestrictP[Y, X, h, x].rpart p ;
+
+    ----------------------------------------------------------------------
+    -- Equality of partial elements
+
+    isProp-Ppt (X : Ob) (x : Pt X) (q : Phi X) (v : PvTy X q) : isProp (PptTy X x q v) =
+      isProp-Pi Ob (\ W -> (f : Hom W X) (i : Lands W X q f) -> Id (Pt W) (v W f i).1 (D.act W X f x)) (\ W ->
+      isProp-Pi (Hom W X) (\ f -> (i : Lands W X q f) -> Id (Pt W) (v W f i).1 (D.act W X f x)) (\ f ->
+      isProp-Pi (Lands W X q f) (\ i -> Id (Pt W) (v W f i).1 (D.act W X f x)) (\ i ->
+        W0.isSetIx (D.ob W) (v W f i).1 (D.act W X f x)))) ;
+
+    isProp-Pn (X : Ob) (q : Phi X) (v : PvTy X q) : isProp (PnTy X q v) =
+      isProp-Pi Ob (\ W' -> (W : Ob) (chi : Hom W' W) (f : Hom W X) (i : Lands W X q f) (i' : Lands W' X q (compH W' W X f chi))
+                            -> Id (EI W') (E.act W' W chi (v W f i)) (v W' (compH W' W X f chi) i')) (\ W' ->
+      isProp-Pi Ob (\ W -> (chi : Hom W' W) (f : Hom W X) (i : Lands W X q f) (i' : Lands W' X q (compH W' W X f chi))
+                           -> Id (EI W') (E.act W' W chi (v W f i)) (v W' (compH W' W X f chi) i')) (\ W ->
+      isProp-Pi (Hom W' W) (\ chi -> (f : Hom W X) (i : Lands W X q f) (i' : Lands W' X q (compH W' W X f chi))
+                           -> Id (EI W') (E.act W' W chi (v W f i)) (v W' (compH W' W X f chi) i')) (\ chi ->
+      isProp-Pi (Hom W X) (\ f -> (i : Lands W X q f) (i' : Lands W' X q (compH W' W X f chi))
+                           -> Id (EI W') (E.act W' W chi (v W f i)) (v W' (compH W' W X f chi) i')) (\ f ->
+      isProp-Pi (Lands W X q f) (\ i -> (i' : Lands W' X q (compH W' W X f chi))
+                           -> Id (EI W') (E.act W' W chi (v W f i)) (v W' (compH W' W X f chi) i')) (\ i ->
+      isProp-Pi (Lands W' X q (compH W' W X f chi)) (\ i' -> Id (EI W') (E.act W' W chi (v W f i)) (v W' (compH W' W X f chi) i')) (\ i' ->
+        W0.isSetIx (E.ob W') (E.act W' W chi (v W f i)) (v W' (compH W' W X f chi) i'))))))) ;
+
+    PvEq (X : Ob) (q q' : Phi X) (v : PvTy X q) (v' : PvTy X q') : U l =
+      (W : Ob) (f : Hom W X) (i : Lands W X q f) (i' : Lands W X q' f) -> Id (EI W) (v W f i) (v' W f i') ;
+
+    psideExt (X : Ob) (x : Pt X) (s s' : PSide[X, x]) (eQ : Id (Phi X) s.pQ s'.pQ)
+      (ev : PvEq X s.pQ s'.pQ s.pv s'.pv) : Id (PSide[X, x]) s s' =
+      idJ (Phi X) s.pQ
+        (\ q2 P2 -> (v2 : PvTy X q2) (pp2 : PptTy X x q2 v2) (pn2 : PnTy X q2 v2) -> PvEq X s.pQ q2 s.pv v2
+           -> Id (PSide[X, x]) s (new PSide[X, x, q2, v2, pp2, pn2]))
+        (\ v2 pp2 pn2 ev2 ->
+           idJ (PvTy X s.pQ) s.pv
+             (\ v3 P3 -> (pp3 : PptTy X x s.pQ v3) (pn3 : PnTy X s.pQ v3) -> Id (PSide[X, x]) s (new PSide[X, x, s.pQ, v3, pp3, pn3]))
+             (\ pp3 pn3 ->
+                trans (PSide[X, x]) s (new PSide[X, x, s.pQ, s.pv, pp3, s.pnat]) (new PSide[X, x, s.pQ, s.pv, pp3, pn3])
+                  (ap (PptTy X x s.pQ s.pv) (PSide[X, x]) (\ z -> new PSide[X, x, s.pQ, s.pv, z, s.pnat]) s.ppt pp3
+                      (isProp-Ppt X x s.pQ s.pv s.ppt pp3))
+                  (ap (PnTy X s.pQ s.pv) (PSide[X, x]) (\ z -> new PSide[X, x, s.pQ, s.pv, pp3, z]) s.pnat pn3
+                      (isProp-Pn X s.pQ s.pv s.pnat pn3)))
+             v2
+             (funext Ob (\ W -> (f : Hom W X) -> Lands W X s.pQ f -> EI W) s.pv v2 (\ W ->
+                funext (Hom W X) (\ f -> Lands W X s.pQ f -> EI W) (s.pv W) (v2 W) (\ f ->
+                  funext (Lands W X s.pQ f) (\ i -> EI W) (s.pv W f) (v2 W f) (\ i -> ev2 W f i i))))
+             pp2 pn2)
+        s'.pQ eQ s'.pv s'.ppt s'.pnat ev ;
+
+    isProp-PCs (X : Ob) (x : Pt X) (r : Nat) (S : Fin r -> PSide[X, x]) : isProp (PCsTy X x r S) =
+      isProp-Pi (Fin r) (\ l -> (j : Fin r) (W : Ob) (f : Hom W X) (i : Lands W X (S l).pQ f) (i' : Lands W X (S j).pQ f)
+                                -> Id (EI W) ((S l).pv W f i) ((S j).pv W f i')) (\ l ->
+      isProp-Pi (Fin r) (\ j -> (W : Ob) (f : Hom W X) (i : Lands W X (S l).pQ f) (i' : Lands W X (S j).pQ f)
+                                -> Id (EI W) ((S l).pv W f i) ((S j).pv W f i')) (\ j ->
+      isProp-Pi Ob (\ W -> (f : Hom W X) (i : Lands W X (S l).pQ f) (i' : Lands W X (S j).pQ f)
+                           -> Id (EI W) ((S l).pv W f i) ((S j).pv W f i')) (\ W ->
+      isProp-Pi (Hom W X) (\ f -> (i : Lands W X (S l).pQ f) (i' : Lands W X (S j).pQ f)
+                           -> Id (EI W) ((S l).pv W f i) ((S j).pv W f i')) (\ f ->
+      isProp-Pi (Lands W X (S l).pQ f) (\ i -> (i' : Lands W X (S j).pQ f) -> Id (EI W) ((S l).pv W f i) ((S j).pv W f i')) (\ i ->
+      isProp-Pi (Lands W X (S j).pQ f) (\ i' -> Id (EI W) ((S l).pv W f i) ((S j).pv W f i')) (\ i' ->
+        W0.isSetIx (E.ob W) ((S l).pv W f i) ((S j).pv W f i'))))))) ;
+
+    partExt (X : Ob) (x : Pt X) (r : Nat) (S S' : Fin r -> PSide[X, x]) (cs : PCsTy X x r S) (cs' : PCsTy X x r S')
+      (eQ : (l : Fin r) -> Id (Phi X) (S l).pQ (S' l).pQ)
+      (ev : (l : Fin r) -> PvEq X (S l).pQ (S' l).pQ (S l).pv (S' l).pv)
+      : Id (Partial[X, x]) (new Partial[X, x, r, S, cs]) (new Partial[X, x, r, S', cs']) =
+      idJ (Fin r -> PSide[X, x]) S
+        (\ S2 P2 -> (cs2 : PCsTy X x r S2) -> Id (Partial[X, x]) (new Partial[X, x, r, S, cs]) (new Partial[X, x, r, S2, cs2]))
+        (\ cs2 -> ap (PCsTy X x r S) (Partial[X, x]) (\ z -> new Partial[X, x, r, S, z]) cs cs2 (isProp-PCs X x r S cs cs2))
+        S' (funext (Fin r) (\ l -> PSide[X, x]) S S' (\ l -> psideExt X x (S l) (S' l) (eQ l) (ev l))) cs' ;
+
+    opaque isProp-Ppt ; opaque isProp-Pn ; opaque psideExt ; opaque isProp-PCs ; opaque partExt ;
+
+    -- partial elements at two equal points, compared through their sides
+    EQT (X : Ob) (x x2 : Pt X) (p : Partial[X, x]) (r2 : Nat) (S2 : Fin r2 -> PSide[X, x2]) (e : Id Nat p.pr r2) : U l =
+      (l : Fin p.pr) -> Id (Phi X) (p.ps l).pQ (S2 (subst Nat (\ n -> Fin n) p.pr r2 e l)).pQ ;
+
+    EVT (X : Ob) (x x2 : Pt X) (p : Partial[X, x]) (r2 : Nat) (S2 : Fin r2 -> PSide[X, x2]) (e : Id Nat p.pr r2) : U l =
+      (l : Fin p.pr) -> PvEq X (p.ps l).pQ (S2 (subst Nat (\ n -> Fin n) p.pr r2 e l)).pQ (p.ps l).pv (S2 (subst Nat (\ n -> Fin n) p.pr r2 e l)).pv ;
+
+    partExtH (X : Ob) (x x' : Pt X) (P : Id (Pt X) x x') (p : Partial[X, x]) (p' : Partial[X, x'])
+      (e : Id Nat p.pr p'.pr) (eQ : EQT X x x' p p'.pr p'.ps e) (ev : EVT X x x' p p'.pr p'.ps e)
+      : Id (Partial[X, x']) (subst (Pt X) (\ z -> Partial[X, z]) x x' P p) p' =
+      idJ (Pt X) x
+        (\ x2 P2 -> (r2 : Nat) (S2 : Fin r2 -> PSide[X, x2]) (cs2 : PCsTy X x2 r2 S2) (e2 : Id Nat p.pr r2)
+           -> EQT X x x2 p r2 S2 e2 -> EVT X x x2 p r2 S2 e2
+           -> Id (Partial[X, x2]) (subst (Pt X) (\ z -> Partial[X, z]) x x2 P2 p) (new Partial[X, x2, r2, S2, cs2]))
+        (\ r2 S2 cs2 e2 ->
+           idJ Nat p.pr
+             (\ r3 e3 -> (S3 : Fin r3 -> PSide[X, x]) (cs3 : PCsTy X x r3 S3) -> EQT X x x p r3 S3 e3 -> EVT X x x p r3 S3 e3
+                -> Id (Partial[X, x]) p (new Partial[X, x, r3, S3, cs3]))
+             (\ S3 cs3 eQ3 ev3 -> partExt X x p.pr p.ps S3 p.pcs cs3 eQ3 ev3)
+             r2 e2 S2 cs2)
+        x' P p'.pr p'.ps p'.pcs e eQ ev ;
+
+    -- restriction is functorial, up to the point
+    restrictP-o (Z Y X : Ob) (g : Hom Z Y) (h : Hom Y X) (x : Pt X) (p : Partial[X, x])
+      : Id (Partial[Z, D.act Z Y g (D.act Y X h x)])
+           (subst (Pt Z) (\ z -> Partial[Z, z]) (D.act Z X (compH Z Y X h g) x) (D.act Z Y g (D.act Y X h x)) (D.act-o Z Y X h g x)
+                  (restrictP Z X (compH Z Y X h g) x p))
+           (restrictP Z Y g (D.act Y X h x) (restrictP Y X h x p)) =
+      partExtH Z (D.act Z X (compH Z Y X h g) x) (D.act Z Y g (D.act Y X h x)) (D.act-o Z Y X h g x)
+        (restrictP Z X (compH Z Y X h g) x p) (restrictP Z Y g (D.act Y X h x) (restrictP Y X h x p)) (refl p.pr)
+        (\ l -> symH (pre-comp Z Y X g h (p.ps l).pQ))
+        (\ l W f i i' -> pv-hom X x (p.ps l) W (compH W Z X (compH Z Y X h g) f) (compH W Y X h (compH W Z Y g f))
+                           (comp-assoc W Z Y X h g f)
+                           (lands-pre W Z X (compH Z Y X h g) (p.ps l).pQ f i)
+                           (lands-pre W Y X h (p.ps l).pQ (compH W Z Y g f) (lands-pre W Z Y g (pre Y X h (p.ps l).pQ) f i'))) ;
+
+    opaque restrictP-o ;
+
+    -- restriction along the identity, up to the point
+    restrictP-id (X : Ob) (x : Pt X) (p : Partial[X, x])
+      : Id (Partial[X, x]) (subst (Pt X) (\ z -> Partial[X, z]) (D.act X X (idH X) x) x (D.act-id X x) (restrictP X X (idH X) x p)) p =
+      partExtH X (D.act X X (idH X) x) x (D.act-id X x) (restrictP X X (idH X) x p) p (refl p.pr)
+        (\ l -> pre-id X (p.ps l).pQ)
+        (\ l W f i i' -> pv-hom X x (p.ps l) W (compH W X X (idH X) f) f (comp-idl W X f) (lands-pre W X X (idH X) (p.ps l).pQ f i) i') ;
+
+    opaque restrictP-id ;
+
+    ----------------------------------------------------------------------
+    -- A partial element made of two families of sides, with their
+    -- compatibilities (within each family and across)
+
+    module Join (X : Ob) (x : Pt X) (r1 r2 : Nat) (S1 : Fin r1 -> PSide[X, x]) (S2 : Fin r2 -> PSide[X, x])
+      (c11 : PCsTy X x r1 S1)
+      (c12 : (l : Fin r1) (k : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (S1 l).pQ f) (i' : Lands W X (S2 k).pQ f)
+             -> Id (EI W) ((S1 l).pv W f i) ((S2 k).pv W f i'))
+      (c22 : PCsTy X x r2 S2) {
+      sideAt : Plus (Fin r1) (Fin r2) -> PSide[X, x] = split { inl l -> S1 l ; inr k -> S2 k } ;
+
+      csAt : (s t : Plus (Fin r1) (Fin r2)) (W : Ob) (f : Hom W X) (i : Lands W X (sideAt s).pQ f)
+        (i' : Lands W X (sideAt t).pQ f) -> Id (EI W) ((sideAt s).pv W f i) ((sideAt t).pv W f i') = split {
+        inl l -> split { inl l' -> c11 l l' ; inr k -> c12 l k } ;
+        inr k -> split { inl l -> \ W f i i' -> symH (c12 l k W f i' i) ; inr k' -> c22 k k' } } ;
+
+      part : Partial[X, x] =
+        new Partial[X, x, plus r1 r2, \ l -> sideAt (splitF r1 r2 l), \ l j -> csAt (splitF r1 r2 l) (splitF r1 r2 j)] ;
+
+      -- the sides of either family, at their index in the joined list
+      landL (l : Fin r1) (W : Ob) (f : Hom W X) (i : Lands W X (S1 l).pQ f) : Lands W X (part.ps (finL r1 r2 l)).pQ f =
+        substH (\ s -> Lands W X (sideAt s).pQ f) (symH (splitL r1 r2 l)) i ;
+      landR (k : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (S2 k).pQ f) : Lands W X (part.ps (finR r1 r2 k)).pQ f =
+        substH (\ s -> Lands W X (sideAt s).pQ f) (symH (splitR r1 r2 k)) i ;
+
+      atL (l : Fin r1) (W : Ob) (f : Hom W X) (i : Lands W X (part.ps (finL r1 r2 l)).pQ f) (i' : Lands W X (S1 l).pQ f)
+        : Id (EI W) ((part.ps (finL r1 r2 l)).pv W f i) ((S1 l).pv W f i') = csAt (splitF r1 r2 (finL r1 r2 l)) (inl l) W f i i' ;
+      atR (k : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (part.ps (finR r1 r2 k)).pQ f) (i' : Lands W X (S2 k).pQ f)
+        : Id (EI W) ((part.ps (finR r1 r2 k)).pv W f i) ((S2 k).pv W f i') = csAt (splitF r1 r2 (finR r1 r2 k)) (inr k) W f i i' ;
+    } ;
+
+    ----------------------------------------------------------------------
+    -- Contractibility structures: uniform extension of partial elements
+
+    module ContrOp {
+      kop (X : Ob) (x : Pt X) (p : Partial[X, x]) : T X x ;
+      -- the extension agrees with each side
+      kside (X : Ob) (x : Pt X) (p : Partial[X, x]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+        : Id (EI W) (E.act W X f (x, kop X x p)) ((p.ps l).pv W f i) ;
+      -- and is uniform
+      kunif (Y X : Ob) (h : Hom Y X) (x : Pt X) (p : Partial[X, x])
+        : Id (EI Y) (E.act Y X h (x, kop X x p)) (D.act Y X h x, kop Y (D.act Y X h x) (restrictP Y X h x p)) ;
+    } ;
+
+    -- Contractibility structures on ONE side (a partial element is one
+    -- sieve with a section; a list presents its union, GCofOne)
+    module ContrOp1 {
+      kop (X : Ob) (x : Pt X) (s : PSide[X, x]) : T X x ;
+      -- the extension agrees with the side
+      kside (X : Ob) (x : Pt X) (s : PSide[X, x]) (W : Ob) (f : Hom W X) (i : Lands W X s.pQ f)
+        : Id (EI W) (E.act W X f (x, kop X x s)) (s.pv W f i) ;
+      -- and is uniform
+      kunif (Y X : Ob) (h : Hom Y X) (x : Pt X) (s : PSide[X, x])
+        : Id (EI Y) (E.act Y X h (x, kop X x s)) (D.act Y X h x, kop Y (D.act Y X h x) (RestrictP[Y, X, h, x].rside s)) ;
+    } ;
+    -- kop at equal points and equal partial elements
+    kop-cong (k : ContrOp) (X : Ob) (x x' : Pt X) (P : Id (Pt X) x x') (p : Partial[X, x]) (p' : Partial[X, x'])
+      (R : Id (Partial[X, x']) (subst (Pt X) (\ z -> Partial[X, z]) x x' P p) p') : Id (EI X) (x, k.kop X x p) (x', k.kop X x' p') =
+      idJ (Pt X) x
+        (\ x2 P2 -> (p2 : Partial[X, x2]) -> Id (Partial[X, x2]) (subst (Pt X) (\ z -> Partial[X, z]) x x2 P2 p) p2
+           -> Id (EI X) (x, k.kop X x p) (x2, k.kop X x2 p2))
+        (\ p2 R2 -> apH {Partial[X, x]} {EI X} (\ z -> (x, k.kop X x z)) R2)
+        x' P p' R ;
+
+    -- a side which is full gives the value of the extension
+    kfull (k : ContrOp) (X : Ob) (x : Pt X) (p : Partial[X, x]) (l : Fin p.pr) (i : Lands X X (p.ps l).pQ (idH X))
+      : Id (EI X) (x, k.kop X x p) ((p.ps l).pv X (idH X) i) =
+      transH (symH (E.act-id X (x, k.kop X x p))) (k.kside X x p l X (idH X) i) ;
+
+    ----------------------------------------------------------------------
+    -- a contractibility structure is determined by its extension (kside
+    -- and kunif are propositions)
+
+    KopTy : U l = (X : Ob) (x : Pt X) (p : Partial[X, x]) -> T X x ;
+
+    KsideTy (kp : KopTy) : U l =
+      (X : Ob) (x : Pt X) (p : Partial[X, x]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+      -> Id (EI W) (E.act W X f (x, kp X x p)) ((p.ps l).pv W f i) ;
+
+    KunifTy (kp : KopTy) : U l =
+      (Y X : Ob) (h : Hom Y X) (x : Pt X) (p : Partial[X, x])
+      -> Id (EI Y) (E.act Y X h (x, kp X x p)) (D.act Y X h x, kp Y (D.act Y X h x) (restrictP Y X h x p)) ;
+
+    isProp-Kside (kp : KopTy) : isProp (KsideTy kp) =
+      isProp-Pi Ob (\ X -> (x : Pt X) (p : Partial[X, x]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+                           -> Id (EI W) (E.act W X f (x, kp X x p)) ((p.ps l).pv W f i)) (\ X ->
+      isProp-Pi (Pt X) (\ x -> (p : Partial[X, x]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+                           -> Id (EI W) (E.act W X f (x, kp X x p)) ((p.ps l).pv W f i)) (\ x ->
+      isProp-Pi (Partial[X, x]) (\ p -> (l : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+                           -> Id (EI W) (E.act W X f (x, kp X x p)) ((p.ps l).pv W f i)) (\ p ->
+      isProp-Pi (Fin p.pr) (\ l -> (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+                           -> Id (EI W) (E.act W X f (x, kp X x p)) ((p.ps l).pv W f i)) (\ l ->
+      isProp-Pi Ob (\ W -> (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+                           -> Id (EI W) (E.act W X f (x, kp X x p)) ((p.ps l).pv W f i)) (\ W ->
+      isProp-Pi (Hom W X) (\ f -> (i : Lands W X (p.ps l).pQ f)
+                           -> Id (EI W) (E.act W X f (x, kp X x p)) ((p.ps l).pv W f i)) (\ f ->
+      isProp-Pi (Lands W X (p.ps l).pQ f) (\ i -> Id (EI W) (E.act W X f (x, kp X x p)) ((p.ps l).pv W f i)) (\ i ->
+        W0.isSetIx (E.ob W) (E.act W X f (x, kp X x p)) ((p.ps l).pv W f i)))))))) ;
+
+    isProp-Kunif (kp : KopTy) : isProp (KunifTy kp) =
+      isProp-Pi Ob (\ Y -> (X : Ob) (h : Hom Y X) (x : Pt X) (p : Partial[X, x])
+        -> Id (EI Y) (E.act Y X h (x, kp X x p)) (D.act Y X h x, kp Y (D.act Y X h x) (restrictP Y X h x p))) (\ Y ->
+      isProp-Pi Ob (\ X -> (h : Hom Y X) (x : Pt X) (p : Partial[X, x])
+        -> Id (EI Y) (E.act Y X h (x, kp X x p)) (D.act Y X h x, kp Y (D.act Y X h x) (restrictP Y X h x p))) (\ X ->
+      isProp-Pi (Hom Y X) (\ h -> (x : Pt X) (p : Partial[X, x])
+        -> Id (EI Y) (E.act Y X h (x, kp X x p)) (D.act Y X h x, kp Y (D.act Y X h x) (restrictP Y X h x p))) (\ h ->
+      isProp-Pi (Pt X) (\ x -> (p : Partial[X, x])
+        -> Id (EI Y) (E.act Y X h (x, kp X x p)) (D.act Y X h x, kp Y (D.act Y X h x) (restrictP Y X h x p))) (\ x ->
+      isProp-Pi (Partial[X, x]) (\ p
+        -> Id (EI Y) (E.act Y X h (x, kp X x p)) (D.act Y X h x, kp Y (D.act Y X h x) (restrictP Y X h x p))) (\ p ->
+        W0.isSetIx (E.ob Y) (E.act Y X h (x, kp X x p)) (D.act Y X h x, kp Y (D.act Y X h x) (restrictP Y X h x p))))))) ;
+
+    contr-ext (k k' : ContrOp) (H : (X : Ob) (x : Pt X) (p : Partial[X, x]) -> Id (T X x) (k.kop X x p) (k'.kop X x p))
+      : Id (ContrOp) k k' =
+      idJ KopTy k.kop
+        (\ kp Q -> (ks : KsideTy kp) (ku : KunifTy kp) -> Id (ContrOp) k (new ContrOp[kp, ks, ku]))
+        (\ ks ku -> transH (apH {KsideTy k.kop} {ContrOp} (\ z -> new ContrOp[k.kop, z, k.kunif]) (isProp-Kside k.kop k.kside ks))
+                           (apH {KunifTy k.kop} {ContrOp} (\ z -> new ContrOp[k.kop, ks, z]) (isProp-Kunif k.kop k.kunif ku)))
+        k'.kop
+        (funext Ob (\ X -> (x : Pt X) (p : Partial[X, x]) -> T X x) k.kop k'.kop (\ X ->
+           funext (Pt X) (\ x -> (p : Partial[X, x]) -> T X x) (k.kop X) (k'.kop X) (\ x ->
+             funext (Partial[X, x]) (\ p -> T X x) (k.kop X x) (k'.kop X x) (H X x))))
+        k'.kside k'.kunif ;
+  } ;
+
+  ------------------------------------------------------------------------
+  -- Partial elements moved along a map of types over a substitution:
+  -- mV sends E1 to E2 over s (mpt) and commutes with restriction (mnat)
+
+  module MapP (D1 D2 : PCtx) (C1 : PTy[D1]) (C2 : PTy[D2]) (s : PSub[D1, D2])
+    (mV : (W : Ob) -> GPR.TyL[D1, C1].EI W -> GPR.TyL[D2, C2].EI W)
+    (mpt : (W : Ob) (v : GPR.TyL[D1, C1].EI W) -> Id (W0.Ix (D2.ob W)) (mV W v).1 (s.nt W v.1))
+    (mnat : (V W : Ob) (g : Hom V W) (v : GPR.TyL[D1, C1].EI W)
+            -> Id (GPR.TyL[D2, C2].EI V) (GPR.TyL[D2, C2].E.act V W g (mV W v)) (mV V (GPR.TyL[D1, C1].E.act V W g v))) {
+    module P1 = Partials[D1, C1] ;
+    module P2 = Partials[D2, C2] ;
+
+    mppt (X : Ob) (x : W0.Ix (D1.ob X)) (sd : P1.PSide[X, x]) : P2.PptTy X (s.nt X x) sd.pQ (\ W f i -> mV W (sd.pv W f i)) =
+      \ W f i -> transH (mpt W (sd.pv W f i)) (transH (apH (s.nt W) (sd.ppt W f i)) (s.nt-nat W X f x)) ;
+
+    mpnat (X : Ob) (x : W0.Ix (D1.ob X)) (sd : P1.PSide[X, x]) : P2.PnTy X sd.pQ (\ W f i -> mV W (sd.pv W f i)) =
+      \ W' W chi f i i' -> transH (mnat W' W chi (sd.pv W f i)) (apH (mV W') (sd.pnat W' W chi f i i')) ;
+
+    opaque mppt ; opaque mpnat ;
+
+    mapS (X : Ob) (x : W0.Ix (D1.ob X)) (sd : P1.PSide[X, x]) : P2.PSide[X, s.nt X x] =
+      new P2.PSide[X, s.nt X x, sd.pQ, \ W f i -> mV W (sd.pv W f i), mppt X x sd, mpnat X x sd] ;
+
+    -- the characterisation of the moved side
+    mapS-pv (X : Ob) (x : W0.Ix (D1.ob X)) (sd : P1.PSide[X, x]) (W : Ob) (f : Hom W X) (i : Lands W X sd.pQ f)
+      : Id (GPR.TyL[D2, C2].EI W) ((mapS X x sd).pv W f i) (mV W (sd.pv W f i)) = refl (mV W (sd.pv W f i)) ;
+
+    mapP (X : Ob) (x : W0.Ix (D1.ob X)) (p : P1.Partial[X, x]) : P2.Partial[X, s.nt X x] =
+      new P2.Partial[X, s.nt X x, p.pr, \ l -> mapS X x (p.ps l), \ l j W f i i' -> apH (mV W) (p.pcs l j W f i i')] ;
+
+    -- the moved partial element of a restriction is the restricted moved one
+    mapP-restr (Y X : Ob) (h : Hom Y X) (x : W0.Ix (D1.ob X)) (p : P1.Partial[X, x])
+      : Id (P2.Partial[Y, s.nt Y (D1.act Y X h x)])
+           (subst (W0.Ix (D2.ob Y)) (\ z -> P2.Partial[Y, z]) (D2.act Y X h (s.nt X x)) (s.nt Y (D1.act Y X h x))
+                  (symH (s.nt-nat Y X h x)) (P2.restrictP Y X h (s.nt X x) (mapP X x p)))
+           (mapP Y (D1.act Y X h x) (P1.restrictP Y X h x p)) =
+      P2.partExtH Y (D2.act Y X h (s.nt X x)) (s.nt Y (D1.act Y X h x)) (symH (s.nt-nat Y X h x))
+        (P2.restrictP Y X h (s.nt X x) (mapP X x p)) (mapP Y (D1.act Y X h x) (P1.restrictP Y X h x p)) (refl p.pr)
+        (\ l -> refl (pre Y X h (p.ps l).pQ))
+        (\ l W g i i' -> apH (mV W) (P1.pv-irr X x (p.ps l) W (compH W Y X h g)
+                                       (lands-pre W Y X h (p.ps l).pQ g i) (lands-pre W Y X h (p.ps l).pQ g i'))) ;
+
+    opaque mapP-restr ;
+  } ;
+
+  ------------------------------------------------------------------------
+  -- A contractibility structure moves along a retraction of types over the
+  -- same context: C' is a retract of C (r : C -> C', s : C' -> C, r s = id,
+  -- read in E).  A partial element of C' is moved to C by s, extended there,
+  -- and the extension is read back by r.
+
+  module ContrRet (D : PCtx) (C C' : PTy[D])
+    (r : (W : Ob) -> GPR.TyL[D, C].EI W -> GPR.TyL[D, C'].EI W)
+    (rpt : (W : Ob) (v : GPR.TyL[D, C].EI W) -> Id (W0.Ix (D.ob W)) (r W v).1 v.1)
+    (rnat : (V W : Ob) (g : Hom V W) (v : GPR.TyL[D, C].EI W)
+            -> Id (GPR.TyL[D, C'].EI V) (GPR.TyL[D, C'].E.act V W g (r W v)) (r V (GPR.TyL[D, C].E.act V W g v)))
+    (s : (W : Ob) -> GPR.TyL[D, C'].EI W -> GPR.TyL[D, C].EI W)
+    (spt : (W : Ob) (v : GPR.TyL[D, C'].EI W) -> Id (W0.Ix (D.ob W)) (s W v).1 v.1)
+    (snat : (V W : Ob) (g : Hom V W) (v : GPR.TyL[D, C'].EI W)
+            -> Id (GPR.TyL[D, C].EI V) (GPR.TyL[D, C].E.act V W g (s W v)) (s V (GPR.TyL[D, C'].E.act V W g v)))
+    (rs : (W : Ob) (v : GPR.TyL[D, C'].EI W) -> Id (GPR.TyL[D, C'].EI W) (r W (s W v)) v)
+    (k : Partials[D, C].ContrOp) {
+    module TC = GPR.TyL[D, C] ;
+    module TC' = GPR.TyL[D, C'] ;
+    module P = Partials[D, C] ;
+    module P' = Partials[D, C'] ;
+    module MS = MapP[D, D, C', C, idS D, s, spt, snat] ;
+
+    -- the extension in C, and its image by r
+    ext (X : Ob) (x : TC.Pt X) (p : P'.Partial[X, x]) : TC'.EI X = r X (x, k.kop X x (MS.mapP X x p)) ;
+
+    kop (X : Ob) (x : TC.Pt X) (p : P'.Partial[X, x]) : TC'.T X x =
+      TC'.coeT X (ext X x p).1 x (rpt X (x, k.kop X x (MS.mapP X x p))) (ext X x p).2 ;
+
+    kop-E (X : Ob) (x : TC.Pt X) (p : P'.Partial[X, x]) : Id (TC'.EI X) (x, kop X x p) (ext X x p) =
+      symH (TC'.pr-coe X (ext X x p).1 x (rpt X (x, k.kop X x (MS.mapP X x p))) (ext X x p).2) ;
+
+    opaque kop ;
+
+    kside (X : Ob) (x : TC.Pt X) (p : P'.Partial[X, x]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+      : Id (TC'.EI W) (TC'.E.act W X f (x, kop X x p)) ((p.ps l).pv W f i) =
+      calc (TC'.EI W) {
+          TC'.E.act W X f (x, kop X x p)
+        =< apH (TC'.E.act W X f) (kop-E X x p) >
+          TC'.E.act W X f (ext X x p)
+        =< rnat W X f (x, k.kop X x (MS.mapP X x p)) >
+          r W (TC.E.act W X f (x, k.kop X x (MS.mapP X x p)))
+        =< apH (r W) (k.kside X x (MS.mapP X x p) l W f i) >
+          r W (s W ((p.ps l).pv W f i))
+        =< rs W ((p.ps l).pv W f i) >
+          (p.ps l).pv W f i } ;
+
+    kunif (Y X : Ob) (h : Hom Y X) (x : TC.Pt X) (p : P'.Partial[X, x])
+      : Id (TC'.EI Y) (TC'.E.act Y X h (x, kop X x p)) (D.act Y X h x, kop Y (D.act Y X h x) (P'.restrictP Y X h x p)) =
+      calc (TC'.EI Y) {
+          TC'.E.act Y X h (x, kop X x p)
+        =< apH (TC'.E.act Y X h) (kop-E X x p) >
+          TC'.E.act Y X h (ext X x p)
+        =< rnat Y X h (x, k.kop X x (MS.mapP X x p)) >
+          r Y (TC.E.act Y X h (x, k.kop X x (MS.mapP X x p)))
+        =< apH (r Y) (k.kunif Y X h x (MS.mapP X x p)) >
+          r Y (D.act Y X h x, k.kop Y (D.act Y X h x) (P.restrictP Y X h x (MS.mapP X x p)))
+        =< apH (r Y) (P.kop-cong k Y (D.act Y X h x) (D.act Y X h x) (symH (refl (D.act Y X h x)))
+                        (P.restrictP Y X h x (MS.mapP X x p)) (MS.mapP Y (D.act Y X h x) (P'.restrictP Y X h x p))
+                        (MS.mapP-restr Y X h x p)) >
+          ext Y (D.act Y X h x) (P'.restrictP Y X h x p)
+        =< symH (kop-E Y (D.act Y X h x) (P'.restrictP Y X h x p)) >
+          (D.act Y X h x, kop Y (D.act Y X h x) (P'.restrictP Y X h x p)) } ;
+
+    contr : P'.ContrOp = new P'.ContrOp[kop, kside, kunif] ;
+  } ;
+
+  ------------------------------------------------------------------------
+  -- The total presheaf of C[s] maps to that of C (liftP); over a fixed point
+  -- of D this map is injective (mV-inj)
+
+  module SubE (D G : PCtx) (s : PSub[D, G]) (C : PTy[G]) {
+    module TC = GPR.TyL[G, C] ;
+    module TS = GPR.TyL[D, subTy D G C s] ;
+
+    mV (W : Ob) (v : TS.EI W) : TC.EI W = (liftP D G C s).nt W v ;
+
+    mV-nat (V W : Ob) (g : Hom V W) (v : TS.EI W) : Id (TC.EI V) (mV V (TS.E.act V W g v)) (TC.E.act V W g (mV W v)) =
+      (liftP D G C s).nt-nat V W g v ;
+
+    -- two elements over equal points of D are equal once their images are
+    mV-inj (W : Ob) (v v' : TS.EI W) (P : Id (TS.Pt W) v.1 v'.1) (Q : Id (TC.EI W) (mV W v) (mV W v')) : Id (TS.EI W) v v' =
+      idJ (TS.Pt W) v.1
+        (\ d2 P2 -> (c2 : TS.T W d2) -> Id (TC.EI W) (mV W v) (s.nt W d2, c2) -> Id (TS.EI W) v (d2, c2))
+        (\ c2 Q2 -> apH {TS.T W v.1} {TS.EI W} (\ z -> (v.1, z)) (TC.pr-inj W (s.nt W v.1) v.2 c2 Q2))
+        v'.1 P v'.2 Q ;
+
+    opaque mV-inj ;
+  } ;
+
+  ------------------------------------------------------------------------
+  -- A contractibility structure along a substitution s : D -> G: move the
+  -- partial element along s (MapP), extend in C; the extension lies in C[s]
+  -- on the nose
+
+  module ContrSub (D G : PCtx) (s : PSub[D, G]) (C : PTy[G]) (k : Partials[G, C].ContrOp) {
+    module SC = SubE[D, G, s, C] ;
+    module P = Partials[G, C] ;
+    module P' = Partials[D, subTy D G C s] ;
+    module MP = MapP[D, G, subTy D G C s, C, s, SC.mV, \ W v -> refl (s.nt W v.1), \ V W g v -> symH (SC.mV-nat V W g v)] ;
+
+    kop (X : Ob) (x : SC.TS.Pt X) (p : P'.Partial[X, x]) : SC.TS.T X x = k.kop X (s.nt X x) (MP.mapP X x p) ;
+
+    kside (X : Ob) (x : SC.TS.Pt X) (p : P'.Partial[X, x]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+      : Id (SC.TS.EI W) (SC.TS.E.act W X f (x, kop X x p)) ((p.ps l).pv W f i) =
+      SC.mV-inj W (SC.TS.E.act W X f (x, kop X x p)) ((p.ps l).pv W f i) (symH ((p.ps l).ppt W f i))
+        (transH (SC.mV-nat W X f (x, kop X x p)) (k.kside X (s.nt X x) (MP.mapP X x p) l W f i)) ;
+
+    kunif (Y X : Ob) (h : Hom Y X) (x : SC.TS.Pt X) (p : P'.Partial[X, x])
+      : Id (SC.TS.EI Y) (SC.TS.E.act Y X h (x, kop X x p)) (D.act Y X h x, kop Y (D.act Y X h x) (P'.restrictP Y X h x p)) =
+      SC.mV-inj Y (SC.TS.E.act Y X h (x, kop X x p)) (D.act Y X h x, kop Y (D.act Y X h x) (P'.restrictP Y X h x p))
+        (refl (D.act Y X h x))
+        (calc (SC.TC.EI Y) {
+            SC.mV Y (SC.TS.E.act Y X h (x, kop X x p))
+          =< SC.mV-nat Y X h (x, kop X x p) >
+            SC.TC.E.act Y X h (s.nt X x, k.kop X (s.nt X x) (MP.mapP X x p))
+          =< k.kunif Y X h (s.nt X x) (MP.mapP X x p) >
+            (G.act Y X h (s.nt X x), k.kop Y (G.act Y X h (s.nt X x)) (P.restrictP Y X h (s.nt X x) (MP.mapP X x p)))
+          =< P.kop-cong k Y (G.act Y X h (s.nt X x)) (s.nt Y (D.act Y X h x)) (symH (s.nt-nat Y X h x))
+               (P.restrictP Y X h (s.nt X x) (MP.mapP X x p)) (MP.mapP Y (D.act Y X h x) (P'.restrictP Y X h x p))
+               (MP.mapP-restr Y X h x p) >
+            (s.nt Y (D.act Y X h x), k.kop Y (s.nt Y (D.act Y X h x)) (MP.mapP Y (D.act Y X h x) (P'.restrictP Y X h x p))) }) ;
+
+    contr : P'.ContrOp = new P'.ContrOp[kop, kside, kunif] ;
+  } ;
+
+  ------------------------------------------------------------------------
+  -- Cofibrations over a context (moved from Cofib): a fixed number cr of
+  -- GENERATORS cQ X rho l : Phi X, natural in rho; the extent is the union
+  -- of the generated sieves.  full X rho decides "rho is in the extent" (id
+  -- lands in one generator): on any base, id lands in a union of sieves of
+  -- y X iff it lands in one of them.  full depends only on the sieve, not
+  -- on the list presenting it (full-same).
+
+  module Cof (G : PCtx) {
+    cr : Nat ;
+    cQ (X : Ob) (rho : W0.Ix (G.ob X)) (l : Fin cr) : Phi X ;
+    -- the sieves are natural: restricting rho is taking inverse images
+    cnat (Y X : Ob) (h : Hom Y X) (rho : W0.Ix (G.ob X)) (l : Fin cr)
+      : Id (Phi Y) (cQ Y (G.act Y X h rho) l) (pre Y X h (cQ X rho l)) ;
+  } ;
+
+  -- the one constructor of cofibrations
+  mkCof (G : PCtx) (r : Nat) (Q : (X : Ob) (rho : W0.Ix (G.ob X)) (l : Fin r) -> Phi X)
+    (n : (Y X : Ob) (h : Hom Y X) (rho : W0.Ix (G.ob X)) (l : Fin r)
+         -> Id (Phi Y) (Q Y (G.act Y X h rho) l) (pre Y X h (Q X rho l))) : Cof[G] = new Cof[G, r, Q, n] ;
+
+  module CofL (G : PCtx) (psi : Cof[G]) {
+    module GL = GPR.PshL[G] ;
+
+    r : Nat = psi.cr ;
+
+    Q (X : Ob) (rho : W0.Ix (G.ob X)) (l : Fin r) : Phi X = psi.cQ X rho l ;
+
+    -- rho lies in the extent of psi (OPAQUE: comparing two occurrences of
+    -- full that are not syntactically equal would evaluate anyF/allIn)
+    full (X : Ob) (rho : W0.Ix (G.ob X)) : Bool = anyF r (\ l -> allS X (Q X rho l)) ;
+
+    -- f lands in Q X rho l iff id lands in Q W (rho f) l
+    nat-in (W X : Ob) (f : Hom W X) (rho : W0.Ix (G.ob X)) (l : Fin r) (i : Lands W X (Q X rho l) f)
+      : Lands W W (Q W (G.act W X f rho) l) (idH W) =
+      substH (\ R -> Lands W W R (idH W)) (symH (psi.cnat W X f rho l))
+        (pre-lands W W X f (Q X rho l) (idH W) (lands-eq W X (Q X rho l) f (compH W W X f (idH W)) (symH (comp-idr W X f)) i)) ;
+
+    nat-out (W X : Ob) (f : Hom W X) (rho : W0.Ix (G.ob X)) (l : Fin r) (i : Lands W W (Q W (G.act W X f rho) l) (idH W))
+      : Lands W X (Q X rho l) f =
+      lands-eq W X (Q X rho l) (compH W W X f (idH W)) f (comp-idr W X f)
+        (lands-pre W W X f (Q X rho l) (idH W) (substH (\ R -> Lands W W R (idH W)) (psi.cnat W X f rho l) i)) ;
+
+    lands-full (W X : Ob) (f : Hom W X) (rho : W0.Ix (G.ob X)) (l : Fin r) (i : Lands W X (Q X rho l) f)
+      : IsT (full W (G.act W X f rho)) =
+      anyF-complete r (\ l' -> allS W (Q W (G.act W X f rho) l')) l
+        (allS-complete W (Q W (G.act W X f rho) l) (nat-in W X f rho l i)) ;
+
+    flAux (W X : Ob) (f : Hom W X) (rho : W0.Ix (G.ob X)) (w : (l' : Fin r) * IsT (allS W (Q W (G.act W X f rho) l')))
+      : (l : Fin r) * Lands W X (Q X rho l) f =
+      (w.1, nat-out W X f rho w.1 (allS-sound W (Q W (G.act W X f rho) w.1) w.2)) ;
+
+    full-lands (W X : Ob) (f : Hom W X) (rho : W0.Ix (G.ob X)) (h : IsT (full W (G.act W X f rho)))
+      : (l : Fin r) * Lands W X (Q X rho l) f =
+      flAux W X f rho (anyF-sound r (\ l' -> allS W (Q W (G.act W X f rho) l')) h) ;
+
+    -- at the identity
+    fidAux (X : Ob) (rho : W0.Ix (G.ob X)) (w : (l' : Fin r) * IsT (allS X (Q X rho l')))
+      : (l : Fin r) * Lands X X (Q X rho l) (idH X) = (w.1, allS-sound X (Q X rho w.1) w.2) ;
+
+    full-id (X : Ob) (rho : W0.Ix (G.ob X)) (h : IsT (full X rho)) : (l : Fin r) * Lands X X (Q X rho l) (idH X) =
+      fidAux X rho (anyF-sound r (\ l' -> allS X (Q X rho l')) h) ;
+
+    opaque full ; opaque lands-full ; opaque flAux ; opaque full-lands ; opaque fidAux ; opaque full-id ;
+
+    full-act (Y X : Ob) (h : Hom Y X) (rho : W0.Ix (G.ob X)) (p : IsT (full X rho)) : IsT (full Y (G.act Y X h rho)) =
+      lands-full Y X h rho (full-id X rho p).1
+        (lands-eq Y X (Q X rho (full-id X rho p).1) (compH Y X X (idH X) h) h (comp-idl Y X h)
+           (lands-comp Y X X (Q X rho (full-id X rho p).1) (idH X) h (full-id X rho p).2)) ;
+
+    opaque full-act ;
+
+    full-eq (X : Ob) (rho rho' : W0.Ix (G.ob X)) (e : Id (W0.Ix (G.ob X)) rho rho') (p : IsT (full X rho)) : IsT (full X rho') =
+      substH (\ z -> IsT (full X z)) e p ;
+
+    ----------------------------------------------------------------------
+    -- The sub-presheaf G|psi
+
+    -- the code is mkV with an opaque embedding: comparing two codes of
+    -- G|psi never unfolds the nested SigV
+    resCode (X : Ob) : W0.V = W0.SigV (G.ob X) (\ rho -> W0.IsTV (full X rho)) ;
+
+    resF (X : Ob) (z : W0.Ix (resCode X)) : W0.V = W0.ev (resCode X) z ;
+
+    resInj (X : Ob) : W0.Inj (W0.Ix (resCode X)) (resF X) =
+      \ z z' P -> W0.emb-inj (W0.Ix (resCode X)) (W0.elt (resCode X).1) (W0.embV (resCode X)) z z' P ;
+
+    resF-ev (X : Ob) (z : W0.Ix (resCode X)) : Id W0.V (resF X z) (W0.ev (resCode X) z) = refl (W0.ev (resCode X) z) ;
+
+    opaque resF ; opaque resInj ; opaque resF-ev ;
+
+    resOb (X : Ob) : W0.V = W0.mkV ((rho : W0.Ix (G.ob X)) * IsT (full X rho)) (resF X) (resInj X) ;
+
+    -- the bridge to the raw code (propositional; see VCode)
+    resOb-code (X : Ob) : Id W0.V (resOb X) (resCode X) = W0.mkV-f (resCode X) (resF X) (resInj X) (resF-ev X) ;
+
+    resAct (J I : Ob) (f : Hom J I) (w : W0.Ix (resOb I)) : W0.Ix (resOb J) = (G.act J I f w.1, full-act J I f w.1 w.2) ;
+
+    resActId (I : Ob) (w : W0.Ix (resOb I)) : Id (W0.Ix (resOb I)) (resAct I I (idH I) w) w =
+      Sigma-eq (W0.Ix (G.ob I)) (\ rho -> IsT (full I rho)) (G.act I I (idH I) w.1) w.1 (resAct I I (idH I) w).2 w.2
+        (G.act-id I w.1) (isProp-IsT' (full I w.1)) ;
+
+    resActO (K J I : Ob) (f : Hom J I) (g : Hom K J) (w : W0.Ix (resOb I))
+      : Id (W0.Ix (resOb K)) (resAct K I (compH K J I f g) w) (resAct K J g (resAct J I f w)) =
+      Sigma-eq (W0.Ix (G.ob K)) (\ rho -> IsT (full K rho)) (G.act K I (compH K J I f g) w.1) (G.act K J g (G.act J I f w.1))
+        (resAct K I (compH K J I f g) w).2 (resAct K J g (resAct J I f w)).2
+        (G.act-o K J I f g w.1) (isProp-IsT' (full K (G.act K J g (G.act J I f w.1)))) ;
+
+    opaque resActId ; opaque resActO ;
+
+    resCtx : PCtx = new PCtx[resOb, resAct, resActId, resActO] ;
+
+    inclR : PSub[resCtx, G] = new PSub[resCtx, G, \ I w -> w.1, \ J I f w -> refl (G.act J I f w.1)] ;
+
+    res-eq (X : Ob) (w w' : W0.Ix (resOb X)) (P : Id (W0.Ix (G.ob X)) w.1 w'.1) : Id (W0.Ix (resOb X)) w w' =
+      Sigma-eq (W0.Ix (G.ob X)) (\ rho -> IsT (full X rho)) w.1 w'.1 w.2 w'.2 P (isProp-IsT' (full X w'.1)) ;
+
+    -- rho is in the extent when id lands in one generator
+    full-of-id (X : Ob) (rho : W0.Ix (G.ob X)) (w : (l : Fin r) * Lands X X (Q X rho l) (idH X)) : IsT (full X rho) =
+      full-eq X (G.act X X (idH X) rho) rho (G.act-id X rho) (lands-full X X (idH X) rho w.1 w.2) ;
+  } ;
+
+  -- presentation invariance: two lists of generators with the same sieve
+  -- (at the identity, hence everywhere by naturality) have the same full
+  full-same (G : PCtx) (psi psi' : Cof[G])
+    (p : (X : Ob) (rho : W0.Ix (G.ob X)) -> ((l : Fin psi.cr) * Lands X X (psi.cQ X rho l) (idH X))
+           -> (l' : Fin psi'.cr) * Lands X X (psi'.cQ X rho l') (idH X))
+    (q : (X : Ob) (rho : W0.Ix (G.ob X)) -> ((l' : Fin psi'.cr) * Lands X X (psi'.cQ X rho l') (idH X))
+           -> (l : Fin psi.cr) * Lands X X (psi.cQ X rho l) (idH X))
+    (X : Ob) (rho : W0.Ix (G.ob X)) : Id Bool (CofL[G, psi].full X rho) (CofL[G, psi'].full X rho) =
+    bool-ext (CofL[G, psi].full X rho) (CofL[G, psi'].full X rho)
+      (\ h -> CofL[G, psi'].full-of-id X rho (p X rho (CofL[G, psi].full-id X rho h)))
+      (\ h -> CofL[G, psi].full-of-id X rho (q X rho (CofL[G, psi'].full-id X rho h))) ;
+
+  -- two cofibrations with the same list of generators, pointwise equal,
+  -- are equal (the naturality proofs are Ids of sieves, a set)
+  CofQTy (G : PCtx) (r : Nat) : U l+ = (X : Ob) (rho : W0.Ix (G.ob X)) (k : Fin r) -> Phi X ;
+
+  CofNTy (G : PCtx) (r : Nat) (Q : CofQTy G r) : U l+ =
+    (Y X : Ob) (h : Hom Y X) (rho : W0.Ix (G.ob X)) (k : Fin r) -> Id (Phi Y) (Q Y (G.act Y X h rho) k) (pre Y X h (Q X rho k)) ;
+
+  isProp-CofN (G : PCtx) (r : Nat) (Q : CofQTy G r) : isProp (CofNTy G r Q) =
+    isProp-Pi Ob (\ Y -> (X : Ob) (h : Hom Y X) (rho : W0.Ix (G.ob X)) (k : Fin r) -> Id (Phi Y) (Q Y (G.act Y X h rho) k) (pre Y X h (Q X rho k))) (\ Y ->
+    isProp-Pi Ob (\ X -> (h : Hom Y X) (rho : W0.Ix (G.ob X)) (k : Fin r) -> Id (Phi Y) (Q Y (G.act Y X h rho) k) (pre Y X h (Q X rho k))) (\ X ->
+    isProp-Pi (Hom Y X) (\ h -> (rho : W0.Ix (G.ob X)) (k : Fin r) -> Id (Phi Y) (Q Y (G.act Y X h rho) k) (pre Y X h (Q X rho k))) (\ h ->
+    isProp-Pi (W0.Ix (G.ob X)) (\ rho -> (k : Fin r) -> Id (Phi Y) (Q Y (G.act Y X h rho) k) (pre Y X h (Q X rho k))) (\ rho ->
+    isProp-Pi (Fin r) (\ k -> Id (Phi Y) (Q Y (G.act Y X h rho) k) (pre Y X h (Q X rho k))) (\ k ->
+      isSet-Phi Y (Q Y (G.act Y X h rho) k) (pre Y X h (Q X rho k))))))) ;
+
+  cof-ext (G : PCtx) (r : Nat) (Q Q' : CofQTy G r) (n : CofNTy G r Q) (n' : CofNTy G r Q')
+    (E : (X : Ob) (rho : W0.Ix (G.ob X)) (k : Fin r) -> Id (Phi X) (Q X rho k) (Q' X rho k))
+    : Id (Cof[G]) (mkCof G r Q n) (mkCof G r Q' n') =
+    idJ (CofQTy G r) Q (\ Q2 E2 -> (n2 : CofNTy G r Q2) -> Id (Cof[G]) (mkCof G r Q n) (mkCof G r Q2 n2))
+      (\ n2 -> apH (mkCof G r Q) (isProp-CofN G r Q n n2))
+      Q' (funext Ob (\ X -> (rho : W0.Ix (G.ob X)) (k : Fin r) -> Phi X) Q Q' (\ X ->
+            funext (W0.Ix (G.ob X)) (\ rho -> (k : Fin r) -> Phi X) (Q X) (Q' X) (\ rho ->
+              funext (Fin r) (\ k -> Phi X) (Q X rho) (Q' X rho) (E X rho))))
+      n' ;
+
+  opaque isProp-CofN ; opaque cof-ext ;

@@ -1,0 +1,269 @@
+-- GExtEquiv2.seg (inside IvBase, any base; line form of ExtEquiv2.seg).
+-- The A-filling of Theorem 7's equivalence: ONE partial line in A over the
+-- constant line at rho (family path object), total at e1 (the point w),
+-- whose sides are
+--   * on Q_l (the sides of p): the lines of the fibre elements of p;
+--   * on the generators cQ X rho k of psi rho: the lines of theta, the
+--     extension in the fibre of alpha (kE) at the full maps;
+-- joined into one list (GCofib.Join; the compatibility of theta on two
+-- generators is th-cong, stated once).  kA fills it; a0 is the filler at
+-- e0, u the pair (a0 , B parts of theta), v0 the fibre element
+-- (glue (a0 , u) , filler) of ext over w.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+
+module ExtEq2 (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (kA : LineFibP[GFam[a].famPath, G, A].FibAt e1)
+  (eal : GEquiv[a].EquivOp GP.CofL[G, psi].resCtx B (subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR) al) {
+  open GP.CofL[G, psi] ;
+  open GExt.ExtDef[G, A, psi] ;
+  open ExtB[B, al] ;
+  open GExt2.ExtB2[G, A, psi, B, al] ;
+  open GExt3.ExtB3[G, A, psi, B, al] ;
+  open GExt4.ExtB4[G, A, psi, B, al] ;
+  open GExtEquiv.ExtEq[G, A, psi, B, al, kA, eal] ;
+
+  module FM = GFam[a] ;
+  module FG = FM.FC[G] ;
+  module FTA = FM.FT[G, A] ;
+  module KA = EndKit[FM.famPath, G, A, e1] ;
+  module LA = LevKit[FM.famPath, FM.famConn, G, A, e1] ;
+  module GL = PR.PshL[G] ;
+
+  module Th (X : Ob) (w : TA.EI X) (p : PX.Partial[X, w]) {
+    rho : W0.Ix (G.ob X) = w.1 ;
+
+    ------------------------------------------------------------------
+    -- theta: the extension in the fibre of alpha at the full maps
+
+    th (W : Ob) (f : Hom W X) (q : IsT (full W (G.act W X f rho))) : FA.TF.EI W =
+      kE W (EA.act W X f w) q (PX.restrictP W X f w p) ;
+
+    th-nat (W' W : Ob) (chi : Hom W' W) (f : Hom W X) (q : IsT (full W (G.act W X f rho)))
+      (q' : IsT (full W' (G.act W' X (compH W' W X f chi) rho)))
+      : Id (FA.TF.EI W') (EFA.act W' W chi (th W f q)) (th W' (compH W' W X f chi) q') =
+      transH (kE-act W' W chi (EA.act W X f w) q (full-act W' W chi (G.act W X f rho) q) (PX.restrictP W X f w p))
+             (symH (kE-cong W' (EA.act W' X (compH W' W X f chi) w) (EA.act W' W chi (EA.act W X f w)) (EA.act-o W' W X f chi w)
+                      q' (full-act W' W chi (G.act W X f rho) q)
+                      (PX.restrictP W' X (compH W' W X f chi) w p)
+                      (PX.restrictP W' W chi (EA.act W X f w) (PX.restrictP W X f w p))
+                      (PX.restrictP-o W' W X chi f w p))) ;
+
+    -- f is f after the identity: the full map f, as a map into the
+    -- restriction of p along f, is the identity of W
+    lands-idr (W : Ob) (f : Hom W X) (l : Fin p.pr) (i : Lands W X (p.ps l).pQ f) : Lands W W (pre W X f (p.ps l).pQ) (idH W) =
+      pre-lands W W X f (p.ps l).pQ (idH W) (lands-eq W X (p.ps l).pQ f (compH W W X f (idH W)) (symH (comp-idr W X f)) i) ;
+
+    -- on a side of p, theta is that side
+    th-full (W : Ob) (f : Hom W X) (q : IsT (full W (G.act W X f rho))) (l : Fin p.pr) (i : Lands W X (p.ps l).pQ f)
+      : Id (FA.TF.EI W) (th W f q)
+           (toFA W ((p.ps l).pv W f i) (full-eq W (G.act W X f rho) ((p.ps l).pv W f i).1.1 (symH (apH (\ z -> z.1) ((p.ps l).ppt W f i))) q)) =
+      transH (kE-full W (EA.act W X f w) q (PX.restrictP W X f w p) l (lands-idr W f l i))
+             (toFA-cong W ((p.ps l).pv W (compH W W X f (idH W)) (lands-pre W W X f (p.ps l).pQ (idH W) (lands-idr W f l i)))
+                          ((p.ps l).pv W f i)
+                (PX.pv-hom X w (p.ps l) W (compH W W X f (idH W)) f (comp-idr W X f) (lands-pre W W X f (p.ps l).pQ (idH W) (lands-idr W f l i)) i)
+                (Tr[W, EA.act W X f w, q].qv (PX.RestrictP[W, X, f, w].rside (p.ps l)) W (idH W) (lands-idr W f l i))
+                (full-eq W (G.act W X f rho) ((p.ps l).pv W f i).1.1 (symH (apH (\ z -> z.1) ((p.ps l).ppt W f i))) q)) ;
+
+    th-cong (W : Ob) (f : Hom W X) (q q' : IsT (full W (G.act W X f rho))) : Id (FA.TF.EI W) (th W f q) (th W f q') =
+      apH (th W f) (isProp-IsT' (full W (G.act W X f rho)) q q') ;
+
+    opaque th-nat ; opaque th-full ; opaque th-cong ;
+
+    -- the full maps are the maps landing in a generator of psi rho
+    qOf (W : Ob) (f : Hom W X) (k : Fin r) (i : Lands W X (Q X rho k) f) : IsT (full W (G.act W X f rho)) =
+      lands-full W X f rho k i ;
+
+    kOf (W : Ob) (f : Hom W X) (q : IsT (full W (G.act W X f rho))) : (k : Fin r) * Lands W X (Q X rho k) f =
+      full-lands W X f rho q ;
+
+    ------------------------------------------------------------------
+    -- the base point: the constant line at rho, with w at e1
+
+    cL : W0.Ix (FG.ob X) = FG.constF X rho ;
+
+    x0 : KA.TV.EI X = (cL, TA.fromE X (G.act X X (idH X) rho) w (symH (G.act-id X rho))) ;
+
+    x0-E : Id (TA.EI X) (KA.endE X x0) w = TA.fromE-eq X (G.act X X (idH X) rho) w (symH (G.act-id X rho)) ;
+
+    -- the end of the base point, restricted, as LineSide wants it
+    x0-act (V : Ob) (f : Hom V X) : Id (TA.EI V) (TA.E.act V X f w) (KA.endE V (KA.TV.E.act V X f x0)) =
+      transH (apH (TA.E.act V X f) (symH x0-E)) (symH (KA.endE-act V X f x0)) ;
+
+    ------------------------------------------------------------------
+    -- the two families of sides
+
+    -- from p: the lines of its fibre elements
+    module S1 (l : Fin p.pr) {
+      s : PX.PSide[X, w] = p.ps l ;
+
+      t (V : Ob) (f : Hom V X) (i : Lands V X s.pQ f) (W : Ob) (g : Hom W V) (j : Hom W Iv) : TA.EI W =
+        FX.fibL V (s.pv V f i) W g j ;
+
+      module SO = GMapLine[a].LineSide[FM.famPath, FM.famConn, G, A, e1, X, x0, s.pQ, t,
+        \ V f i W g j -> transH (FX.fibL-pt V (s.pv V f i) W g j)
+                           (transH (apH (\ z -> G.act W V g z.1) (s.ppt V f i)) (GL.actC W V X f g rho)),
+        \ V f i W' W g' g j -> FX.fibL-nat V (s.pv V f i) W' W g' g j,
+        \ V f i -> transH (FX.fibL-1 V (s.pv V f i)) (transH (s.ppt V f i) (x0-act V f)),
+        \ V' V chi f i i' W g j -> transH (apH (\ z -> FX.fibL V' z W g j) (symH (s.pnat V' V chi f i i')))
+                                          (FX.fibL-act V' V chi (s.pv V f i) W g j)] ;
+    } ;
+
+    -- from theta, on the generators of psi rho
+    module S2 (k : Fin r) {
+      t (V : Ob) (f : Hom V X) (i : Lands V X (Q X rho k) f) (W : Ob) (g : Hom W V) (j : Hom W Iv) : TA.EI W =
+        toEA W (FA.fibL V (th V f (qOf V f k i)) W g j) ;
+
+      module SO = GMapLine[a].LineSide[FM.famPath, FM.famConn, G, A, e1, X, x0, Q X rho k, t,
+        \ V f i W g j -> transH (apH (\ z -> z.1) (FA.fibL-pt V (th V f (qOf V f k i)) W g j)) (GL.actC W V X f g rho),
+        \ V f i W' W g' g j -> apH (toEA W') (FA.fibL-nat V (th V f (qOf V f k i)) W' W g' g j),
+        \ V f i -> transH (apH (toEA V) (FA.fibL-1 V (th V f (qOf V f k i)))) (x0-act V f),
+        \ V' V chi f i i' W g j ->
+          transH (apH (\ z -> toEA W (FA.fibL V' z W g j))
+                      (symH (th-nat V' V chi f (qOf V f k i) (qOf V' (compH V' V X f chi) k i'))))
+                 (apH (toEA W) (FA.fibL-act V' V chi (th V f (qOf V f k i)) W g j))] ;
+    } ;
+
+    -- two elements of the fibres over the same point with the same line values
+    tsEq (V : Ob) (f : Hom V X) (u v : KA.TS.EI V) (pu : Id (KA.TV.EI V) u.1 (KA.TV.E.act V X f x0))
+      (pv : Id (KA.TV.EI V) v.1 (KA.TV.E.act V X f x0))
+      (q : (W : Ob) (g : Hom W V) (j : Hom W Iv)
+           -> Id (TA.EI W) (FM.famConn.levA G A V (KA.lineL V u) W g j) (FM.famConn.levA G A V (KA.lineL V v) W g j))
+      : Id (KA.TS.EI V) u v = LA.ts-ext V u v (transH pu (symH pv)) q ;
+
+    c11 : KA.PT.PCsTy X x0 p.pr (\ l -> S1[l].SO.side) = \ l l' V f i i' ->
+      tsEq V f (S1[l].SO.sv V f i) (S1[l'].SO.sv V f i') (S1[l].SO.sv-pt V f i) (S1[l'].SO.sv-pt V f i')
+        (\ W g j -> transH (S1[l].SO.sv-lev V f i W g j)
+                     (transH (apH (\ z -> FX.fibL V z W g j) (p.pcs l l' V f i i')) (symH (S1[l'].SO.sv-lev V f i' W g j)))) ;
+
+    c22 : KA.PT.PCsTy X x0 r (\ k -> S2[k].SO.side) = \ k k' V f i i' ->
+      tsEq V f (S2[k].SO.sv V f i) (S2[k'].SO.sv V f i') (S2[k].SO.sv-pt V f i) (S2[k'].SO.sv-pt V f i')
+        (\ W g j -> transH (S2[k].SO.sv-lev V f i W g j)
+                     (transH (apH (\ z -> toEA W (FA.fibL V z W g j)) (th-cong V f (qOf V f k i) (qOf V f k' i')))
+                             (symH (S2[k'].SO.sv-lev V f i' W g j)))) ;
+
+    c12 (l : Fin p.pr) (k : Fin r) (V : Ob) (f : Hom V X) (i : Lands V X (p.ps l).pQ f) (i' : Lands V X (Q X rho k) f)
+      : Id (KA.TS.EI V) (S1[l].SO.sv V f i) (S2[k].SO.sv V f i') =
+      tsEq V f (S1[l].SO.sv V f i) (S2[k].SO.sv V f i') (S1[l].SO.sv-pt V f i) (S2[k].SO.sv-pt V f i')
+        (\ W g j -> transH (S1[l].SO.sv-lev V f i W g j)
+                     (transH (symH (transH (apH (\ z -> toEA W (FA.fibL V z W g j)) (th-full V f (qOf V f k i') l i))
+                                           (toFA-L V ((p.ps l).pv V f i)
+                                              (full-eq V (G.act V X f rho) ((p.ps l).pv V f i).1.1
+                                                 (symH (apH (\ z -> z.1) ((p.ps l).ppt V f i))) (qOf V f k i')) W g j)))
+                             (symH (S2[k].SO.sv-lev V f i' W g j)))) ;
+
+    module J = KA.PT.Join[X, x0, p.pr, r, \ l -> S1[l].SO.side, \ k -> S2[k].SO.side, c11, c12, c22] ;
+
+    ------------------------------------------------------------------
+    -- the filler
+
+    fill : W0.Ix (KA.SFm.SF.tob X x0) = kA.kop X x0 J.part ;
+
+    Fv (W : Ob) (f : Hom W X) (j : Hom W Iv) : TA.EI W = fill.1.1.1 W f j ;
+
+    Fn (V W : Ob) (g : Hom V W) (f : Hom W X) (j : Hom W Iv)
+      : Id (TA.EI V) (TA.E.act V W g (Fv W f j)) (Fv V (compH V W X f g) (compH V W Iv j g)) = fill.1.1.2 V W g f j ;
+
+    Fpt (W : Ob) (f : Hom W X) (j : Hom W Iv) : Id (W0.Ix (G.ob W)) (Fv W f j).1 (G.act W X f rho) =
+      apH (\ y -> y.1 W f j) fill.1.2 ;
+
+    F1 : Id (TA.EI X) (Fv X (idH X) (ptH X e1)) w =
+      transH (symH (FTA.Ev[e1].endB-E X (cL, fill.1))) (transH (apH (KA.endE X) fill.2) x0-E) ;
+
+    -- the values of the filler on a side of the joined list
+    Fside (l : Fin J.part.pr) (V : Ob) (f : Hom V X) (i : Lands V X (J.part.ps l).pQ f) (W : Ob) (g : Hom W V) (j : Hom W Iv)
+      : Id (TA.EI W) (Fv W (compH W V X f g) j) (FM.famConn.levA G A V (KA.lineL V ((J.part.ps l).pv V f i)) W g j) =
+      transH (symH (LA.line-act V X f (x0, fill) W g j))
+             (apH (\ u -> FM.famConn.levA G A V (KA.lineL V u) W g j) (kA.kside X x0 J.part l V f i)) ;
+
+    -- on the sides of p, and of theta
+    F-S1 (l : Fin p.pr) (V : Ob) (f : Hom V X) (i : Lands V X (p.ps l).pQ f) (W : Ob) (g : Hom W V) (j : Hom W Iv)
+      : Id (TA.EI W) (Fv W (compH W V X f g) j) (FX.fibL V ((p.ps l).pv V f i) W g j) =
+      transH (Fside (finL p.pr r l) V f (J.landL l V f i) W g j)
+        (transH (apH (\ u -> FM.famConn.levA G A V (KA.lineL V u) W g j) (J.atL l V f (J.landL l V f i) i))
+                (S1[l].SO.sv-lev V f i W g j)) ;
+
+    F-S2 (k : Fin r) (V : Ob) (f : Hom V X) (i : Lands V X (Q X rho k) f) (W : Ob) (g : Hom W V) (j : Hom W Iv)
+      : Id (TA.EI W) (Fv W (compH W V X f g) j) (toEA W (FA.fibL V (th V f (qOf V f k i)) W g j)) =
+      transH (Fside (finR p.pr r k) V f (J.landR k V f i) W g j)
+        (transH (apH (\ u -> FM.famConn.levA G A V (KA.lineL V u) W g j) (J.atR k V f (J.landR k V f i) i))
+                (S2[k].SO.sv-lev V f i W g j)) ;
+
+    opaque F1 ; opaque Fside ; opaque F-S1 ; opaque F-S2 ;
+
+    -- the filler at a point given two ways
+    Fv-eq (W : Ob) (f f' : Hom W X) (j j' : Hom W Iv) (pf : Id (Hom W X) f f') (pj : Id (Hom W Iv) j j')
+      : Id (TA.EI W) (Fv W f j) (Fv W f' j') =
+      transH (apH (\ k -> Fv W k j) pf) (apH (\ k -> Fv W f' k) pj) ;
+
+    -- the restriction of the end at e0 is the value at (f , e0)
+    F0-act (W : Ob) (f : Hom W X)
+      : Id (TA.EI W) (TA.E.act W X f (Fv X (idH X) (ptH X e0))) (Fv W (compH W W X f (idH W)) (ptH W e0)) =
+      transH (Fn W X f (idH X) (ptH X e0))
+             (Fv-eq W (compH W X X (idH X) f) (compH W W X f (idH W)) (compH W X Iv (ptH X e0) f) (ptH W e0)
+                (transH (comp-idl W X f) (symH (comp-idr W X f))) (ptH-nat W X f e0)) ;
+
+    ------------------------------------------------------------------
+    -- the pair (a0 , B parts of theta) and the fibre element
+
+    a0E : TA.EI X = Fv X (idH X) (ptH X e0) ;
+
+    a0pt : Id (W0.Ix (G.ob X)) a0E.1 rho = transH (Fpt X (idH X) (ptH X e0)) (G.act-id X rho) ;
+
+    a0 : TA.T X rho = TA.fromE X rho a0E a0pt ;
+
+    a0-E : Id (TA.EI X) (rho, a0) a0E = TA.fromE-eq X rho a0E a0pt ;
+
+    bE : BETy X rho = \ W f q -> FA.fibB W (th W f q) ;
+
+    bpt : BptTy X rho bE = \ W f q -> refl (G.act W X f rho, q) ;
+
+    pal0 : BalTy X rho a0 bE = \ W f q ->
+      calc (TA.EI W) {
+          toEA W (al.mE W (FA.fibB W (th W f q)))
+        =< apH (toEA W) (symH (FA.fibL-0 W (th W f q))) >
+          toEA W (FA.fibL W (th W f q) W (idH W) (ptH W e0))
+        =< apH (\ z -> toEA W (FA.fibL W z W (idH W) (ptH W e0))) (th-cong W f q (qOf W f (kOf W f q).1 (kOf W f q).2)) >
+          toEA W (FA.fibL W (th W f (qOf W f (kOf W f q).1 (kOf W f q).2)) W (idH W) (ptH W e0))
+        =< symH (F-S2 (kOf W f q).1 W f (kOf W f q).2 W (idH W) (ptH W e0)) >
+          Fv W (compH W W X f (idH W)) (ptH W e0)
+        =< symH (F0-act W f) >
+          TA.E.act W X f a0E
+        =< apH (TA.E.act W X f) (symH a0-E) >
+          EA.act W X f (rho, a0) } ;
+
+    pnat0 : BnatTy X rho bE = \ W' W chi f q q' ->
+      transH (symH (FA.fibB-act W' W chi (th W f q))) (apH (FA.fibB W') (th-nat W' W chi f q q')) ;
+
+    u : Pairs X rho = mkPairs X rho a0 bE bpt pal0 pnat0 ;
+
+    u-a : Id (TA.T X rho) (pa X rho u) a0 = mkPairs-a X rho a0 bE bpt pal0 pnat0 ;
+
+    u-b (W : Ob) (f : Hom W X) (q : IsT (full W (G.act W X f rho))) : Id (TB.EI W) (pb X rho u W f q) (FA.fibB W (th W f q)) =
+      mkPairs-b X rho a0 bE bpt pal0 pnat0 W f q ;
+
+    u-ext : Id (TA.EI X) (extE X (glue X rho u)) (rho, a0) =
+      transH (glue-ext X rho u) (apH {TA.T X rho} {TA.EI X} (\ z -> (rho, z)) u-a) ;
+
+    gb : TX.T X rho = TX.fromE X rho (glue X rho u) (glue-pt X rho u) ;
+
+    gb-E : Id (TX.EI X) (rho, gb) (glue X rho u) = TX.fromE-eq X rho (glue X rho u) (glue-pt X rho u) ;
+
+    F0 : Id (TA.EI X) (Fv X (idH X) (ptH X e0)) (extE X (rho, gb)) =
+      transH (symH a0-E) (transH (symH u-ext) (apH (extE X) (symH gb-E))) ;
+
+    v0 : FX.TF.EI X = FX.mkFib X w gb Fv Fn Fpt F0 F1 ;
+
+    opaque pal0 ; opaque pnat0 ; opaque u-a ; opaque u-b ; opaque u-ext ; opaque F0 ;
+  } ;
+} ;

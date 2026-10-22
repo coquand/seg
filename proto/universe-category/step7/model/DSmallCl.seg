@@ -1,0 +1,124 @@
+-- DSmallCl.seg: the classifier parameters of the univalence operation from
+-- the universal datum (GUaOpN) for the universe of Delta, in the
+-- universal form: ONE horn filling operation on Ext of the universal glue
+-- data, pulled back along every map into it.
+--
+--   elOp      El's horn filling (DElHorn.elFib), as a filling operation
+--   hB        B's: El's pulled back along the code map bmap (GFillX)
+--   hBig      Ext's, once, on the universal data at level a+: B's at the
+--             points of the extent, toCl of Theorem 7's composition
+--             elsewhere (DGlueCl.GC at a+)
+--   smallCl   along al : D -> GDr: hBig pulled back, the fibres read in
+--             the small Ext SA by GExtCmp's ph / ps (GFillX)
+--   smallCl-sub   the moved data have the same values (FExt.isFibExt)
+--
+-- Constructive; El's fillers kU* are parameters (DUaOp gives them).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ;
+module DBm = DeltaBase[a] ;
+module DB = DBm.DB ;
+module PS = DB.GPre[a].PS ;
+module PL = DB.GPre[a+].PS ;
+module DCl = DeltaClassifier[a] ;
+module DU = DCl.DU ;
+module YO = DB.GYon[a] ;
+module DF = DeltaForall[a].DFaU ;
+
+module SC
+  (kU0 : DB.GLine[a+].LineFibP[DB.GFam[a+].famPath, DU.UCtx, DU.EGen].FibAt DB.e0)
+  (kU1 : DB.GLine[a+].LineFibP[DB.GFam[a+].famPath, DU.UCtx, DU.EGen].FibAt DB.e1)
+  (kU0e : DB.GCofEsi[a+].PartialsEsi[DB.GLine[a+].EndKit[DB.GFam[a+].famPath, DU.UCtx, DU.EGen, DB.e0].TV.E,
+            DB.GLine[a+].EndKit[DB.GFam[a+].famPath, DU.UCtx, DU.EGen, DB.e0].SFm.SF].KESI kU0)
+  (kU1e : DB.GCofEsi[a+].PartialsEsi[DB.GLine[a+].EndKit[DB.GFam[a+].famPath, DU.UCtx, DU.EGen, DB.e1].TV.E,
+            DB.GLine[a+].EndKit[DB.GFam[a+].famPath, DU.UCtx, DU.EGen, DB.e1].SFm.SF].KESI kU1)
+  {
+  module UB = DB.GExtBig.UB[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A] ;
+  module XS = DF.GExtSmall.XS[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A, kU0, kU1, kU0e, kU1e] ;
+
+  -- El's horn filling, as a filling operation
+  elOp : DB.GFillS[a+].FS[DCl.HIx, DCl.hOk, DCl.hOb, DCl.hS, DU.UCtx, DU.EGen].Op =
+    \ i o F h -> DElHorn[a].elFib i.1 i.2 o F h ;
+
+  -- B's: El's along the code map
+  LB : PL.PSub[PL.extP UB.CU.resCtx UB.BU, PL.extP DU.UCtx DU.EGen] = PL.liftP UB.CU.resCtx DU.UCtx DU.EGen UB.bmap ;
+
+  module PB = DB.GFillX[a+, a+].Pull[DCl.HIx, DCl.hOk, DCl.hOb, DCl.hS, UB.CU.resCtx, UB.BU, DU.UCtx, DU.EGen,
+    UB.bmap.nt, UB.bmap.nt-nat, \ W x b -> b, \ W x b -> b, \ W x b -> refl b, \ W x b -> refl b,
+    \ V W g w -> symH (LB.nt-nat V W g w), elOp] ;
+
+  hB : DHornFib[a, a+].DH[UB.CU.resCtx, UB.BU].isFib = \ m k o rho h -> PB.op (m, k) o rho h ;
+
+  -- Ext's, once, on the universal data
+  module GC = DGlueCl[a, a+].GC[UB.GDr, UB.AU, UB.psiU, UB.BU, UB.alU, hB, XS.FU.fibBig.2.1, XS.FU.fibBig.2.2] ;
+
+  hBig : DB.GFillS[a+].FS[DCl.HIx, DCl.hOk, DCl.hOb, DCl.hS, UB.GDr, UB.ExtBig].Op = \ i o w h -> GC.clExt i.1 i.2 o w h ;
+
+  -- along a map into the universal data
+  module PA (D : PS.PCtx) (al : DB.GSmall.XSub[D, UB.GDr]) {
+    module P = DB.GFillX[a, a+].Pull[DCl.HIx, DCl.hOk, DCl.hOb, DCl.hS, D, DB.GSmall.xsub D UB.GDr XS.SA al, UB.GDr, UB.ExtBig,
+      al.nt, al.nt-nat, \ W x b -> XS.phS W (al.nt W x) b, \ W x b -> XS.psS W (al.nt W x) b,
+      \ W x b -> XS.CM.At[W, al.nt W x].ps-ph b, \ W x b -> XS.CM.At[W, al.nt W x].ph-ps b,
+      \ V W g w -> symH (XS.SF.At[D, al].PhN V W g w), hBig] ;
+  } ;
+
+  smallCl (D : PS.PCtx) (al : DB.GSmall.XSub[D, UB.GDr]) : DCl.ClD D (DB.GSmall.xsub D UB.GDr XS.SA al) =
+    \ m k o rho h -> PA[D, al].P.op (m, k) o rho h ;
+
+  -- the substitution law: the moved data have the same values
+  module Sb (D D' : PS.PCtx) (t : PS.PSub[D', D]) (al : DB.GSmall.XSub[D, UB.GDr]) {
+    T1 : PS.PTy[D'] = PS.subTy D' D (DB.GSmall.xsub D UB.GDr XS.SA al) t ;
+    al' : DB.GSmall.XSub[D', UB.GDr] = DB.GSmall.xoS D' D UB.GDr al t ;
+    T2 : PS.PTy[D'] = DB.GSmall.xsub D' UB.GDr XS.SA al' ;
+    module FX = DCl.FExt[D', T1] ;
+
+    q : FX.Pack = (T2.tact, (T2.tact-id, T2.tact-o)) ;
+
+    Ht : PS.PtEq D' T1.tob T1.tact q.1 = \ J I f x y e b ->
+      DB.GSmall.tact-irr UB.GDr XS.SA J I f (al.nt I (t.nt I x)) (al.nt J (t.nt J y))
+        (DB.GSmall.xntEq D UB.GDr al J I f (t.nt I x) (t.nt J y) (PS.ntEq D' D t J I f x y e))
+        (DB.GSmall.xntEq D' UB.GDr al' J I f x y e) b ;
+
+    module HD = DB.GFillS[a].FS[DCl.HIx, DCl.hOk, DCl.hOb, DCl.hS, D', T1] ;
+    module PPT = DB.GCofib[a].Partials[D', T1] ;
+
+    -- the data moved both ways
+    hdL (m k : Nat) (rho : W0.Ix (D'.ob (suc m))) (v : PPT.PvTy (suc m) (DCl.hS (m, k)))
+      (pp : PPT.PptTy (suc m) rho (DCl.hS (m, k)) v) (pn : PPT.PnTy (suc m) (DCl.hS (m, k)) v)
+      : DB.GFillS[a+].FS[DCl.HIx, DCl.hOk, DCl.hOb, DCl.hS, UB.GDr, UB.ExtBig].HData (m, k) (al'.nt (suc m) rho) =
+      PA[D, al].P.mv (m, k) (t.nt (suc m) rho)
+        (DCl.Sub[D', D, t, DB.GSmall.xsub D UB.GDr XS.SA al, smallCl D al].mv m k rho (v, (pp, pn))) ;
+
+    hdR (m k : Nat) (rho : W0.Ix (D'.ob (suc m))) (v : PPT.PvTy (suc m) (DCl.hS (m, k)))
+      (pp : PPT.PptTy (suc m) rho (DCl.hS (m, k)) v) (pn : DB.GCofib[a].Partials[D', T2].PnTy (suc m) (DCl.hS (m, k)) v)
+      : DB.GFillS[a+].FS[DCl.HIx, DCl.hOk, DCl.hOb, DCl.hS, UB.GDr, UB.ExtBig].HData (m, k) (al'.nt (suc m) rho) =
+      PA[D', al'].P.mv (m, k) rho (v, (pp, pn)) ;
+
+    H : FX.Agree q (DCl.clSubD D' D t (DB.GSmall.xsub D UB.GDr XS.SA al) (smallCl D al)) (smallCl D' al') =
+      \ m k o rho v pp pnA pnB ->
+        ap (DB.GFillS[a+].FS[DCl.HIx, DCl.hOk, DCl.hOb, DCl.hS, UB.GDr, UB.ExtBig].HData (m, k) (al'.nt (suc m) rho))
+           (W0.Ix (XS.S0 (suc m) (al'.nt (suc m) rho)))
+           (\ hd -> XS.psS (suc m) (al'.nt (suc m) rho) (hBig (m, k) o (al'.nt (suc m) rho) hd).1)
+           (hdL m k rho v pp pnA) (hdR m k rho v pp pnB)
+          (DB.GFillS[a+].FS[DCl.HIx, DCl.hOk, DCl.hOb, DCl.hS, UB.GDr, UB.ExtBig].hd-eq (m, k) (al'.nt (suc m) rho)
+             (hdL m k rho v pp pnA) (hdR m k rho v pp pnB) (refl (hdR m k rho v pp pnB).1)) ;
+
+    res : Id ((T : PS.PTy[D']) * DCl.ClD D' T) (T1, DCl.clSubD D' D t (DB.GSmall.xsub D UB.GDr XS.SA al) (smallCl D al)) (T2, smallCl D' al') =
+      FX.isFibExt (DCl.clSubD D' D t (DB.GSmall.xsub D UB.GDr XS.SA al) (smallCl D al)) q Ht (smallCl D' al') H ;
+  } ;
+
+  smallCl-sub (D D' : PS.PCtx) (t : PS.PSub[D', D]) (al : DB.GSmall.XSub[D, UB.GDr])
+    : Id ((T : PS.PTy[D']) * DCl.ClD D' T)
+         (PS.subTy D' D (DB.GSmall.xsub D UB.GDr XS.SA al) t, DCl.clSubD D' D t (DB.GSmall.xsub D UB.GDr XS.SA al) (smallCl D al))
+         (DB.GSmall.xsub D' UB.GDr XS.SA (DB.GSmall.xoS D' D UB.GDr al t), smallCl D' (DB.GSmall.xoS D' D UB.GDr al t)) =
+    Sb[D, D', t, al].res ;
+} ;

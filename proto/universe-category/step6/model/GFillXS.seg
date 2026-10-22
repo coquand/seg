@@ -1,0 +1,29 @@
+-- GFillXS.seg (inside IvBase, any base): a filling operation on a small
+-- type A over a large context G (read at level a+: GSmall.up) pulls back
+-- along any s : D -> G (GSmall.XSub) to one on xsub A s: GFillX.Pull with
+-- the identity on fibres (V1.Ix (smallC v) is W0.Ix v).
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+module L1 = GPre[a+].PS ;
+
+module XPull (I : U a) (ok : I -> U a) (ob : I -> Ob) (S : (i : I) -> Phi (ob i))
+  (G : L1.PCtx) (A : GSmall.SPTy[G]) (D : PCtx) (s : GSmall.XSub[D, G])
+  (c : GFillS[a+].FS[I, ok, ob, S, G, GSmall.up G A].Op) {
+  module TD = GPR.TyL[D, GSmall.xsub D G A s] ;
+  module TG = GPre[a+].TyL[G, GSmall.up G A] ;
+
+  mnat (V W : Ob) (g : Hom V W) (w : TD.EI W)
+    : Id (TG.EI V) (TG.E.act V W g (s.nt W w.1, w.2)) (s.nt V (TD.E.act V W g w).1, (TD.E.act V W g w).2) =
+    TG.pr-tact V W g (s.nt W w.1) (s.nt V (D.act V W g w.1)) (GSmall.xntEq D G s V W g w.1 (D.act V W g w.1) (refl (D.act V W g w.1))) w.2 ;
+
+  module P = GFillX[a, a+].Pull[I, ok, ob, S, D, GSmall.xsub D G A s, G, GSmall.up G A, s.nt, s.nt-nat,
+    \ W x b -> b, \ W x b -> b, \ W x b -> refl b, \ W x b -> refl b, mnat, c] ;
+
+  op : GFillS[a].FS[I, ok, ob, S, D, GSmall.xsub D G A s].Op = P.op ;
+} ;

@@ -1,0 +1,24 @@
+-- GPiFib.seg (inside IvBase.Cn: with connections): Pi A B is fibrant at
+-- src d, for any base, with the family path object: its composition from
+-- src d to tgt d (GPi[lv].PiComp: reverse filling of A at tgt d, composition
+-- of B) gives filling by the line form of MkFill (GFillFib).
+
+level lv ;
+constraint a <= lv ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module PiFib (G : PCtx) (A : PTy[G]) (B : PTy[extP G A]) (d : Bool)
+  (kA : LineFibP[GFam[lv].famPath, G, A].FibAt (tgt d))
+  (cB : CompAtP[GFam[lv].famPath, extP G A, B, src d, tgt d].CompAt) {
+  module PC = GPi[lv].PiComp[G, A, B, src d, tgt d, kA, cB] ;
+
+  fibAt : LineFibP[GFam[lv].famPath, G, PC.PE.P].FibAt (src d) =
+    GFillFib[lv].FillLineFib[GFam[lv].famPath, GFam[lv].famConn, G, PC.PE.P, d, PC.piComp].fibAt ;
+
+  -- ESI: from CESI of B, the filler of Pi does not see an inserted empty side
+  kesi (ce : CompAtP[GFam[lv].famPath, extP G A, B, src d, tgt d].CESI cB)
+    : GCofEsi[lv].PartialsEsi[CompAtP[GFam[lv].famPath, G, PC.PE.P, src d, tgt d].TV.E, CompAtP[GFam[lv].famPath, G, PC.PE.P, src d, tgt d].SFm.SF].KESI fibAt =
+    GFillFib[lv].FillLineFib[GFam[lv].famPath, GFam[lv].famConn, G, PC.PE.P, d, PC.piComp].Kesi[PC.CE[ce].cesi].kesi ;
+} ;

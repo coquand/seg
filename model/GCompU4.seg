@@ -1,0 +1,82 @@
+-- GCompU4.seg (inside IvBase.Cn): the fibrancy of the universe from
+-- univalence (G7), part 4: a composition problem of U (the constant type
+-- UTy G, in line form from tgt d to src d) gives a partial element p' of
+-- UaTy at the start code: the same sieves, and at a side value u (a line
+-- of codes lnC u) the side value of GCompU3 (transport along the line,
+-- from its code at src d to its code at tgt d = the start, restricted).
+--   valPt   the point of the value is the end of u at tgt d (codeEnd)
+--   pnat    GCompU3.Nat.rEq, lnC-act, lineL-act and p's pnat
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+module L1 = GPre[a+].PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open Trees[a] ;
+open Arith[a] ;
+open GLine[a] ;
+
+
+
+
+module PP (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GFibE[a+].FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GFibE[a+].FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE)
+  (d : Bool) (G : L1.PCtx) {
+  module SV = GCompU3.SV[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, d] ;
+  module S = SV.S ;
+  module UA = SV.UA ;
+  module UU = SV.UU ;
+  module CA = GLine[a+].CompAtP[GFam[a+].famPath, G, UU.UTy G, tgt d, src d] ;
+  module PPa = GCofib[a+].Partials[UU.UCtx, UA.UaTy] ;
+  module TC = GPre[a+].TyL[UU.UCtx, UA.UaTy] ;
+  module LK = GLine[a+].LevKit[GFam[a+].famPath, GFam[a+].famConn, G, UU.UTy G, tgt d] ;
+
+  -- the line of codes of a line in U
+  lnC (W : Ob) (L : CA.TL.EI W) : V1.Ix (S.PU.ob W) =
+    (\ V g j -> (L.2.1.1 V g j).2, \ V' V k g j -> apH (\ z -> z.2) (L.2.1.2 V' V k g j)) ;
+
+  lnC-act (W' W : Ob) (k : Hom W' W) (L : CA.TL.EI W) : Id (V1.Ix (S.PU.ob W')) (lnC W' (CA.TL.E.act W' W k L)) (S.PU.act W' W k (lnC W L)) =
+    GFam[a+].FC[UU.UCtx].fam-eq W' (lnC W' (CA.TL.E.act W' W k L)) (S.PU.act W' W k (lnC W L)) (\ V g j -> refl (L.2.1.1 V (compH V W' W k g) j).2) ;
+
+  -- the code at tgt d of the line of u is u's start
+  codeEnd (W : Ob) (u : CA.TS.EI W) : Id (UU.U0 W) (SV.Ln[W, lnC W (CA.EK.lineL W u)].Fe (tgt d)) u.1.2 =
+    apH (\ z -> z.2) (transH (symH (LK.endL-lev W (CA.EK.lineL W u))) (apH (CA.EK.endE W) u.2.2)) ;
+
+  val (W : Ob) (u : CA.TS.EI W) : TC.EI W = UA.fromR W SV.Ln[W, lnC W (CA.EK.lineL W u)].r ;
+
+  valPt (W : Ob) (u : CA.TS.EI W) : Id (UU.U0 W) (val W u).1 u.1.2 =
+    transH SV.Ln[W, lnC W (CA.EK.lineL W u)].cPA (codeEnd W u) ;
+
+  opaque lnC-act ; opaque codeEnd ; opaque valPt ;
+
+  module Sd (X : Ob) (x : CA.TV.EI X) (s : CA.PT.PSide[X, x]) {
+    ppt (W : Ob) (f : Hom W X) (i : Lands W X s.pQ f) : Id (UU.U0 W) (val W (s.pv W f i)).1 (UU.uAct W X f x.2) =
+      transH (valPt W (s.pv W f i)) (apH (\ z -> z.2) (s.ppt W f i)) ;
+
+    pnat (W' W : Ob) (chi : Hom W' W) (f : Hom W X) (i : Lands W X s.pQ f) (i' : Lands W' X s.pQ (compH W' W X f chi))
+      : Id (TC.EI W') (TC.E.act W' W chi (val W (s.pv W f i))) (val W' (s.pv W' (compH W' W X f chi) i')) =
+      transH (apH (UA.fromR W') SV.Nat[W', W, chi, lnC W (CA.EK.lineL W (s.pv W f i))].rEq)
+        (transH (apH (\ z -> UA.fromR W' SV.Ln[W', z].r)
+                   (transH (symH (lnC-act W' W chi (CA.EK.lineL W (s.pv W f i))))
+                           (apH (lnC W') (symH (CA.EK.lineL-act W' W chi (s.pv W f i))))))
+                (apH (val W') (s.pnat W' W chi f i i'))) ;
+
+    side : PPa.PSide[X, x.2] = new PPa.PSide[X, x.2, s.pQ, \ W f i -> val W (s.pv W f i), ppt, pnat] ;
+  } ;
+
+  part (X : Ob) (x : CA.TV.EI X) (p : CA.PT.Partial[X, x]) : PPa.Partial[X, x.2] =
+    new PPa.Partial[X, x.2, p.pr, \ l -> Sd[X, x, p.ps l].side, \ l l' W f i i' -> apH (val W) (p.pcs l l' W f i i')] ;
+} ;

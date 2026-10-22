@@ -1,0 +1,127 @@
+-- GLocal3.seg (inside IvBase): the locality lemma.  Given, for every line l
+-- in G at X, a composition cl X l of A[s_l] over the generalised points of
+-- X, coherent in l (coh: the composite of the pull along l at the
+-- restricted diagonal h* delta, read in E_A, is the composite of the pull
+-- along h* l at delta), A has a composition over G: a problem at a point x
+-- is pulled back along s_(x.1) to the diagonal and composed there.
+--
+--   LocComp[G, A, e, e', cl, coh].compAt
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+open Trees[a] ;
+open Arith[a] ;
+module W0 = V[lv] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+module FM = GFam[lv] ;
+
+module LocComp (G : PCtx) (A : PTy[G]) (e e' : IPt)
+  (cl : (X : Ob) (l : W0.Ix ((FM.FC[G]).ob X)) -> CompAtP[FM.famPath, GLocal[lv].Pts[X].P, GLocal[lv].Loc[G, A].BL X l, e, e'].CompAt)
+  (coh : (Y X : Ob) (h : Hom Y X) (l : W0.Ix ((FM.FC[G]).ob X)) (y : EndKit[FM.famPath, G, A, e].TV.EI Y)
+     (q1 : Id (W0.Ix ((FM.FC[G]).ob Y)) (GLocal[lv].Loc[G, A].Pull[X, l, e].MF.mapF Y ((FM.FC[GLocal[lv].Pts[X].P]).actF Y X h (GLocal[lv].dg X))) y.1)
+     (q2 : Id (W0.Ix ((FM.FC[G]).ob Y)) (GLocal[lv].Loc[G, A].Pull[Y, (FM.FC[G]).actF Y X h l, e].MF.mapF Y (GLocal[lv].dg Y)) y.1)
+     (p : EndKit[FM.famPath, G, A, e].PT.Partial[Y, y])
+     -> Id (GPR.TyL[G, A].EI Y)
+          (GLocal[lv].Loc[G, A].Pull[X, l, e].rd Y (EndKit[FM.famPath, GLocal[lv].Pts[X].P, GLocal[lv].Loc[G, A].BL X l, e'].endE Y
+             ((FM.FC[GLocal[lv].Pts[X].P]).actF Y X h (GLocal[lv].dg X),
+              (cl X l).cop Y GLocal[lv].Loc[G, A].Pull[X, l, e].PP[Y, (FM.FC[GLocal[lv].Pts[X].P]).actF Y X h (GLocal[lv].dg X), y, q1].x0
+                (GLocal[lv].Loc[G, A].Pull[X, l, e].PP[Y, (FM.FC[GLocal[lv].Pts[X].P]).actF Y X h (GLocal[lv].dg X), y, q1].part p))))
+          (GLocal[lv].Loc[G, A].Pull[Y, (FM.FC[G]).actF Y X h l, e].rd Y
+             (EndKit[FM.famPath, GLocal[lv].Pts[Y].P, GLocal[lv].Loc[G, A].BL Y ((FM.FC[G]).actF Y X h l), e'].endE Y
+               (GLocal[lv].dg Y,
+                (cl Y ((FM.FC[G]).actF Y X h l)).cop Y GLocal[lv].Loc[G, A].Pull[Y, (FM.FC[G]).actF Y X h l, e].PP[Y, GLocal[lv].dg Y, y, q2].x0
+                  (GLocal[lv].Loc[G, A].Pull[Y, (FM.FC[G]).actF Y X h l, e].PP[Y, GLocal[lv].dg Y, y, q2].part p))))) {
+  module FG = FM.FC[G] ;
+  module TA = GPR.TyL[G, A] ;
+  module CG = CompAtP[FM.famPath, G, A, e, e'] ;
+  module KA' = EndKit[FM.famPath, G, A, e'] ;
+  module LA' = LevKit[FM.famPath, FM.famConn, G, A, e'] ;
+  module LC = GLocal[lv].Loc[G, A] ;
+
+  -- the problem at x, pulled back to the diagonal
+  module At (X : Ob) (x : CG.TV.EI X) {
+    module PL = LC.Pull[X, x.1, e] ;
+    module CB = CompAtP[FM.famPath, PL.D, PL.B, e, e'] ;
+    module KB' = EndKit[FM.famPath, PL.D, PL.B, e'] ;
+    module LB' = LevKit[FM.famPath, FM.famConn, PL.D, PL.B, e'] ;
+
+    qx : Id (W0.Ix (FG.ob X)) (PL.MF.mapF X (GLocal[lv].dg X)) x.1 =
+      FG.fam-eq X (PL.MF.mapF X (GLocal[lv].dg X)) x.1 (\ W f i -> refl (x.1.1 W f i)) ;
+
+    module PP = PL.PP[X, GLocal[lv].dg X, x, qx] ;
+
+    cop (p : CG.PT.Partial[X, x]) : CG.TV'.T X x.1 = (cl X x.1).cop X PP.x0 (PP.part p) ;
+  } ;
+
+  cop (X : Ob) (x : CG.TV.EI X) (p : CG.PT.Partial[X, x]) : CG.TV'.T X x.1 = At[X, x].cop p ;
+
+  cside (X : Ob) (x : CG.TV.EI X) (p : CG.PT.Partial[X, x]) (k : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps k).pQ f)
+    : Id (CG.TV'.EI W) (CG.TV'.E.act W X f (x.1, cop X x p)) (CG.endL W ((p.ps k).pv W f i)) =
+    KA'.tv-eq W (CG.TV'.E.act W X f (x.1, cop X x p)) (CG.endL W ((p.ps k).pv W f i))
+      (symH (apH (\ z -> z.1) ((p.ps k).ppt W f i)))
+      (calc (TA.EI W) {
+          KA'.endE W (CG.TV'.E.act W X f (x.1, cop X x p))
+        =< KA'.endE-act W X f (x.1, cop X x p) >
+          TA.E.act W X f (At[X, x].PL.rd X (At[X, x].KB'.endE X (GLocal[lv].dg X, cop X x p)))
+        =< symH (At[X, x].PL.rd-act W X f (At[X, x].KB'.endE X (GLocal[lv].dg X, cop X x p))) >
+          At[X, x].PL.rd W (At[X, x].PL.TB.E.act W X f (At[X, x].KB'.endE X (GLocal[lv].dg X, cop X x p)))
+        =< apH (At[X, x].PL.rd W) (symH (At[X, x].KB'.endE-act W X f (GLocal[lv].dg X, cop X x p))) >
+          At[X, x].PL.rd W (At[X, x].KB'.endE W (At[X, x].CB.TV'.E.act W X f (GLocal[lv].dg X, cop X x p)))
+        =< apH (\ z -> At[X, x].PL.rd W (At[X, x].KB'.endE W z))
+             ((cl X x.1).cside X At[X, x].PP.x0 (At[X, x].PP.part p) k W f i) >
+          At[X, x].PL.rd W (At[X, x].KB'.endE W (At[X, x].CB.endL W (At[X, x].PP.res W f ((p.ps k).pv W f i) ((p.ps k).ppt W f i))))
+        =< apH (At[X, x].PL.rd W) (At[X, x].LB'.endL-lev W (At[X, x].PL.KB.lineL W (At[X, x].PP.res W f ((p.ps k).pv W f i) ((p.ps k).ppt W f i)))) >
+          At[X, x].PL.rd W (FM.famConn.levA At[X, x].PL.D At[X, x].PL.B W
+             (At[X, x].PL.KB.lineL W (At[X, x].PP.res W f ((p.ps k).pv W f i) ((p.ps k).ppt W f i))) W (idH W) (ptH W e'))
+        =< At[X, x].PL.TSP[X, GLocal[lv].dg X, x, At[X, x].qx, W, f, (p.ps k).pv W f i, (p.ps k).ppt W f i].res-lev W (idH W) (ptH W e') >
+          FM.famConn.levA G A W (At[X, x].PL.KA.lineL W ((p.ps k).pv W f i)) W (idH W) (ptH W e')
+        =< symH (LA'.endL-lev W (At[X, x].PL.KA.lineL W ((p.ps k).pv W f i))) >
+          KA'.endE W (CG.endL W ((p.ps k).pv W f i)) }) ;
+
+  module Un (Y X : Ob) (h : Hom Y X) (x : CG.TV.EI X) (p : CG.PT.Partial[X, x]) {
+    module AX = At[X, x] ;
+    module SH = GLocal2[lv].Shift[G, A, X, x.1, e, X, GLocal[lv].dg X, x, AX.qx, Y, h] ;
+    y' : CG.TV.EI Y = CG.TV.E.act Y X h x ;
+    module AY = At[Y, y'] ;
+
+    res : Id (CG.TV'.EI Y) (CG.TV'.E.act Y X h (x.1, cop X x p)) (y'.1, cop Y y' (CG.PT.restrictP Y X h x p)) =
+      KA'.tv-eq Y (CG.TV'.E.act Y X h (x.1, cop X x p)) (y'.1, cop Y y' (CG.PT.restrictP Y X h x p))
+        (refl y'.1)
+        (calc (TA.EI Y) {
+            KA'.endE Y (CG.TV'.E.act Y X h (x.1, cop X x p))
+          =< KA'.endE-act Y X h (x.1, cop X x p) >
+            TA.E.act Y X h (AX.PL.rd X (AX.KB'.endE X (GLocal[lv].dg X, cop X x p)))
+          =< symH (AX.PL.rd-act Y X h (AX.KB'.endE X (GLocal[lv].dg X, cop X x p))) >
+            AX.PL.rd Y (AX.PL.TB.E.act Y X h (AX.KB'.endE X (GLocal[lv].dg X, cop X x p)))
+          =< apH (AX.PL.rd Y) (symH (AX.KB'.endE-act Y X h (GLocal[lv].dg X, cop X x p))) >
+            AX.PL.rd Y (AX.KB'.endE Y (AX.CB.TV'.E.act Y X h (GLocal[lv].dg X, cop X x p)))
+          =< apH (\ z -> AX.PL.rd Y (AX.KB'.endE Y z))
+               (transH ((cl X x.1).cunif Y X h AX.PP.x0 (AX.PP.part p))
+                  (AX.CB.cop-cong (cl X x.1) Y (AX.CB.TV.E.act Y X h AX.PP.x0) SH.P2.x0 SH.tvP-shift
+                     (AX.CB.PT.restrictP Y X h AX.PP.x0 (AX.PP.part p)) (SH.P2.part (CG.PT.restrictP Y X h x p))
+                     (SH.part-shift p))) >
+            AX.PL.rd Y (AX.KB'.endE Y (SH.d', (cl X x.1).cop Y SH.P2.x0 (SH.P2.part (CG.PT.restrictP Y X h x p))))
+          =< coh Y X h x.1 y' SH.q' AY.qx (CG.PT.restrictP Y X h x p) >
+            AY.PL.rd Y (AY.KB'.endE Y (GLocal[lv].dg Y, cop Y y' (CG.PT.restrictP Y X h x p)))
+          =< refl (KA'.endE Y (y'.1, cop Y y' (CG.PT.restrictP Y X h x p))) >
+            KA'.endE Y (y'.1, cop Y y' (CG.PT.restrictP Y X h x p)) }) ;
+  } ;
+
+  cunif (Y X : Ob) (h : Hom Y X) (x : CG.TV.EI X) (p : CG.PT.Partial[X, x])
+    : Id (CG.TV'.EI Y) (CG.TV'.E.act Y X h (x.1, cop X x p)) ((CG.TV.E.act Y X h x).1, cop Y (CG.TV.E.act Y X h x) (CG.PT.restrictP Y X h x p)) =
+    Un[Y, X, h, x, p].res ;
+
+  opaque cside ; opaque cunif ;
+
+  compAt : CG.CompAt = new CG.CompAt[cop, cside, cunif] ;
+
+  -- ESI, from ESI of the local compositions
+  cesi (ce : (X : Ob) (l : W0.Ix (FG.ob X)) -> CompAtP[FM.famPath, GLocal[lv].Pts[X].P, LC.BL X l, e, e'].CESI (cl X l))
+    : CG.CESI compAt = \ X x k p p' h ->
+    ce X x.1 X At[X, x].PP.x0 k (At[X, x].PP.part p) (At[X, x].PP.part p') (At[X, x].PP.ins k p p' h) ;
+} ;

@@ -1,0 +1,116 @@
+-- GUaFullL1b.seg (inside IvBase.FaU; Step 3): smallCl-full for posets,
+-- part 2 (GUaFullL1 has the transfers): in each direction the small Ext's
+-- composite, read in E1, is El's along the codes (P.copEq), so the two
+-- compositions agree (ceq).
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Trees[a] ;
+open Arith[a] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open GLine[a] ;
+module GE1 = GFibE[a+] ;
+module L = GPre[a+].PS ;
+module LP = GPre[a+] ;
+module FMa = GFam[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+
+module FL1b
+  (kU0 : GLine[a+].LineFibP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen].FibAt e0)
+  (kU1 : GLine[a+].LineFibP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen].FibAt e1)
+  (kU0e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0].SFm.SF].KESI kU0)
+  (kU1e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1].SFm.SF].KESI kU1)
+  (cE : GE1.FE[GUnivL.UL.UCtx, GUnivL.UL.EGen].Comp)
+  (eE : GE1.FE[GUnivL.UL.UCtx, GUnivL.UL.EGen].ESIC cE)
+  (HU0 : Id (GLine[a+].CompAtP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0, e1].CompAt)
+            GLine[a+].CompAtP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e0, e1].FromFib[kU0].ca cE.1)
+  (HU1 : Id (GLine[a+].CompAtP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1, e0].CompAt)
+            GLine[a+].CompAtP[GFam[a+].famPath, GUnivL.UL.UCtx, GUnivL.UL.EGen, e1, e0].FromFib[kU1].ca cE.2)
+  (yon : (Z : Ob) (F1 : GUnivL.UL.U0 Z)
+     -> Id (GFibE[a].FibEL (yP Z))
+           GElC.ElC[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, cE, eE].Fam[yP Z, \ W g -> GUnivL.UL.uAct W Z g F1, \ Y' Y h g -> GUnivL.UL.uAct-o Y' Y Z g h F1].fib F1)
+  (r : Nat) (X : Ob) (w : GExtBig.UB[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, r].Pr X) (fu : IsT (GExtBig.UB[GUnivL.ClL, GUnivL.clSubL, GUnivL.clSub-idL, GUnivL.clSub-oL, \ X A -> GUnivL.encClL (yP X) A, r].CU.full X w)) {
+  module F1 = GUaFullL1.FL1[kU0, kU1, kU0e, kU1e, cE, eE, HU0, HU1, yon, r, X, w, fu] ;
+
+  module Dir (eS eT : IPt) (kUS : GLine[a+].LineFibP[GFam[a+].famPath, F1.UU.UCtx, F1.UU.EGen].FibAt eS)
+    (kUSe : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, F1.UU.UCtx, F1.UU.EGen, eS].TV.E,
+              GLine[a+].EndKit[GFam[a+].famPath, F1.UU.UCtx, F1.UU.EGen, eS].SFm.SF].KESI kUS)
+    (kAS : GLine[a+].LineFibP[GFam[a+].famPath, F1.UB.GDr, F1.UB.AU].FibAt eS)
+    (cEd : GLine[a+].CompAtP[GFam[a+].famPath, F1.UU.UCtx, F1.UU.EGen, eS, eT].CompAt)
+    (HU : Id (GLine[a+].CompAtP[GFam[a+].famPath, F1.UU.UCtx, F1.UU.EGen, eS, eT].CompAt)
+             GLine[a+].CompAtP[GFam[a+].famPath, F1.UU.UCtx, F1.UU.EGen, eS, eT].FromFib[kUS].ca cEd) {
+    module D0 = F1.Dir[eS, eT, kUS, kUSe, kAS, cEd, HU] ;
+    module T1 = D0.T1 ;
+    module T2 = D0.T2 ;
+
+    module P (X' : Ob) (x : D0.T1.CD.TV.EI X') (p : D0.T1.CD.PT.Partial[X', x]) {
+      y : D0.T1.CD0.TV.EI X' = D0.T1.M.tvN X' x ;
+      q : D0.T1.CD0.PT.Partial[X', y] = D0.T1.M.mapP X' x p ;
+      flx (W : Ob) (f : Hom W X') (j : Hom W Iv) : IsT (F1.CU.full W (y.1.1 W f j)) = (F1.FT0.yx.nt W (x.1.1 W f j)).2 ;
+      module BT = D0.C1u.Beta[X', y, q, flx] ;
+      pt : Hom X' X = x.1.1 X' (idH X') (ptH X' eT) ;
+
+      -- the problem moved to UCtx both ways
+      Hv (k : Fin p.pr) (W : Ob) (f : Hom W X') (i : Lands W X' (p.ps k).pQ f)
+        (i' : Lands W X' ((D0.T3.M.mapP X' (D0.T2.M.tvN X' x) (D0.T2.M.mapP X' x p)).ps (subst Nat (\ n -> Fin n) p.pr p.pr (refl p.pr) k)).pQ f)
+        (V : Ob) (g : Hom V W) (j : Hom V Iv)
+        : Id (D0.TEu.EI V)
+             (FMa.famConn.levA F1.UU.UCtx F1.UU.EGen W (D0.TR4.CD0.EK.lineL W (((D0.TR4.M.mapP X' BT.xB BT.pB).ps k).pv W f i)) V g j)
+             (FMa.famConn.levA F1.UU.UCtx F1.UU.EGen W (D0.TR4.CD0.EK.lineL W
+                (((D0.T3.M.mapP X' (D0.T2.M.tvN X' x) (D0.T2.M.mapP X' x p)).ps (subst Nat (\ n -> Fin n) p.pr p.pr (refl p.pr) k)).pv W f i')) V g j) =
+        transH (D0.TR4.M.TSN[W, BT.SV[W, f, (q.ps k).pv W f i, (q.ps k).ppt W f i].sv].res-lev V g j)
+         (transH (apH (D0.TR4.M.PhE V) (BT.SV[W, f, (q.ps k).pv W f i, (q.ps k).ppt W f i].sv-lev V g j))
+          (transH (apH (D0.TR4.M.PhE V)
+                     (F1.E3u.toB-cong V (D0.C1u.lvX W ((q.ps k).pv W f i) V g j)
+                        (D0.T1.M.PhE V (((p.ps k).pv W f i).2.1.1.1 V g j))
+                        (D0.T1.M.TSN[W, (p.ps k).pv W f i].res-lev V g j)
+                        (BT.SV[W, f, (q.ps k).pv W f i, (q.ps k).ppt W f i].qv V g j)
+                        (F1.FT0.yx.nt V (((p.ps k).pv W f i).2.1.1.1 V g j).1).2))
+           (symH (transH (D0.T3.M.TSN[W, D0.T2.M.tsN W ((p.ps k).pv W f i')].res-lev V g j)
+                    (transH (apH (D0.T3.M.PhE V) (D0.T2.M.TSN[W, (p.ps k).pv W f i'].res-lev V g j))
+                            (apH (\ u -> D0.T3.M.PhE V (D0.T2.M.PhE V (u.2.1.1.1 V g j))) (D0.T1.CD.PT.pv-irr X' x (p.ps k) W f i' i))))))) ;
+
+      -- the two composites in UCtx agree
+      copU : Id (D0.TR4.CD0.TV'.EI X') ((D0.TR4.M.tvN X' BT.xB).1, cEd.cop X' (D0.TR4.M.tvN X' BT.xB) (D0.TR4.M.mapP X' BT.xB BT.pB))
+                ((D0.T3.M.tvN X' (D0.T2.M.tvN X' x)).1, cEd.cop X' (D0.T3.M.tvN X' (D0.T2.M.tvN X' x)) (D0.T3.M.mapP X' (D0.T2.M.tvN X' x) (D0.T2.M.mapP X' x p))) =
+        GProbEq[a+].ProbEq[F1.UU.UCtx, F1.UU.EGen, eS, eT, X'].cop-eq cEd (D0.TR4.M.tvN X' BT.xB) (D0.T3.M.tvN X' (D0.T2.M.tvN X' x))
+          (\ W f j -> refl (F1.FT0.c W (x.1.1 W f j))) (refl (D0.T3.CD0.EK.endE X' (D0.T3.M.tvN X' (D0.T2.M.tvN X' x))))
+          (D0.TR4.M.mapP X' BT.xB BT.pB) (D0.T3.M.mapP X' (D0.T2.M.tvN X' x) (D0.T2.M.mapP X' x p)) (refl p.pr) (\ k -> refl (p.ps k).pQ) Hv ;
+
+      -- read at the point
+      copV : Id (W0.Ix (F1.UU.fib0 X' (F1.FT0.c X' pt))) (cEd.cop X' (D0.TR4.M.tvN X' BT.xB) (D0.TR4.M.mapP X' BT.xB BT.pB))
+                (cEd.cop X' (D0.T3.M.tvN X' (D0.T2.M.tvN X' x)) (D0.T3.M.mapP X' (D0.T2.M.tvN X' x) (D0.T2.M.mapP X' x p))) =
+        D0.TEu.pr-inj X' (F1.FT0.c X' pt) (cEd.cop X' (D0.TR4.M.tvN X' BT.xB) (D0.TR4.M.mapP X' BT.xB BT.pB))
+          (cEd.cop X' (D0.T3.M.tvN X' (D0.T2.M.tvN X' x)) (D0.T3.M.mapP X' (D0.T2.M.tvN X' x) (D0.T2.M.mapP X' x p))) (apH (D0.KU'.endE X') copU) ;
+
+      -- the small Ext's composite, through B
+      copB : Id (D0.TXu.EI X') (y.1.1 X' (idH X') (ptH X' eT), D0.C4u.extCompAt.cop X' y q)
+                (F1.E3u.fromB X' (F1.FT0.yx.nt X' pt, cEd.cop X' (D0.TR4.M.tvN X' BT.xB) (D0.TR4.M.mapP X' BT.xB BT.pB))) =
+        transH D0.C5u.Full[X', y, q, flx].full
+         (apH (F1.E3u.fromB X')
+           (transH (symH (D0.LB'.endL-lev X' (D0.C1u.KB.lineL X' (BT.xB, BT.fillB))))
+            (transH (apH (D0.KB'.endE X') (symH (D0.FFS.cop-E X' BT.xB BT.pB)))
+                    (apH (\ cc -> D0.KB'.endE X' (BT.xB.1, cc.cop X' BT.xB BT.pB)) (transH D0.TFE.trEnd (apH (\ cc -> GTransfer[a+, a+, a+].Tr[F1.CU.resCtx, F1.UB.BU, F1.UU.UCtx, F1.UU.EGen, F1.UB.bmap.nt, F1.UB.bmap.nt-nat,
+                          \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, F1.FU.PhNB, eS, eT, cc].compAt) HU)))))) ;
+
+      copEq : Id (W0.Ix (F1.FT0.E1.tob X' pt)) (D0.T1.cop X' x p) (D0.T2.cop X' x p) =
+        transH (apH (F1.XS.psS X' (F1.FT0.yx.nt X' pt).1)
+                  (D0.TXu.pr-inj X' (F1.FT0.yx.nt X' pt).1 (D0.C4u.extCompAt.cop X' y q)
+                     (F1.E3u.fromB X' (F1.FT0.yx.nt X' pt, cEd.cop X' (D0.TR4.M.tvN X' BT.xB) (D0.TR4.M.mapP X' BT.xB BT.pB))).2 copB))
+          (apH (\ v -> F1.XS.psS X' (F1.FT0.yx.nt X' pt).1 (F1.E3u.fromB X' (F1.FT0.yx.nt X' pt, v)).2) copV) ;
+    } ;
+
+    ceq : Id (D0.T1.CD.CompAt) D0.T1.compAt D0.T2.compAt = D0.T1.CD.CompAt-ext D0.T1.compAt D0.T2.compAt (\ X' x p -> P[X', x, p].copEq) ;
+  } ;
+
+  module D01 = Dir[e0, e1, kU0, kU0e, F1.FU.FA0.fibAt, cE.1, HU0] ;
+  module D10 = Dir[e1, e0, kU1, kU1e, F1.FU.FA1.fibAt, cE.2, HU1] ;
+} ;

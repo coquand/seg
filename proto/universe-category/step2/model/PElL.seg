@@ -1,0 +1,183 @@
+-- PElL.seg: El of the poset universe U_L (IvBase.GUnivL) is fibrant, part 1:
+-- the local compositions.  A line l in U_L at X is, at the generalised
+-- point (f , j), the fibrant type l f j; and l f j = F moved along (f , j)
+-- (Qd: naturality of l and the product laws), where F = l pr1 pr2 is a
+-- fibrant type over y (X * Iv) (tininess: P X = y (X * Iv) by pairing).
+-- So the pullback of El along s_l is F along the pairing, up to the
+-- fibrewise identification Pv of the fibres; its composition is F's,
+-- moved by GTransfer (ElL.cl).
+--
+--   Pv / ph / ps    the fibres of El[s_l] are those of F along (f , j)
+--   G1, PhN         (sg , ph) commutes with the actions (the content: the
+--                   action of El is that of F, read at the identity)
+--   cl              the local composition (GTransfer.Tr ... .compAt)
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module L1 = BaseP.GPre[a+] ;
+open BaseP.GYon[a] ;
+module UL = BaseP.GUnivL.UL ;
+
+-- transport of fibres along a path of codes
+cV (v w : W0.V) (p : Id W0.V v w) (b : W0.Ix v) : W0.Ix w = subst W0.V (\ u -> W0.Ix u) v w p b ;
+
+cV-sym-l (v w : W0.V) (p : Id W0.V v w) (b : W0.Ix v) : Id (W0.Ix v) (cV w v (symH p) (cV v w p b)) b =
+  idJ W0.V v (\ w2 p2 -> Id (W0.Ix v) (cV w2 v (symH p2) (cV v w2 p2 b)) b)
+    (transH (UL.loopV v (symH (refl v)) (cV v v (refl v) b)) (UL.loopV v (refl v) b)) w p ;
+
+cV-sym-r (v w : W0.V) (p : Id W0.V v w) (b : W0.Ix w) : Id (W0.Ix w) (cV v w p (cV w v (symH p) b)) b =
+  idJ W0.V v (\ w2 p2 -> (b2 : W0.Ix w2) -> Id (W0.Ix w2) (cV v w2 p2 (cV w2 v (symH p2) b2)) b2)
+    (\ b2 -> transH (UL.loopV v (refl v) (cV v v (symH (refl v)) b2)) (UL.loopV v (symH (refl v)) b2)) w p b ;
+
+-- transport along two paths of a set is transport along any path
+subst-two-H (Z V : Ob) (P : Hom V Z -> U a+) (x y z : Hom V Z) (p : Id (Hom V Z) x y) (q : Id (Hom V Z) y z) (r : Id (Hom V Z) x z) (u : P x)
+  : Id (P z) (subst (Hom V Z) P y z q (subst (Hom V Z) P x y p u)) (subst (Hom V Z) P x z r u) =
+  idJ (Hom V Z) x (\ y1 p1 -> (q1 : Id (Hom V Z) y1 z) -> Id (P z) (subst (Hom V Z) P y1 z q1 (subst (Hom V Z) P x y1 p1 u)) (subst (Hom V Z) P x z r u))
+    (\ q1 -> apH (\ r1 -> subst (Hom V Z) P x z r1 u) (W0.isSetIx (homV V Z) x z q1 r)) y p q ;
+
+module ElP (X : Ob) (l : V1.Ix ((BaseP.GFam[a+].FC[UL.UCtx]).ob X)) (F : UL.U0 (prodP X Iv))
+  (Qd : (W : Ob) (z : V1.Ix ((BaseP.GLocal[a+].Pts[X].P).ob W))
+        -> Id (UL.U0 W) (UL.uAct W (prodP X Iv) (pairH X Iv W z.1 z.2) F) (l.1 W z.1 z.2)) {
+  Z : Ob = prodP X Iv ;
+
+  module PX = BaseP.GLocal[a+].Pts[X] ;
+  module LC = BaseP.GLocal[a+].Loc[UL.UCtx, UL.EGen] ;
+  module TB = L1.TyL[PX.P, LC.BL X l] ;
+  module TB0 = PR.TyL[yP Z, F.1] ;
+
+  -- the generalised points of X are the points of X * Iv
+  sg (W : Ob) (z : V1.Ix (PX.P.ob W)) : Hom W Z = pairH X Iv W z.1 z.2 ;
+
+  sg-nat (V W : Ob) (g : Hom V W) (z : V1.Ix (PX.P.ob W)) : Id (Hom V Z) (sg V (PX.P.act V W g z)) (compH V W Z (sg W z) g) =
+    symH (pair-nat V W X Iv z.1 z.2 g) ;
+
+  -- the fibre of F at k is the fibre at the identity of F along k
+  Pv' (W : Ob) (k : Hom W Z) (F' : UL.U0 W) (Q : Id (UL.U0 W) (UL.uAct W Z k F) F') : Id W0.V (F.1.tob W k) (UL.fib0 W F') =
+    transH (apH (F.1.tob W) (symH (comp-idr W Z k))) (apH (UL.fib0 W) Q) ;
+
+  Pv (W : Ob) (z : V1.Ix (PX.P.ob W)) : Id W0.V (F.1.tob W (sg W z)) (UL.fib0 W (l.1 W z.1 z.2)) = Pv' W (sg W z) (l.1 W z.1 z.2) (Qd W z) ;
+
+  ph (W : Ob) (z : V1.Ix (PX.P.ob W)) (b : W0.Ix (UL.fib0 W (l.1 W z.1 z.2))) : W0.Ix (F.1.tob W (sg W z)) =
+    cV (UL.fib0 W (l.1 W z.1 z.2)) (F.1.tob W (sg W z)) (symH (Pv W z)) b ;
+
+  ps (W : Ob) (z : V1.Ix (PX.P.ob W)) (b : W0.Ix (F.1.tob W (sg W z))) : W0.Ix (UL.fib0 W (l.1 W z.1 z.2)) =
+    cV (F.1.tob W (sg W z)) (UL.fib0 W (l.1 W z.1 z.2)) (Pv W z) b ;
+
+  ph-ps (W : Ob) (z : V1.Ix (PX.P.ob W)) (b : W0.Ix (F.1.tob W (sg W z))) : Id (W0.Ix (F.1.tob W (sg W z))) (ph W z (ps W z b)) b =
+    cV-sym-l (F.1.tob W (sg W z)) (UL.fib0 W (l.1 W z.1 z.2)) (Pv W z) b ;
+
+  ps-ph (W : Ob) (z : V1.Ix (PX.P.ob W)) (b : W0.Ix (UL.fib0 W (l.1 W z.1 z.2))) : Id (W0.Ix (UL.fib0 W (l.1 W z.1 z.2))) (ps W z (ph W z b)) b =
+    cV-sym-r (F.1.tob W (sg W z)) (UL.fib0 W (l.1 W z.1 z.2)) (Pv W z) b ;
+
+  ----------------------------------------------------------------------
+  -- the action of El, read in F
+
+  module G1 (V W : Ob) (g : Hom V W) (k : Hom W Z) (b0 : W0.Ix (F.1.tob W k)) {
+    kg : Hom V Z = compH V W Z k g ;
+    k0 : Hom W Z = compH W W Z k (idH W) ;
+    t0 : Hom V Z = compH V W Z k (compH V V W g (idH V)) ;
+    tkg : Id (Hom V Z) t0 kg = apH (compH V W Z k) (comp-idr V W g) ;
+    e' : Id (Hom V Z) (compH V W Z k g) t0 = apH (compH V W Z k) (symH (comp-idr V W g)) ;
+    eN : Id (Hom V Z) (compH V W Z k0 g) t0 =
+      ntEq (yP W) (yP Z) (yH W Z k) V W g (idH W) ((yH V W g).nt V (idH V)) (UL.idf-eq V W g) ;
+
+    goal (k' : Hom V Z) (pk : Id (Hom V Z) k' kg) (F' : UL.U0 W) (F'' : UL.U0 V) (Q : Id (UL.U0 W) (UL.uAct W Z k F) F')
+      (Q'' : Id (UL.U0 V) (UL.uAct V Z k' F) F'') (E : Id (UL.U0 V) (UL.uAct V W g F') F'') : U a =
+      Id (W0.Ix (F.1.tob V kg))
+         (TB0.coeT V k' kg pk (cV (UL.fib0 V F'') (F.1.tob V k') (symH (Pv' V k' F'' Q''))
+            (UL.tactG V W g F' F'' E (cV (F.1.tob W k) (UL.fib0 W F') (Pv' W k F' Q) b0))))
+         (F.1.tact V W g k kg (refl kg) b0) ;
+
+    core (k' : Hom V Z) (pk : Id (Hom V Z) k' kg) (Q4 : Id (UL.U0 V) (UL.uAct V Z k' F) (UL.uAct V W g (UL.uAct W Z k F)))
+      : goal k' pk (UL.uAct W Z k F) (UL.uAct V W g (UL.uAct W Z k F)) (refl (UL.uAct W Z k F)) Q4 (refl (UL.uAct V W g (UL.uAct W Z k F))) =
+      calc (W0.Ix (F.1.tob V kg)) {
+          TB0.coeT V k' kg pk (cV (UL.fib0 V (UL.uAct V W g (UL.uAct W Z k F))) (F.1.tob V k')
+            (symH (Pv' V k' (UL.uAct V W g (UL.uAct W Z k F)) Q4))
+            (UL.tactG V W g (UL.uAct W Z k F) (UL.uAct V W g (UL.uAct W Z k F)) (refl (UL.uAct V W g (UL.uAct W Z k F)))
+               (cV (F.1.tob W k) (UL.fib0 W (UL.uAct W Z k F)) (Pv' W k (UL.uAct W Z k F) (refl (UL.uAct W Z k F))) b0)))
+        =< apH (\ y -> TB0.coeT V k' kg pk (cV (F.1.tob V t0) (F.1.tob V k') (symH (Pv' V k' (UL.uAct V W g (UL.uAct W Z k F)) Q4))
+                         (F.1.tact V W g k0 t0 eN y)))
+             (UL.fib-move (Hom W Z) (F.1.tob W) k k0 (symH (comp-idr W Z k)) (Pv' W k (UL.uAct W Z k F) (refl (UL.uAct W Z k F))) b0) >
+          TB0.coeT V k' kg pk (cV (F.1.tob V t0) (F.1.tob V k') (symH (Pv' V k' (UL.uAct V W g (UL.uAct W Z k F)) Q4))
+            (F.1.tact V W g k0 t0 eN (subst (Hom W Z) (\ x -> W0.Ix (F.1.tob W x)) k k0 (symH (comp-idr W Z k)) b0)))
+        =< apH (\ y -> TB0.coeT V k' kg pk (cV (F.1.tob V t0) (F.1.tob V k') (symH (Pv' V k' (UL.uAct V W g (UL.uAct W Z k F)) Q4)) y))
+             (UL.tact-src-move (yP Z) F.1 V W g k k0 t0 (symH (comp-idr W Z k)) eN e' b0) >
+          TB0.coeT V k' kg pk (cV (F.1.tob V t0) (F.1.tob V k') (symH (Pv' V k' (UL.uAct V W g (UL.uAct W Z k F)) Q4))
+            (F.1.tact V W g k t0 e' b0))
+        =< apH (TB0.coeT V k' kg pk)
+             (UL.fib-move (Hom V Z) (F.1.tob V) t0 k' (transH tkg (symH pk))
+                (symH (Pv' V k' (UL.uAct V W g (UL.uAct W Z k F)) Q4)) (F.1.tact V W g k t0 e' b0)) >
+          TB0.coeT V k' kg pk (subst (Hom V Z) (\ x -> W0.Ix (F.1.tob V x)) t0 k' (transH tkg (symH pk)) (F.1.tact V W g k t0 e' b0))
+        =< subst-two-H Z V (\ x -> W0.Ix (F.1.tob V x)) t0 k' kg (transH tkg (symH pk)) pk tkg (F.1.tact V W g k t0 e' b0) >
+          subst (Hom V Z) (\ x -> W0.Ix (F.1.tob V x)) t0 kg tkg (F.1.tact V W g k t0 e' b0)
+        =< UL.tact-move (yP Z) F.1 V W g k t0 kg e' (refl kg) tkg b0 >
+          F.1.tact V W g k kg (refl kg) b0 } ;
+
+    res (k' : Hom V Z) (pk : Id (Hom V Z) k' kg) (F' : UL.U0 W) (F'' : UL.U0 V) (Q : Id (UL.U0 W) (UL.uAct W Z k F) F')
+      (Q'' : Id (UL.U0 V) (UL.uAct V Z k' F) F'') (E : Id (UL.U0 V) (UL.uAct V W g F') F'') : goal k' pk F' F'' Q Q'' E =
+      idJ (UL.U0 W) (UL.uAct W Z k F)
+        (\ F2 Q2 -> (F3 : UL.U0 V) (Q3 : Id (UL.U0 V) (UL.uAct V Z k' F) F3) (E2 : Id (UL.U0 V) (UL.uAct V W g F2) F3)
+           -> goal k' pk F2 F3 Q2 Q3 E2)
+        (\ F3 Q3 E2 ->
+           idJ (UL.U0 V) (UL.uAct V W g (UL.uAct W Z k F))
+             (\ F4 E4 -> (Q4 : Id (UL.U0 V) (UL.uAct V Z k' F) F4) -> goal k' pk (UL.uAct W Z k F) F4 (refl (UL.uAct W Z k F)) Q4 E4)
+             (\ Q4 -> core k' pk Q4) F3 E2 Q3)
+        F' Q F'' Q'' E ;
+  } ;
+
+  opaque G1.core ; opaque G1.res ;
+
+  PhN (V W : Ob) (g : Hom V W) (w : TB.EI W)
+    : Id (TB0.EI V) (sg V (TB.E.act V W g w).1, ph V (TB.E.act V W g w).1 (TB.E.act V W g w).2)
+                    (TB0.E.act V W g (sg W w.1, ph W w.1 w.2)) =
+    transH (TB0.pr-coe V (sg V (TB.E.act V W g w).1) (compH V W Z (sg W w.1) g) (sg-nat V W g w.1)
+              (ph V (TB.E.act V W g w).1 (TB.E.act V W g w).2))
+      (apH {W0.Ix (F.1.tob V (compH V W Z (sg W w.1) g))} {TB0.EI V} (\ c -> (compH V W Z (sg W w.1) g, c))
+        (transH (apH (\ b -> TB0.coeT V (sg V (TB.E.act V W g w).1) (compH V W Z (sg W w.1) g) (sg-nat V W g w.1)
+                         (ph V (TB.E.act V W g w).1
+                            (UL.tactG V W g (l.1 W w.1.1 w.1.2) (l.1 V (TB.E.act V W g w).1.1 (TB.E.act V W g w).1.2)
+                               (BaseP.GPre[a+].PS.ntEq PX.P UL.UCtx (LC.sL X l) V W g w.1 (TB.E.act V W g w).1 (refl (TB.E.act V W g w).1)) b)))
+                  (symH (ps-ph W w.1 w.2)))
+          (G1[V, W, g, sg W w.1, ph W w.1 w.2].res (sg V (TB.E.act V W g w).1) (sg-nat V W g w.1)
+             (l.1 W w.1.1 w.1.2) (l.1 V (TB.E.act V W g w).1.1 (TB.E.act V W g w).1.2) (Qd W w.1) (Qd V (TB.E.act V W g w).1)
+             (BaseP.GPre[a+].PS.ntEq PX.P UL.UCtx (LC.sL X l) V W g w.1 (TB.E.act V W g w).1 (refl (TB.E.act V W g w).1))))) ;
+
+  opaque PhN ;
+
+  ----------------------------------------------------------------------
+  -- the local compositions, from F's
+
+  module T (e e' : BaseP.IPt) (c0 : BaseP.GLine[a].CompAtP[BaseP.GFam[a].famPath, yP Z, F.1, e, e'].CompAt) {
+    module TR = BaseP.GTransfer[a, a+, a+].Tr[PX.P, LC.BL X l, yP Z, F.1, sg, \ V W g z -> sg-nat V W g z, ph, ps, ph-ps, ps-ph, PhN, e, e', c0] ;
+  } ;
+} ;
+
+-- the canonical presentation: F = l pr1 pr2, and l f j = F along (f , j)
+FC (X : Ob) (l : V1.Ix ((BaseP.GFam[a+].FC[UL.UCtx]).ob X)) : UL.U0 (prodP X Iv) = l.1 (prodP X Iv) (pr1 X Iv) (pr2 X Iv) ;
+
+QdC (X : Ob) (l : V1.Ix ((BaseP.GFam[a+].FC[UL.UCtx]).ob X)) (W : Ob) (z : V1.Ix ((BaseP.GLocal[a+].Pts[X].P).ob W))
+  : Id (UL.U0 W) (UL.uAct W (prodP X Iv) (pairH X Iv W z.1 z.2) (FC X l)) (l.1 W z.1 z.2) =
+  transH (l.2 W (prodP X Iv) (pairH X Iv W z.1 z.2) (pr1 X Iv) (pr2 X Iv))
+    (transH (apH (\ k -> l.1 W k (compH W (prodP X Iv) Iv (pr2 X Iv) (pairH X Iv W z.1 z.2))) (pr1-pair X Iv W z.1 z.2))
+            (apH (\ k -> l.1 W z.1 k) (pr2-pair X Iv W z.1 z.2))) ;
+
+-- the two directions of a fibrant type
+sel01 (Z : Ob) (F : UL.U0 Z) : BaseP.GLine[a].CompAtP[BaseP.GFam[a].famPath, yP Z, F.1, e0, e1].CompAt = F.2.1.1 ;
+
+sel10 (Z : Ob) (F : UL.U0 Z) : BaseP.GLine[a].CompAtP[BaseP.GFam[a].famPath, yP Z, F.1, e1, e0].CompAt = F.2.1.2 ;
+
+-- the local compositions
+cl (e e' : BaseP.IPt) (sel : (Z : Ob) (F : UL.U0 Z) -> BaseP.GLine[a].CompAtP[BaseP.GFam[a].famPath, yP Z, F.1, e, e'].CompAt)
+  (X : Ob) (l : V1.Ix ((BaseP.GFam[a+].FC[UL.UCtx]).ob X))
+  : BaseP.GLine[a+].CompAtP[BaseP.GFam[a+].famPath, BaseP.GLocal[a+].Pts[X].P, BaseP.GLocal[a+].Loc[UL.UCtx, UL.EGen].BL X l, e, e'].CompAt =
+  ElP[X, l, FC X l, QdC X l].T[e, e', sel (prodP X Iv) (FC X l)].TR.compAt ;

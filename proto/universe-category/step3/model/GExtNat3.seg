@@ -1,0 +1,127 @@
+-- GExtNat3.seg (inside IvBase, any base): Theorem 7 along a substitution,
+-- step B4 (the equivalence half, GExtEquiv), part 1.
+--
+-- Fibres of ext(alpha[s]) move to fibres of ext(alpha) (FMX: GFibMove along
+-- (s , Phi), the square by extPhi); fibres of al' to fibres of al (FMA:
+-- along sR, the square by al'-mE / mE-V).  Hypothesis Heal: eal' extends as
+-- the moved eal (FMA.HTy; for EqSub's eqSub it is kopL / kopB).
+--   fromFA-mv / toFA-mv   the translation of GExtEquiv commutes with the moves
+--   thS                   theta of alpha[s], moved, is theta of the moved
+--                         problem (ONE congruence: kop-cong of eal)
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+
+module N3 (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D'])
+  (fullS : (X : Ob) (d : W0.Ix (D'.ob X)) -> Id Bool (GP.CofL[D', psi'].full X d) (GP.CofL[G, psi].full X (s.nt X d))) {
+  module EM = GExtNat1.ExtMove[G, A, psi, B, al, D', s, psi', fullS] ;
+  module ES = EM.ES ;
+  module PS = EM.PS ;
+
+  -- fibres of ext
+  module FMX = GFibMove[a].FibMove[D', PS.E2'.ExtT, ES.A', EM.E4'.extMap, G, PS.E2.ExtT, A, EM.E4.extMap,
+      s.nt, s.nt-nat, EM.phX, \ W d b -> b, EM.AS.PhiNat, (liftP D' G A s).nt-nat, \ W w -> symH (EM.extPhi W w)] ;
+
+  -- fibres of al
+  PhNA2 (V W : Ob) (g : Hom V W) (w : PR.TyL[ES.CL'.resCtx, ES.ED'.A'].EI W)
+    : Id (PR.TyL[ES.CL.resCtx, ES.ED.A'].EI V)
+         (ES.sRnt V (PR.TyL[ES.CL'.resCtx, ES.ED'.A'].E.act V W g w).1, (PR.TyL[ES.CL'.resCtx, ES.ED'.A'].E.act V W g w).2)
+         (PR.TyL[ES.CL.resCtx, ES.ED.A'].E.act V W g (ES.sRnt W w.1, w.2)) =
+    transH (apH {W0.Ix (A.tob V (s.nt V (ES.CL'.resCtx.act V W g w.1).1))} {PR.TyL[ES.CL.resCtx, ES.ED.A'].EI V}
+              (\ b0 -> (ES.sRnt V (ES.CL'.resCtx.act V W g w.1), b0))
+              (tact-irr G A V W g (s.nt W w.1.1) (s.nt V (ES.CL'.resCtx.act V W g w.1).1) _ _ w.2))
+           ((liftP ES.CL'.resCtx ES.CL.resCtx ES.ED.A' ES.sR).nt-nat V W g w) ;
+
+  alSq2 (W : Ob) (w : PR.TyL[ES.CL'.resCtx, ES.B'].EI W)
+    : Id (PR.TyL[ES.CL.resCtx, ES.ED.A'].EI W) (ES.sRnt W (ES.al'.mE W w).1, (ES.al'.mE W w).2) (al.mE W (ES.sRnt W w.1, w.2)) =
+    transH (apH {PR.TyL[ES.CL'.resCtx, ES.AL2].EI W} {PR.TyL[ES.CL.resCtx, ES.ED.A'].EI W} (\ u -> (ES.sRnt W u.1, u.2)) (ES.al'-mE W w))
+           (ES.SM.mE-V W w) ;
+
+  module FMA = GFibMove[a].FibMove[ES.CL'.resCtx, ES.B', ES.ED'.A', ES.al', ES.CL.resCtx, B, ES.ED.A', al,
+      ES.sRnt, ES.sR.nt-nat, \ W d b -> b, \ W d b -> b, (liftP ES.CL'.resCtx ES.CL.resCtx B ES.sR).nt-nat, PhNA2, alSq2] ;
+
+  opaque PhNA2 ; opaque alSq2 ;
+
+  module Eq (kA : LineFibP[GFam[a].famPath, G, A].FibAt e1)
+    (kA' : LineFibP[GFam[a].famPath, D', ES.A'].FibAt e1)
+    (eal : GEquiv[a].EquivOp ES.CL.resCtx B ES.ED.A' al)
+    (eal' : GEquiv[a].EquivOp ES.CL'.resCtx ES.B' ES.ED'.A' ES.al') {
+    module E1 = GExtEquiv[a].ExtEq[G, A, psi, B, al, kA, eal] ;
+    module E1' = GExtEquiv[a].ExtEq[D', ES.A', ES.psi', ES.B', ES.al', kA', eal'] ;
+
+    ------------------------------------------------------------------
+    -- the translation of GExtEquiv commutes with the moves
+
+    fromFA-mv (V : Ob) (y' : E1'.FA.TF.EI V) : Id (E1.FX.TF.EI V) (E1.fromFA V (FMA.mvF V y')) (FMX.mvF V (E1'.fromFA V y')) =
+      E1.FX.fibE-eq V (E1.fromFA V (FMA.mvF V y')) (FMX.mvF V (E1'.fromFA V y'))
+        (transH (E1.fromFA-pt V (FMA.mvF V y')) (apH (FMX.PhA V) (symH (E1'.fromFA-pt V y'))))
+        (transH (E1.fromFA-B V (FMA.mvF V y'))
+          (transH (symH (PS.PhiB V (E1'.FA.fibB V y'))) (apH (PS.PhiE V) (symH (E1'.fromFA-B V y')))))
+        (\ W f i -> transH (E1.fromFA-L V (FMA.mvF V y') W f i) (apH (FMX.PhA W) (symH (E1'.fromFA-L V y' W f i)))) ;
+
+    toFA-mv (V : Ob) (v' : E1'.FX.TF.EI V) (q' : IsT (ES.CL'.full V v'.1.1)) (q : IsT (ES.CL.full V (s.nt V v'.1.1)))
+      : Id (E1.FA.TF.EI V) (FMA.mvF V (E1'.toFA V v' q')) (E1.toFA V (FMX.mvF V v') q) =
+      E1.fromFA-inj V (FMA.mvF V (E1'.toFA V v' q')) (E1.toFA V (FMX.mvF V v') q)
+        (transH (fromFA-mv V (E1'.toFA V v' q'))
+          (transH (apH (FMX.mvF V) (E1'.fromFA-toFA V v' q')) (symH (E1.fromFA-toFA V (FMX.mvF V v') q)))) ;
+
+    -- fullness along s
+    qS (V : Ob) (d : W0.Ix (D'.ob V)) (q' : IsT (ES.CL'.full V d)) : IsT (ES.CL.full V (s.nt V d)) =
+      subst Bool (\ c -> IsT c) (ES.CL'.full V d) (ES.CL.full V (s.nt V d)) (ES.fullS V d) q' ;
+
+    opaque fromFA-mv ; opaque toFA-mv ;
+
+    ------------------------------------------------------------------
+    -- theta moves
+
+    module Sx (Heal : FMA.HTy eal' eal) (X : Ob) (w' : FMX.HD.TA.EI X) (p' : E1'.PX.Partial[X, w']) {
+      module ThX' = GExtEquiv2[a].ExtEq2[D', ES.A', ES.psi', ES.B', ES.al', kA', eal'].Th[X, w', p'] ;
+      module ThX = GExtEquiv2[a].ExtEq2[G, A, psi, B, al, kA, eal].Th[X, FMX.PhA X w', FMX.mapP X w' p'] ;
+
+      module TT (W : Ob) (f : Hom W X) (q' : IsT (ES.CL'.full W (D'.act W X f w'.1))) (q : IsT (ES.CL.full W (G.act W X f (s.nt X w'.1)))) {
+        y' : FMX.HD.TA.EI W = FMX.HD.TA.E.act W X f w' ;
+        y : FMX.HG.TA.EI W = FMX.HG.TA.E.act W X f (FMX.PhA X w') ;
+        r' : E1'.PX.Partial[W, y'] = E1'.PX.restrictP W X f w' p' ;
+        r : E1.PX.Partial[W, y] = E1.PX.restrictP W X f (FMX.PhA X w') (FMX.mapP X w' p') ;
+        x' : E1'.FA.TA.EI W = E1'.wq W y' q' ;
+        x : E1.FA.TA.EI W = E1.wq W y q ;
+        pr' : E1'.PA.Partial[W, x'] = E1'.Tr[W, y', q'].TrP r' ;
+        pr : E1.PA.Partial[W, x] = E1.Tr[W, y, q].TrP r ;
+
+        Pw : Id (E1.FA.TA.EI W) (FMA.PhA W x') x =
+          ES.ED.toEA-inj W (FMA.PhA W x') x ((liftP D' G A s).nt-nat W X f w') ;
+
+        ev (l : Fin p'.pr) (V : Ob) (g : Hom V W) (i : Lands V W (pre W X f (p'.ps l).pQ) g) (i' : Lands V W (pre W X f (p'.ps l).pQ) g)
+          : Id (E1.FA.TF.EI V) (FMA.mvF V ((pr'.ps l).pv V g i)) ((pr.ps l).pv V g i') =
+          transH (toFA-mv V ((r'.ps l).pv V g i) (E1'.Tr[W, y', q'].qv (r'.ps l) V g i)
+                    (qS V ((r'.ps l).pv V g i).1.1 (E1'.Tr[W, y', q'].qv (r'.ps l) V g i)))
+                 (E1.toFA-cong V (FMX.mvF V ((r'.ps l).pv V g i)) ((r.ps l).pv V g i')
+                    (apH (FMX.mvF V) (E1'.PX.pv-irr X w' (p'.ps l) V (compH V W X f g)
+                                        (lands-pre V W X f (p'.ps l).pQ g i) (lands-pre V W X f (p'.ps l).pQ g i')))
+                    (qS V ((r'.ps l).pv V g i).1.1 (E1'.Tr[W, y', q'].qv (r'.ps l) V g i)) (E1.Tr[W, y, q].qv (r.ps l) V g i')) ;
+
+        R : Id (E1.PA.Partial[W, x]) (subst (E1.FA.TA.EI W) (\ z -> E1.PA.Partial[W, z]) (FMA.PhA W x') x Pw (FMA.mapP W x' pr')) pr =
+          E1.PA.partExtH W (FMA.PhA W x') x Pw (FMA.mapP W x' pr') pr (refl p'.pr) (\ l -> refl (pre W X f (p'.ps l).pQ)) ev ;
+
+        -- the congruence of B4 (theta)
+        thS : Id (E1.FA.TF.EI W) (FMA.mvF W (ThX'.th W f q')) (ThX.th W f q) =
+          transH (Heal W x' pr') (E1.PA.kop-cong eal W (FMA.PhA W x') x Pw (FMA.mapP W x' pr') pr R) ;
+      } ;
+
+      thS (W : Ob) (f : Hom W X) (q' : IsT (ES.CL'.full W (D'.act W X f w'.1))) (q : IsT (ES.CL.full W (G.act W X f (s.nt X w'.1))))
+        : Id (E1.FA.TF.EI W) (FMA.mvF W (ThX'.th W f q')) (ThX.th W f q) = TT[W, f, q', q].thS ;
+
+      opaque thS ;
+    } ;
+  } ;
+} ;

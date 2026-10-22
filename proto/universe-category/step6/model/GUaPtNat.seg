@@ -1,0 +1,131 @@
+-- GUaPtNat.seg (inside IvBase, any base; Step 3 probe, M2): the glue data
+-- of a side is natural: along h : Y -> X, the action of GD1 on d_s is
+-- d_(s|h), an Id of data (GGlueE.gd1Ext):
+--
+--   B , al   the values of s at h f and of s|h at f agree (pv-irr);
+--            al moved along any fibre path (V is a set)
+--   eqOn     esAct is eqDSub along the lift moved along triEq (pairTr);
+--            eqD-o; d_p's structure is the glued one (GUaPt.glueES);
+--            gluing is natural (GUaGlue3.glueSub) and depends only on the
+--            side values pointwise (GUaGlue3.glueCong, pcs)
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Trees[a] ;
+open Arith[a] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open GLine[a] ;
+module GE1 = GFibE[a+] ;
+module GX = GEqExt[a] ;
+module GL = GEqLaws[a] ;
+module GL2 = GEqLaws2[a] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+
+module PN (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE)
+  (X : Ob) (F : GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].U0 X)
+  (sd : GCofib[a+].Partials[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx,
+                           GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].UaTy].PSide[X, F])
+  (Y : Ob) (h : Hom Y X) {
+  module UA = GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module UU = UA.UU ;
+  module GEm = GGlueE.GE[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module DD = GEm.DD ;
+
+  module PP = GCofib[a+].Partials[UU.UCtx, UA.UaTy] ;
+
+  sY : PP.PSide[Y, UU.uAct Y X h F] = PP.RestrictP[Y, X, h, F].rside sd ;
+
+  module PX = GUaPt.Pt[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, X, F, sd] ;
+  module PY = GUaPt.Pt[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, Y, UU.uAct Y X h F, sY] ;
+
+  A : UU.U0 Y = UU.uAct Y X h F ;
+
+  -- the data of d_p along h
+  dA : GEm.GD1 Y = GEm.act1 Y X h PX.dP ;
+  ph1 : Phi Y = pre Y X h PX.ph ;
+  be : GEm.BE Y A ph1 = dA.2.2 ;
+  be' : GEm.BE Y A PY.ph = PY.dP.2.2 ;
+
+  module R1 = GGlueE.RCm[Y, ph1] ;
+  c : PSub[PY.RC, R1.RC] = GEm.castRC Y ph1 PY.ph (refl ph1) ;
+  s : PSub[PY.RC, PX.RC] = oS PY.RC R1.RC PX.RC (GEm.lift Y X h PX.ph) c ;
+
+  ----------------------------------------------------------------------
+  -- the side values agree
+
+  Pk2 (W : Ob) (f : Hom W Y) (u : IsT (GGlueD.fl X PX.ph W (compH W Y X h f))) (v : IsT (GGlueD.fl Y PY.ph W f))
+    : Id (UA.Q4 W) (PX.kapR W (compH W Y X h f, u)) (PY.kapR W (f, v)) =
+    PP.pv-irr X F sd W (compH W Y X h f) (PX.lx W (compH W Y X h f, u)) (lands-pre W Y X h PX.ph f (PY.lx W (f, v))) ;
+
+  Pk (W : Ob) (x : W0.Ix (PY.R.ob W)) : Id (UA.Q4 W) (PX.kapR W (s.nt W x)) (PY.kapR W x) = Pk2 W x.1 (s.nt W x).2 x.2 ;
+
+  PB (W : Ob) (f : Hom W Y) (q : IsT (GGlueD.fl Y ph1 W f)) (q' : IsT (GGlueD.fl Y PY.ph W f))
+    : Id (UU.U0 W) (be.1.1 W f q) (be'.1.1 W f q') =
+    apH (\ k -> k.2.1) (Pk2 W f (GGlueD.fl-pre Y X h PX.ph W f q) q') ;
+
+  -- the glued map at equal side values, moved along any fibre paths
+  alJ (W : Ob) (q1 q2 : UA.Q4 W) (P : Id (UA.Q4 W) q1 q2) (T : W0.V)
+    (c1 : Id W0.V (UU.fib0 W q1.1) T) (c2 : Id W0.V (UU.fib0 W q2.1) T) (b : W0.Ix (UU.fib0 W q1.2.1))
+    : Id (W0.Ix T) (subst W0.V (\ t -> W0.Ix t) (UU.fib0 W q1.1) T c1 (PX.G.aOfq W q1 b))
+                   (subst W0.V (\ t -> W0.Ix t) (UU.fib0 W q2.1) T c2 (PX.G.aOfq W q2 (DD.trB W q1.2.1 q2.2.1 (apH (\ k -> k.2.1) P) b))) =
+    idJ (UA.Q4 W) q1
+      (\ q3 P3 -> (c3 : Id W0.V (UU.fib0 W q3.1) T)
+         -> Id (W0.Ix T) (subst W0.V (\ t -> W0.Ix t) (UU.fib0 W q1.1) T c1 (PX.G.aOfq W q1 b))
+                         (subst W0.V (\ t -> W0.Ix t) (UU.fib0 W q3.1) T c3 (PX.G.aOfq W q3 (DD.trB W q1.2.1 q3.2.1 (apH (\ k -> k.2.1) P3) b))))
+      (\ c3 -> apH (\ cc -> subst W0.V (\ t -> W0.Ix t) (UU.fib0 W q1.1) T cc (PX.G.aOfq W q1 b)) (W0.isSetV (UU.fib0 W q1.1) T c1 c3))
+      q2 P c2 ;
+
+  Pal (W : Ob) (f : Hom W Y) (q : IsT (GGlueD.fl Y ph1 W f)) (q' : IsT (GGlueD.fl Y PY.ph W f)) (b : W0.Ix (UU.fib0 W (be.1.1 W f q)))
+    : Id (W0.Ix (A.1.tob W f)) (DD.trA Y A A (refl A) W f (be.1.2.2.1 W f q b)) (be'.1.2.2.1 W f q' (DD.trB W (be.1.1 W f q) (be'.1.1 W f q') (PB W f q q') b)) =
+    alJ W (PX.kapR W (compH W Y X h f, GGlueD.fl-pre Y X h PX.ph W f q)) (PY.kapR W (f, q'))
+      (Pk2 W f (GGlueD.fl-pre Y X h PX.ph W f q) q') (A.1.tob W f)
+      (PX.Po W (compH W Y X h f, GGlueD.fl-pre Y X h PX.ph W f q)) (PY.Po W (f, q')) b ;
+
+  opaque alJ ;
+
+  ----------------------------------------------------------------------
+  -- the structures
+
+  module TE = GEm.TriEq[Y, X, h, F, PX.ph, PX.bd] ;
+  module GSb = GUaGlue3.GlueSub[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, PX.RC, PX.kapR, PX.kapnatR, PY.RC, s] ;
+  module GCg = GUaGlue3.GlueCong[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, PY.RC, GSb.S.ks, GSb.S.ksnat, PY.kapR, PY.kapnatR, Pk] ;
+
+  dl : GEm.ES R1.RC = GL.eqDSub R1.RC PX.RC (GEm.lift Y X h PX.ph) PX.T0.tri PX.eqOnP ;
+
+  He : Id (GEm.ES PY.RC) (GL.eqDSub PY.RC R1.RC c (GEm.TD Y A ph1 be.1) be.2) (GEm.TD Y A PY.ph be'.1, be'.2) =
+    calc (GEm.ES PY.RC) {
+        GL.eqDSub PY.RC R1.RC c (GEm.TD Y A ph1 be.1) be.2
+      =< apH (\ z -> GL.eqDSub PY.RC R1.RC c z.1 z.2) (GEm.pairTr R1.RC dl.1 TE.T1.tri TE.triEq dl.2) >
+        GL.eqDSub PY.RC R1.RC c dl.1 dl.2
+      =< symH GL2.LawO[PY.RC, R1.RC, PX.RC, GEm.lift Y X h PX.ph, c, PX.T0.tri, PX.eqOnP].eqD-o >
+        GL.eqDSub PY.RC PX.RC s PX.T0.tri PX.eqOnP
+      =< apH (\ z -> GL.eqDSub PY.RC PX.RC s z.1 z.2) PX.glueES >
+        GL.eqDSub PY.RC PX.RC s PX.Gtri PX.G2R.eqOn
+      =< GSb.glueSub >
+        ((GSb.G2.G.B, (GSb.G2.G.A, GSb.G2.G.al)), GSb.G2.eqOn)
+      =< GCg.glueCong >
+        (PY.Gtri, PY.G2R.eqOn)
+      =< symH PY.glueES >
+        (PY.T0.tri, PY.eqOnP) } ;
+
+  opaque He ;
+
+  -- the result
+  natP : Id (GEm.GD1 Y) (GEm.act1 Y X h PX.dP) PY.dP =
+    GEm.gd1Ext Y A A (refl A) ph1 PY.ph (refl ph1) be be' PB Pal He ;
+} ;

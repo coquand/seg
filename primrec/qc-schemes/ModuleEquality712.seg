@@ -1,0 +1,22 @@
+-- The injectivity half of 7.1.2 entirely on fraction representatives.
+-- Pointwise merely equal fractions have one global equality exponent.
+-- No weak quasi-coherence hypothesis.
+level l ; open Ring[l] ;
+module Pr = Prelude[l] ; module Tr = Truncation[l] ;
+module Over (R : CRing) (setR : Pr.isSet R.R)
+ (axioms : SAGAxioms[l,l].Over[R,setR].Assumptions) {
+ module MD = Modules[l].Over[R,setR] ;
+ module S = Schemes[l].Over[R,setR] ;
+ module At (X : U l) (scheme : S.Scheme X) (Mx : X -> MD.Module)
+  (g : X -> R.R) (u v : (x : X) -> (Mx x).M) (p q : Nat) {
+  module Fr (x : X) { module F = MD.Fractions[Mx x] ; } ;
+  Same (x : X) (k : Nat) : U l = Fr[x].F.Same (g x) (u x) p (v x) q k ;
+  module Uniform = SchemeUniform[l].Over[R,setR,axioms].At[X,scheme,Same,
+   \ x k -> (Mx x).setM _ _,
+   \ x k K h -> Fr[x].F.kills-up (g x)
+    (Fr[x].F.MA.sub ((Mx x).sm (MD.RA.pw (g x) (NatFin[l].toN q)) (u x))
+     ((Mx x).sm (MD.RA.pw (g x) (NatFin[l].toN p)) (v x))) k K h] ;
+  theorem (pointwise : (x : X) -> Tr.Trunc[(k : Nat) * Same x k].carrier) :
+   Tr.Trunc[(K : Nat) * ((x : X) -> Same x K)].carrier = Uniform.theorem pointwise ;
+ } ;
+} ;

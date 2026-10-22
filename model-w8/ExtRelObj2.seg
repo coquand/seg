@@ -1,0 +1,201 @@
+-- ExtRelObj2.seg: MODEL/Poset/ExtRelObj.agda, second half (split for the
+-- 10 s rule).  Phi and ext (Phi-ext), mapPairs and the actions on pairs
+-- (mapPairs-nat), Phi natural (Phi-act; the case of a pair is the segment
+-- PA), and the EMap PhiM : Ext(d') -> Ext(d) over y h.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+open Yon[a] ;
+open Cofib[a] ;
+open Equiv[a] ;
+open UMapOver[a] ;
+open UnivOp[a] ;
+
+open ExtRelObj[a] ;
+
+module RO2 (Y X : Ob) (h : Hom Y X) (A'' : PTy[yP Y]) (A : PTy[yP X]) (PoA : PoATy Y X h A'' A) (PoAH : PoAHTy Y X h A'' A PoA)
+  (d' : UData[Y, A'']) (d : UData[X, A]) (mAof : MAofTy Y X h A'' A d' d) (mAofE : MAofETy Y X h A'' A PoA d' d mAof)
+  (R : RelG[Y, X, h, A'', A, d', d, mAof].URelB) {
+  open RO[Y, X, h, A'', A, PoA, PoAH, d', d, mAof, mAofE, R] ;
+
+  -- Phi and ext
+  Phi-ext (W : Ob) (w : W0.Ix (EYB3.EX.ob W)) : Id (W0.Ix (EX.EA.ob W)) (EXB4.extE W (PhiE W w)) (mapA W (EYB4.extE W w)) =
+    EYB3.caseFull W w.1 (Id (W0.Ix (EX.EA.ob W)) (EXB4.extE W (PhiE W w)) (mapA W (EYB4.extE W w)))
+      (\ p -> transH {W0.Ix (EX.EA.ob W)} (apH {_} {W0.Ix (EX.EA.ob W)} (\ z -> EXB4.extE W (PhiE W z)) (symH (EYB3.fromB-toB W w p)))
+               (transH {W0.Ix (EX.EA.ob W)} (apH {_} {W0.Ix (EX.EA.ob W)} (EXB4.extE W) (Phi-B W w.1 p (EYB3.toB W w p).2))
+                (transH {W0.Ix (EX.EA.ob W)} (EXB4.extE-B W (mBE W (EYB3.toB W w p)))
+                 (transH {W0.Ix (EX.EA.ob W)} (apH {_} {W0.Ix (EX.EA.ob W)} (EX.toEA W) (symH (H3w W (EYB3.toB W w p))))
+                  (transH {W0.Ix (EX.EA.ob W)} (toEA-mA W (d'.beta.mE W (EYB3.toB W w p)))
+                   (transH {W0.Ix (EX.EA.ob W)} (apH {_} {W0.Ix (EX.EA.ob W)} (mapA W) (symH (EYB4.extE-B W (EYB3.toB W w p))))
+                           (apH {_} {W0.Ix (EX.EA.ob W)} (\ z -> mapA W (EYB4.extE W z)) (EYB3.fromB-toB W w p))))))))
+      (\ np' -> transH {W0.Ix (EX.EA.ob W)} (apH {_} {W0.Ix (EX.EA.ob W)} (\ z -> EXB4.extE W (PhiE W z)) (symH (EYB3.fromP-toP W w np')))
+                 (transH {W0.Ix (EX.EA.ob W)} (apH {_} {W0.Ix (EX.EA.ob W)} (EXB4.extE W) (Phi-P W w.1 np' (EYB3.toP W w np')))
+                  (transH {W0.Ix (EX.EA.ob W)} (EXB4.extE-P W (compH W Y X h w.1) (transH {Bool} (symH {Bool} (R.rf W w.1)) np') (mapPairs W w.1 (EYB3.toP W w np')))
+                   (transH {W0.Ix (EX.EA.ob W)} (apH {W0.Ix (A.tob W (compH W Y X h w.1))} {W0.Ix (EX.EA.ob W)} (\ z -> (compH W Y X h w.1, z))
+                                (mapPairs-a W w.1 (EYB3.toP W w np')))
+                    (transH {W0.Ix (EX.EA.ob W)} (apH {_} {W0.Ix (EX.EA.ob W)} (mapA W) (symH (EYB4.extE-P W w.1 np' (EYB3.toP W w np'))))
+                            (apH {_} {W0.Ix (EX.EA.ob W)} (\ z -> mapA W (EYB4.extE W z)) (EYB3.fromP-toP W w np'))))))) ;
+
+  -- A pair seen in Ext does not depend on the proof that its point is not
+  -- full, nor on which name (y, E) the action along f gives to its point:
+  -- by induction on E, the pair acted on at y is the pair acted on at f.x.
+  fromP-np-irr (J : Ob) (y : Hom J X) (np np' : Id Bool (CX.full J y) false) (u : EXB.Pairs J y)
+    : Id (W0.Ix (EXB3.EX.ob J)) (EXB3.fromP J y np u) (EXB3.fromP J y np' u) =
+    apH (\ z -> EXB3.fromP J y z u) (isSet-Bool (CX.full J y) false np np') ;
+
+  fromP-pact-pt (J I : Ob) (f : Hom J I) (x : Hom I X) (u : EXB.Pairs I x)
+    (np0 : Id Bool (CX.full J (compH J I X x f)) false)
+    (y : Hom J X) (E : Id (Hom J X) (compH J I X x f) y) (np : Id Bool (CX.full J y) false)
+    : Id (W0.Ix (EXB3.EX.ob J))
+         (EXB3.fromP J (compH J I X x f) np0 (EXB2.PAct[J, I, f, x, compH J I X x f, refl (compH J I X x f)].pact u))
+         (EXB3.fromP J y np (EXB2.PAct[J, I, f, x, y, E].pact u)) =
+    idJ (Hom J X) (compH J I X x f)
+      (\ y1 E1 -> (np1 : Id Bool (CX.full J y1) false)
+         -> Id (W0.Ix (EXB3.EX.ob J))
+               (EXB3.fromP J (compH J I X x f) np0 (EXB2.PAct[J, I, f, x, compH J I X x f, refl (compH J I X x f)].pact u))
+               (EXB3.fromP J y1 np1 (EXB2.PAct[J, I, f, x, y1, E1].pact u)))
+      (\ np1 -> fromP-np-irr J (compH J I X x f) np0 np1
+                   (EXB2.PAct[J, I, f, x, compH J I X x f, refl (compH J I X x f)].pact u))
+      y E np ;
+
+  opaque fromP-np-irr ; opaque fromP-pact-pt ;
+
+  -- mapPairs commutes with the actions on pairs.  Acting by k on a pair of d'
+  -- at g lands at g o k, whose image lies at h o (g o k); so the action on the
+  -- X side is taken with target h o (g o k), named by associativity.
+  module PN (W : Ob) (g : Hom W Y) (u : EYB.Pairs W g) (V : Ob) (k : Hom V W) {
+    module PY = EYB2.PAct[V, W, k, g, compH V W Y g k, refl (compH V W Y g k)] ;
+    module PX = EXB2.PAct[V, W, k, compH W Y X h g, compH V Y X h (compH V W Y g k), comp-assoc V W Y X h g k] ;
+    module M2 = MP[V, compH V W Y g k, PY.pact u] ;
+
+    -- the A-components: PoA after the action of k is the action of k after PoA
+    resA : Id (W0.Ix (A.tob V (compH V Y X h (compH V W Y g k))))
+              (EXB.pa V (compH V Y X h (compH V W Y g k)) (mapPairs V (compH V W Y g k) (PY.pact u)))
+              (EXB.pa V (compH V Y X h (compH V W Y g k)) (PX.pact (mapPairs W g u))) =
+      calc (W0.Ix (A.tob V (compH V Y X h (compH V W Y g k)))) {
+        EXB.pa V (compH V Y X h (compH V W Y g k)) (mapPairs V (compH V W Y g k) (PY.pact u))
+          =< mapPairs-a V (compH V W Y g k) (PY.pact u) >
+        subV (A''.tob V (compH V W Y g k)) (A.tob V (compH V Y X h (compH V W Y g k))) (PoA V (compH V W Y g k))
+             (EYB.pa V (compH V W Y g k) (PY.pact u))
+          =< apH (subV (A''.tob V (compH V W Y g k)) (A.tob V (compH V Y X h (compH V W Y g k))) (PoA V (compH V W Y g k)))
+                 (PY.pact-a u) >
+        subV (A''.tob V (compH V W Y g k)) (A.tob V (compH V Y X h (compH V W Y g k))) (PoA V (compH V W Y g k))
+             (A''.tact V W k g (compH V W Y g k) (refl (compH V W Y g k)) (EYB.pa W g u))
+          =< PoAH V W k g (EYB.pa W g u) >
+        A.tact V W k (compH W Y X h g) (compH V Y X h (compH V W Y g k)) (comp-assoc V W Y X h g k)
+             (subV (A''.tob W g) (A.tob W (compH W Y X h g)) (PoA W g) (EYB.pa W g u))
+          =< apH (A.tact V W k (compH W Y X h g) (compH V Y X h (compH V W Y g k)) (comp-assoc V W Y X h g k))
+                 (symH (mapPairs-a W g u)) >
+        A.tact V W k (compH W Y X h g) (compH V Y X h (compH V W Y g k)) (comp-assoc V W Y X h g k)
+             (EXB.pa W (compH W Y X h g) (mapPairs W g u))
+          =< symH (PX.pact-a (mapPairs W g u)) >
+        EXB.pa V (compH V Y X h (compH V W Y g k)) (PX.pact (mapPairs W g u)) } ;
+
+    -- the B-components: both are mBE of the B-component of u at k o k'
+    resB (V' : Ob) (k' : Hom V' V) (q : IsT (CX.full V' (compH V' V X (compH V Y X h (compH V W Y g k)) k')))
+      : Id (W0.Ix (EXB.EB.ob V'))
+           (EXB.pb V (compH V Y X h (compH V W Y g k)) (mapPairs V (compH V W Y g k) (PY.pact u)) V' k' q)
+           (EXB.pb V (compH V Y X h (compH V W Y g k)) (PX.pact (mapPairs W g u)) V' k' q) =
+      calc (W0.Ix (EXB.EB.ob V')) {
+        EXB.pb V (compH V Y X h (compH V W Y g k)) (mapPairs V (compH V W Y g k) (PY.pact u)) V' k' q
+          =< mapPairs-b V (compH V W Y g k) (PY.pact u) V' k' q (M2.qBack V' k' q) >
+        mBE V' (EYB.pb V (compH V W Y g k) (PY.pact u) V' k' (M2.qBack V' k' q))
+          =< apH (mBE V') (PY.pact-b u V' k' (M2.qBack V' k' q)) >
+        mBE V' (EYB.pb W g u V' (compH V' V W k k') (PY.qTr V' k' (M2.qBack V' k' q)))
+          =< symH (mapPairs-b W g u V' (compH V' V W k k') (PX.qTr V' k' q) (PY.qTr V' k' (M2.qBack V' k' q))) >
+        EXB.pb W (compH W Y X h g) (mapPairs W g u) V' (compH V' V W k k') (PX.qTr V' k' q)
+          =< symH (PX.pact-b (mapPairs W g u) V' k' q) >
+        EXB.pb V (compH V Y X h (compH V W Y g k)) (PX.pact (mapPairs W g u)) V' k' q } ;
+
+    res : Id (EXB.Pairs V (compH V Y X h (compH V W Y g k))) (mapPairs V (compH V W Y g k) (PY.pact u)) (PX.pact (mapPairs W g u)) =
+      EXB.pairs-eq V (compH V Y X h (compH V W Y g k)) (mapPairs V (compH V W Y g k) (PY.pact u)) (PX.pact (mapPairs W g u))
+        resA resB ;
+  } ;
+
+  mapPairs-nat (W : Ob) (g : Hom W Y) (u : EYB.Pairs W g) (V : Ob) (k : Hom V W)
+    : Id (EXB.Pairs V (compH V Y X h (compH V W Y g k)))
+         (mapPairs V (compH V W Y g k) (EYB2.PAct[V, W, k, g, compH V W Y g k, refl (compH V W Y g k)].pact u))
+         (EXB2.PAct[V, W, k, compH W Y X h g, compH V Y X h (compH V W Y g k), comp-assoc V W Y X h g k].pact
+            (mapPairs W g u)) =
+    PN[W, g, u, V, k].res ;
+
+  opaque Phi-ext ; opaque mapPairs-nat ;
+
+  -- Phi is natural: the case of a pair
+  module PA (V W : Ob) (k : Hom V W) (g : Hom W Y) (np' : Id Bool (CY.full W g) false) (u : EYB.Pairs W g) {
+    npX : Id Bool (CX.full W (compH W Y X h g)) false =
+      trans Bool (CX.full W (compH W Y X h g)) (CY.full W g) false (sym Bool (CY.full W g) (CX.full W (compH W Y X h g)) (R.rf W g)) np' ;
+
+    -- (h o g) o k = h o (g o k), where the extent of d is that of d' at g o k
+    qq (q' : IsT (CY.full V (compH V W Y g k))) : IsT (CX.full V (compH V W X (compH W Y X h g) k)) =
+      subT (CY.full V (compH V W Y g k)) (CX.full V (compH V W X (compH W Y X h g) k))
+        (transH {Bool} (R.rf V (compH V W Y g k)) (apH (CX.full V) (symH (comp-assoc V W Y X h g k)))) q' ;
+
+    caseB (q' : IsT (CY.full V (compH V W Y g k))) : Id (W0.Ix (EXB3.EX.ob V)) (PhiE V (EYB3.EX.act V W k (EYB3.fromP W g np' u)))
+                                      (EXB3.EX.act V W k (PhiE W (EYB3.fromP W g np' u))) =
+      transH {W0.Ix (EXB3.EX.ob V)} (apH {W0.Ix (EYB3.EX.ob V)} {W0.Ix (EXB3.EX.ob V)} (PhiE V) (EYB3.actX-PB V W k g np' u q'))
+                  (transH {W0.Ix (EXB3.EX.ob V)} (Phi-B V (compH V W Y g k) q' (EYB.pb W g u V k q').2)
+                   (transH {W0.Ix (EXB3.EX.ob V)} (apH {W0.Ix (EXB.EB.ob V)} {W0.Ix (EXB3.EX.ob V)} (EXB3.fromB V) (symH {W0.Ix (EXB.EB.ob V)} (mapPairs-b W g u V k (qq q') q')))
+                    (transH {W0.Ix (EXB3.EX.ob V)} (symH {W0.Ix (EXB3.EX.ob V)} (EXB3.actX-PB V W k (compH W Y X h g) npX (mapPairs W g u) (qq q')))
+                            (apH {W0.Ix (EXB3.EX.ob W)} {W0.Ix (EXB3.EX.ob V)} (EXB3.EX.act V W k) (symH {W0.Ix (EXB3.EX.ob W)} (Phi-P W g np' u)))))) ;
+
+    -- (h o g) o k is not full when g o k is not: it is h o (g o k), where d is d' at g o k
+    npHk (np2 : Id Bool (CY.full V (compH V W Y g k)) false) : Id Bool (CX.full V (compH V Y X h (compH V W Y g k))) false =
+      transH {Bool} (symH {Bool} (R.rf V (compH V W Y g k))) np2 ;
+
+    npXk (np2 : Id Bool (CY.full V (compH V W Y g k)) false) : Id Bool (CX.full V (compH V W X (compH W Y X h g) k)) false =
+      transH {Bool} (apH (CX.full V) (comp-assoc V W Y X h g k)) (npHk np2) ;
+
+    -- when g o k is not full: Phi of the acted pair is the pair mapPairs (k.u) at
+    -- h o (g o k); by mapPairs-nat it is k.(mapPairs u) at h o (g o k), which is
+    -- k.(mapPairs u) at (h o g) o k, i.e. the action of k on Phi of the pair.
+    caseN (np2 : Id Bool (CY.full V (compH V W Y g k)) false)
+      : Id (W0.Ix (EXB3.EX.ob V)) (PhiE V (EYB3.EX.act V W k (EYB3.fromP W g np' u))) (EXB3.EX.act V W k (PhiE W (EYB3.fromP W g np' u))) =
+      -- (written with transH: the stated points of a calc are compared with the
+      -- forms the lemmas produce, through (yP _).act, which triples the cost)
+      transH (apH (PhiE V) (EYB3.actX-PP V W k g np' u np2))                  -- acting on a pair
+      (transH (Phi-P V (compH V W Y g k) np2 (PN[W, g, u, V, k].PY.pact u))    -- Phi of a pair
+      (transH (apH (EXB3.fromP V (compH V Y X h (compH V W Y g k)) (npHk np2))
+                 (mapPairs-nat W g u V k))                                     -- mapPairs natural
+      (transH (symH (fromP-pact-pt V W k (compH W Y X h g) (mapPairs W g u) (npXk np2)
+                    (compH V Y X h (compH V W Y g k)) (comp-assoc V W Y X h g k)
+                    (npHk np2)))                                               -- h o (g o k) = (h o g) o k
+      (transH (symH (EXB3.actX-PP V W k (compH W Y X h g) npX (mapPairs W g u) (npXk np2)))
+              (apH (EXB3.EX.act V W k) (symH (Phi-P W g np' u))))))) ;
+
+    caseP : Id (W0.Ix (EXB3.EX.ob V)) (PhiE V (EYB3.EX.act V W k (EYB3.fromP W g np' u)))
+                                      (EXB3.EX.act V W k (PhiE W (EYB3.fromP W g np' u))) =
+      EYB3.caseFull V (compH V W Y g k) (Id (W0.Ix (EXB3.EX.ob V)) (PhiE V (EYB3.EX.act V W k (EYB3.fromP W g np' u)))
+                                      (EXB3.EX.act V W k (PhiE W (EYB3.fromP W g np' u)))) caseB caseN ;
+  } ;
+
+  Phi-act (V W : Ob) (k : Hom V W) (w : W0.Ix (EYB3.EX.ob W))
+    : Id (W0.Ix (EXB3.EX.ob V)) (PhiE V (EYB3.EX.act V W k w)) (EXB3.EX.act V W k (PhiE W w)) =
+    EYB3.caseFull W w.1 (Id (W0.Ix (EXB3.EX.ob V)) (PhiE V (EYB3.EX.act V W k w)) (EXB3.EX.act V W k (PhiE W w)))
+      (\ p -> transH {W0.Ix (EXB3.EX.ob V)} (apH {_} {W0.Ix (EXB3.EX.ob V)} (\ z -> PhiE V (EYB3.EX.act V W k z)) (symH (EYB3.fromB-toB W w p)))
+               (transH {W0.Ix (EXB3.EX.ob V)} (apH {_} {W0.Ix (EXB3.EX.ob V)} (PhiE V) (EYB3.actX-B V W k (EYB3.toB W w p)))
+                (transH {W0.Ix (EXB3.EX.ob V)} (Phi-B V (EYB.EB.act V W k (EYB3.toB W w p)).1.1 (EYB.EB.act V W k (EYB3.toB W w p)).1.2
+                               (EYB.EB.act V W k (EYB3.toB W w p)).2)
+                 (transH {W0.Ix (EXB3.EX.ob V)} (apH {_} {W0.Ix (EXB3.EX.ob V)} (EXB3.fromB V) (H1w V W k (EYB3.toB W w p)))
+                  (transH {W0.Ix (EXB3.EX.ob V)} (symH (EXB3.actX-B V W k (mBE W (EYB3.toB W w p))))
+                   (transH {W0.Ix (EXB3.EX.ob V)} (apH {_} {W0.Ix (EXB3.EX.ob V)} (EXB3.EX.act V W k) (symH (Phi-B W w.1 p (EYB3.toB W w p).2)))
+                           (apH {_} {W0.Ix (EXB3.EX.ob V)} (\ z -> EXB3.EX.act V W k (PhiE W z)) (EYB3.fromB-toB W w p))))))))
+      (\ np' -> transH {W0.Ix (EXB3.EX.ob V)} (apH {_} {W0.Ix (EXB3.EX.ob V)} (\ z -> PhiE V (EYB3.EX.act V W k z)) (symH (EYB3.fromP-toP W w np')))
+                 (transH {W0.Ix (EXB3.EX.ob V)} (PA[V, W, k, w.1, np', EYB3.toP W w np'].caseP)
+                         (apH {_} {W0.Ix (EXB3.EX.ob V)} (\ z -> EXB3.EX.act V W k (PhiE W z)) (EYB3.fromP-toP W w np')))) ;
+
+  opaque Phi-act ;
+
+  PhiM : EMap[yP Y, yP X, yH Y X h, EYB2.ExtT, EXB2.ExtT] =
+    (mkEMap (yP Y) (yP X) (yH Y X h) EYB2.ExtT EXB2.ExtT PhiE Phi-pt Phi-act) ;
+} ;

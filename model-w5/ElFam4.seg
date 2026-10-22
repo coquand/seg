@@ -1,0 +1,82 @@
+-- ElFam4.seg: MODEL/Univ/ElFam.agda, end: ESI of the composition of ElT,
+-- and ElFib.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module W0 = V[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module ES0 = Esi[a, a] ;
+module FE = FibExt[a, a] ;
+module CN = Conn[a] ;
+open Yon[a] ;
+open UAct[a] ;
+open UnivCtx[a] ;
+open EGenComp[a] ;
+module EG3 = EGenComp3[a] ;
+module GEs = EGenEsi[a] ;
+open ElFam[a] ;
+
+
+module ElF4 (D : PCtx) (Fm : (W : Ob) -> W0.Ix (D.ob W) -> U0 W)
+  (nat : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D.ob W)) -> Id (U0 W') (uAct W' W g (Fm W x)) (Fm W' (D.act W' W g x))) {
+  open ElF[D, Fm, nat] ;
+
+  module CG (d : Bool) {
+    open GC[d] ;
+    open ElFam3[a].ElF3[D, Fm, nat].CF[d] ;
+
+    -- ESI
+    module ESF (X : Ob) (k : Nat) (b b' : BE.Box[eS, X]) (ins : ES0.EsiDef[D, ElT].InsE[eS, X, k, b, b']) {
+      module Tb = TB[eS, X, b] ;
+      module Tb' = TB[eS, X, b'] ;
+
+      insU : GEs.EU.InsE[eS, X, k, TBox eS X b, TBox eS X b'] = new GEs.EU.InsE[eS, X, k, TBox eS X b, TBox eS X b',
+        ins.ins-r,
+        ins.ins-k,
+        apH (Fm (BE.XI X)) ins.ins-rho,
+        trans (EU X) (BU.lidE eS X Tb'.F Tb'.uU) (iota X (BE.lidE eS X b'.brho b'.bu)) (BU.lidE eS X Tb.F Tb.uU)
+          (symH (Tb'.ik X (lid X eS) b'.bu))
+          (trans (EU X) (iota X (BE.lidE eS X b'.brho b'.bu)) (iota X (BE.lidE eS X b.brho b.bu)) (BU.lidE eS X Tb.F Tb.uU)
+             (apH (iota X) ins.ins-lid) (Tb.ik X (lid X eS) b.bu)),
+        ins.ins-e,
+        ins.ins-Q,
+        \ n h h' W psi i i' ->
+          trans (EU W) ((Tb'.sideU (ES0.skipN k n, h')).svE W psi i) (iota W ((b'.bs (ES0.skipN k n, h')).svE W psi i))
+                       ((Tb.sideU (n, h)).svE W psi i')
+            (symH (Tb'.ik W psi ((b'.bs (ES0.skipN k n, h')).sv W psi i)))
+            (trans (EU W) (iota W ((b'.bs (ES0.skipN k n, h')).svE W psi i)) (iota W ((b.bs (n, h)).svE W psi i'))
+                          ((Tb.sideU (n, h)).svE W psi i')
+               (apH (iota W) (ins.ins-v n h h' W psi i i')) (Tb.ik W psi ((b.bs (n, h)).sv W psi i')))] ;
+
+      -- ESI of the composite: that of EGen (esiG) on the translated boxes
+      res : Id (TE.EI X) (BE.topE eT X b'.brho (copF X b')) (BE.topE eT X b.brho (copF X b)) =
+        iotaInj X (BE.topE eT X b'.brho (copF X b')) (BE.topE eT X b.brho (copF X b))
+          (apH (D.act X (BE.XI X) (lid X eT)) ins.ins-rho)
+          (calc (EU X) {
+              iota X (BE.topE eT X b'.brho (copF X b'))
+            =< itop X b' >
+              BU.topE eT X Tb'.F (GC[d].copG X (TBox eS X b'))
+            =< GEs.GE[d].esiG X k (TBox eS X b) (TBox eS X b') insU >
+              BU.topE eT X Tb.F (GC[d].copG X (TBox eS X b))
+            =< symH (itop X b) >
+              iota X (BE.topE eT X b.brho (copF X b)) }) ;
+
+      opaque res ;
+    } ;
+
+    esiF : ES0.EsiDef[D, ElT].ESI eS eT compF = \ X k b b' ins -> ESF[X, k, b, b', ins].res ;
+  } ;
+
+  ElComp : BE.Comp = ElFam3[a].ElF3[D, Fm, nat].ElComp ;
+
+  ElEsi : ES0.EsiDef[D, ElT].ESIC ElComp = (CG[true].esiF, CG[false].esiF) ;
+
+  ElFib : FE.FibE D = (ElT, (ElComp, ElEsi)) ;
+} ;

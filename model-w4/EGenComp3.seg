@@ -1,0 +1,75 @@
+-- EGenComp3.seg: MODEL/Univ/EGenComp.agda, end: uniformity of the
+-- composition of EGen (cunifC), the CompOp, and compEGen.  The chain of
+-- cunifC has its points stated (P0 .. P8), so that no hidden middle point
+-- has to be found by unification.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module W0 = V[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module CN = Conn[a] ;
+open Yon[a] ;
+open UAct[a] ;
+open UnivCtx[a] ;
+open EGenComp[a] ;
+open EGenComp2[a] ;
+
+-- the category laws are locked here (they are propositions), restored at
+-- the end: proofs built from them are then compared by their arguments
+opaque comp-assoc ; opaque comp-idl ; opaque comp-idr ;
+
+module GV (d : Bool) {
+  open GC[d] ;
+
+  module CV (Y X : Ob) (h : Hom Y X) (b : BU.Box[eS, X]) {
+    open GU[d].CU[Y, X, h, b] ;
+
+    -- the points of the chain, stated once
+    tX : Bx.PH.T0.EI X = Bx.B0.topE eT X (idH XI) CX.cop0 ;
+
+    P0 : EU Y = TU.E.act Y X h (BU.topE eT X b.brho (copG X b)) ;
+    P1 : EU Y = TU.E.act Y X h (Bx.PH.phi X tX) ;
+    P2 : EU Y = Bx.PH.phi Y (Bx.PH.T0.E.act Y X h tX) ;
+    P3 : EU Y = Bx.PH.phi Y (Bx.B0.topE eT Y rb0.brho (CX.co.cop Y rb0)) ;
+    P4 : EU Y = Bx.PH.phi Y (Bx.B0.topE eT Y mb.brho (CX.co.cop Y mb)) ;
+    P5 : EU Y = Bx.PH.phi Y (SC.Ls Y (SC.BD.topE eT Y By.b0.brho (SC.copS Y By.b0))) ;
+    P6 : EU Y = By.PH.phi Y (SC.BD.topE eT Y By.b0.brho (SC.copS Y By.b0)) ;
+    P7 : EU Y = By.PH.phi Y (By.B0.topE eT Y (idH YI) (GCX[Y, b'].co.cop Y By.b0)) ;
+    P8 : EU Y = BU.topE eT Y b'.brho (copG Y b') ;
+
+    s01 : Id (EU Y) P0 P1 = apH (TU.E.act Y X h) (copG-E X b) ;
+    s12 : Id (EU Y) P1 P2 = Bx.PH.phiAct Y X h tX ;
+    s23 : Id (EU Y) P2 P3 = apH (Bx.PH.phi Y) (CX.co.cunif Y X h Bx.b0) ;
+    s34 : Id (EU Y) P3 P4 = apH (\ bb -> Bx.PH.phi Y (Bx.B0.topE eT Y bb.brho (CX.co.cop Y bb))) boxEq ;
+    s45 : Id (EU Y) P4 P5 = apH (Bx.PH.phi Y) (symH (SC.copS-E Y By.b0)) ;
+    -- the composite of F [cyl], read in F or in uAct cyl F: the same point
+    s56 : Id (EU Y) P5 P6 =
+      phiLs YI XI cyl b.brho Y (SC.BD.topE eT Y By.b0.brho (SC.copS Y By.b0)).1 (SC.copS Y By.b0) ;
+    s67 : Id (EU Y) P6 P7 =
+      symH (apH (\ cc -> By.PH.phi Y (By.B0.topE eT Y (idH YI) (cc.cop Y By.b0))) (selSub YI XI Bx.PH.A s b.brho.2.1 d)) ;
+    s78 : Id (EU Y) P7 P8 = symH (copG-E Y b') ;
+
+    cunifC : Id (TU.EI Y) P0 P8 =
+      transH {EU Y} {P0} {P1} {P8} s01 (transH {EU Y} {P1} {P2} {P8} s12 (transH {EU Y} {P2} {P3} {P8} s23
+       (transH {EU Y} {P3} {P4} {P8} s34 (transH {EU Y} {P4} {P5} {P8} s45 (transH {EU Y} {P5} {P6} {P8} s56
+        (transH {EU Y} {P6} {P7} {P8} s67 s78)))))) ;
+
+    opaque cunifC ;
+  } ;
+
+  cunifG (Y X : Ob) (h : Hom Y X) (b : BU.Box[eS, X])
+    : Id (TU.EI Y) (TU.E.act Y X h (BU.topE eT X b.brho (copG X b)))
+                   (BU.topE eT Y (BU.restrict eS Y X h b).brho (copG Y (BU.restrict eS Y X h b))) = CV[Y, X, h, b].cunifC ;
+
+  compG : BU.CompOp[eS, eT] = (BU.mkCompOp eS eT copG csideG cunifG) ;
+} ;
+
+compEGen : BU.Comp = (GV[true].compG, GV[false].compG) ;
+
+transparent comp-assoc ; transparent comp-idl ; transparent comp-idr ;

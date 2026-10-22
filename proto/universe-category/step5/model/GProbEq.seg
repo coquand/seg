@@ -1,0 +1,50 @@
+-- GProbEq.seg (inside IvBase): two problems for a composition, at the
+-- family path object, have the same composite as soon as they agree
+-- POINTWISE: the lines of their points have the same values, their points
+-- the same reading at e, they have the same sieves, and the lines of their
+-- sides the same values.  (tv-eq, partExtH and ts-ext, once.)
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+open Trees[a] ;
+open Arith[a] ;
+module W0 = V[lv] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+module FM = GFam[lv] ;
+
+module ProbEq (G : PCtx) (A : PTy[G]) (e e' : IPt) (Y : Ob) {
+  module CC = CompAtP[FM.famPath, G, A, e, e'] ;
+  module LA = LevKit[FM.famPath, FM.famConn, G, A, e] ;
+  module TA = GPR.TyL[G, A] ;
+
+  -- two points with the same line values and the same reading at e
+  pt-eq (x x' : CC.TV.EI Y)
+    (Hl : (W : Ob) (f : Hom W Y) (i : Hom W Iv) -> Id (W0.Ix (G.ob W)) (x.1.1 W f i) (x'.1.1 W f i))
+    (He : Id (TA.EI Y) (CC.EK.endE Y x) (CC.EK.endE Y x')) : Id (CC.TV.EI Y) x x' =
+    CC.EK.tv-eq Y x x' ((FM.FC[G]).fam-eq Y x.1 x'.1 Hl) He ;
+
+  -- the composite at two such problems
+  cop-eq (ca : CC.CompAt) (x x' : CC.TV.EI Y)
+    (Hl : (W : Ob) (f : Hom W Y) (i : Hom W Iv) -> Id (W0.Ix (G.ob W)) (x.1.1 W f i) (x'.1.1 W f i))
+    (He : Id (TA.EI Y) (CC.EK.endE Y x) (CC.EK.endE Y x'))
+    (p : CC.PT.Partial[Y, x]) (p' : CC.PT.Partial[Y, x']) (Hr : Id Nat p.pr p'.pr)
+    (HQ : CC.PT.EQT Y x x' p p'.pr p'.ps Hr)
+    (Hv : (k : Fin p.pr) (W : Ob) (f : Hom W Y) (i : Lands W Y (p.ps k).pQ f)
+          (i' : Lands W Y (p'.ps (subst Nat (\ n -> Fin n) p.pr p'.pr Hr k)).pQ f) (V : Ob) (g : Hom V W) (j : Hom V Iv)
+          -> Id (TA.EI V) (FM.famConn.levA G A W (CC.EK.lineL W ((p.ps k).pv W f i)) V g j)
+                          (FM.famConn.levA G A W (CC.EK.lineL W ((p'.ps (subst Nat (\ n -> Fin n) p.pr p'.pr Hr k)).pv W f i')) V g j))
+    : Id (CC.TV'.EI Y) (x.1, ca.cop Y x p) (x'.1, ca.cop Y x' p') =
+    CC.cop-cong ca Y x x' (pt-eq x x' Hl He) p p'
+      (CC.PT.partExtH Y x x' (pt-eq x x' Hl He) p p' Hr HQ
+        (\ k W f i i' ->
+          LA.ts-ext W ((p.ps k).pv W f i) ((p'.ps (subst Nat (\ n -> Fin n) p.pr p'.pr Hr k)).pv W f i')
+            (transH ((p.ps k).ppt W f i)
+              (transH (apH (CC.TV.E.act W Y f) (pt-eq x x' Hl He))
+                      (symH ((p'.ps (subst Nat (\ n -> Fin n) p.pr p'.pr Hr k)).ppt W f i'))))
+            (\ V g j -> Hv k W f i i' V g j))) ;
+} ;

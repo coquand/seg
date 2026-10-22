@@ -1,0 +1,94 @@
+-- FillSub.seg: MODEL/Univ/FillSub.agda.  The filler of a substituted
+-- composition is the substituted filler:
+--   fillSubOK : LBF[fillOp co, fillOp (subComp co)].FillSubOK
+-- The connection box of b' (over L') mapped to L is the connection box of
+-- the mapped box (BE, by box-ext), and the composite of subComp is the
+-- composite of the mapped box (copS-E).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module CN = Conn[a] ;
+open CN ;
+open Cofib[a] ;
+
+module FS (L' L : PCtx) (sg : PSub[L', L]) (S : PTy[L]) (d : Bool) (co : BXm.Boxes[L, S].CompOp[src d, tgt d]) {
+  eS : El Iv = src d ;
+  eT : El Iv = tgt d ;
+
+  module LS = LBSub[a].LBS[L', L, sg, S, eS] ;
+  module SE = LS.SE ;
+  module B = LS.B ;
+  module B' = LS.B' ;
+  module KG = LS.KG ;
+  module SC = FibSub[a, a].SubComp[L', L, S, sg, eS, eT, co] ;
+  module MF = FibM.MkFill[L, S, d, co] ;
+  module MF' = FibM.MkFill[L', LS.S', d, SC.subComp] ;
+  module KG' = FibM.Kit[L', LS.S'] ;
+
+  module BEm (X : Ob) (b : B'.Box[eS, X]) {
+    module F' = MF'.FBox[X, b] ;
+    module F = MF.FBox[X, LS.mapB X b] ;
+    module M = SC.MB[eS, prodP X Iv, F'.fbox] ;
+    module MB = LS.MapB[X, b] ;
+
+    eQs : (n : Nat) (h : IsT (ltb n (suc b.br))) (t : Tree) -> Id Bool ((M.S (n, h)).sQ t) ((F.S' (n, h)).sQ t) = split {
+      zero -> \ h t -> refl ((M.S (zero, h)).sQ t) ;
+      suc n -> \ h t -> refl ((M.S (suc n, h)).sQ t) } ;
+
+    EvG (n : Nat) (h : IsT (ltb n (suc b.br))) : U a = (W : Ob) (psi : Hom W (prodP (prodP X Iv) Iv))
+      (i : InQ W (prodP X Iv) (M.S (n, h)).sQ psi) (i' : InQ W (prodP X Iv) (F.S' (n, h)).sQ psi)
+      -> Id (LS.TL.EI W) ((M.S (n, h)).svE W psi i) ((F.S' (n, h)).svE W psi i') ;
+
+    evs : (n : Nat) (h : IsT (ltb n (suc b.br))) -> EvG n h = split {
+      zero -> \ h W psi i i' ->
+        transH (M.S-E (zero, h) W psi i)
+         (transH (apH (SE.Ls W) (F'.vAll-E (zero, h) W psi i))
+          (transH (SE.Ls-act W X (F'.kOf W psi) F'.uE)
+           (transH (apH (LS.EL.act W X (F'.kOf W psi)) (symH MB.u-E))
+                   (symH (F.vAll-E (zero, h) W psi i'))))) ;
+      suc n -> \ h W psi i i' ->
+        transH (M.S-E (suc n, h) W psi i)
+         (transH (apH (SE.Ls W) (F'.vAll-E (suc n, h) W psi i))
+          (transH (symH (MB.S-E (n, h) W (F'.cOf W psi) (F'.inQc (n, h) W psi i)))
+           (transH (apH (\ j -> (MB.Sd (n, h)).svE W (F'.cOf W psi) j)
+                       (isProp-InQ W X (b.bs (n, h)).sQ (F'.cOf W psi) (F'.inQc (n, h) W psi i) (F.inQc (n, h) W psi i')))
+                   (symH (F.vAll-E (suc n, h) W psi i'))))) } ;
+
+    res : Id (B.Box[eS, prodP X Iv]) M.box F.fbox =
+      B.box-ext eS (prodP X Iv) M.rho F.rho' M.u F.u' (suc b.br) M.S F.S' M.cs F.cs M.cb F.cb
+        (sg.nt-nat (prodP (prodP X Iv) Iv) (prodP X Iv) (conn d X) b.brho)
+        (transH (KG.fromE-eq (prodP X Iv) (L.act (prodP X Iv) (prodP (prodP X Iv) Iv) (lid (prodP X Iv) eS) M.rho) M.uE M.upt)
+         (transH (apH (SE.Ls (prodP X Iv)) (KG'.fromE-eq (prodP X Iv) (L'.act (prodP X Iv) (prodP (prodP X Iv) Iv) (lid (prodP X Iv) eS) F'.rho') F'.uE' F'.upt))
+          (transH (SE.Ls-act (prodP X Iv) X (pX X) F'.uE)
+           (transH (apH (LS.EL.act (prodP X Iv) X (pX X)) (symH MB.u-E))
+                   (symH (KG.fromE-eq (prodP X Iv) (L.act (prodP X Iv) (prodP (prodP X Iv) Iv) (lid (prodP X Iv) eS) F.rho') F.uE' F.upt))))))
+        (\ j t -> eQs j.1 j.2 t)
+        (\ j W psi i i' -> evs j.1 j.2 W psi i i') ;
+  } ;
+
+  BE (X : Ob) (b : B'.Box[eS, X]) : Id (B.Box[eS, prodP X Iv]) SC.MB[eS, prodP X Iv, MF'.FBox[X, b].fbox].box MF.FBox[X, LS.mapB X b].fbox =
+    BEm[X, b].res ;
+
+  opaque BE ;
+
+  fillSubOK : LS.LBF[MF.fillOp, MF'.fillOp].FillSubOK = \ X b ->
+    transH (apH (SE.Ls (prodP X Iv)) (MF'.fill-E X b))
+     (transH (SC.copS-E (prodP X Iv) MF'.FBox[X, b].fbox)
+      (transH (apH (\ bb -> B.topE eT (prodP X Iv) bb.brho (co.cop (prodP X Iv) bb)) (BE X b))
+              (symH (MF.fill-E X (LS.mapB X b))))) ;
+
+  opaque fillSubOK ;
+} ;

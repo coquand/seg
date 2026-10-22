@@ -1,0 +1,162 @@
+-- GExtNat8.seg (inside IvBase, any base): Theorem 7 along a substitution,
+-- the equivalence half as data: the substituted (Ext triple , extEquiv)
+-- (GEqLaws.eqDSub) is Ext(alpha[s])'s (triple , extEquiv), given B4's
+-- hypotheses (Heal , HA1) and the generators (Hg).
+--   tri      the triples (triExtPw: codes extObEq, actions ActS.H1, the
+--            map through extPhi)
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+
+module N8 (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D'])
+  (fullS : (X : Ob) (d : W0.Ix (D'.ob X)) -> Id Bool (GP.CofL[D', psi'].full X d) (GP.CofL[G, psi].full X (s.nt X d))) {
+  module N5 = GExtNat5.N5[G, A, psi, B, al, D', s, psi', fullS] ;
+  module EM = N5.EM ;
+  module ES = N5.ES ;
+  module PS = N5.PS ;
+  module AS = EM.AS ;
+  module FMX = N5.FMX ;
+  module TA = PR.TyL[G, A] ;
+  module TA' = PR.TyL[D', ES.A'] ;
+  module GXD = GEqExt[a].EqDat[D'] ;
+  module SMX = GEquivSub[a].SubMap[D', G, s, PS.E2.ExtT, A, EM.E4.extMap] ;
+
+  t : GXD.Tri = (PS.E2'.ExtT, (ES.A', EM.E4'.extMap)) ;
+  t2 : GXD.Tri = (subTy D' G PS.E2.ExtT s, (subTy D' G A s, SMX.subMap)) ;
+
+  -- the map, through the codes
+  Hm (X : Ob) (w : PR.TyL[D', subTy D' G PS.E2.ExtT s].EI X)
+    : Id (PR.TyL[D', subTy D' G A s].EI X) (SMX.subMap.mE X w)
+         (w.1, subst W0.V (\ z -> W0.Ix z) (ES.A'.tob X w.1) ((subTy D' G A s).tob X w.1) (refl (ES.A'.tob X w.1))
+                 (TA'.fromE X w.1 (EM.E4'.extMap.mE X (w.1, subst W0.V (\ z -> W0.Ix z) ((subTy D' G PS.E2.ExtT s).tob X w.1) (PS.E2'.ExtT.tob X w.1)
+                                                          (symH (PS.OS.extObEq X w.1)) w.2))
+                    (EM.E4'.extMap.mpt X (w.1, subst W0.V (\ z -> W0.Ix z) ((subTy D' G PS.E2.ExtT s).tob X w.1) (PS.E2'.ExtT.tob X w.1)
+                                                 (symH (PS.OS.extObEq X w.1)) w.2)))) =
+    apH {W0.Ix (A.tob X (s.nt X w.1))} {PR.TyL[D', subTy D' G A s].EI X} (\ v -> (w.1, v))
+      (TA.pr-inj X (s.nt X w.1) (SMX.subMap.mE X w).2
+         (TA'.fromE X w.1 (EM.E4'.extMap.mE X (w.1, EM.psX X w.1 w.2)) (EM.E4'.extMap.mpt X (w.1, EM.psX X w.1 w.2)))
+         (calc (TA.EI X) {
+             (s.nt X w.1, (SMX.subMap.mE X w).2)
+           =< SMX.mE-V X w >
+             EM.E4.extE X (s.nt X w.1, w.2)
+           =< apH (\ b -> EM.E4.extE X (s.nt X w.1, b)) (symH (EM.phps X w.1 w.2)) >
+             EM.E4.extE X (PS.PhiE X (w.1, EM.psX X w.1 w.2))
+           =< EM.extPhi X (w.1, EM.psX X w.1 w.2) >
+             EM.PhA X (EM.E4'.extE X (w.1, EM.psX X w.1 w.2))
+           =< apH (EM.PhA X) (symH (TA'.fromE-eq X w.1 (EM.E4'.extMap.mE X (w.1, EM.psX X w.1 w.2)) (EM.E4'.extMap.mpt X (w.1, EM.psX X w.1 w.2)))) >
+             (s.nt X w.1, TA'.fromE X w.1 (EM.E4'.extMap.mE X (w.1, EM.psX X w.1 w.2)) (EM.E4'.extMap.mpt X (w.1, EM.psX X w.1 w.2))) })) ;
+
+  tri : Id GXD.Tri t t2 =
+    GEqLaws[a].TriL[D'].triExtPw PS.E2'.ExtT ES.A' EM.E4'.extMap (subTy D' G PS.E2.ExtT s) (subTy D' G A s) SMX.subMap
+      PS.OS.extObEq AS.H1
+      (\ I x -> refl (ES.A'.tob I x))
+      (\ J I f x y e a0 -> tact-irr G A J I f (s.nt I x) (s.nt J y) _ _ a0)
+      Hm ;
+
+  opaque Hm ; opaque tri ;
+
+  ----------------------------------------------------------------------
+  -- the structures
+
+  module Eq (kA : LineFibP[GFam[a].famPath, G, A].FibAt e1)
+    (kA' : LineFibP[GFam[a].famPath, D', ES.A'].FibAt e1)
+    (eal : GEquiv[a].EquivOp ES.CL.resCtx B ES.ED.A' al)
+    (eal' : GEquiv[a].EquivOp ES.CL'.resCtx ES.B' ES.ED'.A' ES.al')
+    (kAe : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, e1].TV.E, EndKit[GFam[a].famPath, G, A, e1].SFm.SF].KESI kA)
+    (kAe' : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, D', ES.A', e1].TV.E, EndKit[GFam[a].famPath, D', ES.A', e1].SFm.SF].KESI kA')
+    (keal : GCofEsi[a].PartialsEsi[ES.ED.EA', GEquiv[a].HFib[ES.CL.resCtx, B, ES.ED.A', al].FibT].KESI eal)
+    (keal' : GCofEsi[a].PartialsEsi[ES.ED'.EA', GEquiv[a].HFib[ES.CL'.resCtx, ES.B', ES.ED'.A', ES.al'].FibT].KESI eal')
+    (Heal : N5.FMA.HTy eal' eal) (HA1 : N5.N4.HA1Ty kA kA') (Hg : N5.N4.HgTy) {
+    module NE = N5.Eq[kA, kA', eal, eal'] ;
+    module EE3 = NE.E3 ;
+    module EE3' = NE.E3' ;
+    module EE4 = GExtEquiv4.ExtEq4[G, A, psi, B, al, kA, eal, kAe, keal] ;
+    module EE4' = GExtEquiv4.ExtEq4[D', ES.A', ES.psi', ES.B', ES.al', kA', eal', kAe', keal'] ;
+    module ESx = GEquivSub2[a].EqSub[D', G, s, PS.E2.ExtT, A, EM.E4.extMap, EE3.extEquiv] ;
+    module FI = ESx.FI ;
+    module HGt = GEquiv[a].HFib[D', t.1, t.2.1, t.2.2] ;
+    module MAi = GTransfer[a, a, a].TrM[D', ES.A', G, A, s.nt, s.nt-nat,
+        \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, (liftP D' G A s).nt-nat, e1] ;
+    module MXi = GTransfer[a, a, a].TrM[D', PS.E2'.ExtT, G, PS.E2.ExtT, s.nt, \ V W g d -> s.nt-nat V W g d,
+        EM.phX, EM.psX, EM.phps, EM.psph, AS.PhiNat, e1] ;
+
+    -- along tri, the A part does not move, the B part moves by Phi^-1
+    PsiEq (X : Ob) (w : TA'.EI X) : Id (TA'.EI X) (GXD.Psi t t2 tri X w) w =
+      transH (GXD.Psi-tob t t2 tri X w) (GXD.substLoop X ES.A'.tob (apH (\ u -> u.2.1.tob) (symH tri)) w) ;
+
+    PsiBEq (X : Ob) (w : PR.TyL[D', subTy D' G PS.E2.ExtT s].EI X) : Id (PS.TX'.EI X) (GXD.PsiB t t2 tri X w) (w.1, EM.psX X w.1 w.2) =
+      transH (GXD.PsiB-tob t t2 tri X w)
+        (transH (GEqLaws[a].TriL[D'].substEIo X (subTy D' G PS.E2.ExtT s).tob PS.E2'.ExtT.tob (apH (\ u -> u.1.tob) (symH tri)) w)
+                (apH {W0.Ix (PS.E2'.ExtT.tob X w.1)} {PS.TX'.EI X} (\ v -> (w.1, v))
+                   (GEqLaws[a].TriL[D'].substPw X w.1 (subTy D' G PS.E2.ExtT s).tob PS.E2'.ExtT.tob (apH (\ u -> u.1.tob) (symH tri))
+                      (symH (PS.OS.extObEq X w.1)) w.2))) ;
+
+    -- reading in G: Ext(alpha[s])'s fibres by FMX, the substituted by FibIso
+    key (W : Ob) (v : FI.HD.TF.EI W) : Id (FMX.HG.TF.EI W) (FMX.mvF W (GXD.PhiF t t2 tri W v)) (FI.sG W v) =
+      FMX.HG.fibE-eq W (FMX.mvF W (GXD.PhiF t t2 tri W v)) (FI.sG W v)
+        (transH (FMX.mvF-pt W (GXD.PhiF t t2 tri W v)) (apH (FMX.PhA W) (transH (GXD.PhiF-pt t t2 tri W v) (PsiEq W v.1))))
+        (transH (FMX.mvF-B W (GXD.PhiF t t2 tri W v))
+          (transH (apH (FMX.PhB W) (transH (GXD.PhiF-B t t2 tri W v) (PsiBEq W (FI.HD.fibB W v))))
+                  (apH {W0.Ix (PS.E2.ExtT.tob W (s.nt W v.1.1))} {FMX.HG.TB.EI W} (\ b -> (s.nt W v.1.1, b)) (EM.phps W v.1.1 v.2.1))))
+        (\ V f i -> transH (FMX.mvF-L W (GXD.PhiF t t2 tri W v) V f i)
+           (apH (FMX.PhA V) (transH (GXD.PhiF-L t t2 tri W v V f i) (PsiEq V (FI.HD.fibL W v V f i))))) ;
+
+    -- FMX is injective on the fibres
+    mvF-inj (W : Ob) (v v' : HGt.TF.EI W) (Pp : Id (TA'.EI W) v.1 v'.1) (E : Id (FMX.HG.TF.EI W) (FMX.mvF W v) (FMX.mvF W v')) : Id (HGt.TF.EI W) v v' =
+      HGt.fibE-eq W v v' Pp
+        (MXi.tbEq W (HGt.fibB W v) (HGt.fibB W v') (apH (\ z -> z.1) Pp)
+           (transH (symH (FMX.mvF-B W v)) (transH (apH (FMX.HG.fibB W) E) (FMX.mvF-B W v'))))
+        (\ V f i -> MAi.tbEq V (HGt.fibL W v V f i) (HGt.fibL W v' V f i)
+           (transH (HGt.fibL-pt W v V f i) (transH (apH (\ z -> D'.act V W f z.1) Pp) (symH (HGt.fibL-pt W v' V f i))))
+           (transH (symH (FMX.mvF-L W v V f i)) (transH (apH (\ z -> FMX.HG.fibL W z V f i) E) (FMX.mvF-L W v' V f i)))) ;
+
+    opaque PsiEq ; opaque PsiBEq ; opaque key ; opaque mvF-inj ;
+
+    module HY (X : Ob) (w : TA'.EI X) (p : GCofib[a].Partials[FI.HD.EA, FI.HD.FibT].Partial[X, w]) {
+      pM : GCofib[a].Partials[HGt.EA, HGt.FibT].Partial[X, GXD.Psi t t2 tri X w] = GXD.mvP t t2 tri X w p ;
+      L0 : HGt.TF.EI X = GXD.PhiF t t2 tri X (w, ESx.eqSub.kop X w p) ;
+      R0 : HGt.TF.EI X = (GXD.Psi t t2 tri X w, EE3'.extEquiv.kop X (GXD.Psi t t2 tri X w) pM) ;
+
+      lhs : Id (FMX.HG.TF.EI X) (FMX.mvF X L0) (FI.ls.nt X w, EE3.extEquiv.kop X (FI.ls.nt X w) (ESx.qP X w p)) =
+        transH (key X (w, ESx.eqSub.kop X w p))
+          (transH (apH (FI.sG X) (ESx.CR.kop-E X w p)) (FI.sG-r X (w, ESx.CS.kop X w (ESx.CR.MS.mapP X w p)))) ;
+
+      Pt : Id (FMX.HG.TA.EI X) (FMX.PhA X (GXD.Psi t t2 tri X w)) (FI.ls.nt X w) = apH (FMX.PhA X) (PsiEq X w) ;
+
+      R : Id (FMX.PG.Partial[X, FI.ls.nt X w])
+             (subst (FMX.HG.TA.EI X) (\ z -> FMX.PG.Partial[X, z]) (FMX.PhA X (GXD.Psi t t2 tri X w)) (FI.ls.nt X w) Pt
+                (FMX.mapP X (GXD.Psi t t2 tri X w) pM))
+             (ESx.qP X w p) =
+        FMX.PG.partExtH X (FMX.PhA X (GXD.Psi t t2 tri X w)) (FI.ls.nt X w) Pt (FMX.mapP X (GXD.Psi t t2 tri X w) pM) (ESx.qP X w p)
+          (refl p.pr) (\ l -> refl (p.ps l).pQ)
+          (\ l V g i i' -> transH (key V ((p.ps l).pv V g i))
+             (apH (FI.sG V) (GCofib[a].Partials[FI.HD.EA, FI.HD.FibT].pv-irr X w (p.ps l) V g i i'))) ;
+
+      rhs : Id (FMX.HG.TF.EI X) (FMX.mvF X R0) (FI.ls.nt X w, EE3.extEquiv.kop X (FI.ls.nt X w) (ESx.qP X w p)) =
+        transH (NE.extEqS Heal HA1 Hg kAe X (GXD.Psi t t2 tri X w) pM)
+          (FMX.PG.kop-cong EE3.extEquiv X (FMX.PhA X (GXD.Psi t t2 tri X w)) (FI.ls.nt X w) Pt
+             (FMX.mapP X (GXD.Psi t t2 tri X w) pM) (ESx.qP X w p) R) ;
+
+      hyp : Id (HGt.TF.EI X) L0 R0 = mvF-inj X L0 R0 (GXD.PhiF-pt t t2 tri X (w, ESx.eqSub.kop X w p)) (transH lhs (symH rhs)) ;
+    } ;
+
+    -- the result: (Ext triple , extEquiv) of alpha[s] is the substituted one
+    eqNat : Id ((u : GXD.Tri) * GXD.EqOn u) (t, (EE3'.extEquiv, EE4'.extEquiv-kesi))
+                (GEqLaws[a].eqDSub D' G s (PS.E2.ExtT, (A, EM.E4.extMap)) (EE3.extEquiv, EE4.extEquiv-kesi)) =
+      GXD.ext t t2 tri (EE3'.extEquiv, EE4'.extEquiv-kesi)
+        (GEqLaws[a].eqDSub D' G s (PS.E2.ExtT, (A, EM.E4.extMap)) (EE3.extEquiv, EE4.extEquiv-kesi)).2
+        (\ X w p -> HY[X, w, p].hyp) ;
+
+    opaque eqNat ;
+  } ;
+} ;

@@ -1,0 +1,100 @@
+-- GExtSub3.seg (inside IvBase, any base): the local data of Ext along a
+-- substitution (step (A)): ldEq, the local data of alpha[s] at d ARE the
+-- local data of alpha at s d (an Id of records, by LD-ext), hence the
+-- codes of the pairs are equal (pairsCodeEq, one ap of LocCode).
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+open VCode[a] ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+module S2 = GExtSub2 ;
+
+module LDS (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D'])
+  (fullS : (X : Ob) (d : W0.Ix (D'.ob X)) -> Id Bool (GP.CofL[D', psi'].full X d) (GP.CofL[G, psi].full X (s.nt X d))) (X : Ob) (d : W0.Ix (D'.ob X)) {
+  module ES = S2.ExtSub[G, A, psi, B, al, D', s, psi', fullS] ;
+  module CL = ES.CL ;
+  module EB = ES.EB ;
+  module EB' = ES.EB' ;
+  module TA = PR.TyL[G, A] ;
+  module TB = PR.TyL[CL.resCtx, B] ;
+
+  l1 : GExt.LD[X] = EB'.ld X d ;
+  l2 : GExt.LD[X] = EB.ld X (s.nt X d) ;
+
+  Pfl (W : Ob) (f : Hom W X) : Id Bool (l1.fl W f) (l2.fl W f) =
+    transH (ES.fullS W (D'.act W X f d)) (apH (CL.full W) (s.nt-nat W X f d)) ;
+
+  -- the lifted point of the substituted data is the point of the data
+  Pz (W : Ob) (f : Hom W X) (q1 : IsT (l1.fl W f)) (q2 : IsT (l2.fl W f))
+    : Id (W0.Ix (CL.resCtx.ob W)) (ES.sRnt W (EB'.ptf X d W f q1)) (EB.ptf X (s.nt X d) W f q2) =
+    CL.res-eq W (ES.sRnt W (EB'.ptf X d W f q1)) (EB.ptf X (s.nt X d) W f q2) (s.nt-nat W X f d) ;
+
+  PbV (W : Ob) (f : Hom W X) (q1 : IsT (l1.fl W f)) (q2 : IsT (l2.fl W f)) : Id W0.V (l1.bV W f q1) (l2.bV W f q2) =
+    apH (B.tob W) (Pz W f q1 q2) ;
+
+  PaW (W : Ob) (f : Hom W X) : Id W0.V (l1.aW W f) (l2.aW W f) = apH (A.tob W) (s.nt-nat W X f d) ;
+
+  PaR (W : Ob) (f : Hom W X) (u : W0.Ix l1.aV)
+    : Id (W0.Ix (l2.aW W f)) (substIx (l1.aW W f) (l2.aW W f) (PaW W f) (l1.aR W f u)) (l2.aR W f (substIx l1.aV l2.aV (refl l1.aV) u)) =
+    transH (S2.mvPt G A W (s.nt W (D'.act W X f d)) (G.act W X f (s.nt X d)) (s.nt-nat W X f d) (PaW W f) (l1.aR W f u))
+           (S2.tactMove G A W X f (s.nt X d) (s.nt W (D'.act W X f d)) (G.act W X f (s.nt X d))
+              (ntEq D' G s W X f d (D'.act W X f d) (refl (D'.act W X f d))) (refl (G.act W X f (s.nt X d))) (s.nt-nat W X f d) u) ;
+
+  -- alpha moved along a path of points of the extent
+  alFmv (W : Ob) (z z' : W0.Ix (CL.resCtx.ob W)) (P : Id (W0.Ix (CL.resCtx.ob W)) z z') (b : W0.Ix (B.tob W z))
+    : Id (W0.Ix (A.tob W z'.1)) (TA.coeT W z.1 z'.1 (apH (\ w -> w.1) P) (EB.alF W z b)) (EB.alF W z' (TB.coeT W z z' P b)) =
+    idJ (W0.Ix (CL.resCtx.ob W)) z
+      (\ z2 P2 -> Id (W0.Ix (A.tob W z2.1)) (TA.coeT W z.1 z2.1 (apH (\ w -> w.1) P2) (EB.alF W z b)) (EB.alF W z2 (TB.coeT W z z2 P2 b)))
+      (refl (EB.alF W z b)) z' P ;
+
+  PalW (W : Ob) (f : Hom W X) (q1 : IsT (l1.fl W f)) (q2 : IsT (l2.fl W f)) (b : W0.Ix (l1.bV W f q1))
+    : Id (W0.Ix (l2.aW W f)) (substIx (l1.aW W f) (l2.aW W f) (PaW W f) (l1.alW W f q1 b))
+         (l2.alW W f q2 (substIx (l1.bV W f q1) (l2.bV W f q2) (PbV W f q1 q2) b)) =
+    calc (W0.Ix (l2.aW W f)) {
+        substIx (l1.aW W f) (l2.aW W f) (PaW W f) (EB'.alF W (EB'.ptf X d W f q1) b)
+      =< apH (substIx (l1.aW W f) (l2.aW W f) (PaW W f)) (ES.alFeq W (EB'.ptf X d W f q1) b) >
+        substIx (l1.aW W f) (l2.aW W f) (PaW W f) (EB.alF W (ES.sRnt W (EB'.ptf X d W f q1)) b)
+      =< S2.mvPt G A W (s.nt W (D'.act W X f d)) (G.act W X f (s.nt X d)) (apH (\ w -> w.1) (Pz W f q1 q2)) (PaW W f)
+           (EB.alF W (ES.sRnt W (EB'.ptf X d W f q1)) b) >
+        TA.coeT W (s.nt W (D'.act W X f d)) (G.act W X f (s.nt X d)) (apH (\ w -> w.1) (Pz W f q1 q2))
+          (EB.alF W (ES.sRnt W (EB'.ptf X d W f q1)) b)
+      =< alFmv W (ES.sRnt W (EB'.ptf X d W f q1)) (EB.ptf X (s.nt X d) W f q2) (Pz W f q1 q2) b >
+        EB.alF W (EB.ptf X (s.nt X d) W f q2) (TB.coeT W (ES.sRnt W (EB'.ptf X d W f q1)) (EB.ptf X (s.nt X d) W f q2) (Pz W f q1 q2) b)
+      =< apH (EB.alF W (EB.ptf X (s.nt X d) W f q2))
+           (symH (S2.mvPt CL.resCtx B W (ES.sRnt W (EB'.ptf X d W f q1)) (EB.ptf X (s.nt X d) W f q2) (Pz W f q1 q2) (PbV W f q1 q2) b)) >
+        EB.alF W (EB.ptf X (s.nt X d) W f q2) (substIx (l1.bV W f q1) (l2.bV W f q2) (PbV W f q1 q2) b) } ;
+
+  PbR (W' W : Ob) (chi : Hom W' W) (f : Hom W X) (q1 : IsT (l1.fl W f)) (q1' : IsT (l2.fl W f)) (f2 : Hom W' X)
+    (E : Id (Hom W' X) (compH W' W X f chi) f2) (q2 : IsT (l1.fl W' f2)) (q2' : IsT (l2.fl W' f2)) (b : W0.Ix (l1.bV W f q1))
+    : Id (W0.Ix (l2.bV W' f2 q2')) (substIx (l1.bV W' f2 q2) (l2.bV W' f2 q2') (PbV W' f2 q2 q2') (l1.bR W' W chi f q1 f2 E q2 b))
+         (l2.bR W' W chi f q1' f2 E q2' (substIx (l1.bV W f q1) (l2.bV W f q1') (PbV W f q1 q1') b)) =
+    transH (transH (S2.mvPt CL.resCtx B W' (ES.sRnt W' (EB'.ptf X d W' f2 q2)) (EB.ptf X (s.nt X d) W' f2 q2') (Pz W' f2 q2 q2')
+                      (PbV W' f2 q2 q2') (l1.bR W' W chi f q1 f2 E q2 b))
+                   (S2.tactMove CL.resCtx B W' W chi (ES.sRnt W (EB'.ptf X d W f q1)) (ES.sRnt W' (EB'.ptf X d W' f2 q2))
+                      (EB.ptf X (s.nt X d) W' f2 q2') _ eT (Pz W' f2 q2 q2') b))
+      (symH (transH (apH (B.tact W' W chi (EB.ptf X (s.nt X d) W f q1') (EB.ptf X (s.nt X d) W' f2 q2') (EB.ptfEq X (s.nt X d) W' W chi f q1' f2 E q2'))
+                         (S2.mvPt CL.resCtx B W (ES.sRnt W (EB'.ptf X d W f q1)) (EB.ptf X (s.nt X d) W f q1') (Pz W f q1 q1') (PbV W f q1 q1') b))
+                    (S2.tactSrc CL.resCtx B W' W chi (ES.sRnt W (EB'.ptf X d W f q1)) (EB.ptf X (s.nt X d) W f q1') (EB.ptf X (s.nt X d) W' f2 q2')
+                       (Pz W f q1 q1') (EB.ptfEq X (s.nt X d) W' W chi f q1' f2 E q2') eT b)))
+   where {
+     eT : Id (W0.Ix (CL.resCtx.ob W')) (CL.resCtx.act W' W chi (ES.sRnt W (EB'.ptf X d W f q1))) (EB.ptf X (s.nt X d) W' f2 q2') =
+       transH (symH (ES.sR.nt-nat W' W chi (EB'.ptf X d W f q1)))
+         (transH (apH (ES.sRnt W') (EB'.ptfEq X d W' W chi f q1 f2 E q2)) (Pz W' f2 q2 q2')) ; } ;
+
+  ldEq : Id (GExt.LD[X]) l1 l2 =
+    GExtSub1.LDX[X].LD-ext l1 l2 (refl l1.aV) Pfl PbV PaW PaR PalW PbR ;
+
+  pairsCodeEq : Id W0.V (EB'.pairsCode X d) (EB.pairsCode X (s.nt X d)) =
+    apH (\ l -> GExt.LocCode[X, l].pairsCode) ldEq ;
+
+  opaque PaR ; opaque PalW ; opaque PbR ; opaque ldEq ;
+} ;

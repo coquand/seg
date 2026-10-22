@@ -1,0 +1,69 @@
+-- GTE12.seg (inside IvBase.Cn): transport along a line, part 12: the B
+-- part is uniform.  Along h : Y -> X, the B-problem (GTE5) of the
+-- restricted data (w h , p h) is the restricted B-problem (pBEq: the same
+-- fibre elements on the same sides), so its filler is the restricted
+-- filler (FbN: uniformity of the filler kb) and bnew is natural (bnN).
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module BU (G : PCtx) (A : PTy[G]) (d : Bool) (ca : CompAtP[GFam[lv].famPath, G, A, src d, tgt d].CompAt)
+  (cb : CompAtP[GFam[lv].famPath, G, A, tgt d, src d].CompAt)
+  (c01 : CompAtP[GFam[lv].famPath, G, A, e0, e1].CompAt)
+  (D : PCtx) (ln : PSub[D, GFam[lv].famPath.pth G]) {
+  module FM = GFam[lv] ;
+  module B = GTE5[lv].BB[G, A, d, ca, cb, c01, D, ln] ;
+  module T1 = B.T1 ;
+  module HF = B.HF ;
+  module TA = B.TA ;
+  module EKt = B.EKt ;
+
+  module Un (Y X : Ob) (h : Hom Y X) (w : HF.TA.EI X) (p : B.FP.Partial[X, w]) {
+    module BX = B.Box[X, w, p] ;
+    module BY = B.Box[Y, HF.TA.E.act Y X h w, B.FP.restrictP Y X h w p] ;
+
+    ztEq : Id (EKt.TV.EI Y) (EKt.TV.E.act Y X h BX.zt) BY.zt = symH (T1.LA.nt-nat Y X h w) ;
+
+    -- the restricted sides are the new sides
+    sEq (l : Fin p.pr) (W : Ob) (g : Hom W Y) (i : Lands W Y (pre Y X h (p.ps l).pQ) g) (i' : Lands W Y (pre Y X h (p.ps l).pQ) g)
+      : Id (EKt.TS.EI W) (BX.SD[l].pv W (compH W Y X h g) (lands-pre W Y X h (p.ps l).pQ g i)) (BY.SD[l].pv W g i') =
+      B.LT.ts-ext W (BX.SD[l].pv W (compH W Y X h g) (lands-pre W Y X h (p.ps l).pQ g i)) (BY.SD[l].pv W g i')
+        (transH (BX.SD[l].pv-pt W (compH W Y X h g) (lands-pre W Y X h (p.ps l).pQ g i))
+          (transH (symH (EKt.TV.PE.actC W Y X h g BX.zt))
+            (transH (apH (EKt.TV.E.act W Y g) ztEq) (symH (BY.SD[l].pv-pt W g i')))))
+        (\ V g' j ->
+           transH (BX.SD[l].pv-lev W (compH W Y X h g) (lands-pre W Y X h (p.ps l).pQ g i) V g' j)
+             (transH (apH (\ z -> B.O.W[W, z].omE.2.1.1 V g' j)
+                          (B.FP.pv-irr X w (p.ps l) W (compH W Y X h g) (lands-pre W Y X h (p.ps l).pQ g i)
+                             (lands-pre W Y X h (p.ps l).pQ g i')))
+                     (symH (BY.SD[l].pv-lev W g i' V g' j)))) ;
+
+    pBEq : Id (EKt.PT.Partial[Y, BY.zt])
+              (subst (EKt.TV.EI Y) (\ z -> EKt.PT.Partial[Y, z]) (EKt.TV.E.act Y X h BX.zt) BY.zt ztEq (EKt.PT.restrictP Y X h BX.zt BX.pB))
+              BY.pB =
+      EKt.PT.partExtH Y (EKt.TV.E.act Y X h BX.zt) BY.zt ztEq (EKt.PT.restrictP Y X h BX.zt BX.pB) BY.pB (refl p.pr)
+        (\ l -> refl (pre Y X h (p.ps l).pQ)) (\ l W g i i' -> sEq l W g i i') ;
+
+    FbN : Id (EKt.TS.EI Y) (EKt.TS.E.act Y X h BX.FbS) BY.FbS =
+      transH (B.kb.kunif Y X h BX.zt BX.pB)
+        (EKt.PT.kop-cong B.kb Y (EKt.TV.E.act Y X h BX.zt) BY.zt ztEq (EKt.PT.restrictP Y X h BX.zt BX.pB) BY.pB pBEq) ;
+
+    bnN : Id (HF.TB.EI Y) (HF.TB.E.act Y X h (w.1, BX.bnew)) ((HF.TA.E.act Y X h w).1, BY.bnew) =
+      B.lbInj Y (HF.TB.E.act Y X h (w.1, BX.bnew)) ((HF.TA.E.act Y X h w).1, BY.bnew) (refl (D.act Y X h w.1))
+        (transH (T1.LB.nt-nat Y X h (w.1, BX.bnew))
+          (transH (symH ((FM.famPath.pevA G A (src d)).mnat Y X h (EKt.lineL X BX.FbS)))
+            (apH (\ z -> (FM.famPath.pevA G A (src d)).mE Y z)
+                 (transH (symH (EKt.lineL-act Y X h BX.FbS)) (apH (EKt.lineL Y) FbN))))) ;
+
+    opaque sEq ; opaque pBEq ; opaque FbN ; opaque bnN ;
+  } ;
+} ;

@@ -1,0 +1,163 @@
+-- GTE8.seg (inside IvBase.Cn): transport along a line, part 8: the square
+-- of a side, transposed.  For a side l of p at (W , f , h) with fibre
+-- element v, the square omSq v (GTE3) is a line in j of paths in i over
+-- ln x; transposed, at (W' , g , i) it is the path in j
+--     (W'' , g'' , j)  |->  (omSq v at (g g'' , j)) at (id , i g'')
+-- in A over the point ln x (f g , i) (TrP.tv).  Its ends (j = e0, e1) are
+-- the two lines U0 and Fb of the path problem (GTE7) at (f g , i).
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module TSq (G : PCtx) (A : PTy[G]) (d : Bool) (ca : CompAtP[GFam[lv].famPath, G, A, src d, tgt d].CompAt)
+  (cb : CompAtP[GFam[lv].famPath, G, A, tgt d, src d].CompAt)
+  (c01 : CompAtP[GFam[lv].famPath, G, A, e0, e1].CompAt)
+  (D : PCtx) (ln : PSub[D, GFam[lv].famPath.pth G]) {
+  module FM = GFam[lv] ;
+  module PQ = GTE7[lv].PPt[G, A, d, ca, cb, c01, D, ln] ;
+  module B = PQ.B ;
+  module O = B.O ;
+  module KK = O.KK ;
+  module T1 = B.T1 ;
+  module HF = B.HF ;
+  module TA = B.TA ;
+  module GL = GPR.PshL[G] ;
+  module DL = GPR.PshL[D] ;
+  module KP = PQ.KP ;
+  module LP0 = LevKit[FM.famPath, FM.famConn, KK.K, KK.PT.PathP, e0] ;
+  module LP1 = LevKit[FM.famPath, FM.famConn, KK.K, KK.PT.PathP, e1] ;
+
+  -- the value of ln at a point given as a restriction of x
+  lnPt (X : Ob) (x : W0.Ix (D.ob X)) (W1 : Ob) (k : Hom W1 X) (z : W0.Ix (D.ob W1)) (e : Id (W0.Ix (D.ob W1)) z (D.act W1 X k x))
+    (i1 : Hom W1 Iv) : Id (W0.Ix (G.ob W1)) ((ln.nt W1 z).1 W1 (idH W1) i1) ((ln.nt X x).1 W1 k i1) =
+    transH (apH (\ y -> (ln.nt W1 y).1 W1 (idH W1) i1) e)
+      (transH (apH (\ y -> y.1 W1 (idH W1) i1) (ln.nt-nat W1 X k x))
+              (apH (\ m -> (ln.nt X x).1 W1 m i1) (comp-idr W1 X k))) ;
+
+  opaque lnPt ;
+
+  module Sd (X : Ob) (w : HF.TA.EI X) (p : B.FP.Partial[X, w]) (l : Fin p.pr) (W : Ob) (f : Hom W X)
+    (h : Lands W X (p.ps l).pQ f) {
+    module BX = B.Box[X, w, p] ;
+    module S = BX.SD[l] ;
+
+    v : HF.TF.EI W = S.v W f h ;
+
+    module OW = O.W[W, v] ;
+
+    sqL : KK.PC.CP.EK.TL.EI W = KK.PC.CP.EK.lineL W OW.omSq ;
+
+    -- the square at (a , j): a path over ln x
+    sqV (W1 : Ob) (a : Hom W1 W) (j : Hom W1 Iv) : KK.PT.TP.EI W1 = FM.famConn.levA KK.K KK.PT.PathP W sqL W1 a j ;
+
+    -- the point of the path: over x (f a)
+    xv : Id (W0.Ix (D.ob W)) v.1.1 (D.act W X f w.1) = apH {HF.TA.EI W} {W0.Ix (D.ob W)} (\ z -> z.1) ((p.ps l).ppt W f h) ;
+
+    kptEq (W1 : Ob) (a : Hom W1 W) (j : Hom W1 Iv)
+      : Id (W0.Ix (D.ob W1)) (sqV W1 a j).1.1.1 (D.act W1 X (compH W1 W X f a) w.1) =
+      transH (apH (\ z -> z.1.1) (FM.famConn.levA-pt KK.K KK.PT.PathP W sqL W1 a j))
+        (transH (HF.fibL-pt W v W1 a j)
+          (transH (apH (D.act W1 W a) xv) (DL.actC W1 W X f a w.1))) ;
+
+    -- the values of the transposed square
+    tv (W' : Ob) (g : Hom W' W) (i : Hom W' Iv) (W'' : Ob) (g'' : Hom W'' W') (j : Hom W'' Iv) : TA.EI W'' =
+      (sqV W'' (compH W'' W' W g g'') j).2.1.1 W'' (idH W'') (compH W'' W' Iv i g'') ;
+
+    -- its point: ln x at (f g g'' , i g'')
+    tvPt (W' : Ob) (g : Hom W' W) (i : Hom W' Iv) (W'' : Ob) (g'' : Hom W'' W') (j : Hom W'' Iv)
+      : Id (W0.Ix (G.ob W'')) (tv W' g i W'' g'' j).1 ((ln.nt X w.1).1 W'' (compH W'' W X f (compH W'' W' W g g'')) (compH W'' W' Iv i g'')) =
+      transH ((sqV W'' (compH W'' W' W g g'') j).2.2.1 W'' (idH W'') (compH W'' W' Iv i g''))
+        (lnPt X w.1 W'' (compH W'' W X f (compH W'' W' W g g'')) (sqV W'' (compH W'' W' W g g'') j).1.1.1
+           (kptEq W'' (compH W'' W' W g g'') j) (compH W'' W' Iv i g'')) ;
+
+    module PX = PQ.Bx[X, w, p] ;
+
+    -- the K2 point of the path problem at (f g , i)
+    y2 (W' : Ob) (g : Hom W' W) (i : Hom W' Iv) : W0.Ix (KP.K2.ob W') = PX.L3.v3 W' (compH W' W X f g) i ;
+
+    tvp (W' : Ob) (g : Hom W' W) (i : Hom W' Iv) (W'' : Ob) (g'' : Hom W'' W') (j : Hom W'' Iv)
+      : Id (W0.Ix (G.ob W'')) (tv W' g i W'' g'' j).1 (KP.s W' (y2 W' g i) W'' g'' j) =
+      transH (tvPt W' g i W'' g'' j)
+        (transH (apH (\ m -> (ln.nt X w.1).1 W'' m (compH W'' W' Iv i g'')) (symH (comp-assoc W'' W' W X f g g'')))
+          (transH (symH ((ln.nt X w.1).2 W'' W' g'' (compH W' W X f g) i))
+                  (apH (G.act W'' W' g'') (symH (FM.famConn.levA-pt G A X (B.E0.lineL X PX.uS) W' (compH W' W X f g) i))))) ;
+
+    -- the values of a restricted path over ln x
+    tvn (W' : Ob) (g : Hom W' W) (i : Hom W' Iv) (V W'' : Ob) (g3 : Hom V W'') (g'' : Hom W'' W') (j : Hom W'' Iv)
+      : Id (TA.EI V) (TA.E.act V W'' g3 (tv W' g i W'' g'' j)) (tv W' g i V (compH V W'' W' g'' g3) (compH V W'' Iv j g3)) =
+      calc (TA.EI V) {
+          TA.E.act V W'' g3 ((sqV W'' (compH W'' W' W g g'') j).2.1.1 W'' (idH W'') (compH W'' W' Iv i g''))
+        =< (sqV W'' (compH W'' W' W g g'') j).2.1.2 V W'' g3 (idH W'') (compH W'' W' Iv i g'') >
+          (sqV W'' (compH W'' W' W g g'') j).2.1.1 V (compH V W'' W'' (idH W'') g3) (compH V W'' Iv (compH W'' W' Iv i g'') g3)
+        =< apH (\ m -> (sqV W'' (compH W'' W' W g g'') j).2.1.1 V m (compH V W'' Iv (compH W'' W' Iv i g'') g3))
+             (transH (comp-idl V W'' g3) (symH (comp-idr V W'' g3))) >
+          (sqV W'' (compH W'' W' W g g'') j).2.1.1 V (compH V V W'' g3 (idH V)) (compH V W'' Iv (compH W'' W' Iv i g'') g3)
+        =< apH (\ z -> z.2.1.1 V (idH V) (compH V W'' Iv (compH W'' W' Iv i g'') g3))
+             (FM.famConn.levA-nat KK.K KK.PT.PathP W sqL V W'' g3 (compH W'' W' W g g'') j) >
+          (sqV V (compH V W'' W (compH W'' W' W g g'') g3) (compH V W'' Iv j g3)).2.1.1 V (idH V) (compH V W'' Iv (compH W'' W' Iv i g'') g3)
+        =< apH (\ m -> (sqV V m (compH V W'' Iv j g3)).2.1.1 V (idH V) (compH V W'' Iv (compH W'' W' Iv i g'') g3))
+             (comp-assoc V W'' W' W g g'' g3) >
+          (sqV V (compH V W' W g (compH V W'' W' g'' g3)) (compH V W'' Iv j g3)).2.1.1 V (idH V) (compH V W'' Iv (compH W'' W' Iv i g'') g3)
+        =< apH (\ m -> (sqV V (compH V W' W g (compH V W'' W' g'' g3)) (compH V W'' Iv j g3)).2.1.1 V (idH V) m)
+             (comp-assoc V W'' W' Iv i g'' g3) >
+          tv W' g i V (compH V W'' W' g'' g3) (compH V W'' Iv j g3) } ;
+
+    -- the square at its two ends (j = e0: the start xh ; j = e1: omega)
+    sqStart (W1 : Ob) (a : Hom W1 W) : Id (KK.PT.TP.EI W1) (sqV W1 a (ptH W1 e0)) (KK.PT.TP.E.act W1 W a (KK.PC.CP.EK.endE W OW.xh)) =
+      transH (symH (LP0.levA-ptAct W sqL W1 a))
+        (apH (KK.PT.TP.E.act W1 W a) (transH (symH (LP0.endL-lev W sqL)) (apH (KK.PC.CP.EK.endE W) OW.omSq.2.2))) ;
+
+    sqEnd (W1 : Ob) (a : Hom W1 W)
+      : Id (KK.PT.TP.EI W1) (sqV W1 a (ptH W1 e1)) (KK.PT.TP.E.act W1 W a (EndKit[FM.famPath, KK.K, KK.PT.PathP, e1].endE W OW.omE)) =
+      transH (symH (LP1.levA-ptAct W sqL W1 a)) (apH (KK.PT.TP.E.act W1 W a) (symH (LP1.endL-lev W sqL))) ;
+
+    tv0 (W' : Ob) (g : Hom W' W) (i : Hom W' Iv) : Id (TA.EI W') (tv W' g i W' (idH W') (ptH W' e0)) (KP.aE W' (y2 W' g i)) =
+      calc (TA.EI W') {
+          (sqV W' (compH W' W' W g (idH W')) (ptH W' e0)).2.1.1 W' (idH W') (compH W' W' Iv i (idH W'))
+        =< apH (\ z -> z.2.1.1 W' (idH W') (compH W' W' Iv i (idH W'))) (sqStart W' (compH W' W' W g (idH W'))) >
+          OW.t W' (compH W' W' W (compH W' W' W g (idH W')) (idH W')) (compH W' W' Iv i (idH W'))
+        =< apH (\ m -> OW.t W' m (compH W' W' Iv i (idH W'))) (transH (comp-idr W' W (compH W' W' W g (idH W'))) (comp-idr W' W g)) >
+          OW.t W' g (compH W' W' Iv i (idH W'))
+        =< apH (OW.t W' g) (comp-idr W' Iv i) >
+          FM.famConn.levA G A W (B.E0.lineL W (T1.uF W OW.xb)) W' g i
+        =< apH (\ z -> FM.famConn.levA G A W (B.E0.lineL W (T1.uF W z)) W' g i) (symH (BX.BS[l, W, f, h].bside)) >
+          FM.famConn.levA G A W (B.E0.lineL W (T1.uF W (HF.TB.E.act W X f PX.xbn))) W' g i
+        =< apH (\ z -> FM.famConn.levA G A W (B.E0.lineL W z) W' g i) (symH (T1.uF-nat W X f PX.xbn)) >
+          FM.famConn.levA G A W (B.E0.lineL W (T1.CA.TS.E.act W X f PX.uS)) W' g i
+        =< B.LS.line-act W X f PX.uS W' g i >
+          PX.u W' (compH W' W X f g) i } ;
+
+    tv1 (W' : Ob) (g : Hom W' W) (i : Hom W' Iv) : Id (TA.EI W') (tv W' g i W' (idH W') (ptH W' e1)) (KP.bE W' (y2 W' g i)) =
+      calc (TA.EI W') {
+          (sqV W' (compH W' W' W g (idH W')) (ptH W' e1)).2.1.1 W' (idH W') (compH W' W' Iv i (idH W'))
+        =< apH (\ z -> z.2.1.1 W' (idH W') (compH W' W' Iv i (idH W'))) (sqEnd W' (compH W' W' W g (idH W'))) >
+          S.t W f h W' (compH W' W' W (compH W' W' W g (idH W')) (idH W')) (compH W' W' Iv i (idH W'))
+        =< apH (\ m -> S.t W f h W' m (compH W' W' Iv i (idH W'))) (transH (comp-idr W' W (compH W' W' W g (idH W'))) (comp-idr W' W g)) >
+          S.t W f h W' g (compH W' W' Iv i (idH W'))
+        =< apH (S.t W f h W' g) (comp-idr W' Iv i) >
+          S.t W f h W' g i
+        =< symH (S.pv-lev W f h W' g i) >
+          FM.famConn.levA G A W (B.EKt.lineL W (S.pv W f h)) W' g i
+        =< apH (\ z -> FM.famConn.levA G A W (B.EKt.lineL W z) W' g i) (symH (B.kb.kside X BX.zt BX.pB l W f h)) >
+          FM.famConn.levA G A W (B.EKt.lineL W (B.EKt.TS.E.act W X f BX.FbS)) W' g i
+        =< B.LT.line-act W X f BX.FbS W' g i >
+          PX.u' W' (compH W' W X f g) i
+        =< symH (KP.mk3-b W' (PX.u W' (compH W' W X f g) i) (PX.u' W' (compH W' W X f g) i) (PX.P W' (compH W' W X f g) i)) >
+          KP.bE W' (y2 W' g i) } ;
+
+    -- the transposed square at (g , i): a path in j over ln x (f g , i)
+    P (W' : Ob) (g : Hom W' W) (i : Hom W' Iv) : W0.Ix (KP.PT2.tobP W' (y2 W' g i)) =
+      KP.PT2.mkPath W' (y2 W' g i) (tv W' g i) (tvn W' g i) (tvp W' g i) (tv0 W' g i) (tv1 W' g i) ;
+
+    opaque tvp ; opaque tvn ; opaque sqStart ; opaque sqEnd ; opaque tv0 ; opaque tv1 ;
+  } ;
+} ;

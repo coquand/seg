@@ -1,0 +1,356 @@
+-- FillBase.seg: MODEL/Poset/FillBase.agda.  Set-up for Lemma 2.1 of [S]
+-- (Proposition 3.1 of smodel-proofs): horn(G , A) -> comp(G , DA).
+--
+-- The filling is done on the box restricted along f : [n] -> X, i.e. on a
+-- box over [n].  For a box b over [N] we build elements
+--
+--   P b k  in  A([N+1] , (P_k)^* rho_b)      k = 0 .. N
+--   Q b k  in  A([N]   , (Q_k)^* rho_b)      k = 0 .. N+1
+--
+-- for the chains P_k, Q_k of the prism [N] * [1] which project onto [N]
+-- (smodel-proofs, Lemma 2.1); the chains which do not project onto [N] are
+-- the faces, handled by the stage N-1 on the restricted boxes rB y b.  This
+-- file has the indices, the "full side" case (Case 1 of smodel-proofs: the
+-- image of f lies in some Y_j), and the records Stage (one dimension) and
+-- Cross (two consecutive dimensions), which are segment types.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+module W = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module DD = D[a] ;
+
+------------------------------------------------------------------------
+-- Indices  k + r = n
+
+IxK (k n : Nat) : U a = (r : Nat) * Id Nat (plus k r) n ;
+
+plus-cancel : (k r r' : Nat) -> Id Nat (plus k r) (plus k r') -> Id Nat r r' = split {
+  zero -> \ r r' e -> e ;
+  suc k -> \ r r' e -> plus-cancel k r r' (suc-inj (plus k r) (plus k r') e) } ;
+
+isProp-IxK (k n : Nat) : isProp (IxK k n) = \ u v ->
+  Sigma-path Nat (\ r -> Id Nat (plus k r) n) u.1 v.1 u.2 v.2
+    (plus-cancel k u.1 v.1 (transH u.2 (symH v.2))) (isSet-Nat _ _ _ _) ;
+
+leb-plus : (k r : Nat) -> IsT (leb k (plus k r)) = split { zero -> \ r -> refl true ; suc k -> \ r -> leb-plus k r } ;
+
+ixLe (k n : Nat) (ix : IxK k n) : IsT (leb k n) = substH (\ m -> IsT (leb k m)) ix.2 (leb-plus k ix.1) ;
+
+mkIx : (k n : Nat) -> IsT (leb k n) -> IxK k n = split {
+  zero -> \ n h -> (n, refl n) ;
+  suc k -> split {
+    zero -> \ h -> absurd (IxK (suc k) zero) (false-true h) ;
+    suc n -> \ h -> ((mkIx k n h).1, apH (\ m -> suc m) (mkIx k n h).2) } } ;
+
+------------------------------------------------------------------------
+-- Full subsets of [n]
+
+allQ : Nat -> (Tree -> Bool) -> Bool = split {
+  zero -> \ Q -> Q (leaf zero) ;
+  suc n -> \ Q -> and (Q (leaf (suc n))) (allQ n Q) } ;
+
+allQ-sound : (n : Nat) (Q : Tree -> Bool) -> IsT (allQ n Q) -> (i : Nat) -> IsT (leb i n) -> IsT (Q (leaf i)) = split {
+  zero -> \ Q h i hi -> substH (\ j -> IsT (Q (leaf j))) (symH (leb-zero i hi)) h ;
+  suc n -> \ Q h i hi ->
+    or-elim (IsT (Q (leaf i))) (eqN i (suc n)) (leb i n) (leb-suc-split i n hi)
+      (\ e -> substH (\ j -> IsT (Q (leaf j))) (symH (eqN-sound i (suc n) e)) (and-l (Q (leaf (suc n))) (allQ n Q) h))
+      (\ h' -> allQ-sound n Q (and-r (Q (leaf (suc n))) (allQ n Q) h) i h') } ;
+
+allQ-complete : (n : Nat) (Q : Tree -> Bool) -> ((i : Nat) -> IsT (leb i n) -> IsT (Q (leaf i))) -> IsT (allQ n Q) = split {
+  zero -> \ Q h -> h zero (refl true) ;
+  suc n -> \ Q h -> and-i (Q (leaf (suc n))) (allQ n Q) (h (suc n) (leb-refl n))
+                          (allQ-complete n Q (\ i hi -> h i (leb-step i n hi))) } ;
+
+-- a full subset contains every point of the prism
+fullPt (n : Nat) (Q : Subset (lin n)) (h : IsT (allQ n Q)) (w : El (prodP (lin n) Iv)) : IsT (Q (pr1T w.1)) =
+  substH (\ t -> IsT (Q t)) (pr1-T (lin n) w)
+    (substH (\ t -> IsT (Q t)) (symH (lin-leaf n p.1 p.2)) (allQ-sound n Q h (vnum p.1) (vnum-range n p.1 p.2)))
+ where { p : El (lin n) = app (prodP (lin n) Iv) (lin n) (pr1 (lin n) Iv) w ; } ;
+
+-- a full subset contains every map into the prism
+fullInQ (n : Nat) (Q : Subset (lin n)) (h : IsT (allQ n Q)) (W0 : Ob) (psi : Hom W0 (prodP (lin n) Iv))
+  : InQ W0 (lin n) Q psi = \ s -> fullPt n Q h (app W0 (prodP (lin n) Iv) psi s) ;
+
+-- the inverse image of a full subset along a face is full
+allQ-pre (n y : Nat) (Q : Subset (lin (suc n))) (h : IsT (allQ (suc n) Q))
+  : IsT (allQ n (pre (lin n) (lin (suc n)) (dl n y) Q)) =
+  allQ-complete n (pre (lin n) (lin (suc n)) (dl n y) Q) (\ i hi ->
+    transH (Pre[lin n, lin (suc n), dl n y, Q].pre-el (leaf i, hi)) (allQ-sound (suc n) Q h (skip y i) (skip-range y i n hi))) ;
+
+------------------------------------------------------------------------
+-- Searching a finite index set
+
+FinFound (r : Nat) (p : Fin r -> Bool) : U a =
+  Plus' ((j : Fin r) * IsT (p j)) ((j : Fin r) -> Id Bool (p j) false) ;
+
+searchFin : (r : Nat) (p : Fin r -> Bool) -> FinFound r p = split {
+  zero -> \ p -> inr' (\ j -> absurd (Id Bool (p j) false) (false-true j.2)) ;
+  suc r -> \ p -> sf-test r p (p (r, leb-refl r)) (refl (p (r, leb-refl r))) } ;
+
+sf-p' (r : Nat) (p : Fin (suc r) -> Bool) (j : Fin r) : Bool = p (j.1, leb-step (suc j.1) r j.2) ;
+
+sf-test (r : Nat) (p : Fin (suc r) -> Bool) : (b : Bool) -> Id Bool (p (r, leb-refl r)) b -> FinFound (suc r) p = split {
+  true -> \ e -> inl' ((r, leb-refl r), e) ;
+  false -> \ e -> sf-rest r p e (searchFin r (sf-p' r p)) } ;
+
+sf-rest (r : Nat) (p : Fin (suc r) -> Bool) (e : Id Bool (p (r, leb-refl r)) false)
+  : FinFound r (sf-p' r p) -> FinFound (suc r) p = split {
+  inl' w -> inl' ((w.1.1, leb-step (suc w.1.1) r w.1.2), w.2) ;
+  inr' k -> inr' (\ j ->
+    or-elim (Id Bool (p j) false) (eqN j.1 r) (leb (suc j.1) r) (leb-suc-split (suc j.1) r j.2)
+      (\ q -> transH (apH p (Sigma-eq Nat (\ i -> IsT (ltb i (suc r))) j.1 r j.2 (leb-refl r) (eqN-sound j.1 r q)
+                                (isProp-IsT' (ltb r (suc r))))) e)
+      (\ q -> transH (apH p (Sigma-eq Nat (\ i -> IsT (ltb i (suc r))) j.1 j.1 j.2 (leb-step (suc j.1) r q) (refl j.1)
+                                (isProp-IsT' (ltb j.1 (suc r))))) (k (j.1, q)))) } ;
+
+------------------------------------------------------------------------
+-- Comparing a face y with the vertex k of a horn
+
+data Cmp (y k : Nat) : U a =
+    cLt (k' : Nat) (e : Id Nat k (suc k')) (h : IsT (leb y k'))
+  | cEq (e : Id Nat y k)
+  | cK1 (e : Id Nat y (suc k))
+  | cGt (y' : Nat) (e : Id Nat y (suc y')) (h : IsT (ltb k y')) ;
+
+cmpA : (y : Nat) -> Cmp (suc y) zero = split {
+  zero -> cK1 (refl (suc zero)) ;
+  suc y -> cGt (suc y) (refl (suc (suc y))) (refl true) } ;
+
+cmpLift (y k : Nat) : Cmp y k -> Cmp (suc y) (suc k) = split {
+  cLt k' e h -> cLt (suc k') (apH (\ m -> suc m) e) h ;
+  cEq e -> cEq (apH (\ m -> suc m) e) ;
+  cK1 e -> cK1 (apH (\ m -> suc m) e) ;
+  cGt y' e h -> cGt (suc y') (apH (\ m -> suc m) e) h } ;
+
+cmp : (y k : Nat) -> Cmp y k = split {
+  zero -> split { zero -> cEq (refl zero) ; suc k -> cLt k (refl (suc k)) (refl true) } ;
+  suc y -> split { zero -> cmpA y ; suc k -> cmpLift y k (cmp y k) } } ;
+
+------------------------------------------------------------------------
+-- The records Stage and Cross, over abstract box data.  (Stated for an
+-- abstract family of boxes: a record whose fields mention DA itself is very
+-- slow to check in Agda.)
+
+module Recs (G : PCtx) (A : PTy[G])
+  (BoxL : Nat -> U a)
+  (rB   : (N y : Nat) -> BoxL (suc N) -> BoxL N)
+  (rho  : (N : Nat) -> BoxL N -> W.Ix (G.ob (prodP (lin N) Iv)))
+  (botE : (N : Nat) -> BoxL N -> W.Ix ((extP G A).ob (lin N)))
+  (Full : (N : Nat) -> BoxL N -> U a)
+  (C1   : (N : Nat) (b : BoxL N) -> Full N b -> (m : Nat) -> Hom (lin m) (prodP (lin N) Iv) -> W.Ix ((extP G A).ob (lin m))) {
+
+  open PR.TyL[G, A] ;
+
+  PrN (N : Nat) : Ob = prodP (lin N) Iv ;
+
+  ctxP (N : Nat) (b : BoxL N) (k : Nat) : Pt (lin (suc N)) = G.act (lin (suc N)) (PrN N) (pmap N k) (rho N b) ;
+  ctxQ (N : Nat) (b : BoxL N) (k : Nat) : Pt (lin N) = G.act (lin N) (PrN N) (qmap N k) (rho N b) ;
+
+  -- one dimension
+  module Stage (N : Nat) {
+    P (b : BoxL N) (k : Nat) (ix : IxK k N) : T (lin (suc N)) (ctxP N b k) ;
+    Q (b : BoxL N) (k : Nat) (ix : IxK k (suc N)) : T (lin N) (ctxQ N b k) ;
+
+    -- the two faces of P_k which project onto [N] are Q_k and Q_{k+1}
+    pq (b : BoxL N) (k : Nat) (ix : IxK k N) (ix' : IxK k (suc N))
+      : Id (EI (lin N)) (E.act (lin N) (lin (suc N)) (dl N k) (ctxP N b k, P b k ix)) (ctxQ N b k, Q b k ix') ;
+    pq1 (b : BoxL N) (k : Nat) (ix : IxK k N) (ix' : IxK (suc k) (suc N))
+      : Id (EI (lin N)) (E.act (lin N) (lin (suc N)) (dl N (suc k)) (ctxP N b k, P b k ix)) (ctxQ N b (suc k), Q b (suc k) ix') ;
+
+    -- Q_{N+1} is the lower lid
+    qbot (b : BoxL N) (ix : IxK (suc N) (suc N)) : Id (EI (lin N)) (ctxQ N b (suc N), Q b (suc N) ix) (botE N b) ;
+
+    -- a full side determines everything (Case 1)
+    fullP (b : BoxL N) (w : Full N b) (k : Nat) (ix : IxK k N)
+      : Id (EI (lin (suc N))) (ctxP N b k, P b k ix) (C1 N b w (suc N) (pmap N k)) ;
+    fullQ (b : BoxL N) (w : Full N b) (k : Nat) (ix : IxK k (suc N))
+      : Id (EI (lin N)) (ctxQ N b k, Q b k ix) (C1 N b w N (qmap N k)) ;
+
+    -- double faces (used for the compatibility of the horns one dimension up)
+    ddLL (b : BoxL (suc N)) (j y z : Nat) (hyz : IsT (leb y z)) (hzj : IsT (ltb z j)) (ix : IxK j N)
+      : Id (EI (lin N)) (E.act (lin N) (lin (suc N)) (dl N z) (ctxP N (rB N y b) j, P (rB N y b) j ix))
+                        (E.act (lin N) (lin (suc N)) (dl N y) (ctxP N (rB N (suc z) b) j, P (rB N (suc z) b) j ix)) ;
+    ddLH (b : BoxL (suc N)) (j y z : Nat) (hyj : IsT (leb y j)) (hjz : IsT (ltb (suc j) z)) (hz : IsT (leb z (suc N)))
+      (ix : IxK j N) (ix' : IxK (suc j) N)
+      : Id (EI (lin N)) (E.act (lin N) (lin (suc N)) (dl N z) (ctxP N (rB N y b) j, P (rB N y b) j ix))
+                        (E.act (lin N) (lin (suc N)) (dl N y) (ctxP N (rB N z b) (suc j), P (rB N z b) (suc j) ix')) ;
+    ddHH (b : BoxL (suc N)) (k y z : Nat) (hky : IsT (ltb k y)) (hyz : IsT (ltb y z)) (hz : IsT (leb z (suc N)))
+      (ix : IxK k N)
+      : Id (EI (lin N)) (E.act (lin N) (lin (suc N)) (dl N z) (ctxP N (rB N y b) k, P (rB N y b) k ix))
+                        (E.act (lin N) (lin (suc N)) (dl N (suc y)) (ctxP N (rB N z b) k, P (rB N z b) k ix)) ;
+  } ;
+
+  -- two consecutive dimensions: the faces of the chains which do not project onto [N+1]
+  module Cross (n : Nat) (S : Stage[n]) (S' : Stage[suc n]) {
+    pLo (b : BoxL (suc n)) (k y : Nat) (hy : IsT (leb y k)) (ix : IxK (suc k) (suc n)) (ix' : IxK k n)
+      : Id (EI (lin (suc n))) (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) y) (ctxP (suc n) b (suc k), S'.P b (suc k) ix))
+                              (ctxP n (rB n y b) k, S.P (rB n y b) k ix') ;
+    pHi (b : BoxL (suc n)) (k y : Nat) (hky : IsT (ltb k y)) (hy : IsT (leb y (suc n))) (ix : IxK k (suc n)) (ix' : IxK k n)
+      : Id (EI (lin (suc n))) (E.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) (suc y)) (ctxP (suc n) b k, S'.P b k ix))
+                              (ctxP n (rB n y b) k, S.P (rB n y b) k ix') ;
+    qF (b : BoxL (suc n)) (k y : Nat) (hy : IsT (leb y (suc n))) (ix : IxK k (suc (suc n))) (ix' : IxK (qface y k) (suc n))
+      : Id (EI (lin n)) (E.act (lin n) (lin (suc n)) (dl n y) (ctxQ (suc n) b k, S'.Q b k ix))
+                        (ctxQ n (rB n y b) (qface y k), S.Q (rB n y b) (qface y k) ix') ;
+  } ;
+} ;
+
+------------------------------------------------------------------------
+-- The construction, for a type A over G
+
+module FB (G : PCtx) (A : PTy[G]) {
+  open PR.TyL[G, A] ;
+  open DD.DT[G, A] ;
+  module TD = PR.TyL[G, DA] ;
+  module BX = Box[a, a].Boxes[G, DA] ;
+  module GL = PR.PshL[G] ;
+
+  BoxL (N : Nat) : U a = BX.Box[e0, lin N] ;
+
+  -- restriction along a face
+  rB (N y : Nat) (b : BoxL (suc N)) : BoxL N = BX.restrict e0 (lin N) (lin (suc N)) (dl N y) b ;
+
+  PN (N : Nat) : Ob = prodP (lin N) Iv ;
+
+  -- the lower lid, read at the identity of [N]
+  botE (N : Nat) (b : BoxL N) : EI (lin N) =
+    rd (lin N) (G.act (lin N) (PN N) (lid (lin N) e0) b.brho) b.bu.1 N (idH (lin N)) ;
+
+  -- a full side
+  Full (N : Nat) (b : BoxL N) : U a = (j : Fin b.br) * IsT (allQ N (b.bs j).sQ) ;
+
+  -- the side j, at the identity of the prism
+  fside (N : Nat) (b : BoxL N) (j : Fin b.br) (hl : IsT (allQ N (b.bs j).sQ))
+    : DEl (PN N) (G.act (PN N) (PN N) (idH (PN N)) b.brho) =
+    (b.bs j).sv (PN N) (idH (PN N)) (fullInQ N (b.bs j).sQ hl (PN N) (idH (PN N))) ;
+
+  C1 (N : Nat) (b : BoxL N) (j : Fin b.br) (hl : IsT (allQ N (b.bs j).sQ)) (m : Nat) (c : Hom (lin m) (PN N)) : EI (lin m) =
+    rd (PN N) (G.act (PN N) (PN N) (idH (PN N)) b.brho) (fside N b j hl).1 m c ;
+
+  C1w (N : Nat) (b : BoxL N) (w : Full N b) (m : Nat) (c : Hom (lin m) (PN N)) : EI (lin m) = C1 N b w.1 w.2 m c ;
+
+  module RC = Recs[G, A, BoxL, rB, \ N b -> b.brho, botE, Full, C1w] ;
+  open RC ;
+
+  ----------------------------------------------------------------------
+  -- Equations between contexts
+
+  eqK (N : Nat) (b : BoxL N) (k : Nat) (hk : IsT (leb k N))
+    : Id (Pt (lin N)) (G.act (lin N) (lin (suc N)) (dl N k) (ctxP N b k)) (ctxQ N b k) =
+    GL.actTri (lin N) (lin (suc N)) (PN N) (pmap N k) (dl N k) (qmap N k) (pw-p-face-k N k hk) b.brho ;
+
+  eqK1 (N : Nat) (b : BoxL N) (k : Nat) (hk : IsT (leb k N))
+    : Id (Pt (lin N)) (G.act (lin N) (lin (suc N)) (dl N (suc k)) (ctxP N b k)) (ctxQ N b (suc k)) =
+    GL.actTri (lin N) (lin (suc N)) (PN N) (pmap N k) (dl N (suc k)) (qmap N (suc k)) (pw-p-face-k1 N k hk) b.brho ;
+
+  eqLo (n : Nat) (b : BoxL (suc n)) (k y : Nat) (hy : IsT (leb y k)) (hk : IsT (leb k n))
+    : Id (Pt (lin (suc n))) (G.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) y) (ctxP (suc n) b (suc k)))
+                            (ctxP n (rB n y b) k) =
+    GL.actSq (lin (suc n)) (lin (suc (suc n))) (PN n) (PN (suc n)) (pmap (suc n) (suc k)) (dl (suc n) y)
+             (cdl n y) (pmap n k) (pw-p-face-lo n k y hy hk) b.brho ;
+
+  eqHi (n : Nat) (b : BoxL (suc n)) (k y : Nat) (hy : IsT (ltb k y)) (hk : IsT (leb k n))
+    : Id (Pt (lin (suc n))) (G.act (lin (suc n)) (lin (suc (suc n))) (dl (suc n) (suc y)) (ctxP (suc n) b k))
+                            (ctxP n (rB n y b) k) =
+    GL.actSq (lin (suc n)) (lin (suc (suc n))) (PN n) (PN (suc n)) (pmap (suc n) k) (dl (suc n) (suc y))
+             (cdl n y) (pmap n k) (pw-p-face-hi n k y hy hk) b.brho ;
+
+  eqQF (n : Nat) (b : BoxL (suc n)) (k y : Nat)
+    : Id (Pt (lin n)) (G.act (lin n) (lin (suc n)) (dl n y) (ctxQ (suc n) b k)) (ctxQ n (rB n y b) (qface y k)) =
+    GL.actSq (lin n) (lin (suc n)) (PN n) (PN (suc n)) (qmap (suc n) k) (dl n y)
+             (cdl n y) (qmap n (qface y k)) (pw-q-face n y k) b.brho ;
+
+  eqBot (N : Nat) (b : BoxL N)
+    : Id (Pt (lin N)) (G.act (lin N) (lin N) (idH (lin N)) (G.act (lin N) (PN N) (lid (lin N) e0) b.brho)) (ctxQ N b (suc N)) =
+    GL.actTri (lin N) (lin N) (PN N) (lid (lin N) e0) (idH (lin N)) (qmap N (suc N))
+              (pw-sym (lin N) (PN N) (qmap N (suc N)) (lid (lin N) e0) (pw-q-bot N)) b.brho ;
+
+  ----------------------------------------------------------------------
+  -- Readings of a full side (Case 1)
+
+  -- the reading of a full side is its context
+  C1-fst (N : Nat) (b : BoxL N) (j : Fin b.br) (hl : IsT (allQ N (b.bs j).sQ)) (m : Nat) (c : Hom (lin m) (PN N))
+    : Id (Pt (lin m)) (C1 N b j hl m c).1 (G.act (lin m) (PN N) c b.brho) =
+    apH (G.act (lin m) (PN N) c) (G.act-id (PN N) b.brho) ;
+
+  -- it does not depend on the side
+  C1-indep (N : Nat) (b : BoxL N) (j j' : Fin b.br) (hl : IsT (allQ N (b.bs j).sQ)) (hl' : IsT (allQ N (b.bs j').sQ))
+    (m : Nat) (c : Hom (lin m) (PN N)) : Id (EI (lin m)) (C1 N b j hl m c) (C1 N b j' hl' m c) =
+    apH (\ w -> rd (PN N) (G.act (PN N) (PN N) (idH (PN N)) b.brho) w.1 m c)
+        (b.bcs j j' (PN N) (idH (PN N)) (fullInQ N (b.bs j).sQ hl (PN N) (idH (PN N)))
+                                        (fullInQ N (b.bs j').sQ hl' (PN N) (idH (PN N)))) ;
+
+  -- strictly monotone restriction
+  C1-compat (N : Nat) (b : BoxL N) (j : Fin b.br) (hl : IsT (allQ N (b.bs j).sQ))
+    (m m' : Nat) (g : Hom (lin m') (lin m)) (s : Strict (lin m') (lin m) g) (c : Hom (lin m) (PN N))
+    : Id (EI (lin m')) (E.act (lin m') (lin m) g (C1 N b j hl m c)) (C1 N b j hl m' (compH (lin m') (lin m) (PN N) c g)) =
+    (fside N b j hl).2 m' m g s c ;
+
+  -- pointwise equal chains
+  C1-pw (N : Nat) (b : BoxL N) (j : Fin b.br) (hl : IsT (allQ N (b.bs j).sQ))
+    (m : Nat) (c c' : Hom (lin m) (PN N)) (p : PW (lin m) (PN N) c c')
+    : Id (EI (lin m)) (C1 N b j hl m c) (C1 N b j hl m c') =
+    apH (C1 N b j hl m) (hom-eq (lin m) (PN N) c c' p) ;
+
+  -- along a face
+  C1-rB (N y : Nat) (b : BoxL (suc N)) (j : Fin b.br) (hl : IsT (allQ (suc N) (b.bs j).sQ))
+    (hl' : IsT (allQ N ((rB N y b).bs j).sQ)) (m : Nat) (c : Hom (lin m) (PN N))
+    : Id (EI (lin m)) (C1 N (rB N y b) j hl' m c) (C1 (suc N) b j hl m (compH (lin m) (PN N) (PN (suc N)) (cdl N y) c)) =
+    transH (evalE (PN N) _ _ _ _ step m c)
+           (rd-dtact (PN N) (PN (suc N)) (cdl N y) x1 (G.act (PN N) (PN (suc N)) (cdl N y) x1)
+                     (refl (G.act (PN N) (PN (suc N)) (cdl N y) x1)) (fside (suc N) b j hl) m c)
+   where {
+    x1 : Pt (PN (suc N)) = G.act (PN (suc N)) (PN (suc N)) (idH (PN (suc N))) b.brho ;
+    i1 : InQ (PN N) (lin N) (pre (lin N) (lin (suc N)) (dl N y) (b.bs j).sQ) (idH (PN N)) =
+      fullInQ N (pre (lin N) (lin (suc N)) (dl N y) (b.bs j).sQ) hl' (PN N) (idH (PN N)) ;
+    step : Id (TD.EI (PN N)) (G.act (PN N) (PN N) (idH (PN N)) (rB N y b).brho, fside N (rB N y b) j hl')
+                             (TD.E.act (PN N) (PN (suc N)) (cdl N y) (x1, fside (suc N) b j hl)) =
+      transH {_} {(G.act (PN N) (PN N) (idH (PN N)) (rB N y b).brho, fside N (rB N y b) j hl')}
+             (BX.Restrict[e0, lin N, lin (suc N), dl N y].rsvE b.brho (b.bs j) (PN N) (idH (PN N)) i1)
+             (symH ((b.bs j).snat (PN N) (PN (suc N)) (cdl N y) (idH (PN (suc N)))
+                      (fullInQ (suc N) (b.bs j).sQ hl (PN (suc N)) (idH (PN (suc N))))
+                      (inQ-cyl (PN N) (lin N) (lin (suc N)) (dl N y) (b.bs j).sQ (idH (PN N)) i1))) ;
+   } ;
+
+  -- the lower lid, on a full side
+  C1-bot (N : Nat) (b : BoxL N) (j : Fin b.br) (hl : IsT (allQ N (b.bs j).sQ))
+    : Id (EI (lin N)) (botE N b) (C1 N b j hl N (qmap N (suc N))) =
+    transH (evalE (lin N) _ _ _ _ step N (idH (lin N)))
+     (transH (rd-dtact (lin N) (PN N) (lid (lin N) e0) x1 (G.act (lin N) (PN N) (lid (lin N) e0) x1)
+                       (refl (G.act (lin N) (PN N) (lid (lin N) e0) x1)) (fside N b j hl) N (idH (lin N)))
+             (C1-pw N b j hl N (compH (lin N) (lin N) (PN N) (lid (lin N) e0) (idH (lin N))) (qmap N (suc N))
+                    (pw-sym (lin N) (PN N) (qmap N (suc N)) (lid (lin N) e0) (pw-q-bot N))))
+   where {
+    x1 : Pt (PN N) = G.act (PN N) (PN N) (idH (PN N)) b.brho ;
+    step : Id (TD.EI (lin N)) (G.act (lin N) (PN N) (lid (lin N) e0) b.brho, b.bu)
+                              (TD.E.act (lin N) (PN N) (lid (lin N) e0) (x1, fside N b j hl)) =
+      transH (symH (TD.E.act-id (lin N) (BX.lidE e0 (lin N) b.brho b.bu)))
+       (transH (b.bcb j (lin N) (idH (lin N))
+                  (fullInQ N (b.bs j).sQ hl (lin N) (compH (lin N) (lin N) (PN N) (lid (lin N) e0) (idH (lin N)))))
+               (symH ((b.bs j).snat (lin N) (PN N) (lid (lin N) e0) (idH (PN N))
+                        (fullInQ N (b.bs j).sQ hl (PN N) (idH (PN N)))
+                        (fullInQ N (b.bs j).sQ hl (lin N) (compH (lin N) (PN N) (PN N) (idH (PN N)) (lid (lin N) e0)))))) ;
+   } ;
+
+  ----------------------------------------------------------------------
+  -- The lower lid along a face
+
+  botE-rB (N y : Nat) (b : BoxL (suc N))
+    : Id (EI (lin N)) (E.act (lin N) (lin (suc N)) (dl N y) (botE (suc N) b)) (botE N (rB N y b)) =
+    transH (b.bu.2 N (suc N) (dl N y) (dl-strict N y) (idH (lin (suc N))))
+           (symH (transH (evalE (lin N) _ _ _ _
+                            (BX.Restrict[e0, lin N, lin (suc N), dl N y].ruE b.brho b.bu) N (idH (lin N)))
+                         (rd-dtact (lin N) (lin (suc N)) (dl N y) x1 (G.act (lin N) (lin (suc N)) (dl N y) x1)
+                                   (refl (G.act (lin N) (lin (suc N)) (dl N y) x1)) b.bu N (idH (lin N)))))
+   where { x1 : Pt (lin (suc N)) = G.act (lin (suc N)) (PN (suc N)) (lid (lin (suc N)) e0) b.brho ; } ;
+} ;

@@ -1,0 +1,58 @@
+-- GExtComp5.seg (inside IvBase.FaU, any base; line form of ExtThm7's
+-- extComp-full).  On a problem whose line is FULL everywhere, the
+-- composite of Ext(alpha) is the top of the B-filler (beta, GExtComp1),
+-- read in Ext: the identity lands in delta, so the side of the partial
+-- fibre element on delta is total, and the extension is that side
+-- (kfull).
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+
+module C5 (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (eS eT : IPt) (kAS : LineFibP[GFam[a].famPath, G, A].FibAt eS)
+  (kBS : LineFibP[GFam[a].famPath, GP.CofL[G, psi].resCtx, B].FibAt eS)
+  (kA1 : LineFibP[GFam[a].famPath, G, A].FibAt e1)
+  (eal : GEquiv[a].EquivOp GP.CofL[G, psi].resCtx B (subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR) al) {
+  open GP.CofL[G, psi] ;
+  open GExt.ExtDef[G, A, psi] ;
+  open ExtB[B, al] ;
+  open GExt2.ExtB2[G, A, psi, B, al] ;
+  open GExt3.ExtB3[G, A, psi, B, al] ;
+  open GExt4.ExtB4[G, A, psi, B, al] ;
+  open GExtComp1.C1[G, A, psi, B, al, eS, kBS] ;
+  open GExtComp2.C2[G, A, psi, B, al, eS, kAS, kBS] ;
+  open GExtComp3.C3[G, A, psi, B, al, eS, eT, kAS, kBS, kA1, eal] ;
+
+  module Full (X : Ob) (x : KX.TV.EI X) (p : KX.PT.Partial[X, x]) (fl : FlTy X x) {
+    module CX = Cop[X, x, p] ;
+
+    -- the identity lands in delta
+    hid : HoldsU X r CX.PB.Lk X (idH X) = \ V g j -> full-id V (x.1.1 V (compH V X X (idH X) g) j) (fl V (compH V X X (idH X) g) j) ;
+
+    dI : (d : Fin (forallUn r)) * Lands X X (CX.PB.dl d) (idH X) = forallU-lands X X r CX.PB.Lk (idH X) hid ;
+
+    -- the extension is the side on delta at the identity
+    vE-full : Id (FX.TF.EI X) CX.vE (CX.fe2 dI.1 X (idH X) dI.2) =
+      transH (symH (FX.TF.E.act-id X CX.vE))
+        (transH (E3.extEquiv.kside X CX.w1 CX.J2.part (finR p.pr (forallUn r) dI.1) X (idH X) (CX.J2.landR dI.1 X (idH X) dI.2))
+                (CX.J2.atR dI.1 X (idH X) (CX.J2.landR dI.1 X (idH X) dI.2) dI.2)) ;
+
+    -- the composite is the top of the B-filler of the problem, read in Ext
+    full : Id (TX.EI X) (x.1.1 X (idH X) (ptH X eT), CX.cop) (fromB X (Beta[X, x, p, fl].FBv X (idH X) (ptH X eT))) =
+      transH CX.cop-E
+       (transH (apH (FX.fibB X) vE-full)
+        (transH (cfib-B X (TA.E.act X X (idH X) CX.w1) (CX.el2 dI.1 X (idH X) dI.2) (CX.eq2 dI.1 X (idH X) dI.2))
+                (apH (fromB X)
+                   (FBv-cong X (KX.TV.E.act X X (idH X) x) x (KX.TV.E.act-id X x) (KX.PT.restrictP X X (idH X) x p) p
+                      (KX.PT.restrictP-id X x p) (CX.PB.flAt X (idH X) (CX.PB.hOf dI.1 X (idH X) dI.2)) fl X (idH X) (ptH X eT))))) ;
+  } ;
+} ;

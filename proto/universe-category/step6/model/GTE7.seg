@@ -1,0 +1,92 @@
+-- GTE7.seg (inside IvBase.Cn): transport along a line, part 7: the path
+-- problem of TranspP, in line form.  For w = (x , a) and p (GTE5.BB.Box):
+--
+--   u , u'     the values of the transport filler U0 of bnew (GTE1.uF) and
+--              of the B-filler Fb (GTE5): two lines over ln x
+--   ell2       the line in K2 (GTE6): i |-> (ln x i , U0 i , Fb i)
+--   cp         the constant path at bnew: the start, over ell2 at src d
+--   xh2        the point of the problem
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module PPt (G : PCtx) (A : PTy[G]) (d : Bool) (ca : CompAtP[GFam[lv].famPath, G, A, src d, tgt d].CompAt)
+  (cb : CompAtP[GFam[lv].famPath, G, A, tgt d, src d].CompAt)
+  (c01 : CompAtP[GFam[lv].famPath, G, A, e0, e1].CompAt)
+  (D : PCtx) (ln : PSub[D, GFam[lv].famPath.pth G]) {
+  module FM = GFam[lv] ;
+  module B = GTE5[lv].BB[G, A, d, ca, cb, c01, D, ln] ;
+  module KP = GTE6[lv].K2P[G, A, d, ca] ;
+  module T1 = B.T1 ;
+  module HF = B.HF ;
+  module TA = B.TA ;
+  module E0 = B.E0 ;
+  module EKt = B.EKt ;
+  module LS = B.LS ;
+  module LT = B.LT ;
+
+  module Bx (X : Ob) (w : HF.TA.EI X) (p : B.FP.Partial[X, w]) {
+    module BX = B.Box[X, w, p] ;
+
+    xbn : HF.TB.EI X = (w.1, BX.bnew) ;
+
+    -- the two lines
+    uS : T1.CA.TS.EI X = T1.uF X xbn ;
+
+    u (W : Ob) (f : Hom W X) (i : Hom W Iv) : TA.EI W = FM.famConn.levA G A X (E0.lineL X uS) W f i ;
+    u' (W : Ob) (f : Hom W X) (i : Hom W Iv) : TA.EI W = FM.famConn.levA G A X (EKt.lineL X BX.FbS) W f i ;
+
+    un (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+      : Id (TA.EI V) (TA.E.act V W g (u W f i)) (u V (compH V W X f g) (compH V W Iv i g)) =
+      FM.famConn.levA-nat G A X (E0.lineL X uS) V W g f i ;
+    un' (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+      : Id (TA.EI V) (TA.E.act V W g (u' W f i)) (u' V (compH V W X f g) (compH V W Iv i g)) =
+      FM.famConn.levA-nat G A X (EKt.lineL X BX.FbS) V W g f i ;
+
+    P (W : Ob) (f : Hom W X) (i : Hom W Iv) : Id (W0.Ix (G.ob W)) (u' W f i).1 (u W f i).1 =
+      transH (FM.famConn.levA-pt G A X (EKt.lineL X BX.FbS) W f i) (symH (FM.famConn.levA-pt G A X (E0.lineL X uS) W f i)) ;
+
+    module L3 = KP.Ln3[X, u, u', un, un', P] ;
+
+    ell2 : W0.Ix (KP.FK2.ob X) = L3.line ;
+
+    y0 : W0.Ix (KP.K2.ob X) = L3.v3 X (idH X) (ptH X (src d)) ;
+
+    -- bnew, read in E
+    bnE : TA.EI X = E0.endE X (T1.LB.nt X xbn) ;
+
+    -- both lines start at bnew
+    U0start : Id (TA.EI X) (u X (idH X) (ptH X (src d))) bnE =
+      transH (symH (LS.endL-lev X (E0.lineL X uS))) (apH (E0.endE X) (T1.uF-start X xbn)) ;
+
+    Fbstart : Id (TA.EI X) (u' X (idH X) (ptH X (src d))) bnE = symH (LS.endL-lev X (EKt.lineL X BX.FbS)) ;
+
+    -- the constant path at bnew
+    cv (W : Ob) (f : Hom W X) (j : Hom W Iv) : TA.EI W = TA.E.act W X f bnE ;
+
+    cvn (V W : Ob) (g : Hom V W) (f : Hom W X) (j : Hom W Iv)
+      : Id (TA.EI V) (TA.E.act V W g (cv W f j)) (cv V (compH V W X f g) (compH V W Iv j g)) =
+      TA.PE.actC V W X f g bnE ;
+
+    cvp (W : Ob) (f : Hom W X) (j : Hom W Iv) : Id (W0.Ix (G.ob W)) (cv W f j).1 (KP.s X y0 W f j) =
+      apH (G.act W X f) (apH {TA.EI X} {W0.Ix (G.ob X)} (\ z -> z.1) (symH U0start)) ;
+
+    cv0 : Id (TA.EI X) (cv X (idH X) (ptH X e0)) (KP.aE X y0) = transH (TA.E.act-id X bnE) (symH U0start) ;
+
+    cv1 : Id (TA.EI X) (cv X (idH X) (ptH X e1)) (KP.bE X y0) =
+      transH (TA.E.act-id X bnE) (transH (symH Fbstart) (symH (KP.mk3-b X (u X (idH X) (ptH X (src d))) (u' X (idH X) (ptH X (src d))) (P X (idH X) (ptH X (src d)))))) ;
+
+    cp : W0.Ix (KP.PT2.tobP X y0) = KP.PT2.mkPath X y0 cv cvn cvp cv0 cv1 ;
+
+    xh2 : KP.PC2.CP.TV.EI X = (ell2, cp) ;
+  } ;
+} ;

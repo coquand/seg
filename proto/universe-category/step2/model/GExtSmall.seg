@@ -1,0 +1,65 @@
+-- GExtSmall.seg (inside IvBase.FaU, any base; Step 2 probe): Ext over any
+-- glue data given as a map into the universal glue data, with its
+-- fibration and the substitution law of the fibration.
+--
+--   SA         the small type over GDr: fibre at w the fibre of Ext of w's
+--              data over y I at the identity (GExtCmp.obD), action
+--              ExtBig's transported through the comparison (ph / ps)
+--   extFib     for al : D -> GDr (level a), Ext(al) = xsub al SA with
+--              Theorem 7's fibration moved down (GSmallFibI)
+--   extFibSub  extFib along al o t is extFib along al substituted along t
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open Encode[a, a+] ;
+
+module XS (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[GYon[a].yP X]) -> Enc (Cl (GYon[a].yP X) A)) (r : Nat)
+  (kU0 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e0)
+  (kU1 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e1)
+  (kU0e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].SFm.SF].KESI kU0)
+  (kU1e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].SFm.SF].KESI kU1) {
+  module UB = GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl, r] ;
+  module CM = GExtCmp.CM[Cl, clSub, clSub-id, clSub-o, encCl, r] ;
+  module FU = GExtFibU.FU[Cl, clSub, clSub-id, clSub-o, encCl, r, kU0, kU1, kU0e, kU1e] ;
+
+  S0 (I : Ob) (w : V1.Ix (UB.GDr.ob I)) : W0.V = CM.At[I, w].obD ;
+
+  phS (I : Ob) (w : V1.Ix (UB.GDr.ob I)) (z : W0.Ix (S0 I w)) : V1.Ix (UB.ExtBig.tob I w) = CM.At[I, w].ph z ;
+  psS (I : Ob) (w : V1.Ix (UB.GDr.ob I)) (y : V1.Ix (UB.ExtBig.tob I w)) : W0.Ix (S0 I w) = CM.At[I, w].ps y ;
+
+  -- the small copy of ExtBig
+  tactS (J I : Ob) (f : Hom J I) (x : V1.Ix (UB.GDr.ob I)) (y : V1.Ix (UB.GDr.ob J)) (e : Id (V1.Ix (UB.GDr.ob J)) (UB.GDr.act J I f x) y)
+    (z : W0.Ix (S0 I x)) : W0.Ix (S0 J y) = psS J y (UB.ExtBig.tact J I f x y e (phS I x z)) ;
+
+  SA : GSmall.SPTy[UB.GDr] =
+    new GSmall.SPTy[UB.GDr, S0, tactS,
+      \ I x e z -> transH (apH (psS I x) (UB.ExtBig.tact-id I x e (phS I x z))) (CM.At[I, x].ps-ph z),
+      \ K J I f g x y z e1 e2 e3 a0 -> apH (psS K z)
+          (transH (UB.ExtBig.tact-o K J I f g x y z e1 e2 e3 (phS I x a0))
+                  (apH (UB.ExtBig.tact K J g y z e2) (symH (CM.At[J, y].ph-ps (UB.ExtBig.tact J I f x y e1 (phS I x a0))))))] ;
+
+  module SF = GSmallFibI.SFI[UB.GDr, SA, UB.ExtBig, phS, psS, \ W x b -> CM.At[W, x].ph-ps b, \ W x b -> CM.At[W, x].ps-ph b,
+    \ V W g x y e b -> CM.At[V, y].ph-ps (UB.ExtBig.tact V W g x y e (phS W x b)), FU.fibBig.2.1, FU.fibBig.2.2] ;
+
+  -- Ext over any glue data al : D -> GDr, with its fibration
+  extFib (D : PCtx) (al : GSmall.XSub[D, UB.GDr]) : GFibE[a].FibEL D = SF.At[D, al].fib ;
+
+  -- ... natural by composition: no construction-specific naturality proof
+  extFibSub (D : PCtx) (al : GSmall.XSub[D, UB.GDr]) (D' : PCtx) (t : PSub[D', D])
+    : Id (GFibE[a].FibEL D') (extFib D' (GSmall.xoS D' D UB.GDr al t)) (GSubst[a].subFibEL D' D t (extFib D al)) =
+    SF.FibSub[D, al, D', t].xfibSub ;
+} ;

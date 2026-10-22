@@ -1,0 +1,123 @@
+-- GUaGlue3.seg (inside IvBase, any base): gluing along a classifying map
+-- is natural, structure included (step K2 of the univalence op's
+-- uniformity).  For s : D' -> D:
+--   glueSub  eqDSub s (glue kap , eqOn) = (glue (kap o s) , eqOn), an Id
+--            of data: the triples by GUaGlue1b.GSub; the structures by
+--            YonDet (GYonEq5): along each yPt x', both restrict to the local
+--            data of kap (s x') (eqD-o, yonL, Tx.Wx)
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon ;
+open Encode[a, a+] ;
+open GLine[a] ;
+module GE1 = GFibE[a+] ;
+module GX = GEqExt[a] ;
+module GL = GEqLaws[a] ;
+module GL2 = GEqLaws2[a] ;
+
+module GlueSub (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE)
+  (D : PCtx)
+  (kap : (Y : Ob) -> W0.Ix (D.ob Y) -> GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].Q4 Y)
+  (kapnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y))
+     -> Id (GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].Q4 Y') (kap Y' (D.act Y' Y h x))
+           (GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].q4Act Y' Y (yH Y' Y h) (kap Y x)))
+  (D' : PCtx) (s : PSub[D', D]) {
+  module UA = GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module GL1b = GUaGlue1b.GlueL[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE] ;
+  module S = GL1b.GSub[D, kap, kapnat, D', s] ;
+  module G1 = GUaGlue2.Glue2[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, D, kap, kapnat] ;
+  module G2 = GUaGlue2.Glue2[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, D', S.ks, S.ksnat] ;
+  module ED = GX.EqDat[D'] ;
+
+  d1 : (u : ED.Tri) * ED.EqOn u = GL.eqDSub D' D s (G1.G.B, (G1.G.A, G1.G.al)) G1.eqOn ;
+  t1 : ED.Tri = d1.1 ;
+  e2' : ED.EqOn t1 = subst ED.Tri ED.EqOn (G2.G.B, (G2.G.A, G2.G.al)) t1 (symH S.P) G2.eqOn ;
+
+  d2E : Id ((u : ED.Tri) * ED.EqOn u) (t1, e2') ((G2.G.B, (G2.G.A, G2.G.al)), G2.eqOn) =
+    GUaGlue2.pairTr D' t1 (G2.G.B, (G2.G.A, G2.G.al)) S.P G2.eqOn ;
+
+  -- the Yoneda map of x', followed by s, is the Yoneda map of s x'
+  yS (Z : Ob) (x' : W0.Ix (D'.ob Z)) : Id (PSub[yP Z, D]) (oS (yP Z) D' D s (yPt D' Z x')) (yPt D Z (s.nt Z x')) =
+    sub-ext (yP Z) D (oS (yP Z) D' D s (yPt D' Z x')) (yPt D Z (s.nt Z x')) (\ W f -> s.nt-nat W Z f x') ;
+
+  H (Z : Ob) (x' : W0.Ix (D'.ob Z))
+    : Id ((u : GX.EqDat[yP Z].Tri) * GX.EqDat[yP Z].EqOn u)
+         (GL.eqDSub (yP Z) D' (yPt D' Z x') t1 d1.2) (GL.eqDSub (yP Z) D' (yPt D' Z x') t1 e2') =
+    transH (symH GL2.LawO[yP Z, D', D, s, yPt D' Z x', (G1.G.B, (G1.G.A, G1.G.al)), G1.eqOn].eqD-o)
+     (transH (apH (\ r -> GL.eqDSub (yP Z) D r (G1.G.B, (G1.G.A, G1.G.al)) G1.eqOn) (yS Z x'))
+      (transH GYonEq4.YL[D, G1.G.B, G1.G.A, G1.G.al, G1.L, G1.coh, Z, s.nt Z x'].yonL
+       (transH G1.Tx[Z, s.nt Z x'].Wx
+        (symH (transH (apH (\ z -> GL.eqDSub (yP Z) D' (yPt D' Z x') z.1 z.2) d2E)
+                (transH GYonEq4.YL[D', G2.G.B, G2.G.A, G2.G.al, G2.L, G2.coh, Z, x'].yonL G2.Tx[Z, x'].Wx)))))) ;
+
+  -- the result
+  glueSub : Id ((u : ED.Tri) * ED.EqOn u) d1 ((G2.G.B, (G2.G.A, G2.G.al)), G2.eqOn) =
+    transH (apH {ED.EqOn t1} {(u : ED.Tri) * ED.EqOn u} (\ e -> (t1, e))
+              (GYonEq5.YD[D', t1.1, t1.2.1, t1.2.2, d1.2, e2', H].yd))
+           d2E ;
+
+  opaque yS ; opaque H ; opaque glueSub ;
+} ;
+
+-- the same for pointwise-equal classifying maps
+module GlueCong (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE)
+  (D : PCtx)
+  (kap : (Y : Ob) -> W0.Ix (D.ob Y) -> GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].Q4 Y)
+  (kapnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y))
+     -> Id (GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].Q4 Y') (kap Y' (D.act Y' Y h x))
+           (GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].q4Act Y' Y (yH Y' Y h) (kap Y x)))
+  (kap' : (Y : Ob) -> W0.Ix (D.ob Y) -> GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].Q4 Y)
+  (kapnat' : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y))
+     -> Id (GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].Q4 Y') (kap' Y' (D.act Y' Y h x))
+           (GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].q4Act Y' Y (yH Y' Y h) (kap' Y x)))
+  (Pk : (Y : Ob) (x : W0.Ix (D.ob Y)) -> Id (GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].Q4 Y) (kap Y x) (kap' Y x)) {
+  module GL1b = GUaGlue1b.GlueL[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE] ;
+  module C = GL1b.GCong[D, kap, kapnat, kap', kapnat', Pk] ;
+  module G1 = GUaGlue2.Glue2[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, D, kap, kapnat] ;
+  module G2 = GUaGlue2.Glue2[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, D, kap', kapnat'] ;
+  module ED = GX.EqDat[D] ;
+
+  t1 : ED.Tri = (G1.G.B, (G1.G.A, G1.G.al)) ;
+  e2' : ED.EqOn t1 = subst ED.Tri ED.EqOn (G2.G.B, (G2.G.A, G2.G.al)) t1 (symH C.P) G2.eqOn ;
+
+  d2E : Id ((u : ED.Tri) * ED.EqOn u) (t1, e2') ((G2.G.B, (G2.G.A, G2.G.al)), G2.eqOn) =
+    GUaGlue2.pairTr D t1 (G2.G.B, (G2.G.A, G2.G.al)) C.P G2.eqOn ;
+
+  H (Z : Ob) (x : W0.Ix (D.ob Z))
+    : Id ((u : GX.EqDat[yP Z].Tri) * GX.EqDat[yP Z].EqOn u)
+         (GL.eqDSub (yP Z) D (yPt D Z x) t1 G1.eqOn) (GL.eqDSub (yP Z) D (yPt D Z x) t1 e2') =
+    transH GYonEq4.YL[D, G1.G.B, G1.G.A, G1.G.al, G1.L, G1.coh, Z, x].yonL
+     (transH G1.Tx[Z, x].Wx
+      (transH (apH (G1.loc Z) (Pk Z x))
+       (symH (transH (apH (\ z -> GL.eqDSub (yP Z) D (yPt D Z x) z.1 z.2) d2E)
+               (transH GYonEq4.YL[D, G2.G.B, G2.G.A, G2.G.al, G2.L, G2.coh, Z, x].yonL G2.Tx[Z, x].Wx))))) ;
+
+  glueCong : Id ((u : ED.Tri) * ED.EqOn u) (t1, G1.eqOn) ((G2.G.B, (G2.G.A, G2.G.al)), G2.eqOn) =
+    transH (apH {ED.EqOn t1} {(u : ED.Tri) * ED.EqOn u} (\ e -> (t1, e)) (GYonEq5.YD[D, t1.1, t1.2.1, t1.2.2, G1.eqOn, e2', H].yd)) d2E ;
+
+  opaque H ; opaque glueCong ;
+} ;

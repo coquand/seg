@@ -1,0 +1,191 @@
+-- GCofEsi2.seg (inside IvBase): an empty side inserted into the SECOND
+-- family of a joined partial element (GCofib.Partials.Join) is inserted at
+-- r1 + k in the joined list (JoinIns2; the first-family case is
+-- GCofEsi.JoinIns).  The index lemmas (SR2, split-skip2, split-k2) are the
+-- second-family analogues of Arith's SR / split-skip / split-k.
+
+level l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+module W0 = V[l] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[l] ;
+open GPR.PS ;
+module GCF = GCofib[l] ;
+
+-- s' (in the list with a side inserted at k of the second family) corresponds to s
+SR2 (r1 r2 k : Nat) : Plus (Fin r1) (Fin (suc r2)) -> Plus (Fin r1) (Fin r2) -> U l = split {
+  inl l' -> split { inl l -> Id Nat l'.1 l.1 ; inr j -> Empty } ;
+  inr j' -> split { inl l -> Empty ; inr j -> Id Nat j'.1 (skipN k j.1) } } ;
+
+plusSuc-SR2 (r1 r2 k : Nat) : (s' : Plus (Fin r1) (Fin (suc r2))) (s : Plus (Fin r1) (Fin r2))
+  -> SR2 r1 r2 k s' s -> SR2 (suc r1) r2 k (plusSuc r1 (suc r2) s') (plusSuc r1 r2 s) = split {
+  inl l' -> split { inl l -> \ P -> ap Nat Nat (\ z -> suc z) l'.1 l.1 P ; inr j -> \ P -> absurd _ P } ;
+  inr j' -> split { inl l -> \ P -> absurd _ P ; inr j -> \ P -> P } } ;
+
+split-skip2 (r2 k : Nat) : (r1 n : Nat) (h : IsT (ltb n (plus r1 r2))) (h' : IsT (ltb (skipN (plus r1 k) n) (plus r1 (suc r2))))
+  -> SR2 r1 r2 k (splitF r1 (suc r2) (skipN (plus r1 k) n, h')) (splitF r1 r2 (n, h)) = split {
+  zero -> \ n h h' -> refl (skipN k n) ;
+  suc r1 -> split {
+    zero -> \ h h' -> refl zero ;
+    suc n -> \ h h' ->
+      plusSuc-SR2 r1 r2 k (splitF r1 (suc r2) (skipN (plus r1 k) n, h')) (splitF r1 r2 (n, h)) (split-skip2 r2 k r1 n h h') } } ;
+
+SK2Ty (r1 r2 k : Nat) (hk : IsT (ltb (plus r1 k) (plus r1 (suc r2)))) : U l =
+  (j' : Fin (suc r2)) * (Id Nat j'.1 k * Id (Plus (Fin r1) (Fin (suc r2))) (splitF r1 (suc r2) (plus r1 k, hk)) (inr j')) ;
+
+split-k2 (r2 k : Nat) : (r1 : Nat) (hk : IsT (ltb (plus r1 k) (plus r1 (suc r2)))) -> SK2Ty r1 r2 k hk = split {
+  zero -> \ hk -> ((k, hk), (refl k, refl (inr (k, hk)))) ;
+  suc r1 -> \ hk -> ((split-k2 r2 k r1 hk).1, ((split-k2 r2 k r1 hk).2.1,
+     ap (Plus (Fin r1) (Fin (suc r2))) (Plus (Fin (suc r1)) (Fin (suc r2))) (plusSuc r1 (suc r2))
+        (splitF r1 (suc r2) (plus r1 k, hk)) (inr (split-k2 r2 k r1 hk).1) (split-k2 r2 k r1 hk).2.2)) } ;
+
+leb-plusL (k r2 : Nat) (hk : IsT (leb k r2)) : (r1 : Nat) -> IsT (leb (plus r1 k) (plus r1 r2)) = split {
+  zero -> hk ;
+  suc r1 -> leb-plusL k r2 hk r1 } ;
+
+module PartialsEsi2 (D : PCtx) (C : PTy[D]) {
+  open GPR.TyL[D, C] ;
+  open GCF.Partials[D, C] ;
+  module PE = GCofEsi[l].PartialsEsi[D, C] ;
+
+  module JoinIns2 (X : Ob) (x x' : Pt X) (k r1 r2 : Nat) (hk : IsT (leb k r2))
+    (S1 : Fin r1 -> PSide[X, x]) (S2 : Fin r2 -> PSide[X, x]) (c11 : PCsTy X x r1 S1)
+    (c12 : (l : Fin r1) (j : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (S1 l).pQ f) (i' : Lands W X (S2 j).pQ f)
+           -> Id (EI W) ((S1 l).pv W f i) ((S2 j).pv W f i'))
+    (c22 : PCsTy X x r2 S2)
+    (S1' : Fin r1 -> PSide[X, x']) (S2' : Fin (suc r2) -> PSide[X, x']) (c11' : PCsTy X x' r1 S1')
+    (c12' : (l : Fin r1) (j : Fin (suc r2)) (W : Ob) (f : Hom W X) (i : Lands W X (S1' l).pQ f) (i' : Lands W X (S2' j).pQ f)
+            -> Id (EI W) ((S1' l).pv W f i) ((S2' j).pv W f i'))
+    (c22' : PCsTy X x' (suc r2) S2')
+    (eE : (m' : Fin (suc r2)) -> Id Nat m'.1 k -> Id (Phi X) (S2' m').pQ (emptyS X))
+    (eQL : (l : Fin r1) -> Id (Phi X) (S1' l).pQ (S1 l).pQ)
+    (eQR : (m : Fin r2) (m' : Fin (suc r2)) -> Id Nat m'.1 (skipN k m.1) -> Id (Phi X) (S2' m').pQ (S2 m).pQ)
+    (eVL : (l : Fin r1) (W : Ob) (f : Hom W X) (i : Lands W X (S1' l).pQ f) (i' : Lands W X (S1 l).pQ f)
+           -> Id (EI W) ((S1' l).pv W f i) ((S1 l).pv W f i'))
+    (eVR : (m : Fin r2) (m' : Fin (suc r2)) (P : Id Nat m'.1 (skipN k m.1)) (W : Ob) (f : Hom W X)
+           (i : Lands W X (S2' m').pQ f) (i' : Lands W X (S2 m).pQ f) -> Id (EI W) ((S2' m').pv W f i) ((S2 m).pv W f i')) {
+    module J = Join[X, x, r1, r2, S1, S2, c11, c12, c22] ;
+    module J' = Join[X, x', r1, suc r2, S1', S2', c11', c12', c22'] ;
+
+    qRel : (s' : Plus (Fin r1) (Fin (suc r2))) (s : Plus (Fin r1) (Fin r2)) -> SR2 r1 r2 k s' s
+      -> Id (Phi X) (J'.sideAt s').pQ (J.sideAt s).pQ = split {
+      inl l' -> split {
+        inl l -> \ P -> transH (apH (\ z -> (S1' z).pQ) (fin-eq r1 l' l P)) (eQL l) ;
+        inr j -> \ P -> absurd _ P } ;
+      inr j' -> split { inl l -> \ P -> absurd _ P ; inr j -> \ P -> eQR j j' P } } ;
+
+    vRel : (s' : Plus (Fin r1) (Fin (suc r2))) (s : Plus (Fin r1) (Fin r2)) -> SR2 r1 r2 k s' s
+      -> (W : Ob) (f : Hom W X) (i : Lands W X (J'.sideAt s').pQ f) (i' : Lands W X (J.sideAt s).pQ f)
+      -> Id (EI W) ((J'.sideAt s').pv W f i) ((J.sideAt s).pv W f i') = split {
+      inl l' -> split {
+        inl l -> \ P W f i i' ->
+          transH (idJ (Fin r1) l' (\ l2 E -> (i2 : Lands W X (S1' l2).pQ f) -> Id (EI W) ((S1' l').pv W f i) ((S1' l2).pv W f i2))
+                    (\ i2 -> pv-irr X x' (S1' l') W f i i2) l (fin-eq r1 l' l P)
+                    (lands-sub W X (S1 l).pQ (S1' l).pQ (symH (eQL l)) f i'))
+                 (eVL l W f (lands-sub W X (S1 l).pQ (S1' l).pQ (symH (eQL l)) f i') i') ;
+        inr j -> \ P -> absurd _ P } ;
+      inr j' -> split { inl l -> \ P -> absurd _ P ; inr j -> \ P -> eVR j j' P } } ;
+
+    ins : PE.InsPH[X, x, x', plus r1 k, J.part, J'.part] =
+      new PE.InsPH[X, x, x', plus r1 k, J.part, J'.part,
+        plus-suc r1 r2,
+        leb-plusL k r2 hk r1,
+        \ hk' -> transH (apH (\ s -> (J'.sideAt s).pQ) (split-k2 r2 k r1 hk').2.2)
+                       (eE (split-k2 r2 k r1 hk').1 (split-k2 r2 k r1 hk').2.1),
+        \ n h h' -> qRel (splitF r1 (suc r2) (skipN (plus r1 k) n, h')) (splitF r1 r2 (n, h)) (split-skip2 r2 k r1 n h h'),
+        \ n h h' W f i i' -> vRel (splitF r1 (suc r2) (skipN (plus r1 k) n, h')) (splitF r1 r2 (n, h)) (split-skip2 r2 k r1 n h h') W f i i'] ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- two joined partial elements whose second families have propositionally
+  -- equal lengths and sides related index by index are equal (joinEq2;
+  -- J on the length, the families quantified)
+
+  module JE (X : Ob) (x x' : Pt X) (P : Id (Pt X) x' x) (r1 r2 : Nat)
+    (S1 : Fin r1 -> PSide[X, x]) (S2 : Fin r2 -> PSide[X, x]) (c11 : PCsTy X x r1 S1)
+    (c12 : (l : Fin r1) (j : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (S1 l).pQ f) (i' : Lands W X (S2 j).pQ f)
+           -> Id (EI W) ((S1 l).pv W f i) ((S2 j).pv W f i'))
+    (c22 : PCsTy X x r2 S2)
+    (S1' : Fin r1 -> PSide[X, x']) (c11' : PCsTy X x' r1 S1')
+    (eQL : (l : Fin r1) -> Id (Phi X) (S1' l).pQ (S1 l).pQ)
+    (eVL : (l : Fin r1) (W : Ob) (f : Hom W X) (i : Lands W X (S1' l).pQ f) (i' : Lands W X (S1 l).pQ f)
+           -> Id (EI W) ((S1' l).pv W f i) ((S1 l).pv W f i')) {
+    module J = Join[X, x, r1, r2, S1, S2, c11, c12, c22] ;
+
+    Ty (r2' : Nat) : U l+ =
+      (S2' : Fin r2' -> PSide[X, x'])
+      (c12' : (l : Fin r1) (j : Fin r2') (W : Ob) (f : Hom W X) (i : Lands W X (S1' l).pQ f) (i' : Lands W X (S2' j).pQ f)
+              -> Id (EI W) ((S1' l).pv W f i) ((S2' j).pv W f i'))
+      (c22' : PCsTy X x' r2' S2')
+      (eQR : (m : Fin r2) (m' : Fin r2') -> Id Nat m'.1 m.1 -> Id (Phi X) (S2' m').pQ (S2 m).pQ)
+      (eVR : (m : Fin r2) (m' : Fin r2') (Pm : Id Nat m'.1 m.1) (W : Ob) (f : Hom W X)
+             (i : Lands W X (S2' m').pQ f) (i' : Lands W X (S2 m).pQ f) -> Id (EI W) ((S2' m').pv W f i) ((S2 m).pv W f i'))
+      -> Id (Partial[X, x]) (subst (Pt X) (\ z -> Partial[X, z]) x' x P Join[X, x', r1, r2', S1', S2', c11', c12', c22'].part) J.part ;
+
+    module AtRefl (S2' : Fin r2 -> PSide[X, x'])
+      (c12' : (l : Fin r1) (j : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (S1' l).pQ f) (i' : Lands W X (S2' j).pQ f)
+              -> Id (EI W) ((S1' l).pv W f i) ((S2' j).pv W f i'))
+      (c22' : PCsTy X x' r2 S2')
+      (eQR : (m : Fin r2) (m' : Fin r2) -> Id Nat m'.1 m.1 -> Id (Phi X) (S2' m').pQ (S2 m).pQ)
+      (eVR : (m : Fin r2) (m' : Fin r2) (Pm : Id Nat m'.1 m.1) (W : Ob) (f : Hom W X)
+             (i : Lands W X (S2' m').pQ f) (i' : Lands W X (S2 m).pQ f) -> Id (EI W) ((S2' m').pv W f i) ((S2 m).pv W f i')) {
+      module J' = Join[X, x', r1, r2, S1', S2', c11', c12', c22'] ;
+
+      qAt : (sd : Plus (Fin r1) (Fin r2)) -> Id (Phi X) (J'.sideAt sd).pQ (J.sideAt sd).pQ = split {
+        inl l -> eQL l ;
+        inr m -> eQR m m (refl m.1) } ;
+
+      vAt : (sd : Plus (Fin r1) (Fin r2)) (W : Ob) (f : Hom W X) (i : Lands W X (J'.sideAt sd).pQ f) (i' : Lands W X (J.sideAt sd).pQ f)
+        -> Id (EI W) ((J'.sideAt sd).pv W f i) ((J.sideAt sd).pv W f i') = split {
+        inl l -> eVL l ;
+        inr m -> eVR m m (refl m.1) } ;
+
+      res : Id (Partial[X, x]) (subst (Pt X) (\ z -> Partial[X, z]) x' x P J'.part) J.part =
+        partExtH X x' x P J'.part J.part (refl (plus r1 r2))
+          (\ l -> qAt (splitF r1 r2 l)) (\ l -> vAt (splitF r1 r2 l)) ;
+    } ;
+
+    joinEq2 (r2' : Nat) (e : Id Nat r2 r2') : Ty r2' =
+      idJ Nat r2 (\ n E -> Ty n)
+        (\ S2' c12' c22' eQR eVR -> AtRefl[S2', c12', c22', eQR, eVR].res) r2' e ;
+  } ;
+
+  -- JoinIns2 with the second family of p' of any length r2' = suc r2
+  JoinIns2Ty (X : Ob) (x x' : Pt X) (k r1 r2 : Nat)
+    (S1 : Fin r1 -> PSide[X, x]) (S2 : Fin r2 -> PSide[X, x]) (c11 : PCsTy X x r1 S1)
+    (c12 : (l : Fin r1) (j : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (S1 l).pQ f) (i' : Lands W X (S2 j).pQ f)
+           -> Id (EI W) ((S1 l).pv W f i) ((S2 j).pv W f i'))
+    (c22 : PCsTy X x r2 S2) (S1' : Fin r1 -> PSide[X, x']) (c11' : PCsTy X x' r1 S1')
+    (eQL : (l : Fin r1) -> Id (Phi X) (S1' l).pQ (S1 l).pQ)
+    (eVL : (l : Fin r1) (W : Ob) (f : Hom W X) (i : Lands W X (S1' l).pQ f) (i' : Lands W X (S1 l).pQ f)
+           -> Id (EI W) ((S1' l).pv W f i) ((S1 l).pv W f i'))
+    (r2' : Nat) : U l+ =
+    (S2' : Fin r2' -> PSide[X, x'])
+    (c12' : (l : Fin r1) (j : Fin r2') (W : Ob) (f : Hom W X) (i : Lands W X (S1' l).pQ f) (i' : Lands W X (S2' j).pQ f)
+            -> Id (EI W) ((S1' l).pv W f i) ((S2' j).pv W f i'))
+    (c22' : PCsTy X x' r2' S2')
+    (eE : (m' : Fin r2') -> Id Nat m'.1 k -> Id (Phi X) (S2' m').pQ (emptyS X))
+    (eQR : (m : Fin r2) (m' : Fin r2') -> Id Nat m'.1 (skipN k m.1) -> Id (Phi X) (S2' m').pQ (S2 m).pQ)
+    (eVR : (m : Fin r2) (m' : Fin r2') (P : Id Nat m'.1 (skipN k m.1)) (W : Ob) (f : Hom W X)
+           (i : Lands W X (S2' m').pQ f) (i' : Lands W X (S2 m).pQ f) -> Id (EI W) ((S2' m').pv W f i) ((S2 m).pv W f i'))
+    -> PE.InsPH[X, x, x', plus r1 k, Join[X, x, r1, r2, S1, S2, c11, c12, c22].part, Join[X, x', r1, r2', S1', S2', c11', c12', c22'].part] ;
+
+  joinIns2 (X : Ob) (x x' : Pt X) (k r1 r2 : Nat) (hk : IsT (leb k r2))
+    (S1 : Fin r1 -> PSide[X, x]) (S2 : Fin r2 -> PSide[X, x]) (c11 : PCsTy X x r1 S1)
+    (c12 : (l : Fin r1) (j : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (S1 l).pQ f) (i' : Lands W X (S2 j).pQ f)
+           -> Id (EI W) ((S1 l).pv W f i) ((S2 j).pv W f i'))
+    (c22 : PCsTy X x r2 S2) (S1' : Fin r1 -> PSide[X, x']) (c11' : PCsTy X x' r1 S1')
+    (eQL : (l : Fin r1) -> Id (Phi X) (S1' l).pQ (S1 l).pQ)
+    (eVL : (l : Fin r1) (W : Ob) (f : Hom W X) (i : Lands W X (S1' l).pQ f) (i' : Lands W X (S1 l).pQ f)
+           -> Id (EI W) ((S1' l).pv W f i) ((S1 l).pv W f i'))
+    (r2' : Nat) (er : Id Nat (suc r2) r2')
+    : JoinIns2Ty X x x' k r1 r2 S1 S2 c11 c12 c22 S1' c11' eQL eVL r2' =
+    idJ Nat (suc r2) (\ n E -> JoinIns2Ty X x x' k r1 r2 S1 S2 c11 c12 c22 S1' c11' eQL eVL n)
+      (\ S2' c12' c22' eE eQR eVR ->
+         JoinIns2[X, x, x', k, r1, r2, hk, S1, S2, c11, c12, c22, S1', S2', c11', c12', c22', eE, eQL, eQR, eVL, eVR].ins)
+      r2' er ;
+} ;

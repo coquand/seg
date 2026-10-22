@@ -1,0 +1,175 @@
+-- GExtComp4.seg (inside IvBase.FaU, any base; line form of ExtComp1b /
+-- ExtComp4U).  Theorem 7, part 4: uniformity of the composite, and the
+-- composition structure extCompAt : CompAt eS eT of Ext(alpha).
+--
+-- Along h : Y -> X, every piece of the construction restricts side by side:
+--   * delta: the restricted generator lines ARE the generator lines of the
+--     restricted problem (phiL-ext), so the restricted delta is the delta
+--     of the restricted problem (FaU.forallU-pre; this is where the list
+--     must be stable, and it is on both bases);
+--   * the B-fillers on delta: FBv-cong (h g versus h then g);
+--   * the A-filler: kA.kunif + kop-cong on the joined partial line;
+--   * the partial fibre element over w1, and its extension: extEquiv.kunif
+--     + kop-cong.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+
+module C4 (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (eS eT : IPt) (kAS : LineFibP[GFam[a].famPath, G, A].FibAt eS)
+  (kBS : LineFibP[GFam[a].famPath, GP.CofL[G, psi].resCtx, B].FibAt eS)
+  (kA1 : LineFibP[GFam[a].famPath, G, A].FibAt e1)
+  (eal : GEquiv[a].EquivOp GP.CofL[G, psi].resCtx B (subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR) al) {
+  open GP.CofL[G, psi] ;
+  open GExt.ExtDef[G, A, psi] ;
+  open ExtB[B, al] ;
+  open GExt2.ExtB2[G, A, psi, B, al] ;
+  open GExt3.ExtB3[G, A, psi, B, al] ;
+  open GExt4.ExtB4[G, A, psi, B, al] ;
+  open GExtComp1.C1[G, A, psi, B, al, eS, kBS] ;
+  open GExtComp2.C2[G, A, psi, B, al, eS, kAS, kBS] ;
+  open GExtComp3.C3[G, A, psi, B, al, eS, eT, kAS, kBS, kA1, eal] ;
+
+  module Un (Y X : Ob) (h : Hom Y X) (x : KX.TV.EI X) (p : KX.PT.Partial[X, x]) {
+    xY : KX.TV.EI Y = KX.TV.E.act Y X h x ;
+    pY : KX.PT.Partial[Y, xY] = KX.PT.restrictP Y X h x p ;
+
+    module PX' = Pb[X, x, p] ;
+    module PY' = Pb[Y, xY, pY] ;
+    module CX = Cop[X, x, p] ;
+    module CY = Cop[Y, xY, pY] ;
+
+    ------------------------------------------------------------------
+    -- delta restricts
+
+    LkEq (k : Fin r) : Id (PhiL Y) (restrL Y X h (PX'.Lk k)) (PY'.Lk k) =
+      phiL-ext Y (restrL Y X h (PX'.Lk k)) (PY'.Lk k) (\ W f j -> refl (Q W (x.1.1 W (compH W Y X h f) j) k)) ;
+
+    dlEq (d : Fin (forallUn r)) : Id (Phi Y) (pre Y X h (PX'.dl d)) (PY'.dl d) =
+      transH (forallU-pre Y X h r PX'.Lk d)
+             (apH (\ Ls -> forallU Y r Ls d) (Axioms[a+].FunExtLemmas[fe @(a+)].funext (Fin r) (\ k -> PhiL Y) (\ k -> restrL Y X h (PX'.Lk k)) PY'.Lk LkEq)) ;
+
+    -- the B-filler on delta at h g is the one of the restriction at g
+    fbR (d : Fin (forallUn r)) (W : Ob) (g : Hom W Y) (i : Lands W X (PX'.dl d) (compH W Y X h g)) (i' : Lands W Y (PY'.dl d) g)
+      (V : Ob) (g' : Hom V W) (j : Hom V Iv)
+      : Id (TB.EI V) (PX'.BW[d, W, compH W Y X h g, i].BB.FBv V g' j) (PY'.BW[d, W, g, i'].BB.FBv V g' j) =
+      FBv-cong W (KX.TV.E.act W X (compH W Y X h g) x) (KX.TV.E.act W Y g xY) (KX.TV.E.act-o W Y X h g x)
+        (KX.PT.restrictP W X (compH W Y X h g) x p) (KX.PT.restrictP W Y g xY pY) (KX.PT.restrictP-o W Y X g h x p)
+        (PX'.flAt W (compH W Y X h g) (PX'.hOf d W (compH W Y X h g) i)) (PY'.flAt W g (PY'.hOf d W g i')) V g' j ;
+
+    ------------------------------------------------------------------
+    -- the A-filler restricts
+
+    xAeq : Id (KA.TV.EI Y) (KA.TV.E.act Y X h PX'.xA) PY'.xA = symH (ML.tvM-act Y X h x) ;
+
+    eQs : (s : Plus (Fin p.pr) (Fin (forallUn r))) -> Id (Phi Y) (pre Y X h (PX'.J.sideAt s).pQ) (PY'.J.sideAt s).pQ = split {
+      inl l -> refl (pre Y X h (p.ps l).pQ) ;
+      inr d -> dlEq d } ;
+
+    -- two elements of the fibres at W over x (h g)
+    tsA (W : Ob) (g : Hom W Y) (u v : KA.TS.EI W)
+      (pu : Id (KA.TV.EI W) u.1 (KA.TV.E.act W X (compH W Y X h g) PX'.xA))
+      (pv : Id (KA.TV.EI W) v.1 (KA.TV.E.act W Y g PY'.xA))
+      (q : (V : Ob) (g' : Hom V W) (j : Hom V Iv)
+           -> Id (TA.EI V) (FM.famConn.levA G A W (KA.lineL W u) V g' j) (FM.famConn.levA G A W (KA.lineL W v) V g' j))
+      : Id (KA.TS.EI W) u v =
+      LA.ts-ext W u v
+        (transH pu (transH (symH (KA.TV.PE.actC W Y X h g PX'.xA)) (transH (apH (KA.TV.E.act W Y g) xAeq) (symH pv)))) q ;
+
+    evs : (s : Plus (Fin p.pr) (Fin (forallUn r))) (W : Ob) (g : Hom W Y) (i : Lands W Y (pre Y X h (PX'.J.sideAt s).pQ) g)
+      (i' : Lands W Y (PY'.J.sideAt s).pQ g)
+      -> Id (KA.TS.EI W) ((PX'.J.sideAt s).pv W (compH W Y X h g) (lands-pre W Y X h (PX'.J.sideAt s).pQ g i))
+                        ((PY'.J.sideAt s).pv W g i') = split {
+      inl l -> \ W g i i' ->
+        apH (ML.tsM W) (KX.PT.pv-irr X x (p.ps l) W (compH W Y X h g) (lands-pre W Y X h (p.ps l).pQ g i) (lands-pre W Y X h (p.ps l).pQ g i')) ;
+      inr d -> \ W g i i' ->
+        tsA W g (PX'.SD[d].LS.sv W (compH W Y X h g) (lands-pre W Y X h (PX'.dl d) g i)) (PY'.SD[d].LS.sv W g i')
+          (PX'.SD[d].LS.sv-pt W (compH W Y X h g) (lands-pre W Y X h (PX'.dl d) g i)) (PY'.SD[d].LS.sv-pt W g i')
+          (\ V g' j -> transH (PX'.SD[d].LS.sv-lev W (compH W Y X h g) (lands-pre W Y X h (PX'.dl d) g i) V g' j)
+             (transH (apH (\ z -> toEA V (al.mE V z)) (fbR d W g (lands-pre W Y X h (PX'.dl d) g i) i' V g' j))
+                     (symH (PY'.SD[d].LS.sv-lev W g i' V g' j)))) } ;
+
+    ppA : Id (KA.PT.Partial[Y, PY'.xA])
+             (subst (KA.TV.EI Y) (\ z -> KA.PT.Partial[Y, z]) (KA.TV.E.act Y X h PX'.xA) PY'.xA xAeq (KA.PT.restrictP Y X h PX'.xA PX'.J.part))
+             PY'.J.part =
+      KA.PT.partExtH Y (KA.TV.E.act Y X h PX'.xA) PY'.xA xAeq (KA.PT.restrictP Y X h PX'.xA PX'.J.part) PY'.J.part
+        (refl (plus p.pr (forallUn r)))
+        (\ l -> eQs (splitF p.pr (forallUn r) l))
+        (\ l -> evs (splitF p.pr (forallUn r) l)) ;
+
+    fillA-R : Id (KA.TS.EI Y) (KA.TS.E.act Y X h (PX'.xA, PX'.fill)) (PY'.xA, PY'.fill) =
+      transH (kAS.kunif Y X h PX'.xA PX'.J.part)
+        (KA.PT.kop-cong kAS Y (KA.TV.E.act Y X h PX'.xA) PY'.xA xAeq (KA.PT.restrictP Y X h PX'.xA PX'.J.part) PY'.J.part ppA) ;
+
+    FAv-R (W : Ob) (g : Hom W Y) (j : Hom W Iv) : Id (TA.EI W) (PX'.FAv W (compH W Y X h g) j) (PY'.FAv W g j) =
+      transH (symH (LA.line-act Y X h (PX'.xA, PX'.fill) W g j))
+             (apH (\ u -> FM.famConn.levA G A Y (KA.lineL Y u) W g j) fillA-R) ;
+
+    ------------------------------------------------------------------
+    -- the partial fibre element restricts
+
+    w1eq : Id (TA.EI Y) (TA.E.act Y X h CX.w1) CY.w1 = transH (CX.w1-act Y h) (FAv-R Y (idH Y) (ptH Y eT)) ;
+
+    wf-eq (W : Ob) (g : Hom W Y) : Id (TA.EI W) (TA.E.act W X (compH W Y X h g) CX.w1) (TA.E.act W Y g CY.w1) =
+      transH (symH (TA.PE.actC W Y X h g CX.w1)) (apH (TA.E.act W Y g) w1eq) ;
+
+    eQ2 : (s : Plus (Fin p.pr) (Fin (forallUn r))) -> Id (Phi Y) (pre Y X h (CX.J2.sideAt s).pQ) (CY.J2.sideAt s).pQ = split {
+      inl l -> refl (pre Y X h (p.ps l).pQ) ;
+      inr d -> dlEq d } ;
+
+    elR (d : Fin (forallUn r)) (W : Ob) (g : Hom W Y) (i : Lands W Y (pre Y X h (PX'.dl d)) g) (i' : Lands W Y (PY'.dl d) g)
+      : Id (TX.EI W) (fromB W (PX'.BW[d, W, compH W Y X h g, lands-pre W Y X h (PX'.dl d) g i].BB.FBv W (idH W) (ptH W eT)))
+                     (fromB W (PY'.BW[d, W, g, i'].BB.FBv W (idH W) (ptH W eT))) =
+      apH {TB.EI W} {TX.EI W} (fromB W) (fbR d W g (lands-pre W Y X h (PX'.dl d) g i) i' W (idH W) (ptH W eT)) ;
+
+    ev2 : (s : Plus (Fin p.pr) (Fin (forallUn r))) (W : Ob) (g : Hom W Y) (i : Lands W Y (pre Y X h (CX.J2.sideAt s).pQ) g)
+      (i' : Lands W Y (CY.J2.sideAt s).pQ g)
+      -> Id (FX.TF.EI W) ((CX.J2.sideAt s).pv W (compH W Y X h g) (lands-pre W Y X h (CX.J2.sideAt s).pQ g i))
+                        ((CY.J2.sideAt s).pv W g i') = split {
+      inl l -> \ W g i i' ->
+        cfib-eq W (TA.E.act W X (compH W Y X h g) CX.w1) (TA.E.act W Y g CY.w1) (wf-eq W g)
+          (CX.el1 l W (compH W Y X h g) (lands-pre W Y X h (p.ps l).pQ g i)) (CY.el1 l W g i')
+          (apH (\ u -> lvX W u W (idH W) (ptH W eT))
+             (KX.PT.pv-irr X x (p.ps l) W (compH W Y X h g) (lands-pre W Y X h (p.ps l).pQ g i) (lands-pre W Y X h (p.ps l).pQ g i')))
+          (CX.eq1 l W (compH W Y X h g) (lands-pre W Y X h (p.ps l).pQ g i)) (CY.eq1 l W g i') ;
+      inr d -> \ W g i i' ->
+        cfib-eq W (TA.E.act W X (compH W Y X h g) CX.w1) (TA.E.act W Y g CY.w1) (wf-eq W g)
+          (CX.el2 d W (compH W Y X h g) (lands-pre W Y X h (PX'.dl d) g i)) (CY.el2 d W g i')
+          (elR d W g i i')
+          (CX.eq2 d W (compH W Y X h g) (lands-pre W Y X h (PX'.dl d) g i)) (CY.eq2 d W g i') } ;
+
+    ppP : Id (PX.Partial[Y, CY.w1])
+             (subst (TA.EI Y) (\ z -> PX.Partial[Y, z]) (TA.E.act Y X h CX.w1) CY.w1 w1eq (PX.restrictP Y X h CX.w1 CX.J2.part))
+             CY.J2.part =
+      PX.partExtH Y (TA.E.act Y X h CX.w1) CY.w1 w1eq (PX.restrictP Y X h CX.w1 CX.J2.part) CY.J2.part
+        (refl (plus p.pr (forallUn r)))
+        (\ l -> eQ2 (splitF p.pr (forallUn r) l))
+        (\ l -> ev2 (splitF p.pr (forallUn r) l)) ;
+
+    vEeq : Id (FX.TF.EI Y) (FX.TF.E.act Y X h CX.vE) CY.vE =
+      transH (E3.extEquiv.kunif Y X h CX.w1 CX.J2.part)
+        (PX.kop-cong E3.extEquiv Y (TA.E.act Y X h CX.w1) CY.w1 w1eq (PX.restrictP Y X h CX.w1 CX.J2.part) CY.J2.part ppP) ;
+
+    unif : Id (CC.TV'.EI Y) (CC.TV'.E.act Y X h (x.1, CX.cop)) (xY.1, CY.cop) =
+      KX'.tv-eq Y (CC.TV'.E.act Y X h (x.1, CX.cop)) (xY.1, CY.cop) (refl (FG.actF Y X h x.1))
+        (transH (KX'.endE-act Y X h (x.1, CX.cop))
+          (transH (apH (TX.E.act Y X h) CX.cop-E)
+            (transH (symH (FX.fibB-act Y X h CX.vE))
+              (transH (apH (FX.fibB Y) vEeq) (symH CY.cop-E))))) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- Theorem 7: composition of Ext(alpha) in line form
+
+  extCompAt : CC.CompAt =
+    new CC.CompAt[\ X x p -> Cop[X, x, p].cop, cside, \ Y X h x p -> Un[Y, X, h, x, p].unif] ;
+} ;

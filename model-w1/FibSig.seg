@@ -1,0 +1,210 @@
+-- FibSig.seg: MODEL/Lv/FibSig.agda (MODEL/Poset/FibSig.agda is its
+-- instance at lzero).  Composition for Sigma A B, from a filler for A and
+-- a composition for B (in the same direction).
+--
+-- A box b for Sigma A B over X gives the box FstBox for A (first
+-- components, on the nose).  Let aF be its filler, an element of A over
+-- the whole cylinder X * [1].  Over (rho , aF) the second components form
+-- a box SndBox for B; its composite, paired with aF at X * eT, is the
+-- composite of b.  The total presheaf of Sigma A B and that of B over G.A
+-- are the same up to reassociation (asc), on the nose, so all equations
+-- are those of B read back through asc.
+--
+-- Posets at a, presheaves at l (Level1 takes l = a+).
+
+level a l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+module W0 = V[l] ;
+open Trees[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, l] ;
+open PR.PS ;
+module BXm = Box[a, l] ;
+module FibM = Fib[a, l] ;
+module PF = PresheafFormers[a, l].PFormers[PosetCat] ;
+
+module SigComp (G : PCtx) (A : PTy[G]) (B : PTy[extP G A]) (eS eT : El Iv)
+  (F : FibM.FillDef[G, A].FillOp[eS]) (cB : BXm.Boxes[extP G A, B].CompOp[eS, eT]) {
+
+  S : PTy[G] = PF.SigAB[G, A, B].SigP ;
+
+  GA : PCtx = extP G A ;
+
+  module BS = BXm.Boxes[G, S] ;
+  module BA = BXm.Boxes[G, A] ;
+  module BB = BXm.Boxes[GA, B] ;
+  module TS = PR.TyL[G, S] ;
+  module TA = PR.TyL[G, A] ;
+  module TB = PR.TyL[GA, B] ;
+  module KB = FibM.Kit[GA, B] ;
+
+  -- first components, and reassociation
+  pA (I : Ob) (w : TS.EI I) : TA.EI I = (w.1, w.2.1) ;
+
+  asc (I : Ob) (w : TS.EI I) : TB.EI I = ((w.1, w.2.1), w.2.2) ;
+
+  unasc (I : Ob) (w : TB.EI I) : TS.EI I = (w.1.1, (w.1.2, w.2)) ;
+
+  ----------------------------------------------------------------------
+  -- The box of first components
+
+  module FstBox (X : Ob) (b : BS.Box[eS, X]) {
+
+    rho : TA.Pt (prodP X Iv) = b.brho ;
+
+    side (j : Fin b.br) : BA.Side[X, rho] =
+      (BA.mkSide X rho ((b.bs j).sQ) (\ W psi i -> ((b.bs j).sv W psi i).1) (\ W' W chi psi i i' -> apH (pA W') ((b.bs j).snat W' W chi psi i i'))) ;
+
+    cs : BA.CsTy X rho b.br side = \ j k W psi i i' -> apH (\ z -> z.1) (b.bcs j k W psi i i') ;
+
+    cb : BA.CbTy eS X rho b.bu.1 b.br side = \ j W phi i -> apH (pA W) (b.bcb j W phi i) ;
+
+    opaque cs ; opaque cb ;
+
+    box : BA.Box[eS, X] = (BA.mkBox eS X rho b.bu.1 b.br side cs cb) ;
+  } ;
+
+  module FstBoxR (Y X : Ob) (h : Hom Y X) (b : BS.Box[eS, X]) {
+
+    module RA = BA.Restrict[eS, Y, X, h] ;
+    module RS = BS.Restrict[eS, Y, X, h] ;
+    module FX = FstBox[X, b] ;
+    module FY = FstBox[Y, BS.restrict eS Y X h b] ;
+
+    BEq : Id (BA.Box[eS, Y]) (BA.restrict eS Y X h FX.box) FY.box =
+      BA.box-ext eS Y (RA.rrho b.brho) (RA.rrho b.brho) (RA.ru b.brho b.bu.1) (RS.ru b.brho b.bu).1 b.br
+        (RA.rS FX.box) FY.side (RA.rcs FX.box) FY.cs (RA.rcb FX.box) FY.cb
+        (refl (RA.rrho b.brho))
+        (transH (RA.ruE b.brho b.bu.1) (apH (pA Y) (symH (RS.ruE b.brho b.bu))))
+        (\ j x -> refl (pre Y X h (b.bs j).sQ x))
+        (\ j W psi i i' ->
+          transH (RA.rsvE b.brho (FX.side j) W psi i)
+           (apH (pA W) (transH ((b.bs j).pw W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi)
+                                             (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi)
+                                             (\ q -> refl (app W (prodP X Iv) (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi) q).1)
+                                             (inQ-cyl W Y X h (b.bs j).sQ psi i) (inQ-cyl W Y X h (b.bs j).sQ psi i'))
+                               (symH (RS.rsvE b.brho (b.bs j) W psi i'))))) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- The box of second components, over the filler
+
+  module SndBox (X : Ob) (b : BS.Box[eS, X]) {
+
+    bA : BA.Box[eS, X] = FstBox[X, b].box ;
+
+    rho : TA.Pt (prodP X Iv) = b.brho ;
+
+    aF : TA.T (prodP X Iv) rho = F.fop X bA ;
+
+    rhoB : TB.Pt (prodP X Iv) = (rho, aF) ;
+
+    v (j : Fin b.br) : KB.VTy X (b.bs j).sQ = \ W psi i -> asc W ((b.bs j).svE W psi i) ;
+
+    vpt (j : Fin b.br) : KB.VPt X rhoB (b.bs j).sQ (v j) = \ W psi i -> symH (F.fside X bA j W psi i) ;
+
+    vnat (j : Fin b.br) : KB.VNat X (b.bs j).sQ (v j) = \ W' W chi psi i i' -> apH (asc W') ((b.bs j).snat W' W chi psi i i') ;
+
+    side (j : Fin b.br) : BB.Side[X, rhoB] = KB.mkSideE X rhoB (b.bs j).sQ (v j) (vpt j) (vnat j) ;
+
+    side-E (j : Fin b.br) (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X (b.bs j).sQ psi)
+      : Id (TB.EI W) ((side j).svE W psi i) (v j W psi i) =
+      KB.mkSideE-E X rhoB (b.bs j).sQ (v j) (vpt j) (vnat j) W psi i ;
+
+    uE : TB.EI X = asc X (BS.lidE eS X rho b.bu) ;
+
+    upt : Id (TB.Pt X) uE.1 (GA.act X (prodP X Iv) (lid X eS) rhoB) = symH (F.flid X bA) ;
+
+    u : TB.T X (GA.act X (prodP X Iv) (lid X eS) rhoB) = KB.fromE X (GA.act X (prodP X Iv) (lid X eS) rhoB) uE upt ;
+
+    cs : BB.CsTy X rhoB b.br side = \ j k W psi i i' ->
+      TB.pr-inj W (GA.act W (prodP X Iv) psi rhoB) ((side j).sv W psi i) ((side k).sv W psi i')
+        (transH (side-E j W psi i)
+         (transH (apH (asc W) (apH {TS.T W (G.act W (prodP X Iv) psi rho)} {TS.EI W} (\ z -> (G.act W (prodP X Iv) psi rho, z)) {(b.bs j).sv W psi i} {(b.bs k).sv W psi i'} (b.bcs j k W psi i i')))
+                 (symH (side-E k W psi i')))) ;
+
+    cb : BB.CbTy eS X rhoB u b.br side = \ j W phi i ->
+      transH (apH (TB.E.act W X phi) (KB.fromE-eq X (GA.act X (prodP X Iv) (lid X eS) rhoB) uE upt))
+       (transH (apH (asc W) (b.bcb j W phi i)) (symH (side-E j W (compH W X (prodP X Iv) (lid X eS) phi) i))) ;
+
+    opaque cs ; opaque cb ;
+
+    box : BB.Box[eS, X] = (BB.mkBox eS X rhoB u b.br side cs cb) ;
+  } ;
+
+  module SndBoxR (Y X : Ob) (h : Hom Y X) (b : BS.Box[eS, X]) {
+
+    b' : BS.Box[eS, Y] = BS.restrict eS Y X h b ;
+
+    module SX = SndBox[X, b] ;
+    module SY = SndBox[Y, b'] ;
+    module RB = BB.Restrict[eS, Y, X, h] ;
+    module RS = BS.Restrict[eS, Y, X, h] ;
+
+    Erho : Id (TB.Pt (prodP Y Iv)) (RB.rrho SX.rhoB) SY.rhoB =
+      transH (F.funif Y X h SX.bA) (apH (\ bb -> (bb.brho, F.fop Y bb)) FstBoxR[Y, X, h, b].BEq) ;
+
+    BEq : Id (BB.Box[eS, Y]) (BB.restrict eS Y X h SX.box) SY.box =
+      BB.box-ext eS Y (RB.rrho SX.rhoB) SY.rhoB (RB.ru SX.rhoB SX.u) SY.u b.br (RB.rS SX.box) SY.side
+        (RB.rcs SX.box) SY.cs (RB.rcb SX.box) SY.cb Erho
+        (transH (RB.ruE SX.rhoB SX.u)
+         (transH (apH (TB.E.act Y X h) (KB.fromE-eq X (GA.act X (prodP X Iv) (lid X eS) SX.rhoB) SX.uE SX.upt))
+          (transH (apH (asc Y) (symH (RS.ruE b.brho b.bu)))
+                  (symH (KB.fromE-eq Y (GA.act Y (prodP Y Iv) (lid Y eS) SY.rhoB) SY.uE SY.upt)))))
+        (\ j x -> refl (pre Y X h (b.bs j).sQ x))
+        (\ j W psi i i' ->
+          transH (RB.rsvE SX.rhoB (SX.side j) W psi i)
+           (transH (SX.side-E j W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi) (inQ-cyl W Y X h (b.bs j).sQ psi i))
+            (transH (apH (asc W) (transH ((b.bs j).pw W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi)
+                                                       (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi)
+                                                       (\ q -> refl (app W (prodP X Iv) (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi) q).1)
+                                                       (inQ-cyl W Y X h (b.bs j).sQ psi i) (inQ-cyl W Y X h (b.bs j).sQ psi i'))
+                                         (symH (RS.rsvE b.brho (b.bs j) W psi i'))))
+                    (symH (SY.side-E j W psi i'))))) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- The composition
+
+  topOf (Y : Ob) (bb : BB.Box[eS, Y]) : TB.EI Y = BB.topE eT Y bb.brho (cB.cop Y bb) ;
+
+  copSig (X : Ob) (b : BS.Box[eS, X]) : TS.T X (G.act X (prodP X Iv) (lid X eT) b.brho) =
+    ((TA.E.act X (prodP X Iv) (lid X eT) SndBox[X, b].rhoB).2, cB.cop X SndBox[X, b].box) ;
+
+  -- the composite, read in the total presheaf of B
+  copSig-E (X : Ob) (b : BS.Box[eS, X]) : Id (TB.EI X) (asc X (BS.topE eT X b.brho (copSig X b))) (topOf X SndBox[X, b].box) =
+    refl (topOf X SndBox[X, b].box) ;
+
+  opaque copSig ; opaque copSig-E ;
+
+  csideSig (X : Ob) (b : BS.Box[eS, X]) (j : Fin b.br) (W : Ob) (phi : Hom W X)
+    (i : InQ W X (b.bs j).sQ (compH W X (prodP X Iv) (lid X eT) phi))
+    : Id (TS.EI W) (TS.E.act W X phi (BS.topE eT X b.brho (copSig X b))) ((b.bs j).svE W (compH W X (prodP X Iv) (lid X eT) phi) i) =
+    apH (unasc W)
+      (transH (apH (TB.E.act W X phi) (copSig-E X b))
+       (transH (cB.cside X SndBox[X, b].box j W phi i) (SndBox[X, b].side-E j W (compH W X (prodP X Iv) (lid X eT) phi) i))) ;
+
+  stepU (Y X : Ob) (h : Hom Y X) (b : BS.Box[eS, X])
+    : Id (TB.EI Y) (TB.E.act Y X h (topOf X SndBox[X, b].box)) (topOf Y SndBox[Y, BS.restrict eS Y X h b].box) =
+    transH (cB.cunif Y X h SndBox[X, b].box) (apH (topOf Y) SndBoxR[Y, X, h, b].BEq) ;
+
+  cunifSig (Y X : Ob) (h : Hom Y X) (b : BS.Box[eS, X])
+    : Id (TS.EI Y) (TS.E.act Y X h (BS.topE eT X b.brho (copSig X b)))
+                   (BS.topE eT Y (BS.restrict eS Y X h b).brho (copSig Y (BS.restrict eS Y X h b))) =
+    apH (unasc Y)
+      (transH (apH (TB.E.act Y X h) (copSig-E X b))
+       (transH (stepU Y X h b) (symH (copSig-E Y (BS.restrict eS Y X h b))))) ;
+
+  sigComp : BS.CompOp[eS, eT] = (BS.mkCompOp eS eT copSig csideSig cunifSig) ;
+} ;
+
+sigCompC (G : PCtx) (A : PTy[G]) (B : PTy[extP G A]) (cA : BXm.Boxes[G, A].Comp) (cB : BXm.Boxes[extP G A, B].Comp)
+  : BXm.Boxes[G, PF.SigAB[G, A, B].SigP].Comp =
+  (SigComp[G, A, B, e0, e1, (FibM.FillB[G, A].comp-to-fill cA).1, cB.1].sigComp,
+   SigComp[G, A, B, e1, e0, (FibM.FillB[G, A].comp-to-fill cA).2, cB.2].sigComp) ;

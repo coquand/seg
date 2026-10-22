@@ -1,0 +1,116 @@
+-- GFibExt.seg (inside IvBase): extensionality for fibrant types in line
+-- form, over any base (the line version of FibExt).  Two of them whose
+-- types have the SAME objects part are equal as soon as their actions
+-- agree pointwise and their composites agree, the problems of the second
+-- type being moved to problems of the first by MorC along the identity.
+--
+--   MorId      MorC along the identity does nothing to problems
+--   fibExtL    the extensionality principle
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+open Axioms[lv+].FunExtLemmas[fe @(lv+)] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module FX (G : PCtx) {
+  module FM = GFam[lv] ;
+  module GS = GSubst[lv] ;
+  module GE = GFibE[lv] ;
+
+  Pack (o : TOb G) : U lv = (h : TactTy G o) * (IdLaw G o h * OLaw G o h) ;
+
+  -- the second type, written as MorC's source along the identity
+
+
+  packOf (A : PTy[G]) : Pack A.tob = (A.tact, (A.tact-id, A.tact-o)) ;
+
+  -- the naturality of the identity on data, from GS.srcTy G G (idS G) A q.1 q.2.1 q.2.2 to A
+  NatTy (A : PTy[G]) (q : Pack A.tob) : U lv =
+    (J I : Ob) (f : Hom J I) (w : W0.Ix ((extP G (GS.srcTy G G (idS G) A q.1 q.2.1 q.2.2)).ob I))
+      -> Id (W0.Ix ((extP G A).ob J)) ((extP G (GS.srcTy G G (idS G) A q.1 q.2.1 q.2.2)).act J I f w) ((extP G A).act J I f w) ;
+
+  -- MorC along the identity, with the action of A, does nothing
+  module MorId (A : PTy[G]) (mnat : NatTy A (packOf A)) (e e' : IPt)
+    (ca : CompAtP[FM.famPath, G, A, e, e'].CompAt) {
+    module M = GS.MorC[G, G, idS G, A, A.tact, A.tact-id, A.tact-o, mnat, e, e', ca] ;
+    module CG = M.MP.CG ;
+    module LG = M.MP.LG ;
+
+    tvId (X : Ob) (x : CG.TV.EI X) : Id (CG.TV.EI X) (M.MP.tvN X x) x =
+      CG.EK.tv-eq X (M.MP.tvN X x) x (FM.FC[G].fam-eq X (M.MP.tvN X x).1 x.1 (\ W f i -> refl (x.1.1 W f i)))
+        (refl (CG.EK.endE X x)) ;
+
+    tsId (W : Ob) (u : CG.TS.EI W) : Id (CG.TS.EI W) (M.MP.tsN W u) u =
+      LG.ts-ext W (M.MP.tsN W u) u
+        (transH (CG.EK.mkTS-pt W (M.MP.tvN W u.1) M.MP.TSN[W, u].lineG (refl (M.MP.MC.mapF W u.1.1)) M.MP.TSN[W, u].qN) (tvId W u.1))
+        (\ V g j -> M.MP.TSN[W, u].res-lev V g j) ;
+
+    cop-id (X : Ob) (x : CG.TV.EI X) (p : CG.PT.Partial[X, x])
+      : Id (CG.TV'.T X x.1) (M.cop X x p) (ca.cop X x p) =
+      M.MP.TA.pr-inj X ((FM.famPath.pev G e').nt X x.1) (M.cop X x p) (ca.cop X x p)
+        (apH (M.MP.KG'.endE X) (CG.cop-cong ca X (M.MP.tvN X x) x (tvId X x) (M.MP.MN.mapP X x p) p
+           (CG.PT.partExtH X (M.MP.tvN X x) x (tvId X x) (M.MP.MN.mapP X x p) p (refl p.pr)
+              (\ l -> refl (p.ps l).pQ)
+              (\ l W f i i' -> transH (M.MP.MN.mapS-pv X x (p.ps l) W f i)
+                                 (transH (tsId W ((p.ps l).pv W f i)) (CG.PT.pv-irr X x (p.ps l) W f i i')))))) ;
+  } ;
+
+  -- composites agree, problems of the second type moved to the first
+  CopAgree (A : PTy[G]) (q : Pack A.tob) (mnat : NatTy A q) (c : GE.FE[G, A].Comp) (c' : GE.FE[G, GS.srcTy G G (idS G) A q.1 q.2.1 q.2.2].Comp) : U lv =
+    ((X : Ob) (x : CompAtP[FM.famPath, G, GS.srcTy G G (idS G) A q.1 q.2.1 q.2.2, e0, e1].TV.EI X) (p : CompAtP[FM.famPath, G, GS.srcTy G G (idS G) A q.1 q.2.1 q.2.2, e0, e1].PT.Partial[X, x])
+      -> Id (CompAtP[FM.famPath, G, GS.srcTy G G (idS G) A q.1 q.2.1 q.2.2, e0, e1].TV'.T X x.1)
+            (GS.MorC[G, G, idS G, A, q.1, q.2.1, q.2.2, mnat, e0, e1, c.1].cop X x p) (c'.1.cop X x p)) *
+    ((X : Ob) (x : CompAtP[FM.famPath, G, GS.srcTy G G (idS G) A q.1 q.2.1 q.2.2, e1, e0].TV.EI X) (p : CompAtP[FM.famPath, G, GS.srcTy G G (idS G) A q.1 q.2.1 q.2.2, e1, e0].PT.Partial[X, x])
+      -> Id (CompAtP[FM.famPath, G, GS.srcTy G G (idS G) A q.1 q.2.1 q.2.2, e1, e0].TV'.T X x.1)
+            (GS.MorC[G, G, idS G, A, q.1, q.2.1, q.2.2, mnat, e1, e0, c.2].cop X x p) (c'.2.cop X x p)) ;
+
+  pairC (A : PTy[G]) (c c' : GE.FE[G, A].Comp) (p : Id (GE.FE[G, A].C01.CompAt) c.1 c'.1)
+    (q : Id (GE.FE[G, A].C10.CompAt) c.2 c'.2) : Id (GE.FE[G, A].Comp) c c' =
+    transH (apH {GE.FE[G, A].C01.CompAt} {GE.FE[G, A].Comp} (\ z -> (z, c.2)) p)
+           (apH {GE.FE[G, A].C10.CompAt} {GE.FE[G, A].Comp} (\ z -> (c'.1, z)) q) ;
+
+  -- over the identity pack, agreement is equality
+  base (A : PTy[G]) (c : GE.FE[G, A].Comp) (ec : GE.FE[G, A].ESIC c) (mn : NatTy A (packOf A))
+    (c2 : GE.FE[G, A].Comp) (ec2 : GE.FE[G, A].ESIC c2) (H2 : CopAgree A (packOf A) mn c c2)
+    : Id (GE.FibEL G) (A, (c, ec)) (A, (c2, ec2)) =
+    apH {(cc : GE.FE[G, A].Comp) * GE.FE[G, A].ESIC cc} {GE.FibEL G} (\ cc -> (A, cc))
+      (Sigma-eq (GE.FE[G, A].Comp) (\ cc -> GE.FE[G, A].ESIC cc) c c2 ec ec2
+         (pairC A c c2
+            (GE.FE[G, A].C01.CompAt-ext c.1 c2.1 (\ X x p ->
+               transH (symH (MorId[A, mn, e0, e1, c.1].cop-id X x p)) (H2.1 X x p)))
+            (GE.FE[G, A].C10.CompAt-ext c.2 c2.2 (\ X x p ->
+               transH (symH (MorId[A, mn, e1, e0, c.2].cop-id X x p)) (H2.2 X x p))))
+         (isProp-Sigma (GE.FE[G, A].C01.CESI c2.1) (\ z -> GE.FE[G, A].C10.CESI c2.2)
+            (GE.FE[G, A].C01.isProp-CESI c2.1) (\ z -> GE.FE[G, A].C10.isProp-CESI c2.2))) ;
+
+  core (A : PTy[G]) (c : GE.FE[G, A].Comp) (ec : GE.FE[G, A].ESIC c)
+    (q : Pack A.tob) (Q : Id (Pack A.tob) (packOf A) q) (mnat : NatTy A q)
+    (c' : GE.FE[G, GS.srcTy G G (idS G) A q.1 q.2.1 q.2.2].Comp) (ec' : GE.FE[G, GS.srcTy G G (idS G) A q.1 q.2.1 q.2.2].ESIC c')
+    (H : CopAgree A q mnat c c')
+    : Id (GE.FibEL G) (A, (c, ec)) (GS.srcTy G G (idS G) A q.1 q.2.1 q.2.2, (c', ec')) =
+    idJ (Pack A.tob) (packOf A)
+      (\ q2 Q2 -> (mn2 : NatTy A q2) (c2 : GE.FE[G, GS.srcTy G G (idS G) A q2.1 q2.2.1 q2.2.2].Comp) (ec2 : GE.FE[G, GS.srcTy G G (idS G) A q2.1 q2.2.1 q2.2.2].ESIC c2)
+         -> CopAgree A q2 mn2 c c2 -> Id (GE.FibEL G) (A, (c, ec)) (GS.srcTy G G (idS G) A q2.1 q2.2.1 q2.2.2, (c2, ec2)))
+      (base A c ec)
+      q Q mnat c' ec' H ;
+
+  -- the principle
+  fibExtL (A : PTy[G]) (c : GE.FE[G, A].Comp) (ec : GE.FE[G, A].ESIC c)
+    (q : Pack A.tob) (Ht : PtEq G A.tob A.tact q.1) (mnat : NatTy A q)
+    (c' : GE.FE[G, GS.srcTy G G (idS G) A q.1 q.2.1 q.2.2].Comp) (ec' : GE.FE[G, GS.srcTy G G (idS G) A q.1 q.2.1 q.2.2].ESIC c')
+    (H : CopAgree A q mnat c c')
+    : Id (GE.FibEL G) (A, (c, ec)) (GS.srcTy G G (idS G) A q.1 q.2.1 q.2.2, (c', ec')) =
+    core A c ec q
+      (Sigma-eq (TactTy G A.tob) (\ h -> IdLaw G A.tob h * OLaw G A.tob h) A.tact q.1 (A.tact-id, A.tact-o) q.2
+         (tact-funext G A.tob A.tact q.1 Ht)
+         (isProp-Sigma (IdLaw G A.tob q.1) (\ z -> OLaw G A.tob q.1) (idLaw-prop G A.tob q.1) (\ z -> oLaw-prop G A.tob q.1)))
+      mnat c' ec' H ;
+} ;

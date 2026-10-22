@@ -1,0 +1,163 @@
+-- DGlueClSub.seg: the substitution law of the glue classifier of Delta
+-- (DGlueCl.GC), strict: an Id in Sigma A'. ClD D' A' with Ext[s] first,
+--
+--   clExt-sub   (Ext(alpha)[s], clSub s clExt) = (Ext(alpha[s]), clExt')
+--
+-- where clExt' is built from clSub sR hB and Ext(alpha[s])'s FibEL (cE', eE'),
+-- under FS: that FibEL is subFibEL s of Ext(alpha)'s.  The cofibration over
+-- D' is any psi' with psi's extent along s (fullS; GExtSub2.PQ gives one from
+-- generators, a re-presentation of psi is s = id).  Pointwise by cases on
+-- full, which is stable (GExtSub2.fullS): on psi through PhiB / toBeq (Ext's
+-- B part along s, GExtSub5), off psi by DFibToHornSub.toCl-sub and FS.  The
+-- passage pointwise <-> Sigma is DGlueCl.ClT (along GExtSub6.tyEq).
+--
+-- Constructive.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+module DBm = DeltaBase[a] ;
+module DB = DBm.DB ;
+module DS = DBm.DS ;
+module PR = DB.GPre[a] ;
+open PR.PS ;
+module GP = DB.GCofib[a] ;
+module DCl = DeltaClassifier[a] ;
+module DHm = DeltaHorn[a] ;
+open DB.GLine[a] ;
+open Constr[a] ;
+
+
+------------------------------------------------------------------------
+-- classifiers along an equation of types
+
+------------------------------------------------------------------------
+-- the substitution law
+
+module GS (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (hB : DCl.ClD GP.CofL[G, psi].resCtx B)
+  (cE : DB.GFibE[a].FE[G, DB.GExt2[a].ExtB2[G, A, psi, B, al].ExtT].Comp)
+  (eE : DB.GFibE[a].FE[G, DB.GExt2[a].ExtB2[G, A, psi, B, al].ExtT].ESIC cE)
+  (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D'])
+  (fullS : (X : Nat) (d : W0.Ix (D'.ob X)) -> Id Bool (GP.CofL[D', psi'].full X d) (GP.CofL[G, psi].full X (s.nt X d))) {
+  module S2 = DB.GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS] ;
+  module PH = DB.GExtSub5.PhiS[G, A, psi, B, al, D', s, psi', fullS] ;
+  module S6 = DB.GExtSub6.ActS[G, A, psi, B, al, D', s, psi', fullS] ;
+  module C = DGlueCl[a].GC[G, A, psi, B, al, hB, cE, eE] ;
+
+  module E2' = DB.GExt2[a].ExtB2[D', S2.A', S2.psi', S2.B', S2.al'] ;
+
+ module Sb (cE' : DB.GFibE[a].FE[D', E2'.ExtT].Comp) (eE' : DB.GFibE[a].FE[D', E2'.ExtT].ESIC cE')
+  (FS : Id (DB.GFibE[a].FibEL D') (E2'.ExtT, (cE', eE')) (DB.GSubst[a].subFibEL D' G s C.FE)) {
+  hB' : DCl.ClD S2.CL'.resCtx S2.B' = DCl.clSubD S2.CL'.resCtx S2.CL.resCtx S2.sR B hB ;
+
+  module C' = DGlueCl[a].GC[D', S2.A', S2.psi', S2.B', S2.al', hB', cE', eE'] ;
+
+  T1 : PTy[D'] = subTy D' G C.E2.ExtT s ;
+  c1 : DCl.ClD D' T1 = DCl.clSubD D' G s C.E2.ExtT C.clExt ;
+
+  module K = DGlueCl[a].ClT[D', C'.E2.ExtT, C'.clExt] ;
+  module TR = DGlueCl[a].TrT[D', C'.E2.ExtT] ;
+  module SB = DCl.Sub[D', G, s, C.E2.ExtT, C.clExt] ;
+
+  -- Phi on an element given by B, at abstract data
+  phiChain (W : Nat) (v : PH.TX'.EI W) (w' : PH.TB'.EI W) (e1 : Id (PH.TX'.EI W) v (PH.E3'.fromB W w'))
+    (wb : PH.TB.EI W) (e2 : Id (PH.TB.EI W) (PH.LB.mV W w') wb) (u : PH.TX.EI W) (e3 : Id (PH.TX.EI W) (PH.E3.fromB W wb) u)
+    : Id (PH.TX.EI W) (PH.PhiE W v) u =
+    transH (apH (PH.PhiE W) e1) (transH (PH.PhiB W w') (transH (apH (PH.E3.fromB W) e2) e3)) ;
+
+  opaque phiChain ;
+
+  ----------------------------------------------------------------------
+  -- on psi
+
+  module OnF (m k : Nat) (hk : IsT (leb k (suc m))) (d : W0.Ix (D'.ob (suc m))) (p' : IsT (S2.CL'.full (suc m) d))
+    (h2 : C'.HX.HornData m k d) {
+    p : IsT (S2.CL.full (suc m) (s.nt (suc m) d)) = (S2.sRnt (suc m) (d, p')).2 ;
+
+    hh : C.HX.HornData m k (s.nt (suc m) d) = SB.mv m k d (TR.trH T1 S6.tyEq m k d h2) ;
+
+    module F' = C'.Full[m, k, hk, d, p', h2] ;
+    module F = C.Full[m, k, hk, s.nt (suc m) d, p, hh] ;
+
+    -- the horn data of B at (s d , p) agree
+    vEq (W : Nat) (f : Hom (lin W) (lin (suc m))) (i : DS.Lands W (suc m) (DHm.hornS m k) f)
+      : Id (PH.TB.EI W) (PH.LB.mV W (F'.bv W f i)) (F.bv W f i) =
+      S6.toBPhi W (h2.1 W f i) (F'.pW W f i) (hh.1 W f i)
+        (apH ((liftP D' G C.E2.ExtT s).nt W) (symH (TR.trH-v T1 S6.tyEq m k d h2 W f i))) (F.pW W f i) ;
+
+    hdEq : Id (C.HB.HornData m k (s.nt (suc m) d, p)) (DCl.Sub[S2.CL'.resCtx, S2.CL.resCtx, S2.sR, B, hB].mv m k (d, p') F'.hd) F.hd =
+      DCl.FExt[S2.CL.resCtx, B].hd-eq m k (s.nt (suc m) d, p) (DCl.Sub[S2.CL'.resCtx, S2.CL.resCtx, S2.sR, B, hB].mv m k (d, p') F'.hd) F.hd
+        (funext Nat (\ W -> (f : Hom (lin W) (lin (suc m))) -> DS.Lands W (suc m) (DHm.hornS m k) f -> PH.TB.EI W)
+           (DCl.Sub[S2.CL'.resCtx, S2.CL.resCtx, S2.sR, B, hB].mv m k (d, p') F'.hd).1 F.hd.1 (\ W ->
+         funext (Hom (lin W) (lin (suc m))) (\ f -> DS.Lands W (suc m) (DHm.hornS m k) f -> PH.TB.EI W)
+           ((DCl.Sub[S2.CL'.resCtx, S2.CL.resCtx, S2.sR, B, hB].mv m k (d, p') F'.hd).1 W) (F.hd.1 W) (\ f ->
+         funext (DS.Lands W (suc m) (DHm.hornS m k) f) (\ i -> PH.TB.EI W)
+           ((DCl.Sub[S2.CL'.resCtx, S2.CL.resCtx, S2.sR, B, hB].mv m k (d, p') F'.hd).1 W f) (F.hd.1 W f) (\ i -> vEq W f i)))) ;
+
+    K1 : Id (PH.TX.EI (suc m)) (PH.PhiE (suc m) (d, (C'.clExt m k hk d h2).1)) (s.nt (suc m) d, (C.clExt m k hk (s.nt (suc m) d) hh).1) =
+      phiChain (suc m) (d, (C'.clExt m k hk d h2).1) F'.w
+        (transH (apH {C'.HX.Ext m k d h2} {C'.TX.EI (suc m)} (\ z -> (d, z.1)) (C'.clExt-full m k hk d p' h2)) F'.res-E)
+        F.w (apH {C.HB.HornData m k (s.nt (suc m) d, p)} {C.TB.EI (suc m)} (\ hd -> ((s.nt (suc m) d, p), (hB m k hk (s.nt (suc m) d, p) hd).1)) hdEq)
+        (s.nt (suc m) d, (C.clExt m k hk (s.nt (suc m) d) hh).1)
+        (transH (symH F.res-E) (symH (apH {C.HX.Ext m k (s.nt (suc m) d) hh} {C.TX.EI (suc m)} (\ z -> (s.nt (suc m) d, z.1)) (C.clExt-full m k hk (s.nt (suc m) d) p hh)))) ;
+
+    res : Id (PR.TyL[D', T1].EI (suc m)) (TR.trE (suc m) T1 S6.tyEq (d, (C'.clExt m k hk d h2).1))
+                                        (d, (c1 m k hk d (TR.trH T1 S6.tyEq m k d h2)).1) =
+      SB.liftInj (suc m) (TR.trE (suc m) T1 S6.tyEq (d, (C'.clExt m k hk d h2).1)) (d, (c1 m k hk d (TR.trH T1 S6.tyEq m k d h2)).1)
+        (TR.trE-pt (suc m) T1 S6.tyEq (d, (C'.clExt m k hk d h2).1))
+        (transH (S6.trPhi (suc m) (d, (C'.clExt m k hk d h2).1)) K1) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- off psi: toCl-sub and FS
+
+  Rn : Id ((A' : PTy[D']) * DCl.ClD D' A') (C'.E2.ExtT, DFibToHornSub[a].toCl D' C'.FE) (T1, DCl.clSubD D' G s C.E2.ExtT (DFibToHornSub[a].toCl G C.FE)) =
+    transH (apH {DB.GFibE[a].FibEL D'} {(A' : PTy[D']) * DCl.ClD D' A'} (\ F -> (F.1, DFibToHornSub[a].toCl D' F)) FS)
+           (symH (DFibToHornSub[a].toCl-sub D' G s C.FE)) ;
+
+  StN : DGlueCl[a].ClT[D', C'.E2.ExtT, DFibToHornSub[a].toCl D' C'.FE].St T1 (DCl.clSubD D' G s C.E2.ExtT (DFibToHornSub[a].toCl G C.FE)) S6.tyEq =
+    DGlueCl[a].ClT[D', C'.E2.ExtT, DFibToHornSub[a].toCl D' C'.FE].ofSig T1 (DCl.clSubD D' G s C.E2.ExtT (DFibToHornSub[a].toCl G C.FE)) Rn S6.tyEq ;
+
+  -- the chain off psi, at abstract fillers
+  offChain (W : Nat) (d : W0.Ix (D'.ob W)) (x x' : W0.Ix (C'.E2.ExtT.tob W d)) (e1 : Id (W0.Ix (C'.E2.ExtT.tob W d)) x x')
+    (y : W0.Ix (C.E2.ExtT.tob W (s.nt W d))) (e2 : Id (PR.TyL[D', T1].EI W) (TR.trE W T1 S6.tyEq (d, x')) (d, y))
+    (y' : W0.Ix (C.E2.ExtT.tob W (s.nt W d))) (e3 : Id (W0.Ix (C.E2.ExtT.tob W (s.nt W d))) y y')
+    : Id (PR.TyL[D', T1].EI W) (TR.trE W T1 S6.tyEq (d, x)) (d, y') =
+    transH (apH (\ z -> TR.trE W T1 S6.tyEq (d, z)) e1)
+      (transH e2 (apH {W0.Ix (C.E2.ExtT.tob W (s.nt W d))} {PR.TyL[D', T1].EI W} (\ z -> (d, z)) e3)) ;
+
+  opaque offChain ;
+
+  module OffF (m k : Nat) (hk : IsT (leb k (suc m))) (d : W0.Ix (D'.ob (suc m))) (np' : Id Bool (S2.CL'.full (suc m) d) false)
+    (h2 : C'.HX.HornData m k d) {
+    hh : C.HX.HornData m k (s.nt (suc m) d) = SB.mv m k d (TR.trH T1 S6.tyEq m k d h2) ;
+
+    res : Id (PR.TyL[D', T1].EI (suc m)) (TR.trE (suc m) T1 S6.tyEq (d, (C'.clExt m k hk d h2).1))
+                                        (d, (c1 m k hk d (TR.trH T1 S6.tyEq m k d h2)).1) =
+      offChain (suc m) d (C'.clExt m k hk d h2).1 (DFibToHornSub[a].toCl D' C'.FE m k hk d h2).1
+        (apH {C'.HX.Ext m k d h2} {W0.Ix (C'.E2.ExtT.tob (suc m) d)} (\ z -> z.1) (C'.clExt-nfull m k hk d np' h2))
+        (DFibToHornSub[a].toCl G C.FE m k hk (s.nt (suc m) d) hh).1 (StN m k hk d h2)
+        (C.clExt m k hk (s.nt (suc m) d) hh).1 (symH (apH {C.HX.Ext m k (s.nt (suc m) d) hh} {W0.Ix (C.E2.ExtT.tob (suc m) (s.nt (suc m) d))} (\ z -> z.1) (C.clExt-nfull m k hk (s.nt (suc m) d) (PH.np (suc m) d np') hh))) ;
+  } ;
+
+  stC (m k : Nat) (hk : IsT (leb k (suc m))) (d : W0.Ix (D'.ob (suc m))) (h2 : C'.HX.HornData m k d)
+    : (c : Bool) -> Id Bool (S2.CL'.full (suc m) d) c
+      -> Id (PR.TyL[D', T1].EI (suc m)) (TR.trE (suc m) T1 S6.tyEq (d, (C'.clExt m k hk d h2).1))
+                                       (d, (c1 m k hk d (TR.trH T1 S6.tyEq m k d h2)).1) = split {
+    true -> \ e -> OnF[m, k, hk, d, e, h2].res ;
+    false -> \ e -> OffF[m, k, hk, d, e, h2].res } ;
+
+  st : K.St T1 c1 S6.tyEq = \ m k hk d h2 -> stC m k hk d h2 (S2.CL'.full (suc m) d) (refl (S2.CL'.full (suc m) d)) ;
+
+  clExt-sub : Id ((A' : PTy[D']) * DCl.ClD D' A') (T1, c1) (C'.E2.ExtT, C'.clExt) = K.toSig T1 S6.tyEq c1 st ;
+} ;
+} ;

@@ -1,0 +1,56 @@
+-- If a maps to zero in a localization A[1/f], then merely f^k a = 0.
+-- The certificate of the one-variable presentation A[Y]/(fY-1) gives
+-- a raw list q with (fY-1)q = a, and the linear-certificate calculation
+-- turns it into an annihilating power.
+level l ; open Ring[l] ;
+module Pr = Prelude[l] ;
+module Tr = Truncation[l] ;
+module Relative (A : CRing) (setA : Pr.isSet A.R) (f : A.R) {
+ module Rel = LocalizationNilpotence[l].Relative[A,setA,f] ;
+ module PC = Rel.PC ;
+ module Lin = Rel.Lin ;
+ module X = PC.X ;
+ module Pow = AffinePowers[l].Over[A] ;
+ module M = Mul[l].MulR[A] ;
+ Annihilating (a : A.R) : U l = (n : Nat) * Id A.R (A.mul (Pow.power f n) a) A.z ;
+ Annihilated (a : A.R) : U l = Tr.Trunc[Annihilating a].carrier ;
+ lin : Poly[l].PolyR[A].P = Lin.linear f ;
+ raw (a : A.R) (w : PC.T.Ideal.Certificate (PC.T.ev (cst a)) (PC.T.ev PC.D.zeroE))
+  (p : PC.Representatives w.1) : Poly[l].PolyR[A].peq (M.pmul lin p.1) (cons a nil) =
+  X.Q.effective (M.pmul lin p.1) (cons a nil) (calc X.Carrier {
+   X.include (M.pmul lin p.1)
+    =< sym (X.Multiply.beta lin p.1) > X.mulQ (X.include lin) (X.include p.1)
+    =< ap (X.mulQ (X.include lin)) p.2 > X.mulQ (X.include lin) w.1
+    =< sym (RL[X.ring].zl (X.mulQ (X.include lin) w.1)) > X.addQ X.zeroQ (X.mulQ (X.include lin) w.1)
+    =< ap (\ t -> X.addQ t (X.mulQ (X.include lin) w.1)) (sym PC.T.zero-value)
+    > X.addQ (PC.T.ev PC.D.zeroE) (X.mulQ (X.include lin) w.1)
+    =< sym w.2 > X.include (cons a nil) }) ;
+ kernel (a : A.R) (h : Id PC.K.A.Carrier (PC.K.A.constant a) PC.K.A.zeroQ) : Annihilated a =
+  Tr.Trunc[PC.T.Ideal.Certificate (PC.T.ev (cst a)) (PC.T.ev PC.D.zeroE)].induction @l
+   (\ t -> Annihilated a) (\ t -> Tr.Trunc[Annihilating a].proposition)
+   (\ w -> Tr.Trunc[PC.Representatives w.1].induction @l
+     (\ t -> Annihilated a) (\ t -> Tr.Trunc[Annihilating a].proposition)
+     (\ p -> Tr.Trunc[Annihilating a].inc (len {A.R} p.1,Lin.annihilate f p.1 a (raw a w p)))
+     (PC.representatives w.1))
+   (PC.Interpretation.certificate (cst a) PC.D.zeroE (PC.K.A.Q.effective (cst a) PC.D.zeroE h)) ;
+} ;
+module Over (R : CRing) (setR : Pr.isSet R.R) {
+ module C = Algebras[l].Over[R,setR] ;
+ module I = AffineInterface[l].Over[R,setR] ;
+ module LN = LocalizationNilpotence[l].Over[R,setR] ;
+ module At (A : C.Algebra) (f : A.ring.R) (loc : I.LocalizationWitness A f) {
+  module Mo = LN.Model[A,f] ;
+  module K = Relative[A.ring,A.set,f] ;
+  inc : C.Hom A loc.1 = loc.2.2.1 ;
+  h : C.Hom loc.1 Mo.target = (loc.2.2.2.2 Mo.target).sec (Mo.inclusion,Mo.inverse) ;
+  restrict : Id (I.LocalData A Mo.target f)
+   (I.local-map A loc.1 Mo.target f inc loc.2.2.2.1 h) (Mo.inclusion,Mo.inverse) =
+   (loc.2.2.2.2 Mo.target).sec-eq (Mo.inclusion,Mo.inverse) ;
+  on-elements (a : A.ring.R) : Id Mo.target.ring.R (h.1.1 (inc.1.1 a)) (Mo.inclusion.1.1 a) =
+   Pr.happly A.ring.R (\ x -> Mo.target.ring.R) (\ x -> h.1.1 (inc.1.1 x)) Mo.inclusion.1.1
+    (ap (\ d -> d.1.1.1) restrict) a ;
+  kernel (a : A.ring.R) (vanish : Id loc.1.ring.R (inc.1.1 a) loc.1.ring.z) : K.Annihilated a =
+   K.kernel a (trans (sym (on-elements a))
+    (trans (ap h.1.1 vanish) (RingHom[l].zero loc.1.ring Mo.target.ring h.1))) ;
+ } ;
+} ;

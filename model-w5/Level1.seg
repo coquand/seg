@@ -1,0 +1,18 @@
+-- Level1.seg: MODEL/Lv/Level1.agda.  The fibrant presheaf model one level
+-- up (fibres in the iterative sets of level l+, over the same category of
+-- posets): the instances of the level-generic modules at l+.  The universe
+-- of level-l fibrant types lives here.  Agda's base1 = baseLift disappears
+-- (cumulativity: the small data types belong to every universe).
+
+level l ;
+
+module V1   = V[l+] ;
+module VL1  = VLift[l, l+] ;
+module P1   = PreL[l, l+] ;
+module Box1 = Box[l, l+] ;
+module Fib1 = Fib[l, l+] ;
+module Sub1 = FibSub[l, l+] ;
+module Sig1 = FibSig[l, l+] ;
+module Nat1 = FibNat[l, l+] ;
+module Path1 = FibPath[l, l+] ;
+module Pi1  = FibPi[l, l+] ;

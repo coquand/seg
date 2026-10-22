@@ -1,0 +1,435 @@
+-- IvBase.seg: the base of the model WITHOUT products (CYLINDER.md, plan for
+-- simplicial sets): a small category C, an object Iv with the points e0, e1
+-- (constant maps ptH), and a presheaf Phi of decidable sieves.  The line
+-- layer (GPre, GCofib, ...) is stated over it.  Instances: posets
+-- (PosetBase.seg: module PB = IvBase[...]) and the simplex category Delta.
+-- The generic files are imported INSIDE the segment and see its fields.
+--
+-- Same names as CylCat (Ob, Hom, idH, compH, comp-*, Iv, ptH, Phi, pre,
+-- Lands, ...), with the derived sieve laws (lands-eq, pre-comp, pre-id,
+-- is-empty, pre-empty, lands-sub) proved once here.
+
+level a ;
+open Base ;
+-- Prelude / Paths are not opened here: the files imported inside the
+-- segment open them at their own level
+module VB = V[a] ;
+
+module IvBase {
+  -- the category: fields, so that an instance (module IvBase[...]) binds
+  -- them to its own objects and maps (one name per object)
+  obV  : VB.V ;
+  homV : SmallCat[a].Objs[obV].Ob -> SmallCat[a].Objs[obV].Ob -> VB.V ;
+
+  open SmallCat[a].Objs[obV] ;
+  open SmallCat[a].Homs[obV, homV] ;
+
+  idH (X : Ob) : Hom X X ;
+  compH (X Y Z : Ob) (g : Hom Y Z) (f : Hom X Y) : Hom X Z ;
+  comp-idl (J I : Ob) (f : Hom J I) : Id (Hom J I) (compH J I I (idH I) f) f ;
+  comp-idr (J I : Ob) (f : Hom J I) : Id (Hom J I) (compH J J I f (idH J)) f ;
+  comp-assoc (L K J I : Ob) (f : Hom J I) (g : Hom K J) (h : Hom L K)
+    : Id (Hom L I) (compH L K I (compH K J I f g) h) (compH L J I f (compH L K J g h)) ;
+
+  -- as a small category (for the presheaves)
+  BC : SmallCat[a].SmallCat = new SmallCat[a].SmallCat[obV, homV, idH, \ K J I g f -> compH K J I g f, comp-idl, comp-idr, comp-assoc] ;
+
+  ----------------------------------------------------------------------
+  -- the interval and its end points
+
+  Iv : Ob ;
+  IPt : U a ;
+  e0 : IPt ;
+  e1 : IPt ;
+  ptH (X : Ob) (e : IPt) : Hom X Iv ;
+  ptH-nat (Y X : Ob) (f : Hom Y X) (e : IPt) : Id (Hom Y Iv) (compH Y X Iv (ptH X e) f) (ptH Y e) ;
+
+  -- the two ends of a direction d: d = true goes from e0 to e1 (one home:
+  -- the line layer and the cylinder (Cyl) both use these)
+  src : Bool -> IPt = split { true -> e0 ; false -> e1 } ;
+  tgt : Bool -> IPt = split { true -> e1 ; false -> e0 } ;
+
+  ----------------------------------------------------------------------
+  -- sieves: Q : Phi X is known through the maps landing in it
+
+  Phi (X : Ob) : U a ;
+  pre (Y X : Ob) (f : Hom Y X) (Q : Phi X) : Phi Y ;
+  Lands (W X : Ob) (Q : Phi X) (f : Hom W X) : U a ;
+  isProp-Lands (W X : Ob) (Q : Phi X) (f : Hom W X) : Prelude[a+].isProp (Lands W X Q f) ;
+  lands-comp (W' W X : Ob) (Q : Phi X) (f : Hom W X) (chi : Hom W' W) (i : Lands W X Q f)
+    : Lands W' X Q (compH W' W X f chi) ;
+  lands-pre (W Y X : Ob) (h : Hom Y X) (Q : Phi X) (g : Hom W Y) (i : Lands W Y (pre Y X h Q) g)
+    : Lands W X Q (compH W Y X h g) ;
+  pre-lands (W Y X : Ob) (h : Hom Y X) (Q : Phi X) (g : Hom W Y) (i : Lands W X Q (compH W Y X h g))
+    : Lands W Y (pre Y X h Q) g ;
+  phi-ext (X : Ob) (Q Q' : Phi X) (p : (W : Ob) (f : Hom W X) -> Lands W X Q f -> Lands W X Q' f)
+    (q : (W : Ob) (f : Hom W X) -> Lands W X Q' f -> Lands W X Q f) : Id (Phi X) Q Q' ;
+  emptyS (X : Ob) : Phi X ;
+  empty-lands (W X : Ob) (f : Hom W X) (i : Lands W X (emptyS X) f) : Empty ;
+  ptS (e : IPt) : Phi Iv ;
+  lands-pt (W : Ob) (e : IPt) (g : Hom W Iv) (i : Lands W Iv (ptS e) g) : Id (Hom W Iv) g (ptH W e) ;
+  pt-lands (W : Ob) (e : IPt) : Lands W Iv (ptS e) (ptH W e) ;
+  pt-disj (W : Ob) (g : Hom W Iv) (i : Lands W Iv (ptS e0) g) (i' : Lands W Iv (ptS e1) g) : Empty ;
+  -- decidability on the identity
+  allS (X : Ob) (Q : Phi X) : Bool ;
+  allS-sound (X : Ob) (Q : Phi X) (h : Id Bool (allS X Q) true) : Lands X X Q (idH X) ;
+  allS-complete (X : Ob) (Q : Phi X) (i : Lands X X Q (idH X)) : Id Bool (allS X Q) true ;
+
+  ----------------------------------------------------------------------
+  -- derived
+
+  lands-eq (W X : Ob) (Q : Phi X) (f g : Hom W X) (p : Id (Hom W X) f g) (i : Lands W X Q f) : Lands W X Q g =
+    Paths[a+].substH (\ k -> Lands W X Q k) p i ;
+
+  pre-comp (Z Y X : Ob) (g : Hom Z Y) (h : Hom Y X) (Q : Phi X)
+    : Id (Phi Z) (pre Z Y g (pre Y X h Q)) (pre Z X (compH Z Y X h g) Q) =
+    phi-ext Z (pre Z Y g (pre Y X h Q)) (pre Z X (compH Z Y X h g) Q)
+      (\ W f i -> pre-lands W Z X (compH Z Y X h g) Q f
+         (lands-eq W X Q (compH W Y X h (compH W Z Y g f)) (compH W Z X (compH Z Y X h g) f)
+            (Paths[a+].symH (comp-assoc W Z Y X h g f))
+            (lands-pre W Y X h Q (compH W Z Y g f) (lands-pre W Z Y g (pre Y X h Q) f i))))
+      (\ W f i -> pre-lands W Z Y g (pre Y X h Q) f
+         (pre-lands W Y X h Q (compH W Z Y g f)
+            (lands-eq W X Q (compH W Z X (compH Z Y X h g) f) (compH W Y X h (compH W Z Y g f))
+               (comp-assoc W Z Y X h g f)
+               (lands-pre W Z X (compH Z Y X h g) Q f i)))) ;
+
+  pre-id (X : Ob) (Q : Phi X) : Id (Phi X) (pre X X (idH X) Q) Q =
+    phi-ext X (pre X X (idH X) Q) Q
+      (\ W f i -> lands-eq W X Q (compH W X X (idH X) f) f (comp-idl W X f) (lands-pre W X X (idH X) Q f i))
+      (\ W f i -> pre-lands W X X (idH X) Q f (lands-eq W X Q f (compH W X X (idH X) f) (Paths[a+].symH (comp-idl W X f)) i)) ;
+
+  is-empty (X : Ob) (Q : Phi X) (p : (W : Ob) (f : Hom W X) -> Lands W X Q f -> Empty) : Id (Phi X) Q (emptyS X) =
+    phi-ext X Q (emptyS X) (\ W f i -> Prelude[a+].absurd _ (p W f i)) (\ W f i -> Prelude[a+].absurd _ (empty-lands W X f i)) ;
+
+  pre-empty (Y X : Ob) (h : Hom Y X) : Id (Phi Y) (pre Y X h (emptyS X)) (emptyS Y) =
+    is-empty Y (pre Y X h (emptyS X)) (\ W f i -> empty-lands W X (compH W Y X h f) (lands-pre W Y X h (emptyS X) f i)) ;
+
+  lands-sub (W X : Ob) (Q Q' : Phi X) (e : Id (Phi X) Q Q') (f : Hom W X) (i : Lands W X Q f) : Lands W X Q' f =
+    Paths[a+].substH (\ R -> Lands W X R f) e i ;
+
+  ----------------------------------------------------------------------
+  -- forall along the interval, on the path object: a line of sieves at X
+  -- (a natural family of sieves over (f , j) : W -> X * Iv, i.e. a sieve
+  -- of y X * y Iv: no product in the base) and the sieve of X where it
+  -- holds everywhere.  The forall itself is the parameter segment Fa.
+
+  PhiL (X : Ob) : U a =
+    (L : (W : Ob) -> Hom W X -> Hom W Iv -> Phi W)
+    * ((V W : Ob) (g : Hom V W) (f : Hom W X) (j : Hom W Iv)
+       -> Id (Phi V) (pre V W g (L W f j)) (L V (compH V W X f g) (compH V W Iv j g))) ;
+
+  -- L holds at every (V , f g , j)
+  HoldsL (X : Ob) (L : PhiL X) (W : Ob) (f : Hom W X) : U a =
+    (V : Ob) (g : Hom V W) (j : Hom V Iv) -> Lands V V (L.1 V (compH V W X f g) j) (idH V) ;
+
+  -- the line of a sieve of X, constant along the interval
+  constL (X : Ob) (Q : Phi X) : PhiL X = (\ W f j -> pre W X f Q, \ V W g f j -> pre-comp V W X g f Q) ;
+
+  -- a line of sieves restricted along h : Y -> X
+  restrL (Y X : Ob) (h : Hom Y X) (L : PhiL X) : PhiL Y =
+    (\ W f j -> L.1 W (compH W Y X h f) j,
+     \ V W g f j -> Paths[a+].transH (L.2 V W g (compH W Y X h f) j)
+                      (Paths[a+].apH (\ k -> L.1 V k (compH V W Iv j g)) (comp-assoc V W Y X h f g))) ;
+
+  -- the sieves of an object form a set (local Hedberg: two sieves landing
+  -- the same maps are equal, phi-ext), so a line of sieves is determined by
+  -- its sieves
+  LandsEq (X : Ob) (Q Q' : Phi X) : U a =
+    ((W : Ob) (f : Hom W X) -> Lands W X Q f -> Lands W X Q' f) * ((W : Ob) (f : Hom W X) -> Lands W X Q' f -> Lands W X Q f) ;
+
+  isProp-LandsEq (X : Ob) (Q Q' : Phi X) : Prelude[a+].isProp (LandsEq X Q Q') =
+    Prelude[a+].isProp-Sigma ((W : Ob) (f : Hom W X) -> Lands W X Q f -> Lands W X Q' f)
+      (\ r -> (W : Ob) (f : Hom W X) -> Lands W X Q' f -> Lands W X Q f)
+      (Axioms[a+].FunExtLemmas[fe @(a+)].isProp-Pi Ob (\ W -> (f : Hom W X) -> Lands W X Q f -> Lands W X Q' f) (\ W ->
+       Axioms[a+].FunExtLemmas[fe @(a+)].isProp-Pi (Hom W X) (\ f -> Lands W X Q f -> Lands W X Q' f) (\ f ->
+       Axioms[a+].FunExtLemmas[fe @(a+)].isProp-Pi (Lands W X Q f) (\ i -> Lands W X Q' f) (\ i -> isProp-Lands W X Q' f))))
+      (\ r -> Axioms[a+].FunExtLemmas[fe @(a+)].isProp-Pi Ob (\ W -> (f : Hom W X) -> Lands W X Q' f -> Lands W X Q f) (\ W ->
+       Axioms[a+].FunExtLemmas[fe @(a+)].isProp-Pi (Hom W X) (\ f -> Lands W X Q' f -> Lands W X Q f) (\ f ->
+       Axioms[a+].FunExtLemmas[fe @(a+)].isProp-Pi (Lands W X Q' f) (\ i -> Lands W X Q f) (\ i -> isProp-Lands W X Q f)))) ;
+
+  isSet-Phi (X : Ob) : Prelude[a+].isSet (Phi X) = \ Q ->
+    Prelude[a+].Hedberg[Phi X, Q, \ Q' -> LandsEq X Q Q', \ Q' -> isProp-LandsEq X Q Q',
+      (\ W f i -> i, \ W f i -> i), \ Q' r -> phi-ext X Q Q' r.1 r.2].hedberg ;
+
+  -- a line of sieves is determined by its sieves
+  phiL-ext (X : Ob) (L L' : PhiL X) (q : (W : Ob) (f : Hom W X) (j : Hom W Iv) -> Id (Phi W) (L.1 W f j) (L'.1 W f j)) : Id (PhiL X) L L' =
+    Prelude[a+].Sigma-eq ((W : Ob) -> Hom W X -> Hom W Iv -> Phi W)
+      (\ MM -> (V W : Ob) (g : Hom V W) (f : Hom W X) (j : Hom W Iv)
+               -> Id (Phi V) (pre V W g (MM W f j)) (MM V (compH V W X f g) (compH V W Iv j g)))
+      L.1 L'.1 L.2 L'.2
+      (Axioms[a+].FunExtLemmas[fe @(a+)].funext Ob (\ W -> Hom W X -> Hom W Iv -> Phi W) L.1 L'.1 (\ W ->
+         Axioms[a+].FunExtLemmas[fe @(a+)].funext (Hom W X) (\ f -> Hom W Iv -> Phi W) (L.1 W) (L'.1 W) (\ f ->
+           Axioms[a+].FunExtLemmas[fe @(a+)].funext (Hom W Iv) (\ j -> Phi W) (L.1 W f) (L'.1 W f) (\ j -> q W f j))))
+      (Axioms[a+].FunExtLemmas[fe @(a+)].isProp-Pi Ob (\ V -> (W : Ob) (g : Hom V W) (f : Hom W X) (j : Hom W Iv)
+            -> Id (Phi V) (pre V W g (L'.1 W f j)) (L'.1 V (compH V W X f g) (compH V W Iv j g))) (\ V ->
+       Axioms[a+].FunExtLemmas[fe @(a+)].isProp-Pi Ob (\ W -> (g : Hom V W) (f : Hom W X) (j : Hom W Iv)
+            -> Id (Phi V) (pre V W g (L'.1 W f j)) (L'.1 V (compH V W X f g) (compH V W Iv j g))) (\ W ->
+       Axioms[a+].FunExtLemmas[fe @(a+)].isProp-Pi (Hom V W) (\ g -> (f : Hom W X) (j : Hom W Iv)
+            -> Id (Phi V) (pre V W g (L'.1 W f j)) (L'.1 V (compH V W X f g) (compH V W Iv j g))) (\ g ->
+       Axioms[a+].FunExtLemmas[fe @(a+)].isProp-Pi (Hom W X) (\ f -> (j : Hom W Iv)
+            -> Id (Phi V) (pre V W g (L'.1 W f j)) (L'.1 V (compH V W X f g) (compH V W Iv j g))) (\ f ->
+       Axioms[a+].FunExtLemmas[fe @(a+)].isProp-Pi (Hom W Iv) (\ j
+            -> Id (Phi V) (pre V W g (L'.1 W f j)) (L'.1 V (compH V W X f g) (compH V W Iv j g))) (\ j ->
+         isSet-Phi V (pre V W g (L'.1 W f j)) (L'.1 V (compH V W X f g) (compH V W Iv j g)))))))) ;
+
+  module Fa {
+    forallL (X : Ob) (L : PhiL X) : Phi X ;
+    lands-forall (W X : Ob) (L : PhiL X) (f : Hom W X) (i : Lands W X (forallL X L) f) : HoldsL X L W f ;
+    forall-lands (W X : Ob) (L : PhiL X) (f : Hom W X) (h : HoldsL X L W f) : Lands W X (forallL X L) f ;
+
+    -- forall of a UNION (a list of lines, as in the cofibration of a
+    -- partial equivalence): NOT the union of the foralls in general.  On
+    -- Delta the prism W * Delta[1] is not representable and is the union of
+    -- its triangles (CYLINDER.md: the counterexample); on posets it is an
+    -- object, so a map into the union lands in one generator and forall of
+    -- a list is the list of foralls (Cofib.full-dQ).  Stated as the
+    -- parameter segment FaU (instances: to do, see CYLINDER.md).
+    -- forall is stable under pullback
+    forall-pre (Y X : Ob) (h : Hom Y X) (L : PhiL X)
+      : Id (Phi Y) (pre Y X h (forallL X L)) (forallL Y (restrL Y X h L)) =
+      phi-ext Y (pre Y X h (forallL X L)) (forallL Y (restrL Y X h L))
+        (\ W f i -> forall-lands W Y (restrL Y X h L) f (\ V g j ->
+           lands-sub V V (L.1 V (compH V W X (compH W Y X h f) g) j) (L.1 V (compH V Y X h (compH V W Y f g)) j)
+             (Paths[a+].apH (\ k -> L.1 V k j) (comp-assoc V W Y X h f g)) (idH V)
+             (lands-forall W X L (compH W Y X h f) (lands-pre W Y X h (forallL X L) f i) V g j)))
+        (\ W f i -> pre-lands W Y X h (forallL X L) f (forall-lands W X L (compH W Y X h f) (\ V g j ->
+           lands-sub V V (L.1 V (compH V Y X h (compH V W Y f g)) j) (L.1 V (compH V W X (compH W Y X h f) g) j)
+             (Paths[a+].symH (Paths[a+].apH (\ k -> L.1 V k j) (comp-assoc V W Y X h f g))) (idH V)
+             (lands-forall W Y (restrL Y X h L) f i V g j)))) ;
+
+    -- forall of an everywhere-empty line is empty
+    forall-empty (X : Ob) (L : PhiL X) (eE : (W : Ob) (f : Hom W X) (i : Hom W Iv) -> Id (Phi W) (L.1 W f i) (emptyS W))
+      : Id (Phi X) (forallL X L) (emptyS X) =
+      is-empty X (forallL X L) (\ W f i -> empty-lands W W (idH W)
+        (lands-sub W W (L.1 W (compH W W X f (idH W)) (ptH W e0)) (emptyS W) (eE W (compH W W X f (idH W)) (ptH W e0)) (idH W)
+           (lands-forall W X L f i W (idH W) (ptH W e0)))) ;
+
+    -- forall of a constant line is the sieve
+    forall-const (X : Ob) (Q : Phi X) : Id (Phi X) (forallL X (constL X Q)) Q =
+      phi-ext X (forallL X (constL X Q)) Q
+        (\ W f i -> lands-eq W X Q (compH W W X (compH W W X f (idH W)) (idH W)) f
+           (Paths[a+].transH (comp-idr W X (compH W W X f (idH W))) (comp-idr W X f))
+           (lands-pre W W X (compH W W X f (idH W)) Q (idH W) (lands-forall W X (constL X Q) f i W (idH W) (ptH W e0))))
+        (\ W f i -> forall-lands W X (constL X Q) f (\ V g j ->
+           pre-lands V V X (compH V W X f g) Q (idH V)
+             (lands-eq V X Q (compH V W X f g) (compH V V X (compH V W X f g) (idH V))
+                (Paths[a+].symH (comp-idr V X (compH V W X f g))) (lands-comp V W X Q f g i)))) ;
+  } ;
+
+  -- forall of a union of lines: a union (list) of sieves, characterised by
+  -- "every (V , f g , j) lands in one of the lines"
+  HoldsU (X : Ob) (k : Nat) (Ls : Arith[a].Fin k -> PhiL X) (W : Ob) (f : Hom W X) : U a =
+    (V : Ob) (g : Hom V W) (j : Hom V Iv) -> (l : Arith[a].Fin k) * Lands V V ((Ls l).1 V (compH V W X f g) j) (idH V) ;
+
+
+  -- a prism cover: every simplex (V , g , j) of W * Iv factors through one
+  -- of finitely many test simplices (Vk , gk , jk); then "covered by a
+  -- union of lines" is decided on the test simplices (shared by the
+  -- instances of FaU: posets (one test simplex, W * [1] itself), Delta (the
+  -- shuffles))
+  module PrismCov (W : Ob) (r : Nat) (Vk : Arith[a].Fin r -> Ob) (gk : (k : Arith[a].Fin r) -> Hom (Vk k) W)
+    (jk : (k : Arith[a].Fin r) -> Hom (Vk k) Iv)
+    (fact : (V : Ob) (g : Hom V W) (j : Hom V Iv)
+            -> (k : Arith[a].Fin r) * ((h : Hom V (Vk k)) * (Id (Hom V W) (compH V (Vk k) W (gk k) h) g * Id (Hom V Iv) (compH V (Vk k) Iv (jk k) h) j))) {
+
+    AtTests (X : Ob) (n : Nat) (Ls : Arith[a].Fin n -> PhiL X) (f : Hom W X) : U a =
+      (k : Arith[a].Fin r) -> (l : Arith[a].Fin n) * Lands (Vk k) (Vk k) ((Ls l).1 (Vk k) (compH (Vk k) W X f (gk k)) (jk k)) (idH (Vk k)) ;
+
+    -- a line holding at (Vk , f gk , jk) holds at (V , f g , j) for g = gk h, j = jk h
+    pull (X : Ob) (L : PhiL X) (f : Hom W X) (V : Ob) (k : Arith[a].Fin r) (h : Hom V (Vk k))
+      (i : Lands (Vk k) (Vk k) (L.1 (Vk k) (compH (Vk k) W X f (gk k)) (jk k)) (idH (Vk k)))
+      : Lands V V (L.1 V (compH V W X f (compH V (Vk k) W (gk k) h)) (compH V (Vk k) Iv (jk k) h)) (idH V) =
+      lands-sub V V (L.1 V (compH V (Vk k) X (compH (Vk k) W X f (gk k)) h) (compH V (Vk k) Iv (jk k) h))
+        (L.1 V (compH V W X f (compH V (Vk k) W (gk k) h)) (compH V (Vk k) Iv (jk k) h))
+        (Paths[a+].apH (\ m -> L.1 V m (compH V (Vk k) Iv (jk k) h)) (comp-assoc V (Vk k) W X f (gk k) h)) (idH V)
+        (lands-sub V V (pre V (Vk k) h (L.1 (Vk k) (compH (Vk k) W X f (gk k)) (jk k)))
+           (L.1 V (compH V (Vk k) X (compH (Vk k) W X f (gk k)) h) (compH V (Vk k) Iv (jk k) h))
+           (L.2 V (Vk k) h (compH (Vk k) W X f (gk k)) (jk k)) (idH V)
+           (pre-lands V V (Vk k) h (L.1 (Vk k) (compH (Vk k) W X f (gk k)) (jk k)) (idH V)
+              (lands-eq V (Vk k) (L.1 (Vk k) (compH (Vk k) W X f (gk k)) (jk k)) (compH V (Vk k) (Vk k) (idH (Vk k)) h)
+                 (compH V V (Vk k) h (idH V)) (Paths[a+].transH (comp-idl V (Vk k) h) (Paths[a+].symH (comp-idr V (Vk k) h)))
+                 (lands-comp V (Vk k) (Vk k) (L.1 (Vk k) (compH (Vk k) W X f (gk k)) (jk k)) (idH (Vk k)) h i)))) ;
+
+    tests-holdsU (X : Ob) (n : Nat) (Ls : Arith[a].Fin n -> PhiL X) (f : Hom W X) (t : AtTests X n Ls f) : HoldsU X n Ls W f =
+      \ V g j -> ((t (fact V g j).1).1,
+        Paths[a+].substH (\ jj -> Lands V V ((Ls (t (fact V g j).1).1).1 V (compH V W X f g) jj) (idH V)) (fact V g j).2.2.2
+          (Paths[a+].substH (\ gg -> Lands V V ((Ls (t (fact V g j).1).1).1 V (compH V W X f gg) (compH V (Vk (fact V g j).1) Iv (jk (fact V g j).1) (fact V g j).2.1)) (idH V))
+             (fact V g j).2.2.1
+             (pull X (Ls (t (fact V g j).1).1) f V (fact V g j).1 (fact V g j).2.1 (t (fact V g j).1).2))) ;
+
+    holdsU-tests (X : Ob) (n : Nat) (Ls : Arith[a].Fin n -> PhiL X) (f : Hom W X) (h : HoldsU X n Ls W f) : AtTests X n Ls f =
+      \ k -> h (Vk k) (gk k) (jk k) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- the line layer over the base
+
+  import CylCat ;
+  import GPre ;
+  import GYon ;
+  import GSmall ;
+  import GUniv ;
+  import GCofib ;
+  import GFillS ;
+  import GFillX ;
+  import GFillXS ;
+  import GCofEsi ;
+  import GCofOne ;
+  import GLine ;
+  import GFam ;
+  import GMapLine ;
+  import GSig ;
+  import FibPiE ;
+  import GPi ;
+  import GTrans ;
+  import GFibE ;
+  import GHornRetr ;
+  import GSubst ;
+  import GHornRetrSub ;
+  import GFibExt ;
+  import GFibLaws ;
+  import GUnivL ;
+  import GLocal ;
+  import GLocal2 ;
+  import GLocal3 ;
+  import GContrMove ;
+  import GTransfer ;
+  import GTransferComp ;
+  import GTransferEnd ;
+  import GProbEq ;
+  import GPath ;
+  import GPathProb ;
+  import GPathRes ;
+  import GPathComp ;
+  import GEquiv ;
+  import GTransferEq ;
+  import GEquivSub ;
+  import GEquivSub2 ;
+  import GEquivSub3 ;
+  import GTransferEqSub ;
+  import GEqExt ;
+  import GEqLaws ;
+  import GTransferEqCong ;
+  import GTransferEqComp ;
+  import GTransferEqTwice ;
+  import GXsubEq ;
+  import GTransferSub ;
+  import GEqLaws2 ;
+  import GUnivEq ;
+  import GSmallFib ;
+  import GSmallFibI ;
+  import GElC ;
+  import GGlueD ;
+  import GGlueE ;
+  import GUaGlue1 ;
+  import GUaGlue1b ;
+  import GYonEq1 ;
+  import GYonEq2 ;
+  import GYonEq3 ;
+  import GYonEq4 ;
+  import GYonEq5 ;
+  import GUaGlue2 ;
+  import GUaGlue3 ;
+  import GUaPt ;
+  import GUaPtNat ;
+  import GExt ;
+  import GExt2 ;
+  import GExt3 ;
+  import GExtU ;
+  import GExtBig ;
+  import GExtCmp ;
+  import GExtEq ;
+  import GExt4 ;
+  import GExtEquiv ;
+  import GExtEquiv2 ;
+  import GExtEquiv3 ;
+  import GExtEquiv4 ;
+  import GExtComp1 ;
+  import GExtRes ;
+  import GExtFull ;
+  import GExtFullPt ;
+
+  -- with connections on the interval (G-S (1.2), (1.3)), as operations on
+  -- maps into Iv:  cI i src = src,  cI i tgt = i,  cI src j = src,  cI tgt j = j
+  module Cn {
+    cI (d : Bool) (W : Ob) (i j : Hom W Iv) : Hom W Iv ;
+    cI-nat (d : Bool) (V W : Ob) (g : Hom V W) (i j : Hom W Iv)
+      : Id (Hom V Iv) (compH V W Iv (cI d W i j) g) (cI d V (compH V W Iv i g) (compH V W Iv j g)) ;
+    cI-jsrc (d : Bool) (W : Ob) (i : Hom W Iv) : Id (Hom W Iv) (cI d W i (ptH W (src d))) (ptH W (src d)) ;
+    cI-jtgt (d : Bool) (W : Ob) (i : Hom W Iv) : Id (Hom W Iv) (cI d W i (ptH W (tgt d))) i ;
+    cI-isrc (d : Bool) (W : Ob) (j : Hom W Iv) : Id (Hom W Iv) (cI d W (ptH W (src d)) j) (ptH W (src d)) ;
+    cI-itgt (d : Bool) (W : Ob) (j : Hom W Iv) : Id (Hom W Iv) (cI d W (ptH W (tgt d)) j) j ;
+
+    import GConn ;
+    import GFill ;
+    import GFillFib ;
+    import GPiFib ;
+    import GFibFill ;
+    import GTE1 ;
+    import GTE2 ;
+    import GTE3 ;
+    import GTE4 ;
+    import GTE5 ;
+    import GTE6 ;
+    import GTE7 ;
+    import GTE8 ;
+    import GTE9 ;
+    import GTE10 ;
+    import GTE11 ;
+    import GTE12 ;
+    import GTE13 ;
+    import GTE14 ;
+    import GTE15 ;
+    import GTE16 ;
+    import GCompU1 ;
+    import GCompU2 ;
+    import GCompU3 ;
+    import GCompU4 ;
+    import GCompU5 ;
+  } ;
+
+  -- forall of a union of lines (instances: Constr.PFaU, DeltaForall.DFaU);
+  -- after the line layer, so that the files nested in it see it
+  module FaU {
+    -- the length of the list depends only on the number of lines (posets:
+    -- one sieve per line; Delta: one sieve), so restriction keeps it
+    forallUn (k : Nat) : Nat ;
+    forallU (X : Ob) (k : Nat) (Ls : Arith[a].Fin k -> PhiL X) : Arith[a].Fin (forallUn k) -> Phi X ;
+    landsU-forall (W X : Ob) (k : Nat) (Ls : Arith[a].Fin k -> PhiL X) (f : Hom W X)
+      (i : (l : Arith[a].Fin (forallUn k)) * Lands W X (forallU X k Ls l) f) : HoldsU X k Ls W f ;
+    forallU-lands (W X : Ob) (k : Nat) (Ls : Arith[a].Fin k -> PhiL X) (f : Hom W X)
+      (h : HoldsU X k Ls W f) : (l : Arith[a].Fin (forallUn k)) * Lands W X (forallU X k Ls l) f ;
+    -- the list is stable under restriction: the restricted generators are
+    -- the generators of the restricted lines (so the partial elements built
+    -- on it restrict side by side; posets: forall-pre per line; Delta: one
+    -- decidable sieve)
+    forallU-pre (Y X : Ob) (h : Hom Y X) (k : Nat) (Ls : Arith[a].Fin k -> PhiL X) (l : Arith[a].Fin (forallUn k))
+      : Id (Phi Y) (pre Y X h (forallU X k Ls l)) (forallU Y k (\ l' -> restrL Y X h (Ls l')) l) ;
+
+    -- Theorem 7's composition (delta = forall of the union of psi)
+    import GExtComp2 ;
+    import GExtComp3 ;
+    import GExtComp4 ;
+    import GExtComp5 ;
+    import GExtComp6 ;
+    import GExtFib ;
+    import GExtFibU ;
+    import GExtSmall ;
+    import GUaKunifL ;
+    import GUaUniv ;
+    import GUaFull ;
+    import GUaLoc ;
+    import GUaLoc2 ;
+    import GUaKfull ;
+    import GUaFullT ;
+    import GUaOpN ;
+    import GUaFullL1 ;
+    import GUaFullL1b ;
+    import GUaFullL ;
+    import GUaOpNL ;
+    import GExtFullC ;
+  } ;
+
+
+} ;

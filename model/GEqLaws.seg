@@ -1,0 +1,271 @@
+-- GEqLaws.seg (inside IvBase, any base): substitution of equivalence data
+-- is functorial (step G2 of the univalence plan), the analogue of
+-- GFibLaws for (B , A , al , equivalence structure with KESI).
+--
+--   eqDSub     the data along s (SubMap, EqSub, EqSubEsi)
+--   pmap-ext   a map is determined by mE
+--   triExt     two triples are equal once their types are and the maps
+--              agree, read through the types
+--   eqD-id     (t , e) = (t , e)[id]
+-- (eqD-o, (t , e)[s o s'] = (t , e)[s][s'], is in GEqLaws2.)
+-- Both laws go through EqDat.ext: the extension of the substituted data
+-- reads (lines, B part: EqSub.kopL / kopB) eal's extension of the moved
+-- partial element, and the moved partial elements agree side by side
+-- (fibE-eq on point, B part and lines).
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+open Axioms[lv+].FunExtLemmas[fe @(lv+)] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+module GCF = GCofib[lv] ;
+module GQ = GEquiv[lv] ;
+module GSB = GEquivSub[lv] ;
+module GSB2 = GEquivSub2[lv] ;
+module GSB3 = GEquivSub3[lv] ;
+module GX = GEqExt[lv] ;
+
+eqDSub (D G : PCtx) (s : PSub[D, G]) (t : GX.EqDat[G].Tri) (e : GX.EqDat[G].EqOn t)
+  : (u : GX.EqDat[D].Tri) * GX.EqDat[D].EqOn u =
+  ((subTy D G t.1 s, (subTy D G t.2.1 s, GSB.SubMap[D, G, s, t.1, t.2.1, t.2.2].subMap)),
+   (GSB2.EqSub[D, G, s, t.1, t.2.1, t.2.2, e.1].eqSub, GSB3.EqSubEsi[D, G, s, t.1, t.2.1, t.2.2, e.1, e.2].eqSubEsi)) ;
+
+-- a type is determined by its codes and its action, read through a
+-- pointwise equation of codes
+module TyEqPw (D : PCtx) (A A' : PTy[D])
+  (Po : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A.tob I x) (A'.tob I x))
+  (H1 : (J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) (y : W0.Ix (D.ob J)) (e : Id (W0.Ix (D.ob J)) (D.act J I f x) y)
+        (a0 : W0.Ix (A.tob I x))
+        -> Id (W0.Ix (A'.tob J y)) (subst W0.V (\ z -> W0.Ix z) (A.tob J y) (A'.tob J y) (Po J y) (A.tact J I f x y e a0))
+                                   (A'.tact J I f x y e (subst W0.V (\ z -> W0.Ix z) (A.tob I x) (A'.tob I x) (Po I x) a0))) {
+  P : Id (TOb D) A.tob A'.tob =
+    funext Ob (\ I -> W0.Ix (D.ob I) -> W0.V) A.tob A'.tob
+      (\ I -> funext (W0.Ix (D.ob I)) (\ x -> W0.V) (A.tob I) (A'.tob I) (\ x -> Po I x)) ;
+
+  -- transport along P is transport along Po (V is a set)
+  substP (I : Ob) (x : W0.Ix (D.ob I)) (a0 : W0.Ix (A.tob I x))
+    : Id (W0.Ix (A'.tob I x)) (subst (TOb D) (\ o -> W0.Ix (o I x)) A.tob A'.tob P a0)
+                              (subst W0.V (\ z -> W0.Ix z) (A.tob I x) (A'.tob I x) (Po I x) a0) =
+    transH (subst-ap (TOb D) W0.V (\ o -> o I x) (\ z -> W0.Ix z) A.tob A'.tob P a0)
+           (apH (\ q -> subst W0.V (\ z -> W0.Ix z) (A.tob I x) (A'.tob I x) q a0)
+                (W0.isSetV (A.tob I x) (A'.tob I x) (ap (TOb D) W0.V (\ o -> o I x) A.tob A'.tob P) (Po I x))) ;
+
+  tyEq : Id (PTy[D]) A A' =
+    ty-ext2 D A A' P (\ J I f x y e a0 ->
+      transH (substP J y (A.tact J I f x y e a0))
+       (transH (H1 J I f x y e a0) (apH (A'.tact J I f x y e) (symH (substP I x a0))))) ;
+
+  opaque substP ; opaque tyEq ;
+} ;
+
+module TriL (G : PCtx) {
+  module ED = GX.EqDat[G] ;
+
+  METy (B A : PTy[G]) : U lv = (X : Ob) -> GPR.TyL[G, B].EI X -> GPR.TyL[G, A].EI X ;
+
+  MptTy (B A : PTy[G]) (m : METy B A) : U lv = (X : Ob) (w : GPR.TyL[G, B].EI X) -> Id (W0.Ix (G.ob X)) (m X w).1 w.1 ;
+
+  MnatTy (B A : PTy[G]) (m : METy B A) : U lv =
+    (Y X : Ob) (h : Hom Y X) (w : GPR.TyL[G, B].EI X)
+    -> Id (GPR.TyL[G, A].EI Y) (m Y (GPR.TyL[G, B].E.act Y X h w)) (GPR.TyL[G, A].E.act Y X h (m X w)) ;
+
+  isProp-Mpt (B A : PTy[G]) (m : METy B A) : isProp (MptTy B A m) =
+    isProp-Pi Ob (\ X -> (w : GPR.TyL[G, B].EI X) -> Id (W0.Ix (G.ob X)) (m X w).1 w.1) (\ X ->
+    isProp-Pi (GPR.TyL[G, B].EI X) (\ w -> Id (W0.Ix (G.ob X)) (m X w).1 w.1) (\ w ->
+      W0.isSetIx (G.ob X) (m X w).1 w.1)) ;
+
+  isProp-Mnat (B A : PTy[G]) (m : METy B A) : isProp (MnatTy B A m) =
+    isProp-Pi Ob (\ Y -> (X : Ob) (h : Hom Y X) (w : GPR.TyL[G, B].EI X)
+      -> Id (GPR.TyL[G, A].EI Y) (m Y (GPR.TyL[G, B].E.act Y X h w)) (GPR.TyL[G, A].E.act Y X h (m X w))) (\ Y ->
+    isProp-Pi Ob (\ X -> (h : Hom Y X) (w : GPR.TyL[G, B].EI X)
+      -> Id (GPR.TyL[G, A].EI Y) (m Y (GPR.TyL[G, B].E.act Y X h w)) (GPR.TyL[G, A].E.act Y X h (m X w))) (\ X ->
+    isProp-Pi (Hom Y X) (\ h -> (w : GPR.TyL[G, B].EI X)
+      -> Id (GPR.TyL[G, A].EI Y) (m Y (GPR.TyL[G, B].E.act Y X h w)) (GPR.TyL[G, A].E.act Y X h (m X w))) (\ h ->
+    isProp-Pi (GPR.TyL[G, B].EI X) (\ w
+      -> Id (GPR.TyL[G, A].EI Y) (m Y (GPR.TyL[G, B].E.act Y X h w)) (GPR.TyL[G, A].E.act Y X h (m X w))) (\ w ->
+      W0.isSetIx ((extP G A).ob Y) (m Y (GPR.TyL[G, B].E.act Y X h w)) (GPR.TyL[G, A].E.act Y X h (m X w)))))) ;
+
+  pmap-ext (B A : PTy[G]) (al al2 : PMap[G, B, A])
+    (H : (X : Ob) (w : GPR.TyL[G, B].EI X) -> Id (GPR.TyL[G, A].EI X) (al.mE X w) (al2.mE X w)) : Id (PMap[G, B, A]) al al2 =
+    idJ (METy B A) al.mE
+      (\ m Q -> (mp : MptTy B A m) (mn : MnatTy B A m) -> Id (PMap[G, B, A]) al (new PMap[G, B, A, m, mp, mn]))
+      (\ mp mn -> transH (apH {MptTy B A al.mE} {PMap[G, B, A]} (\ z -> new PMap[G, B, A, al.mE, z, al.mnat]) (isProp-Mpt B A al.mE al.mpt mp))
+                         (apH {MnatTy B A al.mE} {PMap[G, B, A]} (\ z -> new PMap[G, B, A, al.mE, mp, z]) (isProp-Mnat B A al.mE al.mnat mn)))
+      al2.mE
+      (funext Ob (\ X -> GPR.TyL[G, B].EI X -> GPR.TyL[G, A].EI X) al.mE al2.mE (\ X ->
+         funext (GPR.TyL[G, B].EI X) (\ w -> GPR.TyL[G, A].EI X) (al.mE X) (al2.mE X) (H X)))
+      al2.mpt al2.mnat ;
+
+  -- transport of a point along an equation of types
+  trE (X : Ob) (A A2 : PTy[G]) (Q : Id (PTy[G]) A A2) (w : GPR.TyL[G, A].EI X) : GPR.TyL[G, A2].EI X =
+    subst (PTy[G]) (\ A' -> GPR.TyL[G, A'].EI X) A A2 Q w ;
+
+  -- ... read through the objects parts
+  trE-tob (X : Ob) (A A2 : PTy[G]) (Q : Id (PTy[G]) A A2) (same : Id (TOb G) A.tob A2.tob) (w : GPR.TyL[G, A].EI X)
+    : Id (ED.EIo X A2.tob) (trE X A A2 Q w) (subst (TOb G) (ED.EIo X) A.tob A2.tob same w) =
+    tob-same G (\ A' -> GPR.TyL[G, A'].EI X) (ED.EIo X) (\ A' u -> u) A A2 Q same w ;
+
+  triExt (B A : PTy[G]) (al : PMap[G, B, A]) (B2 A2 : PTy[G]) (al2 : PMap[G, B2, A2]) (QB : Id (PTy[G]) B B2) (QA : Id (PTy[G]) A A2)
+    (Hm : (X : Ob) (w : GPR.TyL[G, B2].EI X)
+          -> Id (GPR.TyL[G, A2].EI X) (al2.mE X w) (trE X A A2 QA (al.mE X (trE X B2 B (symH QB) w))))
+    : Id ED.Tri (B, (A, al)) (B2, (A2, al2)) =
+    idJ (PTy[G]) B
+      (\ B3 Q3 -> (al3 : PMap[G, B3, A2])
+         -> ((X : Ob) (w : GPR.TyL[G, B3].EI X)
+             -> Id (GPR.TyL[G, A2].EI X) (al3.mE X w) (trE X A A2 QA (al.mE X (trE X B3 B (symH Q3) w))))
+         -> Id ED.Tri (B, (A, al)) (B3, (A2, al3)))
+      (\ al3 H3 -> apH {(A' : PTy[G]) * PMap[G, B, A']} {ED.Tri} (\ z -> (B, z))
+         (idJ (PTy[G]) A
+            (\ A4 Q4 -> (al4 : PMap[G, B, A4])
+               -> ((X : Ob) (w : GPR.TyL[G, B].EI X) -> Id (GPR.TyL[G, A4].EI X) (al4.mE X w) (trE X A A4 Q4 (al.mE X w)))
+               -> Id ((A' : PTy[G]) * PMap[G, B, A']) (A, al) (A4, al4))
+            (\ al4 H4 -> apH {PMap[G, B, A]} {(A' : PTy[G]) * PMap[G, B, A']} (\ z -> (A, z))
+               (pmap-ext B A al al4 (\ X w -> symH (H4 X w))))
+            A2 QA al3 H3))
+      B2 QB al2 Hm ;
+
+  -- transport of a point along a path of objects parts, componentwise
+  substEIo (X : Ob) (o o' : TOb G) (P : Id (TOb G) o o') (w : ED.EIo X o)
+    : Id (ED.EIo X o') (subst (TOb G) (ED.EIo X) o o' P w) (w.1, subst (TOb G) (\ o2 -> W0.Ix (o2 X w.1)) o o' P w.2) =
+    idJ (TOb G) o (\ o3 P3 -> Id (ED.EIo X o3) (subst (TOb G) (ED.EIo X) o o3 P3 w) (w.1, subst (TOb G) (\ o2 -> W0.Ix (o2 X w.1)) o o3 P3 w.2))
+      (refl w) o' P ;
+
+  -- ... and a fibre transported along a path of objects parts is
+  -- transported along any path of its code (V is a set)
+  substPw (X : Ob) (y : W0.Ix (G.ob X)) (o o' : TOb G) (P : Id (TOb G) o o') (Q : Id W0.V (o X y) (o' X y)) (b : W0.Ix (o X y))
+    : Id (W0.Ix (o' X y)) (subst (TOb G) (\ o2 -> W0.Ix (o2 X y)) o o' P b) (subst W0.V (\ z -> W0.Ix z) (o X y) (o' X y) Q b) =
+    transH (subst-ap (TOb G) W0.V (\ o2 -> o2 X y) (\ z -> W0.Ix z) o o' P b)
+           (apH (\ q -> subst W0.V (\ z -> W0.Ix z) (o X y) (o' X y) q b)
+                (W0.isSetV (o X y) (o' X y) (ap (TOb G) W0.V (\ o2 -> o2 X y) o o' P) Q)) ;
+
+  -- transport of a point along any path of types, through pointwise codes
+  trE-pw (X : Ob) (A A2 : PTy[G]) (Q : Id (PTy[G]) A A2) (Po : (y : W0.Ix (G.ob X)) -> Id W0.V (A.tob X y) (A2.tob X y))
+    (P : Id (TOb G) A.tob A2.tob) (w : GPR.TyL[G, A].EI X)
+    : Id (GPR.TyL[G, A2].EI X) (trE X A A2 Q w) (w.1, subst W0.V (\ z -> W0.Ix z) (A.tob X w.1) (A2.tob X w.1) (Po w.1) w.2) =
+    transH (trE-tob X A A2 Q P w)
+      (transH (substEIo X A.tob A2.tob P w)
+         (apH {W0.Ix (A2.tob X w.1)} {GPR.TyL[G, A2].EI X} (\ z -> (w.1, z)) (substPw X w.1 A.tob A2.tob P (Po w.1) w.2))) ;
+
+  -- two triples are equal once their types are, through pointwise codes
+  -- (TyEqPw), and the maps agree read through the codes
+  triExtPw (B A : PTy[G]) (al : PMap[G, B, A]) (B2 A2 : PTy[G]) (al2 : PMap[G, B2, A2])
+    (PoB : (I : Ob) (x : W0.Ix (G.ob I)) -> Id W0.V (B.tob I x) (B2.tob I x))
+    (H1B : (J I : Ob) (f : Hom J I) (x : W0.Ix (G.ob I)) (y : W0.Ix (G.ob J)) (e : Id (W0.Ix (G.ob J)) (G.act J I f x) y)
+        (a0 : W0.Ix (B.tob I x))
+        -> Id (W0.Ix (B2.tob J y)) (subst W0.V (\ z -> W0.Ix z) (B.tob J y) (B2.tob J y) (PoB J y) (B.tact J I f x y e a0))
+                                   (B2.tact J I f x y e (subst W0.V (\ z -> W0.Ix z) (B.tob I x) (B2.tob I x) (PoB I x) a0)))
+    (PoA : (I : Ob) (x : W0.Ix (G.ob I)) -> Id W0.V (A.tob I x) (A2.tob I x))
+    (H1A : (J I : Ob) (f : Hom J I) (x : W0.Ix (G.ob I)) (y : W0.Ix (G.ob J)) (e : Id (W0.Ix (G.ob J)) (G.act J I f x) y)
+        (a0 : W0.Ix (A.tob I x))
+        -> Id (W0.Ix (A2.tob J y)) (subst W0.V (\ z -> W0.Ix z) (A.tob J y) (A2.tob J y) (PoA J y) (A.tact J I f x y e a0))
+                                   (A2.tact J I f x y e (subst W0.V (\ z -> W0.Ix z) (A.tob I x) (A2.tob I x) (PoA I x) a0)))
+    (Hm : (X : Ob) (w : GPR.TyL[G, B2].EI X)
+          -> Id (GPR.TyL[G, A2].EI X) (al2.mE X w)
+                (w.1, subst W0.V (\ z -> W0.Ix z) (A.tob X w.1) (A2.tob X w.1) (PoA X w.1)
+                        (GPR.TyL[G, A].fromE X w.1 (al.mE X (w.1, subst W0.V (\ z -> W0.Ix z) (B2.tob X w.1) (B.tob X w.1) (symH (PoB X w.1)) w.2))
+                           (al.mpt X (w.1, subst W0.V (\ z -> W0.Ix z) (B2.tob X w.1) (B.tob X w.1) (symH (PoB X w.1)) w.2)))))
+    : Id ED.Tri (B, (A, al)) (B2, (A2, al2)) =
+    triExt B A al B2 A2 al2 TyEqPw[G, B, B2, PoB, H1B].tyEq TyEqPw[G, A, A2, PoA, H1A].tyEq
+      (\ X w -> transH (Hm X w)
+        (symH (transH (trE-pw X A A2 TyEqPw[G, A, A2, PoA, H1A].tyEq (PoA X) TyEqPw[G, A, A2, PoA, H1A].P (al.mE X (trE X B2 B (symH TyEqPw[G, B, B2, PoB, H1B].tyEq) w)))
+          (calc (GPR.TyL[G, A2].EI X) {
+              ((al.mE X (trE X B2 B (symH TyEqPw[G, B, B2, PoB, H1B].tyEq) w)).1,
+               subst W0.V (\ z -> W0.Ix z) (A.tob X (al.mE X (trE X B2 B (symH TyEqPw[G, B, B2, PoB, H1B].tyEq) w)).1) (A2.tob X (al.mE X (trE X B2 B (symH TyEqPw[G, B, B2, PoB, H1B].tyEq) w)).1)
+                 (PoA X (al.mE X (trE X B2 B (symH TyEqPw[G, B, B2, PoB, H1B].tyEq) w)).1) (al.mE X (trE X B2 B (symH TyEqPw[G, B, B2, PoB, H1B].tyEq) w)).2)
+            =< apH (\ v -> (v.1, subst W0.V (\ z -> W0.Ix z) (A.tob X v.1) (A2.tob X v.1) (PoA X v.1) v.2))
+                 (symH (GPR.TyL[G, A].fromE-eq X (trE X B2 B (symH TyEqPw[G, B, B2, PoB, H1B].tyEq) w).1 (al.mE X (trE X B2 B (symH TyEqPw[G, B, B2, PoB, H1B].tyEq) w))
+                         (al.mpt X (trE X B2 B (symH TyEqPw[G, B, B2, PoB, H1B].tyEq) w)))) >
+              ((trE X B2 B (symH TyEqPw[G, B, B2, PoB, H1B].tyEq) w).1,
+               subst W0.V (\ z -> W0.Ix z) (A.tob X (trE X B2 B (symH TyEqPw[G, B, B2, PoB, H1B].tyEq) w).1) (A2.tob X (trE X B2 B (symH TyEqPw[G, B, B2, PoB, H1B].tyEq) w).1)
+                 (PoA X (trE X B2 B (symH TyEqPw[G, B, B2, PoB, H1B].tyEq) w).1)
+                 (GPR.TyL[G, A].fromE X (trE X B2 B (symH TyEqPw[G, B, B2, PoB, H1B].tyEq) w).1 (al.mE X (trE X B2 B (symH TyEqPw[G, B, B2, PoB, H1B].tyEq) w)) (al.mpt X (trE X B2 B (symH TyEqPw[G, B, B2, PoB, H1B].tyEq) w))))
+            =< apH (\ v -> (v.1, subst W0.V (\ z -> W0.Ix z) (A.tob X v.1) (A2.tob X v.1) (PoA X v.1)
+                                 (GPR.TyL[G, A].fromE X v.1 (al.mE X v) (al.mpt X v))))
+                 (trE-pw X B2 B (symH TyEqPw[G, B, B2, PoB, H1B].tyEq) (\ y -> symH (PoB X y)) (symH TyEqPw[G, B, B2, PoB, H1B].P) w) >
+              (w.1, subst W0.V (\ z -> W0.Ix z) (A.tob X w.1) (A2.tob X w.1) (PoA X w.1)
+                      (GPR.TyL[G, A].fromE X w.1 (al.mE X (w.1, subst W0.V (\ z -> W0.Ix z) (B2.tob X w.1) (B.tob X w.1) (symH (PoB X w.1)) w.2))
+                         (al.mpt X (w.1, subst W0.V (\ z -> W0.Ix z) (B2.tob X w.1) (B.tob X w.1) (symH (PoB X w.1)) w.2)))) })))) ;
+
+} ;
+
+------------------------------------------------------------------------
+-- the identity law
+
+module LawId (G : PCtx) (t : GX.EqDat[G].Tri) (e : GX.EqDat[G].EqOn t) {
+  module ED = GX.EqDat[G] ;
+  module TL = TriL[G] ;
+  B : PTy[G] = t.1 ;
+  A : PTy[G] = t.2.1 ;
+  al : PMap[G, B, A] = t.2.2 ;
+  module ES = GSB2.EqSub[G, G, idS G, B, A, al, e.1] ;
+
+  t2 : ED.Tri = (eqDSub G G (idS G) t e).1 ;
+  e2 : ED.EqOn t2 = (eqDSub G G (idS G) t e).2 ;
+
+  QB : Id (PTy[G]) B (subTy G G B (idS G)) =
+    ty-ext2 G B (subTy G G B (idS G)) (refl B.tob)
+      (\ J I f x y q b -> tact-irr G B J I f x y q (ntEq G G (idS G) J I f x y q) b) ;
+
+  QA : Id (PTy[G]) A (subTy G G A (idS G)) =
+    ty-ext2 G A (subTy G G A (idS G)) (refl A.tob)
+      (\ J I f x y q b -> tact-irr G A J I f x y q (ntEq G G (idS G) J I f x y q) b) ;
+
+  trA (X : Ob) (w : GPR.TyL[G, A].EI X) : Id (GPR.TyL[G, A].EI X) (TL.trE X A (subTy G G A (idS G)) QA w) w =
+    TL.trE-tob X A (subTy G G A (idS G)) QA (refl A.tob) w ;
+
+  trB (X : Ob) (w : GPR.TyL[G, B].EI X) : Id (GPR.TyL[G, B].EI X) (TL.trE X (subTy G G B (idS G)) B (symH QB) w) w =
+    TL.trE-tob X (subTy G G B (idS G)) B (symH QB) (refl B.tob) w ;
+
+  P : Id ED.Tri t t2 =
+    TL.triExt B A al (subTy G G B (idS G)) (subTy G G A (idS G)) ES.al' QB QA
+      (\ X w -> transH (ES.SM.mE-V X w)
+                  (symH (transH (trA X (al.mE X (TL.trE X (subTy G G B (idS G)) B (symH QB) w))) (apH (al.mE X) (trB X w))))) ;
+
+  -- Psi and PsiB along P do nothing (the objects parts are the same)
+  psiId (X : Ob) (w : GPR.TyL[G, A].EI X) : Id (GPR.TyL[G, A].EI X) (ED.Psi t t2 P X w) w =
+    transH (ED.Psi-tob t t2 P X w) (ED.substLoop X A.tob (apH (\ u -> u.2.1.tob) (symH P)) w) ;
+
+  psiBId (X : Ob) (w : GPR.TyL[G, B].EI X) : Id (GPR.TyL[G, B].EI X) (ED.PsiB t t2 P X w) w =
+    transH (ED.PsiB-tob t t2 P X w) (ED.substLoop X B.tob (apH (\ u -> u.1.tob) (symH P)) w) ;
+
+  -- a fibre element moved by s' (EqSub) or by PhiF: the same element
+  E1 (W : Ob) (v : ES.HD.TF.EI W) : Id (ES.HG.TF.EI W) (ES.CS.SC.mV W (ES.s' W v)) (ED.PhiF t t2 P W v) =
+    ES.HG.fibE-eq W (ES.CS.SC.mV W (ES.s' W v)) (ED.PhiF t t2 P W v)
+      (symH (transH (ED.PhiF-pt t t2 P W v) (psiId W v.1)))
+      (symH (transH (ED.PhiF-B t t2 P W v) (psiBId W (ES.HD.fibB W v))))
+      (\ W' f i -> symH (transH (ED.PhiF-L t t2 P W v W' f i) (psiId W' (ES.HD.fibL W v W' f i)))) ;
+
+  module Hy (X : Ob) (w : GPR.TyL[G, A].EI X) (p : GCF.Partials[ES.HD.EA, ES.HD.FibT].Partial[X, w]) {
+    R : Id (GCF.Partials[ES.HG.EA, ES.HG.FibT].Partial[X, ED.Psi t t2 P X w])
+           (subst (GPR.TyL[G, A].EI X) (\ z -> GCF.Partials[ES.HG.EA, ES.HG.FibT].Partial[X, z]) w (ED.Psi t t2 P X w)
+                  (symH (psiId X w)) (ES.qP X w p))
+           (ED.mvP t t2 P X w p) =
+      GCF.Partials[ES.HG.EA, ES.HG.FibT].partExtH X w (ED.Psi t t2 P X w) (symH (psiId X w)) (ES.qP X w p) (ED.mvP t t2 P X w p)
+        (refl p.pr) (\ l -> refl (p.ps l).pQ)
+        (\ l W f i i' -> transH (E1 W ((p.ps l).pv W f i))
+                           (apH (ED.PhiF t t2 P W) (GCF.Partials[ES.HD.EA, ES.HD.FibT].pv-irr X w (p.ps l) W f i i'))) ;
+
+    K : Id (ES.HG.TF.EI X) (w, e.1.kop X w (ES.qP X w p)) (ED.Psi t t2 P X w, e.1.kop X (ED.Psi t t2 P X w) (ED.mvP t t2 P X w p)) =
+      GCF.Partials[ES.HG.EA, ES.HG.FibT].kop-cong e.1 X w (ED.Psi t t2 P X w) (symH (psiId X w)) (ES.qP X w p) (ED.mvP t t2 P X w p) R ;
+
+    hyp : Id (ES.HG.TF.EI X) (ED.PhiF t t2 P X (w, e2.1.kop X w p)) (ED.Psi t t2 P X w, e.1.kop X (ED.Psi t t2 P X w) (ED.mvP t t2 P X w p)) =
+      ES.HG.fibE-eq X (ED.PhiF t t2 P X (w, e2.1.kop X w p)) (ED.Psi t t2 P X w, e.1.kop X (ED.Psi t t2 P X w) (ED.mvP t t2 P X w p))
+        (ED.PhiF-pt t t2 P X (w, e2.1.kop X w p))
+        (transH (ED.PhiF-B t t2 P X (w, e2.1.kop X w p))
+          (transH (psiBId X (ES.HD.fibB X (w, e2.1.kop X w p)))
+            (transH (ES.kopB X w p) (apH (ES.HG.fibB X) K))))
+        (\ W f i -> transH (ED.PhiF-L t t2 P X (w, e2.1.kop X w p) W f i)
+                      (transH (psiId W (ES.HD.fibL X (w, e2.1.kop X w p) W f i))
+                        (transH (ES.kopL X w p W f i) (apH (\ z -> ES.HG.fibL X z W f i) K)))) ;
+  } ;
+
+  eqD-id : Id ((u : ED.Tri) * ED.EqOn u) (t, e) (eqDSub G G (idS G) t e) =
+    ED.ext t t2 P e e2 (\ X w p -> Hy[X, w, p].hyp) ;
+} ;

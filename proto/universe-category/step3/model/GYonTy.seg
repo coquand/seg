@@ -1,0 +1,126 @@
+-- GYonTy.seg (inside IvBase, any base; Step 2 probe): a small type over a
+-- large context given by LOCAL types.  For G at level a+ and a family Phi
+-- assigning to a point x of G at stage I a type over y I, natural
+-- (nat: Phi at x f is Phi at x substituted along y f, an Id of types):
+--
+--   yonTy   the small type over G: fibre at x the fibre of Phi x at the
+--           identity, action the action of Phi x followed by transport
+--           along nat (as El's tactG along codes, GUniv)
+--
+-- El is the case Phi = the type of a code.  A type former given on data
+-- over representables (Ext on glue data, GGlueD/E) is another.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+module L1 = GPre[a+].PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+
+module YT (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A)) {
+  module UU = GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl] ;
+
+  -- the fibre of a local type at the identity
+  fibL (I : Ob) (T : PTy[yP I]) : W0.V = T.tob I (idH I) ;
+
+  trT (J : Ob) (T T' : PTy[yP J]) (P : Id (PTy[yP J]) T T') (z : W0.Ix (fibL J T)) : W0.Ix (fibL J T') =
+    subst (PTy[yP J]) (\ T2 -> W0.Ix (fibL J T2)) T T' P z ;
+
+  -- the action of a local type along f, landing in any type equal to its restriction
+  tactL (J I : Ob) (f : Hom J I) (T : PTy[yP I]) (T' : PTy[yP J]) (P : Id (PTy[yP J]) (subTy (yP J) (yP I) T (yH J I f)) T')
+    (z : W0.Ix (fibL I T)) : W0.Ix (fibL J T') =
+    trT J (subTy (yP J) (yP I) T (yH J I f)) T' P (T.tact J I f (idH I) ((yH J I f).nt J (idH J)) (UU.idf-eq J I f) z) ;
+
+  trT-move (J : Ob) (T : PTy[yP J]) (T' : PTy[yP J]) (P : Id (PTy[yP J]) T T') (z : W0.Ix (fibL J T))
+    : Id (W0.Ix (fibL J T')) (trT J T T' P z) (subst W0.V (\ u -> W0.Ix u) (fibL J T) (fibL J T') (ap (PTy[yP J]) W0.V (fibL J) T T' P) z) =
+    subst-ap (PTy[yP J]) W0.V (fibL J) (\ u -> W0.Ix u) T T' P z ;
+
+  tidL (I : Ob) (T : PTy[yP I]) (P : Id (PTy[yP I]) (subTy (yP I) (yP I) T (yH I I (idH I))) T) (z : W0.Ix (fibL I T))
+    : Id (W0.Ix (fibL I T)) (tactL I I (idH I) T T P z) z =
+    calc (W0.Ix (fibL I T)) {
+      tactL I I (idH I) T T P z
+        =< trT-move I (subTy (yP I) (yP I) T (yH I I (idH I))) T P tz >
+      subst W0.V (\ u -> W0.Ix u) (T.tob I y0) (fibL I T) (ap (PTy[yP I]) W0.V (fibL I) (subTy (yP I) (yP I) T (yH I I (idH I))) T P) tz
+        =< UU.fib-move (Hom I I) (T.tob I) y0 (idH I) (comp-idl I I (idH I))
+                    (ap (PTy[yP I]) W0.V (fibL I) (subTy (yP I) (yP I) T (yH I I (idH I))) T P) tz >
+      subst (Hom I I) (\ x -> W0.Ix (T.tob I x)) y0 (idH I) (comp-idl I I (idH I)) tz
+        =< UU.tact-move (yP I) T I I (idH I) (idH I) y0 (idH I) (UU.idf-eq I I (idH I)) (comp-idl I I (idH I)) (comp-idl I I (idH I)) z >
+      T.tact I I (idH I) (idH I) (idH I) (comp-idl I I (idH I)) z
+        =< T.tact-id I (idH I) (comp-idl I I (idH I)) z >
+      z }
+   where {
+     y0 : Hom I I = (yH I I (idH I)).nt I (idH I) ;
+     tz : W0.Ix (T.tob I y0) = T.tact I I (idH I) (idH I) y0 (UU.idf-eq I I (idH I)) z ; } ;
+
+  module TO (K J I : Ob) (f : Hom J I) (g : Hom K J) (T : PTy[yP I]) (z : W0.Ix (fibL I T)) {
+    Tf : PTy[yP J] = subTy (yP J) (yP I) T (yH J I f) ;
+
+    Tfg : PTy[yP K] = subTy (yP K) (yP J) Tf (yH K J g) ;
+
+    y1 : Hom K I = (yH K I (compH K J I f g)).nt K (idH K) ;
+    y2 : Hom K I = (yH J I f).nt K ((yH K J g).nt K (idH K)) ;
+
+    p12 : Id (Hom K I) y1 y2 = comp-assoc K K J I f g (idH K) ;
+
+    q1 : Id (Hom J I) ((yP I).act J I f (idH I)) ((yH J I f).nt J (idH J)) = UU.idf-eq J I f ;
+    q2 : Id (Hom K I) ((yP I).act K J g ((yH J I f).nt J (idH J))) y2 =
+      ntEq (yP J) (yP I) (yH J I f) K J g (idH J) ((yH K J g).nt K (idH K)) (UU.idf-eq K J g) ;
+
+    tz : W0.Ix (T.tob K y1) = T.tact K I (compH K J I f g) (idH I) y1 (UU.idf-eq K I (compH K J I f g)) z ;
+
+    base (Q3 : Id (PTy[yP K]) (subTy (yP K) (yP I) T (yH K I (compH K J I f g))) Tfg)
+      : Id (W0.Ix (fibL K Tfg)) (tactL K I (compH K J I f g) T Tfg Q3 z) (tactL K J g Tf Tfg (refl Tfg) (tactL J I f T Tf (refl Tf) z)) =
+      calc (W0.Ix (fibL K Tfg)) {
+        tactL K I (compH K J I f g) T Tfg Q3 z
+          =< trT-move K (subTy (yP K) (yP I) T (yH K I (compH K J I f g))) Tfg Q3 tz >
+        subst W0.V (\ u -> W0.Ix u) (T.tob K y1) (fibL K Tfg) (ap (PTy[yP K]) W0.V (fibL K) (subTy (yP K) (yP I) T (yH K I (compH K J I f g))) Tfg Q3) tz
+          =< UU.fib-move (Hom K I) (T.tob K) y1 y2 p12 (ap (PTy[yP K]) W0.V (fibL K) (subTy (yP K) (yP I) T (yH K I (compH K J I f g))) Tfg Q3) tz >
+        subst (Hom K I) (\ x -> W0.Ix (T.tob K x)) y1 y2 p12 tz
+          =< UU.tact-move (yP I) T K I (compH K J I f g) (idH I) y1 y2 (UU.idf-eq K I (compH K J I f g)) (transH (UU.idf-eq K I (compH K J I f g)) p12) p12 z >
+        T.tact K I (compH K J I f g) (idH I) y2 (transH (UU.idf-eq K I (compH K J I f g)) p12) z
+          =< T.tact-o K J I f g (idH I) ((yH J I f).nt J (idH J)) y2 q1 q2 (transH (UU.idf-eq K I (compH K J I f g)) p12) z >
+        T.tact K J g ((yH J I f).nt J (idH J)) y2 q2 (T.tact J I f (idH I) ((yH J I f).nt J (idH J)) q1 z) } ;
+
+    res (T' : PTy[yP J]) (T'' : PTy[yP K]) (r1 : Id (PTy[yP J]) Tf T') (r2 : Id (PTy[yP K]) (subTy (yP K) (yP J) T' (yH K J g)) T'')
+      (r3 : Id (PTy[yP K]) (subTy (yP K) (yP I) T (yH K I (compH K J I f g))) T'')
+      : Id (W0.Ix (fibL K T'')) (tactL K I (compH K J I f g) T T'' r3 z) (tactL K J g T' T'' r2 (tactL J I f T T' r1 z)) =
+      idJ (PTy[yP J]) Tf
+        (\ T2 R1 -> (T3 : PTy[yP K]) (R2 : Id (PTy[yP K]) (subTy (yP K) (yP J) T2 (yH K J g)) T3)
+           (R3 : Id (PTy[yP K]) (subTy (yP K) (yP I) T (yH K I (compH K J I f g))) T3)
+           -> Id (W0.Ix (fibL K T3)) (tactL K I (compH K J I f g) T T3 R3 z) (tactL K J g T2 T3 R2 (tactL J I f T T2 R1 z)))
+        (\ T3 R2 ->
+           idJ (PTy[yP K]) Tfg
+             (\ T4 E4 -> (R3 : Id (PTy[yP K]) (subTy (yP K) (yP I) T (yH K I (compH K J I f g))) T4)
+                -> Id (W0.Ix (fibL K T4)) (tactL K I (compH K J I f g) T T4 R3 z) (tactL K J g Tf T4 E4 (tactL J I f T Tf (refl Tf) z)))
+             base T3 R2)
+        T' r1 T'' r2 r3 ;
+  } ;
+
+  opaque trT-move ; opaque tidL ;
+
+  ----------------------------------------------------------------------
+  -- the small type of a natural family of local types
+
+  module Y (G : L1.PCtx) (Phi : (I : Ob) -> V1.Ix (G.ob I) -> PTy[yP I])
+    (nat : (J I : Ob) (f : Hom J I) (x : V1.Ix (G.ob I)) -> Id (PTy[yP J]) (subTy (yP J) (yP I) (Phi I x) (yH J I f)) (Phi J (G.act J I f x))) {
+    Nf (J I : Ob) (f : Hom J I) (x : V1.Ix (G.ob I)) (y : V1.Ix (G.ob J)) (e : Id (V1.Ix (G.ob J)) (G.act J I f x) y)
+      : Id (PTy[yP J]) (subTy (yP J) (yP I) (Phi I x) (yH J I f)) (Phi J y) = transH (nat J I f x) (apH (Phi J) e) ;
+
+    yonTy : GSmall.SPTy[G] =
+      new GSmall.SPTy[G, \ I x -> fibL I (Phi I x),
+        \ J I f x y e z -> tactL J I f (Phi I x) (Phi J y) (Nf J I f x y e) z,
+        \ I x e z -> tidL I (Phi I x) (Nf I I (idH I) x x e) z,
+        \ K J I f g x y z e1 e2 e3 a -> TO[K, J, I, f, g, Phi I x, a].res (Phi J y) (Phi K z) (Nf J I f x y e1) (Nf K J g y z e2) (Nf K I (compH K J I f g) x z e3)] ;
+  } ;
+} ;

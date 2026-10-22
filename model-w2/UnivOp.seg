@@ -1,0 +1,216 @@
+-- UnivOp.seg: MODEL/Univ/UnivOp.agda.  The univalence operation (the type
+-- part), as an interface.
+--
+--   UData[X, A]   a partial type with an equivalence to A (over y X): a
+--                 cofibration psi, an ESI-fibrant B over (y X)|psi, a map
+--                 beta : B -> A|psi and an equivalence structure eB (with
+--                 its empty-side invariance eBesi)
+--   URel[Y, X, h, A, d', d]   d' (over y Y) is d (over y X) restricted
+--                 along h, up to the identifications that restriction
+--                 produces: rfull, Po (fibres of B' are those of B), H1
+--                 (actions), H2 (composites), H3 (beta), H4 (equivalence
+--                 structures send related partial elements to related
+--                 elements)
+--   UIns          the same data with an empty subset inserted
+--   UnivOp        uop, uside (restricts to B on psi), uunif, uins
+--
+-- Records are segment types (UData, URelB, URel, UIns, UnivOp).  Agda's
+-- anonymous module over (rf, Po) in RelG is the segment RG.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module FS = FibSub[a, a] ;
+module ESS = EsiSub[a, a] ;
+module FE = FibExt[a, a] ;
+module ES = Esi[a, a] ;
+open Yon[a] ;
+open UAct[a] ;
+open Cofib[a] ;
+open Equiv[a] ;
+open CofEsi[a] ;
+open UMapOver[a] ;
+
+-- substitution of an ESI-fibrant type
+subFibE (D G : PCtx) (F : FE.FibE G) (s : PSub[D, G]) : FE.FibE D =
+  (subTy D G F.1 s, (FS.subCompC D G F.1 s F.2.1, ESS.esiSubC D G F.1 s F.2.1 F.2.2)) ;
+
+------------------------------------------------------------------------
+-- Partial types with an equivalence
+
+module UData (X : Ob) (A : PTy[yP X]) {
+  psi : Cof[yP X] ;
+  Bf : FE.FibE (CofL[yP X, psi].resCtx) ;
+  beta : PMap[CofL[yP X, psi].resCtx, Bf.1, subTy (CofL[yP X, psi].resCtx) (yP X) A (CofL[yP X, psi].inclR)] ;
+  eB : EquivOp (CofL[yP X, psi].resCtx) Bf.1 (subTy (CofL[yP X, psi].resCtx) (yP X) A (CofL[yP X, psi].inclR)) beta ;
+  -- empty-side invariance of the equivalence structure (needed for ESI of Ext)
+  eBesi : PartialsEsi[extP (CofL[yP X, psi].resCtx) (subTy (CofL[yP X, psi].resCtx) (yP X) A (CofL[yP X, psi].inclR)),
+                      FibTy[CofL[yP X, psi].resCtx, Bf.1, subTy (CofL[yP X, psi].resCtx) (yP X) A (CofL[yP X, psi].inclR), beta].FibT].KESI eB ;
+} ;
+
+-- the restriction of B along a map f : W -> X in the extent
+fullSub (X : Ob) (psi : Cof[yP X]) (W : Ob) (f : Hom W X) (q : IsT (CofL[yP X, psi].full W f))
+  : PSub[yP W, CofL[yP X, psi].resCtx] =
+  new PSub[yP W, CofL[yP X, psi].resCtx, \ V g -> (compH V W X f g, CofL[yP X, psi].full-act V W g f q),
+    \ V' V k g -> CofL[yP X, psi].res-eq V' _ _ (refl (compH V' W X f (compH V' V W g k)))] ;
+
+------------------------------------------------------------------------
+-- Restriction up to identification
+
+module RelPre (Y X : Ob) (h : Hom Y X) (psi' : Cof[yP Y]) (psi : Cof[yP X]) {
+  module CR' = CofL[yP Y, psi'] ;
+  module CR = CofL[yP X, psi] ;
+
+  G' : PCtx = CR'.resCtx ;
+  G : PCtx = CR.resCtx ;
+
+  RFull : U a = (W : Ob) (g : Hom W Y) -> Id Bool (CR'.full W g) (CR.full W (compH W Y X h g)) ;
+
+  -- the substitution G' -> G
+  sR (rf : RFull) : PSub[G', G] =
+    new PSub[G', G, \ W x -> (compH W Y X h x.1, subst Bool (\ b -> IsT b) (CR'.full W x.1) (CR.full W (compH W Y X h x.1)) (rf W x.1) x.2),
+      \ V W k x -> CR.res-eq V _ _ (refl (compH V Y X h (compH V W Y x.1 k)))] ;
+
+  -- equality of points of A|psi over equal maps
+  resPair (A : PTy[yP X]) (V : Ob) (p p' : W0.Ix (G.ob V)) (a : W0.Ix (A.tob V p.1)) (a' : W0.Ix (A.tob V p'.1))
+    (e : Id (Hom V X) p.1 p'.1) (E : Id (W0.Ix (A.tob V p'.1)) (subst (Hom V X) (\ g -> W0.Ix (A.tob V g)) p.1 p'.1 e a) a')
+    : Id (W0.Ix ((extP G (subTy G (yP X) A CR.inclR)).ob V)) (p, a) (p', a') =
+    idJ (Hom V X) p.1
+      (\ g E1 -> (q' : IsT (CR.full V g)) (a1 : W0.Ix (A.tob V g))
+         -> Id (W0.Ix (A.tob V g)) (subst (Hom V X) (\ g2 -> W0.Ix (A.tob V g2)) p.1 g E1 a) a1
+         -> Id (W0.Ix ((extP G (subTy G (yP X) A CR.inclR)).ob V)) (p, a) ((g, q'), a1))
+      (\ q' a1 E2 ->
+         idJ (W0.Ix (A.tob V p.1)) a
+           (\ a2 E3 -> Id (W0.Ix ((extP G (subTy G (yP X) A CR.inclR)).ob V)) (p, a) ((p.1, q'), a2))
+           (apH (\ z -> ((p.1, z), a)) (isProp-IsT' (CR.full V p.1) p.2 q'))
+           a1 E2)
+      p'.1 e p'.2 a' E ;
+} ;
+
+-- the identification of A|psi' with A|psi along h (A' = A [y h])
+mAsub (Y X : Ob) (h : Hom Y X) (A : PTy[yP X]) (psi' : Cof[yP Y]) (psi : Cof[yP X]) (rf : RelPre[Y, X, h, psi', psi].RFull)
+  : EMap[RelPre[Y, X, h, psi', psi].G', RelPre[Y, X, h, psi', psi].G, RelPre[Y, X, h, psi', psi].sR rf,
+         subTy (CofL[yP Y, psi'].resCtx) (yP Y) (subTy (yP Y) (yP X) A (yH Y X h)) (CofL[yP Y, psi'].inclR),
+         subTy (CofL[yP X, psi].resCtx) (yP X) A (CofL[yP X, psi].inclR)] =
+  (mkEMap (RelPre[Y, X, h, psi', psi].G') (RelPre[Y, X, h, psi', psi].G) (RelPre[Y, X, h, psi', psi].sR rf) (subTy (CofL[yP Y, psi'].resCtx) (yP Y) (subTy (yP Y) (yP X) A (yH Y X h)) (CofL[yP Y, psi'].inclR)) (subTy (CofL[yP X, psi].resCtx) (yP X) A (CofL[yP X, psi].inclR)) (\ W w -> ((RelPre[Y, X, h, psi', psi].sR rf).nt W w.1, w.2)) (\ W w -> refl ((RelPre[Y, X, h, psi', psi].sR rf).nt W w.1)) (\ V W k w -> RelPre[Y, X, h, psi', psi].resPair A V _ _ _ _ (refl (compH V Y X h (compH V W Y w.1.1 k)))
+                   (tact-irr (yP X) A V W k (compH W Y X h w.1.1) (compH V Y X h (compH V W Y w.1.1 k)) _ _ w.2))) ;
+
+-- the same for h = id and the same A
+mAid (X : Ob) (A : PTy[yP X]) (psi' psi : Cof[yP X]) (rf : RelPre[X, X, idH X, psi', psi].RFull)
+  : EMap[RelPre[X, X, idH X, psi', psi].G', RelPre[X, X, idH X, psi', psi].G, RelPre[X, X, idH X, psi', psi].sR rf,
+         subTy (CofL[yP X, psi'].resCtx) (yP X) A (CofL[yP X, psi'].inclR),
+         subTy (CofL[yP X, psi].resCtx) (yP X) A (CofL[yP X, psi].inclR)] =
+  (mkEMap (RelPre[X, X, idH X, psi', psi].G') (RelPre[X, X, idH X, psi', psi].G) (RelPre[X, X, idH X, psi', psi].sR rf) (subTy (CofL[yP X, psi'].resCtx) (yP X) A (CofL[yP X, psi'].inclR)) (subTy (CofL[yP X, psi].resCtx) (yP X) A (CofL[yP X, psi].inclR)) (\ W w -> ((RelPre[X, X, idH X, psi', psi].sR rf).nt W w.1, w.2)) (\ W w -> refl ((RelPre[X, X, idH X, psi', psi].sR rf).nt W w.1)) (\ V W k w -> RelPre[X, X, idH X, psi', psi].resPair A V _ _ _ _ (refl (compH V W X w.1.1 k))
+                   (tact-irr (yP X) A V W k w.1.1 (compH V W X w.1.1 k) _ _ w.2))) ;
+
+-- the B-part of the relation, for any identification of the codomains
+module RelG (Y X : Ob) (h : Hom Y X) (A' : PTy[yP Y]) (A : PTy[yP X]) (d' : UData[Y, A']) (d : UData[X, A])
+  (mAof : (rf : RelPre[Y, X, h, d'.psi, d.psi].RFull)
+          -> EMap[RelPre[Y, X, h, d'.psi, d.psi].G', RelPre[Y, X, h, d'.psi, d.psi].G, RelPre[Y, X, h, d'.psi, d.psi].sR rf,
+                  subTy (CofL[yP Y, d'.psi].resCtx) (yP Y) A' (CofL[yP Y, d'.psi].inclR),
+                  subTy (CofL[yP X, d.psi].resCtx) (yP X) A (CofL[yP X, d.psi].inclR)]) {
+  open RelPre[Y, X, h, d'.psi, d.psi] ;
+
+  B' : PTy[G'] = d'.Bf.1 ;
+  B : PTy[G] = d.Bf.1 ;
+
+  AL' : PTy[G'] = subTy G' (yP Y) A' CR'.inclR ;
+  AG : PTy[G] = subTy G (yP X) A CR.inclR ;
+
+  mA (rf : RFull) : EMap[G', G, sR rf, AL', AG] = mAof rf ;
+
+  PoTy (rf : RFull) : U a+ = (W : Ob) (x : W0.Ix (G'.ob W)) -> Id W0.V (B'.tob W x) (B.tob W ((sR rf).nt W x)) ;
+
+  coeB (rf : RFull) (Po : PoTy rf) (W : Ob) (x : W0.Ix (G'.ob W)) (b : W0.Ix (B'.tob W x)) : W0.Ix (B.tob W ((sR rf).nt W x)) =
+    subst W0.V (\ z -> W0.Ix z) (B'.tob W x) (B.tob W ((sR rf).nt W x)) (Po W x) b ;
+
+  module TB' = PR.TyL[G', B'] ;
+  module TB = PR.TyL[G, B] ;
+
+  mBE (rf : RFull) (Po : PoTy rf) (W : Ob) (w : TB'.EI W) : TB.EI W = ((sR rf).nt W w.1, coeB rf Po W w.1 w.2) ;
+
+  H1Ty (rf : RFull) (Po : PoTy rf) : U a = (V W : Ob) (k : Hom V W) (w : TB'.EI W)
+    -> Id (TB.EI V) (mBE rf Po V (TB'.E.act V W k w)) (TB.E.act V W k (mBE rf Po W w)) ;
+
+  mB (rf : RFull) (Po : PoTy rf) (H1 : H1Ty rf Po) : EMap[G', G, sR rf, B', B] =
+    (mkEMap G' G (sR rf) B' B (mBE rf Po) (\ W w -> refl ((sR rf).nt W w.1)) H1) ;
+
+  module FT' = FibTy[G', B', AL', d'.beta] ;
+  module FT = FibTy[G, B, AG, d.beta] ;
+  module PX' = Partials[FT'.EA, FT'.FibT] ;
+  module PX = Partials[FT.EA, FT.FibT] ;
+
+  module RG (rf : RFull) (Po : PoTy rf) {
+    mAE (W : Ob) (w : W0.Ix (FT'.EA.ob W)) : W0.Ix (FT.EA.ob W) = (mA rf).mE W w ;
+
+    -- related fibre elements
+    FRel (V : Ob) (v' : W0.Ix (FT'.EF.ob V)) (v : W0.Ix (FT.EF.ob V)) : U a =
+      Id (W0.Ix (FT.EA.ob V)) v.1 (mAE V v'.1)
+      * (Id (TB.EI V) (FT.fibB V v) (mBE rf Po V (FT'.fibB V v'))
+      * Id (W0.Ix (FT.EA.ob (prodP V Iv))) (FT.fibP V v) (mAE (prodP V Iv) (FT'.fibP V v'))) ;
+
+    -- related partial elements
+    PRel (X0 : Ob) (w' : W0.Ix (FT'.EA.ob X0)) (p' : PX'.Partial[X0, w']) (p : PX.Partial[X0, mAE X0 w']) : U a =
+      (e : Id Nat p'.pr p.pr) *
+        (((l : Fin p'.pr) (t : Tree) -> Id Bool ((p'.ps l).pQ t) ((p.ps (subst Nat (\ n -> Fin n) p'.pr p.pr e l)).pQ t)) *
+         ((l : Fin p'.pr) (W : Ob) (f : Hom W X0) (i : Lands W X0 (p'.ps l).pQ f)
+          (i' : Lands W X0 (p.ps (subst Nat (\ n -> Fin n) p'.pr p.pr e l)).pQ f)
+          -> FRel W ((p'.ps l).pv W f i) ((p.ps (subst Nat (\ n -> Fin n) p'.pr p.pr e l)).pv W f i'))) ;
+
+    H3Ty : U a = (W : Ob) (w : TB'.EI W) -> Id (W0.Ix (FT.EA.ob W)) (mAE W (d'.beta.mE W w)) (d.beta.mE W (mBE rf Po W w)) ;
+
+    H4Ty : U a = (X0 : Ob) (w' : W0.Ix (FT'.EA.ob X0)) (p' : PX'.Partial[X0, w']) (p : PX.Partial[X0, mAE X0 w'])
+      -> PRel X0 w' p' p -> FRel X0 (w', d'.eB.kop X0 w' p') (mAE X0 w', d.eB.kop X0 (mAE X0 w') p) ;
+  } ;
+
+  module URelB {
+    rf : RFull ;
+    Po : PoTy rf ;
+    H1 : H1Ty rf Po ;
+    H2 : MapOver[G', G, sR rf, B', B, mB rf Po H1].CompOver d'.Bf.2.1 d.Bf.2.1 ;
+    H3 : RG[rf, Po].H3Ty ;
+    H4 : RG[rf, Po].H4Ty ;
+  } ;
+} ;
+
+-- restriction along h, with the same presentation of the extent
+module URel (Y X : Ob) (h : Hom Y X) (A : PTy[yP X]) (d' : UData[Y, subTy (yP Y) (yP X) A (yH Y X h)]) (d : UData[X, A]) {
+  base : RelG[Y, X, h, subTy (yP Y) (yP X) A (yH Y X h), A, d', d, \ rf -> mAsub Y X h A d'.psi d.psi rf].URelB ;
+  rcr : Id Nat d'.psi.cr d.psi.cr ;
+  rcQ (W : Ob) (g : Hom W Y) (k : Fin d'.psi.cr) (t : Tree)
+    : Id Bool (d'.psi.cQ W g k t) (d.psi.cQ W (compH W Y X h g) (subst Nat (\ n -> Fin n) d'.psi.cr d.psi.cr rcr k) t) ;
+} ;
+
+-- the same data with an empty subset inserted at k in the presentation of the extent
+module UIns (X : Ob) (A : PTy[yP X]) (k : Nat) (d' d : UData[X, A]) {
+  base : RelG[X, X, idH X, A, A, d', d, \ rf -> mAid X A d'.psi d.psi rf].URelB ;
+  icr : Id Nat d'.psi.cr (suc d.psi.cr) ;
+  ik : IsT (leb k d.psi.cr) ;
+  iQ (W : Ob) (g : Hom W X) (n : Nat) (hn : IsT (ltb n d.psi.cr)) (hn' : IsT (ltb (ES.skipN k n) d'.psi.cr)) (t : Tree)
+    : Id Bool (d'.psi.cQ W g (ES.skipN k n, hn') t) (d.psi.cQ W g (n, hn) t) ;
+  ie (W : Ob) (g : Hom W X) (hk : IsT (ltb k d'.psi.cr)) (t : Tree) : Id Bool (d'.psi.cQ W g (k, hk) t) false ;
+} ;
+
+------------------------------------------------------------------------
+-- The univalence operation (type part)
+
+module UnivOp {
+  uop (X : Ob) (A : U0 X) (d : UData[X, A.1]) : U0 X ;
+  -- on the extent, the result is B
+  uside (X : Ob) (A : U0 X) (d : UData[X, A.1]) (W : Ob) (f : Hom W X) (q : IsT (CofL[yP X, d.psi].full W f))
+    : Id (U0 W) (uAct W X f (uop X A d)) (subFibE (yP W) (CofL[yP X, d.psi].resCtx) d.Bf (fullSub X d.psi W f q)) ;
+  -- natural for restriction up to identification
+  uunif (Y X : Ob) (h : Hom Y X) (A : U0 X) (d' : UData[Y, (uAct Y X h A).1]) (d : UData[X, A.1])
+    (r : URel[Y, X, h, A.1, d', d]) : Id (U0 Y) (uAct Y X h (uop X A d)) (uop Y (uAct Y X h A) d') ;
+  -- invariant under inserting an empty subset in the presentation of the extent
+  uins (X : Ob) (A : U0 X) (k : Nat) (d' d : UData[X, A.1]) (r : UIns[X, A.1, k, d', d]) : Id (U0 X) (uop X A d') (uop X A d) ;
+} ;

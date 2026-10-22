@@ -1,0 +1,177 @@
+-- HornFace.seg: MODEL/Poset/HornFace.agda.  A horn, read on maps missing a
+-- face: on a map g : W -> [m+1] which misses the vertex y, the value of
+-- the horn is that of its face y, along the factorisation of g through
+-- delta_y (vF); the values of two faces agree (vF-compat).  Agda's
+-- where-block of compat-lt is the segment CL.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+
+------------------------------------------------------------------------
+-- Arithmetic
+
+-- dg_y j = z  and  y <= z  give  j = z + 1  (for j /= y)
+dg-hit (n y z j : Nat) (hy : IsT (leb y (suc n))) (hj : IsT (leb j (suc n))) (kj : IsT (not (eqN j y)))
+  (hyz : IsT (leb y z)) (e : Id Nat (dg n y j) z) : Id Nat j (suc z) =
+  transH (symH (skip-dg n y j hy hj kj)) (transH (apH (skip y) e) (skip-ge y z hyz)) ;
+
+neq-of (x y : Nat) (k : Id Nat x y -> Empty) : IsT (not (eqN x y)) =
+  eqN-dec (IsT (not (eqN x y))) x y (\ e -> absurd _ (k e)) (\ ne -> ne) ;
+
+neq-elim (x : Nat) (k : IsT (not (eqN x x))) : Empty = false-true (transH (symH (apH not (eqN-refl x))) k) ;
+
+------------------------------------------------------------------------
+-- The values of a horn on maps missing a face
+
+module HF (G : PCtx) (A : PTy[G]) (m k : Nat) (hk : IsT (leb k (suc m)))
+  (tau : W0.Ix (G.ob (lin (suc m)))) (F : Box[a, a].Horns[G, A].Faces m k tau) {
+  open PR.TyL[G, A] ;
+  open Box[a, a].Horns[G, A] ;
+  module GL = PR.PshL[G] ;
+
+  X : Ob = lin (suc m) ;
+
+  vF (y : Nat) (hy : IsT (leb y (suc m))) (ky : IsT (not (eqN y k))) (W : Ob) (g : Hom W X) : EI W =
+    E.act W (lin m) (compH W X (lin m) (dgH m y) g) (fE m k tau F y hy ky) ;
+
+  vF-pt (y : Nat) (hy : IsT (leb y (suc m))) (ky : IsT (not (eqN y k))) (W : Ob) (g : Hom W X) (ms : Miss W m y g)
+    : Id (Pt W) (vF y hy ky W g).1 (G.act W X g tau) =
+    GL.actTri W (lin m) X (dl m y) (compH W X (lin m) (dgH m y) g) g (pw-factor W m y g hy ms) tau ;
+
+  vF-pw (y : Nat) (hy : IsT (leb y (suc m))) (ky : IsT (not (eqN y k))) (W : Ob) (g g' : Hom W X) (p : PW W X g g')
+    : Id (EI W) (vF y hy ky W g) (vF y hy ky W g') =
+    PE.actPW W (lin m) _ _ (pw-post W X (lin m) g g' (dgH m y) p) (fE m k tau F y hy ky) ;
+
+  vF-nat (y : Nat) (hy : IsT (leb y (suc m))) (ky : IsT (not (eqN y k))) (W' W : Ob) (chi : Hom W' W) (g : Hom W X)
+    : Id (EI W') (E.act W' W chi (vF y hy ky W g)) (vF y hy ky W' (compH W' W X g chi)) =
+    PE.actTri W' W (lin m) (compH W X (lin m) (dgH m y) g) chi (compH W' X (lin m) (dgH m y) (compH W' W X g chi))
+      (\ s -> refl (app W' (lin m) (compH W' X (lin m) (dgH m y) (compH W' W X g chi)) s).1) (fE m k tau F y hy ky) ;
+
+  vF-irr (y : Nat) (hy hy' : IsT (leb y (suc m))) (ky ky' : IsT (not (eqN y k))) (W : Ob) (g : Hom W X)
+    : Id (EI W) (vF y hy ky W g) (vF y hy' ky' W g) =
+    transH (apH (\ h1 -> vF y h1 ky W g) (isProp-IsT' _ hy hy'))
+           (apH (\ h1 -> vF y hy' h1 W g) (isProp-IsT' _ ky ky')) ;
+} ;
+
+------------------------------------------------------------------------
+-- Compatibility
+
+-- m = 0: two distinct faces of [1] cannot both differ from k
+c0aux1 : (k : Nat) -> IsT (not (eqN zero (suc k))) -> IsT (not (eqN (suc zero) (suc k))) -> IsT (leb (suc k) (suc zero)) -> Empty = split {
+  zero -> \ x y z -> false-true y ;
+  suc k -> \ x y z -> false-true z } ;
+
+c0aux : (k : Nat) -> IsT (not (eqN zero k)) -> IsT (not (eqN (suc zero) k)) -> IsT (leb k (suc zero)) -> Empty = split {
+  zero -> \ x y z -> false-true x ;
+  suc k -> c0aux1 k } ;
+
+-- the case y = 0, z = suc z
+c0z (k : Nat) : (z : Nat) -> IsT (ltb zero (suc z)) -> IsT (leb (suc z) (suc zero))
+  -> IsT (not (eqN zero k)) -> IsT (not (eqN (suc z) k)) -> IsT (leb k (suc zero)) -> Empty = split {
+  zero -> \ hyz hz ky kz hk -> c0aux k ky kz hk ;
+  suc z -> \ hyz hz ky kz hk -> false-true hz } ;
+
+-- the case y = suc y, z = suc z
+c0s (k y : Nat) : (z : Nat) -> IsT (ltb (suc y) (suc z)) -> IsT (leb (suc z) (suc zero))
+  -> IsT (not (eqN (suc y) k)) -> IsT (not (eqN (suc z) k)) -> IsT (leb k (suc zero)) -> Empty = split {
+  zero -> \ hyz hz ky kz hk -> false-true hyz ;
+  suc z -> \ hyz hz ky kz hk -> false-true hz } ;
+
+-- m = 0: two distinct faces of [1] cannot both differ from k
+compat-0 (k : Nat) : (y z : Nat) -> IsT (ltb y z) -> IsT (leb z (suc zero))
+  -> IsT (not (eqN y k)) -> IsT (not (eqN z k)) -> IsT (leb k (suc zero)) -> Empty = split {
+  zero -> split {
+    zero -> \ hyz hz ky kz hk -> false-true hyz ;
+    suc z -> c0z k z } ;
+  suc y -> split {
+    zero -> \ hyz hz ky kz hk -> false-true hyz ;
+    suc z -> c0s k y z } } ;
+
+module HC (G : PCtx) (A : PTy[G]) {
+  open PR.TyL[G, A] ;
+  open Box[a, a].Horns[G, A] ;
+
+  VF (m k : Nat) (hk : IsT (leb k (suc m))) (tau : W0.Ix (G.ob (lin (suc m)))) (F : Faces m k tau)
+    (y : Nat) (hy : IsT (leb y (suc m))) (ky : IsT (not (eqN y k))) (W : Ob) (g : Hom W (lin (suc m))) : EI W =
+    HF[G, A, m, k, hk, tau, F].vF y hy ky W g ;
+
+  -- the case  m = n+1 , y < z+1  of compat-lt
+  module CL (n k : Nat) (hk : IsT (leb k (suc (suc n)))) (tau : W0.Ix (G.ob (lin (suc (suc n)))))
+    (F : Faces (suc n) k tau) (hc : HCompat (suc n) k tau F)
+    (y z : Nat) (hyz : IsT (ltb y (suc z))) (hy : IsT (leb y (suc (suc n)))) (hz : IsT (leb (suc z) (suc (suc n))))
+    (ky : IsT (not (eqN y k))) (kz : IsT (not (eqN (suc z) k)))
+    (W : Ob) (g : Hom W (lin (suc (suc n)))) (msy : Miss W (suc n) y g) (msz : Miss W (suc n) (suc z) g) {
+
+    m : Nat = suc n ;
+    X : Ob = lin (suc m) ;
+
+    g' : Hom W (lin m) = compH W X (lin m) (dgH m y) g ;
+
+    msaux : (t : Tree) (h : IsT (car X t)) -> IsT (not (eqN (vnum t) y)) -> IsT (not (eqN (vnum t) (suc z)))
+      -> IsT (not (eqN (vnum (app X (lin m) (dgH m y) (t, h)).1) z)) = split {
+      leaf j -> \ h kj kz' -> neq-of (dg m y j) z
+        (\ e -> neq-elim (suc z) (substH (\ v -> IsT (not (eqN v (suc z)))) (dg-hit m y z j hy h kj hyz e) kz')) ;
+      node c d -> \ h kj kz' -> absurd _ (false-true h) } ;
+
+    ms' : Miss W n z g' = \ s -> msaux (app W X g s).1 (app W X g s).2 (msy s) (msz s) ;
+
+    h : Hom W (lin n) = compH W (lin m) (lin n) (dgH n z) g' ;
+
+    -- dl_{z+1} dl_y h = g
+    pw1 : PW W X (compH W (lin m) X (dl m (suc z)) (compH W (lin n) (lin m) (dl n y) h)) g = \ s ->
+      transH (pw-dl-dl n y z hyz (app W (lin n) h s))
+       (transH (apH (\ u -> (app (lin m) X (dl m y) u).1)
+                    (el-eq (lin m) (app W (lin m) (compH W (lin n) (lin m) (dl n z) h) s) (app W (lin m) g' s)
+                           (pw-factor W n z g' hz ms' s)))
+               (pw-factor W m y g hy msy s)) ;
+
+    pwh : PW W (lin m) (compH W (lin n) (lin m) (dl n y) h) (compH W X (lin m) (dgH m (suc z)) g) = \ s ->
+      transH (symH (pw-dg-dl m (suc z) hz (app W (lin m) (compH W (lin n) (lin m) (dl n y) h) s)))
+             (pw-post W X (lin m) (compH W (lin m) X (dl m (suc z)) (compH W (lin n) (lin m) (dl n y) h)) g (dgH m (suc z)) pw1 s) ;
+
+    res : Id (EI W) (VF m k hk tau F y hy ky W g) (VF m k hk tau F (suc z) hz kz W g) =
+      transH (PE.actPW W (lin m) g' (compH W (lin n) (lin m) (dl n z) h)
+                (pw-sym W (lin m) (compH W (lin n) (lin m) (dl n z) h) g' (pw-factor W n z g' hz ms')) (fE m k tau F y hy ky))
+       (transH (symH (PE.actC W (lin n) (lin m) (dl n z) h (fE m k tau F y hy ky)))
+        (transH (apH (E.act W (lin n) h) (hc y z hyz hy hz ky kz))
+         (transH (PE.actC W (lin n) (lin m) (dl n y) h (fE m k tau F (suc z) hz kz))
+                 (PE.actPW W (lin m) _ _ pwh (fE m k tau F (suc z) hz kz))))) ;
+  } ;
+
+  -- y < z
+  compat-lt : (m k : Nat) (hk : IsT (leb k (suc m))) (tau : W0.Ix (G.ob (lin (suc m))))
+    (F : Faces m k tau) (hc : HCompat m k tau F)
+    (y z : Nat) (hyz : IsT (ltb y z)) (hy : IsT (leb y (suc m))) (hz : IsT (leb z (suc m)))
+    (ky : IsT (not (eqN y k))) (kz : IsT (not (eqN z k)))
+    (W : Ob) (g : Hom W (lin (suc m))) -> Miss W m y g -> Miss W m z g
+    -> Id (EI W) (VF m k hk tau F y hy ky W g) (VF m k hk tau F z hz kz W g) = split {
+    zero -> \ k hk tau F hc y z hyz hy hz ky kz W g msy msz -> absurd _ (compat-0 k y z hyz hz ky kz hk) ;
+    suc n -> \ k hk tau F hc y -> split {
+      zero -> \ hyz hy hz ky kz W g msy msz -> absurd _ (false-true hyz) ;
+      suc z -> \ hyz hy hz ky kz W g msy msz -> CL[n, k, hk, tau, F, hc, y, z, hyz, hy, hz, ky, kz, W, g, msy, msz].res } } ;
+
+  vF-compat (m k : Nat) (hk : IsT (leb k (suc m))) (tau : W0.Ix (G.ob (lin (suc m))))
+    (F : Faces m k tau) (hc : HCompat m k tau F)
+    (y z : Nat) (hy : IsT (leb y (suc m))) (hz : IsT (leb z (suc m)))
+    (ky : IsT (not (eqN y k))) (kz : IsT (not (eqN z k)))
+    (W : Ob) (g : Hom W (lin (suc m))) (msy : Miss W m y g) (msz : Miss W m z g)
+    : Id (EI W) (VF m k hk tau F y hy ky W g) (VF m k hk tau F z hz kz W g) =
+    eqN-dec (Id (EI W) (VF m k hk tau F y hy ky W g) (VF m k hk tau F z hz kz W g)) y z
+      (\ e -> idJ Nat y
+                (\ z1 e1 -> (hz1 : IsT (leb z1 (suc m))) (kz1 : IsT (not (eqN z1 k)))
+                   -> Id (EI W) (VF m k hk tau F y hy ky W g) (VF m k hk tau F z1 hz1 kz1 W g))
+                (\ hz1 kz1 -> HF[G, A, m, k, hk, tau, F].vF-irr y hy hz1 ky kz1 W g) z e hz kz)
+      (\ ne -> ltb-dec (Id (EI W) (VF m k hk tau F y hy ky W g) (VF m k hk tau F z hz kz W g)) y z
+         (\ lt -> compat-lt m k hk tau F hc y z lt hy hz ky kz W g msy msz)
+         (\ ge -> symH (compat-lt m k hk tau F hc z y (leb-neq z y ge (neq-sym y z ne)) hz hy kz ky W g msz msy))) ;
+} ;

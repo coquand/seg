@@ -1,0 +1,94 @@
+-- DSmallFull2.seg: smallCl-full for the universe of Delta, assembled
+-- (DSmallFull has the pointwise statement St along tyEq):
+--
+--   (xsub (yon w) SA , smallCl)  = (E1 , c1)                 Qy
+--                                = (E2[id] , clSub id tE2)    ClT.toSig, St
+--                                = (E2 , tE2)                 clSub-id
+--                                = (El along c' , tautCl c')  codeEq (J)
+--                                = bmap x                     tautCl-yon
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ;
+module DBm = DeltaBase[a] ;
+module DB = DBm.DB ;
+module PS = DB.GPre[a].PS ;
+module DCl = DeltaClassifier[a] ;
+module DU = DCl.DU ;
+module YO = DB.GYon[a] ;
+module DF = DeltaForall[a].DFaU ;
+
+module SF2
+  (kU0 : DB.GLine[a+].LineFibP[DB.GFam[a+].famPath, DU.UCtx, DU.EGen].FibAt DB.e0)
+  (kU1 : DB.GLine[a+].LineFibP[DB.GFam[a+].famPath, DU.UCtx, DU.EGen].FibAt DB.e1)
+  (kU0e : DB.GCofEsi[a+].PartialsEsi[DB.GLine[a+].EndKit[DB.GFam[a+].famPath, DU.UCtx, DU.EGen, DB.e0].TV.E,
+            DB.GLine[a+].EndKit[DB.GFam[a+].famPath, DU.UCtx, DU.EGen, DB.e0].SFm.SF].KESI kU0)
+  (kU1e : DB.GCofEsi[a+].PartialsEsi[DB.GLine[a+].EndKit[DB.GFam[a+].famPath, DU.UCtx, DU.EGen, DB.e1].TV.E,
+            DB.GLine[a+].EndKit[DB.GFam[a+].famPath, DU.UCtx, DU.EGen, DB.e1].SFm.SF].KESI kU1)
+  (cE : DB.GFibE[a+].FE[DU.UCtx, DU.EGen].Comp) (eE : DB.GFibE[a+].FE[DU.UCtx, DU.EGen].ESIC cE)
+  (X : Nat)
+  (w : DB.GExtBig.UB[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A].Pr X)
+  (fu : IsT (DB.GExtBig.UB[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A].CU.full X w)) {
+  module S = DSmallFull[a].SF[kU0, kU1, kU0e, kU1e, cE, eE, X, w, fu] ;
+  module SC0 = S.SC0 ;
+  module FT0 = S.FT0 ;
+  module TC = S.TC ;
+  module UU = FT0.UU ;
+
+  T : PS.PTy[YO.yP X] = PS.subTy (YO.yP X) (YO.yP X) FT0.E2 (PS.idS (YO.yP X)) ;
+  tE2 : DCl.ClD (YO.yP X) FT0.E2 = TC.tautCl (YO.yP X) FT0.c FT0.cnat ;
+  cT : DCl.ClD (YO.yP X) T = DCl.clSubD (YO.yP X) (YO.yP X) (PS.idS (YO.yP X)) FT0.E2 tE2 ;
+
+  module St (m k : Nat) (hk : IsT (leb k (suc m))) (rho : Hom (lin (suc m)) (lin X))
+    (h : DHornFib[a, a].DH[YO.yP X, S.FT0.E1].HornData m k rho) {
+    module A0 = S.At[m, k, hk, rho, h] ;
+    module P0 = DSmallFullP[a].SFP[kU0, kU1, kU0e, kU1e, cE, eE, X, w, fu].At[m, k, hk, rho, h] ;
+
+    st3 : Id (W0.Ix (DU.fib0 (suc m) (S.FT0.c (suc m) rho))) A0.z A0.cTf =
+      transH (apH {S.TC.HEl.HornData m k (S.FT0.c (suc m) rho)} {W0.Ix (DU.fib0 (suc m) (S.FT0.c (suc m) rho))}
+                (\ d -> (DElHorn[a].elFib m k hk (S.FT0.c (suc m) rho) d).1) P0.dEq)
+             (symH (S.TC.tautCl-fill (YO.yP X) S.FT0.c S.FT0.cnat m k hk rho
+                      (DCl.Sub[YO.yP X, YO.yP X, PS.idS (YO.yP X), S.FT0.E2, S.TC.tautCl (YO.yP X) S.FT0.c S.FT0.cnat].mv m k rho A0.hT))) ;
+
+    st : Id (DB.GPre[a].TyL[YO.yP X, A0.T].EI (suc m)) (A0.TR.trE (suc m) A0.T S.FT0.TP.tyEq (rho, (S.c1 m k hk rho h).1)) (rho, A0.cTf) =
+      transH P0.st1
+        (apH {W0.Ix (DU.fib0 (suc m) (S.FT0.c (suc m) rho))} {DB.GPre[a].TyL[YO.yP X, A0.T].EI (suc m)} (\ b -> (rho, b))
+           (transH (S.FT0.FMx.phB-psBR (suc m) rho A0.z) st3)) ;
+
+    opaque st3 ;
+  } ;
+
+  -- along tyEq
+  s2 : Id ((A' : PS.PTy[YO.yP X]) * DCl.ClD (YO.yP X) A') (T, cT) (FT0.E1, S.c1) =
+    DClT[a].ClT[YO.yP X, FT0.E1, S.c1].toSig T FT0.TP.tyEq cT (\ m k hk rho h -> St[m, k, hk, rho, h].st) ;
+
+  -- the codes along yx are B's at x moved
+  s4 : Id ((A' : PS.PTy[YO.yP X]) * DCl.ClD (YO.yP X) A') (FT0.E2, tE2)
+          (TC.EC.Fam[YO.yP X, FT0.c', FT0.cnat'].ElTy, TC.tautCl (YO.yP X) FT0.c' FT0.cnat') =
+    idJ ((Y : Nat) -> Hom (lin Y) (lin X) -> UU.U0 Y) FT0.c
+      (\ c2 P2 -> (cn2 : FT0.CnTy c2) -> Id ((A' : PS.PTy[YO.yP X]) * DCl.ClD (YO.yP X) A') (FT0.E2, tE2)
+                    (TC.EC.Fam[YO.yP X, c2, cn2].ElTy, TC.tautCl (YO.yP X) c2 cn2))
+      (\ cn2 -> apH {FT0.CnTy FT0.c} {(A' : PS.PTy[YO.yP X]) * DCl.ClD (YO.yP X) A'}
+                   (\ q -> (TC.EC.Fam[YO.yP X, FT0.c, q].ElTy, TC.tautCl (YO.yP X) FT0.c q)) (FT0.isProp-Cn FT0.c FT0.cnat cn2))
+      FT0.c' FT0.codeEq FT0.cnat' ;
+
+  -- the result
+  smallCl-full : Id ((A' : PS.PTy[YO.yP X]) * DCl.ClD (YO.yP X) A')
+      (DB.GSmall.xsub (YO.yP X) SC0.UB.GDr SC0.XS.SA (DF.GUaUniv.YD[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A].yon X w),
+       SC0.smallCl (YO.yP X) (DF.GUaUniv.YD[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A].yon X w))
+      (SC0.UB.bmap.nt X (w, fu)) =
+    transH (apH {DB.GSmall.XSub[YO.yP X, SC0.UB.GDr]} {(A' : PS.PTy[YO.yP X]) * DCl.ClD (YO.yP X) A'}
+              (\ al -> (DB.GSmall.xsub (YO.yP X) SC0.UB.GDr SC0.XS.SA al, SC0.smallCl (YO.yP X) al)) FT0.Qy)
+     (transH (symH s2)
+      (transH (symH (DCl.clSub-idD (YO.yP X) FT0.E2 tE2))
+       (transH s4 (DTautYon[a].TY[cE, eE].tautCl-yon X (SC0.UB.bmap.nt X (w, fu)))))) ;
+} ;

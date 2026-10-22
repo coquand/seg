@@ -1,0 +1,82 @@
+-- GUaOpN.seg (inside IvBase.FaU, any base; Step 3): the univalence
+-- operation from the universal datum U, as a contractibility structure on
+-- UaTy (Sigma (X : U) Equiv (X , A) is contractible, uniformly):
+--   kop     U along the Yoneda map of d_p (GUaUniv.KP)
+--   kunif   GUaUniv.KUn
+--   kside   kunif along f, then kfull at p|f (GUaKfull), whose side l
+--           contains id
+-- The classifier's parameters: smallCl, smallCl-sub, smallCl-full.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Trees[a] ;
+open Arith[a] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open GLine[a] ;
+module GE1 = GFibE[a+] ;
+
+module UaN (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE)
+  (kU0 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e0)
+  (kU1 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e1)
+  (kU0e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].SFm.SF].KESI kU0)
+  (kU1e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].SFm.SF].KESI kU1)
+  (smallCl : (r : Nat) (D : PCtx) (al : GSmall.XSub[D, GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl, r].GDr])
+     -> Cl D (GSmall.xsub D GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl, r].GDr GExtSmall.XS[Cl, clSub, clSub-id, clSub-o, encCl, r, kU0, kU1, kU0e, kU1e].SA al))
+  (smallCl-sub : (r : Nat) (D D' : PCtx) (t : PSub[D', D]) (al : GSmall.XSub[D, GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl, r].GDr])
+     -> Id ((T : PTy[D']) * Cl D' T)
+           (subTy D' D (GSmall.xsub D GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl, r].GDr GExtSmall.XS[Cl, clSub, clSub-id, clSub-o, encCl, r, kU0, kU1, kU0e, kU1e].SA al) t,
+            clSub D' D t (GSmall.xsub D GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl, r].GDr GExtSmall.XS[Cl, clSub, clSub-id, clSub-o, encCl, r, kU0, kU1, kU0e, kU1e].SA al) (smallCl r D al))
+           (GSmall.xsub D' GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl, r].GDr GExtSmall.XS[Cl, clSub, clSub-id, clSub-o, encCl, r, kU0, kU1, kU0e, kU1e].SA
+              (GSmall.xoS D' D GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl, r].GDr al t),
+            smallCl r D' (GSmall.xoS D' D GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl, r].GDr al t)))
+  (smallCl-full : (r : Nat) (X : Ob) (w : GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl, r].Pr X) (fu : IsT (GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl, r].CU.full X w))
+     -> Id ((T : PTy[yP X]) * Cl (yP X) T)
+           (GSmall.xsub (yP X) GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl, r].GDr GExtSmall.XS[Cl, clSub, clSub-id, clSub-o, encCl, r, kU0, kU1, kU0e, kU1e].SA (GUaUniv.YD[Cl, clSub, clSub-id, clSub-o, encCl, r].yon X w),
+            smallCl r (yP X) (GUaUniv.YD[Cl, clSub, clSub-id, clSub-o, encCl, r].yon X w))
+           (GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl, r].bmap.nt X (w, fu)))
+  {
+  module UA = GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module UU = UA.UU ;
+  module PPa = GCofib[a+].Partials[UU.UCtx, UA.UaTy] ;
+  module TC = GPre[a+].TyL[UU.UCtx, UA.UaTy] ;
+
+  kop (X : Ob) (F : UU.U0 X) (p : PPa.Partial[X, F]) : UA.UaT0 X F =
+    GUaUniv.KP[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e, smallCl, smallCl-sub, X, F, p].kop ;
+
+  kunif (Y X : Ob) (h : Hom Y X) (F : UU.U0 X) (p : PPa.Partial[X, F])
+    : Id (TC.EI Y) (TC.E.act Y X h (F, kop X F p)) (UU.uAct Y X h F, kop Y (UU.uAct Y X h F) (PPa.restrictP Y X h F p)) =
+    GUaUniv.KUn[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e, smallCl, smallCl-sub, X, F, p, Y, h].kunif ;
+
+  -- the side l at f, as a side of p|f containing id
+  il0 (X : Ob) (F : UU.U0 X) (p : PPa.Partial[X, F]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+    : Lands W W (pre W X f (p.ps l).pQ) (idH W) =
+    pre-lands W W X f (p.ps l).pQ (idH W) (lands-eq W X (p.ps l).pQ f (compH W W X f (idH W)) (symH (comp-idr W X f)) i) ;
+
+  kside (X : Ob) (F : UU.U0 X) (p : PPa.Partial[X, F]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+    : Id (TC.EI W) (TC.E.act W X f (F, kop X F p)) ((p.ps l).pv W f i) =
+    transH (kunif W X f F p)
+      (transH (GUaKfull.KF[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e, smallCl, smallCl-sub, smallCl-full,
+                 W, UU.uAct W X f F, PPa.restrictP W X f F p, l, il0 X F p l W f i].kfull)
+              (PPa.pv-hom X F (p.ps l) W (compH W W X f (idH W)) f (comp-idr W X f)
+                 (lands-pre W W X f (p.ps l).pQ (idH W) (il0 X F p l W f i)) i)) ;
+
+  -- univalence: Sigma (X : U) Equiv (X , A) is contractible, uniformly
+  ua : PPa.ContrOp = new PPa.ContrOp[kop, kside, \ Y X h F p -> kunif Y X h F p] ;
+} ;

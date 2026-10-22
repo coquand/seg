@@ -1,0 +1,42 @@
+-- EsiNat.seg: MODEL/Lv/EsiNat.agda.  Discrete types, Nat and Unit are ESI:
+-- their composite is the lid, which an inserted empty side does not
+-- change.  Agda's two anonymous modules are the segments ED1 and EU1.
+
+level a l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+module W0 = V[l] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[l] ;
+open PR.PS ;
+module BXm = Box[a, l] ;
+module PF = PresheafFormers[a, l].PFormers[BaseP.BC] ;
+module FN = FibNat[a, l] ;
+module ES = Esi[a, l] ;
+
+module ED1 (G : PCtx) (S : W0.V) (eS eT : El Iv) {
+  module ED = ES.EsiDef[G, FN.DiscP G S] ;
+
+  esiDisc : ED.ESI eS eT FN.DiscComp[G, S, eS, eT].discComp = \ X k b b' ins ->
+    FN.pairEq {PR.TyL[G, FN.DiscP G S].Pt X} {W0.Ix S}
+      (apH (G.act X (prodP X Iv) (lid X eT)) ins.ins-rho) (apH (\ z -> z.2) ins.ins-lid) ;
+} ;
+
+module EU1 (G : PCtx) (eS eT : El Iv) {
+  module ED = ES.EsiDef[G, PF.Un[G].T] ;
+
+  esiUnit : ED.ESI eS eT FN.UnitComp[G, eS, eT].unitComp = \ X k b b' ins ->
+    FN.pairEq {PR.TyL[G, PF.Un[G].T].Pt X} {Top} (apH (G.act X (prodP X Iv) (lid X eT)) ins.ins-rho) (isTop tt tt) ;
+} ;
+
+esiDiscC (G : PCtx) (S : W0.V) : ES.EsiDef[G, FN.DiscP G S].ESIC (FN.discCompC G S) =
+  (ED1[G, S, e0, e1].esiDisc, ED1[G, S, e1, e0].esiDisc) ;
+
+esiNatC (G : PCtx) : ES.EsiDef[G, FN.NatP G].ESIC (FN.natCompC G) = esiDiscC G W0.natV ;
+
+esiUnitC (G : PCtx) : ES.EsiDef[G, PF.Un[G].T].ESIC (FN.unitCompC G) = (EU1[G, e0, e1].esiUnit, EU1[G, e1, e0].esiUnit) ;

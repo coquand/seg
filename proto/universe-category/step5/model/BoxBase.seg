@@ -1,0 +1,44 @@
+-- BoxBase.seg: MODEL/Poset/BoxBase.agda.  The level-free part of the open
+-- boxes: maps into Q * [1] (InQ), inverse images, the lid, finite index
+-- sets.  Shared by the boxes at every level.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+
+------------------------------------------------------------------------
+-- Maps into Q * [1]
+
+pr1T : Tree -> Tree = split { leaf n -> leaf n ; node s t -> s } ;
+
+-- InQ, isProp-InQ, inQ-comp, inQ-cyl: CylCat (Sieves)
+
+-- the first projection, on trees
+pr1-T (X : Ob) (w : El (prodP X Iv)) : Id Tree (app (prodP X Iv) X (pr1 X Iv) w).1 (pr1T w.1) = aux w.1 w.2
+ where { aux : (t : Tree) (h : IsT (car (prodP X Iv) t)) -> Id Tree (app (prodP X Iv) X (pr1 X Iv) (t, h)).1 (pr1T t) = split {
+           leaf n -> \ h -> absurd _ (false-true h) ;
+           node s t -> \ h -> refl s } ; } ;
+
+-- along pointwise equal maps
+inQ-pw (W X : Ob) (Q : Subset X) (psi psi' : Hom W (prodP X Iv)) (p : PW W (prodP X Iv) psi psi') (i : InQ W X Q psi)
+  : InQ W X Q psi' = inQ-eq W X Q psi psi' (hom-eq W (prodP X Iv) psi psi' p) i ;
+
+-- (pre-comp: CylCat)
+
+-- the lid commutes with restriction
+pw-lid (Y X : Ob) (h : Hom Y X) (e : El Iv)
+  : PW Y (prodP X Iv) (compH Y X (prodP X Iv) (lid X e) h) (compH Y (prodP Y Iv) (prodP X Iv) (cylH Y X h) (lid Y e)) =
+  \ y -> apH (\ k -> (app Y (prodP X Iv) k y).1) (symH (cyl-lid Y X h e)) ;
+
+------------------------------------------------------------------------
+-- Finite index sets
+
+-- Fin: Arith

@@ -1,0 +1,121 @@
+-- UMapOver.seg: MODEL/Univ/MapOver.agda (renamed: the file module would
+-- shadow the segment MapOver).  Maps between total presheaves
+-- over a substitution, and boxes mapped along them.
+--
+-- Data: sg : G' -> G, B' over G', B over G, and m : E_B' -> E_B over sg
+-- (mE-pt: the point of m w is sg of the point of w; mE-act: natural).
+--   EMap[G', G, sg, B', B]   the record, a segment type
+--   mapBox eS X b'           a box of B' as a box of B (values through m)
+--   MB.S-E, MB.u-E           its sides and lid read in E
+--   CopOver co' co           the composites correspond: m (cop' b') = cop (mapBox b')
+--
+-- Agda's MB module (eS X b) is the segment MB.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+
+module EMap (G' G : PCtx) (sg : PSub[G', G]) (B' : PTy[G']) (B : PTy[G]) {
+  mE (W : Ob) (w : PR.TyL[G', B'].EI W) : PR.TyL[G, B].EI W ;
+  mE-pt (W : Ob) (w : PR.TyL[G', B'].EI W) : Id (W0.Ix (G.ob W)) (mE W w).1 (sg.nt W w.1) ;
+  mE-act (V W : Ob) (f : Hom V W) (w : PR.TyL[G', B'].EI W)
+    : Id (PR.TyL[G, B].EI V) (mE V (PR.TyL[G', B'].E.act V W f w)) (PR.TyL[G, B].E.act V W f (mE W w)) ;
+} ;
+
+-- the one constructor of EMap (records are compared by name)
+mkEMap (G' G : PCtx) (sg : PSub[G', G]) (B' : PTy[G']) (B : PTy[G])
+  (mE : (W : Ob) -> PR.TyL[G', B'].EI W -> PR.TyL[G, B].EI W)
+  (mE-pt : (W : Ob) (w : PR.TyL[G', B'].EI W) -> Id (W0.Ix (G.ob W)) (mE W w).1 (sg.nt W w.1))
+  (mE-act : (V W : Ob) (f : Hom V W) (w : PR.TyL[G', B'].EI W)
+    -> Id (PR.TyL[G, B].EI V) (mE V (PR.TyL[G', B'].E.act V W f w)) (PR.TyL[G, B].E.act V W f (mE W w)))
+  : EMap[G', G, sg, B', B] = new EMap[G', G, sg, B', B, mE, mE-pt, mE-act] ;
+
+module MapOver (G' G : PCtx) (sg : PSub[G', G]) (B' : PTy[G']) (B : PTy[G]) (m : EMap[G', G, sg, B', B]) {
+  module B1 = BXm.Boxes[G', B'] ;
+  module B2 = BXm.Boxes[G, B] ;
+  module K2 = FibM.Kit[G, B] ;
+  module T2 = PR.TyL[G, B] ;
+  module T1 = PR.TyL[G', B'] ;
+
+  module MB (eS : El Iv) (X : Ob) (b : B1.Box[eS, X]) {
+    rhoD : W0.Ix (G'.ob (prodP X Iv)) = b.brho ;
+
+    rho : W0.Ix (G.ob (prodP X Iv)) = sg.nt (prodP X Iv) b.brho ;
+
+    uE : T2.EI X = m.mE X (B1.lidE eS X b.brho b.bu) ;
+
+    upt : Id (W0.Ix (G.ob X)) uE.1 (G.act X (prodP X Iv) (lid X eS) rho) =
+      trans (W0.Ix (G.ob X)) uE.1 (sg.nt X (G'.act X (prodP X Iv) (lid X eS) b.brho)) (G.act X (prodP X Iv) (lid X eS) rho)
+        (m.mE-pt X (B1.lidE eS X b.brho b.bu)) (sg.nt-nat X (prodP X Iv) (lid X eS) b.brho) ;
+
+    u : T2.T X (G.act X (prodP X Iv) (lid X eS) rho) = K2.fromE X (G.act X (prodP X Iv) (lid X eS) rho) uE upt ;
+
+    v (l : Fin b.br) : K2.VTy X (b.bs l).sQ = \ W psi i -> m.mE W ((b.bs l).svE W psi i) ;
+
+    vpt (l : Fin b.br) : K2.VPt X rho (b.bs l).sQ (v l) = \ W psi i ->
+      trans (W0.Ix (G.ob W)) (v l W psi i).1 (sg.nt W (G'.act W (prodP X Iv) psi b.brho)) (G.act W (prodP X Iv) psi rho)
+        (m.mE-pt W ((b.bs l).svE W psi i)) (sg.nt-nat W (prodP X Iv) psi b.brho) ;
+
+    vnat (l : Fin b.br) : K2.VNat X (b.bs l).sQ (v l) = \ W' W chi psi i i' ->
+      trans (T2.EI W') (T2.E.act W' W chi (v l W psi i)) (m.mE W' (T1.E.act W' W chi ((b.bs l).svE W psi i)))
+        (v l W' (compH W' W (prodP X Iv) psi chi) i')
+        (sym (T2.EI W') (m.mE W' (T1.E.act W' W chi ((b.bs l).svE W psi i))) (T2.E.act W' W chi (v l W psi i))
+             (m.mE-act W' W chi ((b.bs l).svE W psi i)))
+        (apH (m.mE W') ((b.bs l).snat W' W chi psi i i')) ;
+
+    Sd (l : Fin b.br) : B2.Side[X, rho] = K2.mkSideE X rho (b.bs l).sQ (v l) (vpt l) (vnat l) ;
+
+    S-E (l : Fin b.br) (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X (b.bs l).sQ psi)
+      : Id (T2.EI W) ((Sd l).svE W psi i) (v l W psi i) =
+      K2.mkSideE-E X rho (b.bs l).sQ (v l) (vpt l) (vnat l) W psi i ;
+
+    u-E : Id (T2.EI X) (B2.lidE eS X rho u) uE = K2.fromE-eq X (G.act X (prodP X Iv) (lid X eS) rho) uE upt ;
+
+    cs : B2.CsTy X rho b.br Sd = \ l j W psi i i' ->
+      T2.pr-inj W (G.act W (prodP X Iv) psi rho) ((Sd l).sv W psi i) ((Sd j).sv W psi i')
+        (trans (T2.EI W) ((Sd l).svE W psi i) (v l W psi i) ((Sd j).svE W psi i')
+          (S-E l W psi i)
+          (trans (T2.EI W) (v l W psi i) (v j W psi i') ((Sd j).svE W psi i')
+            (apH (\ z -> m.mE W (G'.act W (prodP X Iv) psi b.brho, z)) (b.bcs l j W psi i i'))
+            (sym (T2.EI W) ((Sd j).svE W psi i') (v j W psi i') (S-E j W psi i')))) ;
+
+    cb : B2.CbTy eS X rho u b.br Sd = \ l W phi i ->
+      trans (T2.EI W) (T2.E.act W X phi (B2.lidE eS X rho u)) (T2.E.act W X phi uE)
+        ((Sd l).svE W (compH W X (prodP X Iv) (lid X eS) phi) i)
+        (apH (T2.E.act W X phi) u-E)
+        (trans (T2.EI W) (T2.E.act W X phi uE) (m.mE W (T1.E.act W X phi (B1.lidE eS X b.brho b.bu)))
+          ((Sd l).svE W (compH W X (prodP X Iv) (lid X eS) phi) i)
+          (sym (T2.EI W) (m.mE W (T1.E.act W X phi (B1.lidE eS X b.brho b.bu))) (T2.E.act W X phi uE)
+               (m.mE-act W X phi (B1.lidE eS X b.brho b.bu)))
+          (trans (T2.EI W) (m.mE W (T1.E.act W X phi (B1.lidE eS X b.brho b.bu)))
+            (v l W (compH W X (prodP X Iv) (lid X eS) phi) i)
+            ((Sd l).svE W (compH W X (prodP X Iv) (lid X eS) phi) i)
+            (apH (m.mE W) (b.bcb l W phi i))
+            (sym (T2.EI W) ((Sd l).svE W (compH W X (prodP X Iv) (lid X eS) phi) i)
+                 (v l W (compH W X (prodP X Iv) (lid X eS) phi) i) (S-E l W (compH W X (prodP X Iv) (lid X eS) phi) i)))) ;
+
+    opaque cs ; opaque cb ;
+
+    box : B2.Box[eS, X] = B2.mkBox eS X rho u b.br Sd cs cb ;
+  } ;
+
+  mapBox (eS : El Iv) (X : Ob) (b : B1.Box[eS, X]) : B2.Box[eS, X] = MB[eS, X, b].box ;
+
+  -- the composites correspond
+  CopOver (eS eT : El Iv) (co' : B1.CompOp[eS, eT]) (co : B2.CompOp[eS, eT]) : U a =
+    (X : Ob) (b : B1.Box[eS, X])
+    -> Id (T2.EI X) (m.mE X (B1.topE eT X b.brho (co'.cop X b)))
+                    (B2.topE eT X (mapBox eS X b).brho (co.cop X (mapBox eS X b))) ;
+
+  CompOver (c' : B1.Comp) (c : B2.Comp) : U a = CopOver e0 e1 c'.1 c.1 * CopOver e1 e0 c'.2 c.2 ;
+} ;

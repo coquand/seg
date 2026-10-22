@@ -1,0 +1,198 @@
+-- UEnc.seg: MODEL/Univ/UEnc.agda.  The fibres of the universe are
+-- iterative sets one level up: an injective encoding of U0 X = FibE (y X)
+-- into V[a+].
+--
+--   encBox   a box is determined by (rho , lid in E , r , sides as
+--            (subset , values in E))  (box-ext)
+--   encTy    a type is determined by (tob , tact)  (laws are props)
+--   encU     an ESI-fibrant type is determined by its type and its two
+--            families of composites (CompOp-ext; ESI is a prop)
+--   codeU X  the level-a+ code, with Ix (codeU X) = U0 X on the nose
+--
+-- Agda's pattern matches on mkbox / mkty / pairs (with refl for the
+-- equal components) are idJ's over the equations of the components.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module ES = Esi[a, a] ;
+module FE = FibExt[a, a] ;
+open Yon[a] ;
+open Encode[a, a+] ;
+
+------------------------------------------------------------------------
+-- Generalities
+
+encFin (r : Nat) : Enc (Fin r) =
+  encSig Nat (\ n -> IsT (ltb n r)) (encIx0 W0.natV) (\ n -> encProp (IsT (ltb n r)) (isProp-IsT' (ltb n r))) ;
+
+encSubset (X : Ob) : Enc (Subset X) = encPi0 Tree (\ t -> Bool) (encIx0 treeV) (\ t -> encIx0 W0.boolV) ;
+
+encOb : Enc Ob = encIx0 obV ;
+
+encHom (Y X : Ob) : Enc (Hom Y X) = encIx0 (homV Y X) ;
+
+------------------------------------------------------------------------
+-- Boxes
+
+module EncBox (G : PCtx) (A : PTy[G]) {
+  open PR.TyL[G, A] ;
+  module BX = BXm.Boxes[G, A] ;
+
+  SvD (X : Ob) (Q : Subset X) : U a = (W : Ob) (psi : Hom W (prodP X Iv)) -> InQ W X Q psi -> EI W ;
+
+  SideD (X : Ob) : U a = (Q : Subset X) * SvD X Q ;
+
+  BoxD (X : Ob) : U a = Pt (prodP X Iv) * (EI X * ((r : Nat) * (Fin r -> SideD X))) ;
+
+  sideD (X : Ob) (rho : Pt (prodP X Iv)) (s : BX.Side[X, rho]) : SideD X = (s.sQ, \ W psi i -> s.svE W psi i) ;
+
+  boxD (eS : El Iv) (X : Ob) (b : BX.Box[eS, X]) : BoxD X =
+    (b.brho, (BX.lidE eS X b.brho b.bu, (b.br, \ j -> sideD X b.brho (b.bs j)))) ;
+
+  encSideD (X : Ob) : Enc (SideD X) =
+    encSig (Subset X) (\ Q -> SvD X Q) (encSubset X) (\ Q ->
+      encPi0 Ob (\ W -> (psi : Hom W (prodP X Iv)) -> InQ W X Q psi -> EI W) encOb (\ W ->
+        encPi0 (Hom W (prodP X Iv)) (\ psi -> InQ W X Q psi -> EI W) (encHom W (prodP X Iv)) (\ psi ->
+          encPi0 (InQ W X Q psi) (\ i -> EI W) (encProp (InQ W X Q psi) (isProp-InQ W X Q psi)) (\ i -> encIx0 (E.ob W))))) ;
+
+  encBoxD (X : Ob) : Enc (BoxD X) =
+    encSig (Pt (prodP X Iv)) (\ z -> EI X * ((r : Nat) * (Fin r -> SideD X))) (encIx0 (G.ob (prodP X Iv))) (\ z ->
+    encSig (EI X) (\ z1 -> (r : Nat) * (Fin r -> SideD X)) (encIx0 (E.ob X)) (\ z1 ->
+    encSig Nat (\ r -> Fin r -> SideD X) (encIx0 W0.natV) (\ r ->
+      encPi0 (Fin r) (\ j -> SideD X) (encFin r) (\ j -> encSideD X)))) ;
+
+  sideEq (X : Ob) (w w' : SideD X) (P : Id (SideD X) w w') (W : Ob) (psi : Hom W (prodP X Iv))
+    (i : InQ W X w.1 psi) (i' : InQ W X w'.1 psi) : Id (EI W) (w.2 W psi i) (w'.2 W psi i') =
+    idJ (SideD X) w (\ w2 P2 -> (i2 : InQ W X w2.1 psi) -> Id (EI W) (w.2 W psi i) (w2.2 W psi i2))
+      (\ i2 -> apH (\ k -> w.2 W psi k) (isProp-InQ W X w.1 psi i i2))
+      w' P i' ;
+
+  -- two boxes over the same rho and r
+  inj2 (eS : El Iv) (X : Ob) (rho : Pt (prodP X Iv)) (u u' : BX.LidT eS X rho)
+    (r : Nat) (S S' : Fin r -> BX.Side[X, rho]) (cs : BX.CsTy X rho r S) (cs' : BX.CsTy X rho r S')
+    (cb : BX.CbTy eS X rho u r S) (cb' : BX.CbTy eS X rho u' r S')
+    (EL : Id (EI X) (BX.lidE eS X rho u) (BX.lidE eS X rho u'))
+    (Es : Id (Fin r -> SideD X) (\ j -> sideD X rho (S j)) (\ j -> sideD X rho (S' j)))
+    : Id (BX.Box[eS, X]) ((BX.mkBox eS X rho u r S cs cb)) ((BX.mkBox eS X rho u' r S' cs' cb')) =
+    BX.box-ext eS X rho rho u u' r S S' cs cs' cb cb' (refl rho) EL
+      (\ j x -> apH (\ F -> (F j).1 x) Es)
+      (\ j W psi i i' -> sideEq X (sideD X rho (S j)) (sideD X rho (S' j)) (apH (\ F -> F j) Es) W psi i i') ;
+
+  -- with r fixed, the side families are equal (Nat is a set)
+  sidesEq (X : Ob) (r : Nat) (F F' : Fin r -> SideD X)
+    (Q : Id ((n : Nat) * (Fin n -> SideD X)) (r, F) (r, F')) : Id (Fin r -> SideD X) F F' =
+    transH (symH (apH (\ q -> subst Nat (\ n -> Fin n -> SideD X) r r q F)
+                      (W0.isSetIx W0.natV r r (ap ((n : Nat) * (Fin n -> SideD X)) Nat (\ w -> w.1) (r, F) (r, F') Q) (refl r))))
+           (Sigma-snd Nat (\ n -> Fin n -> SideD X) r r F F' Q) ;
+
+  inj1 (eS : El Iv) (X : Ob) (b b' : BX.Box[eS, X]) (P : Id (BoxD X) (boxD eS X b) (boxD eS X b')) : Id (BX.Box[eS, X]) b b' =
+    idJ (Pt (prodP X Iv)) b.brho
+      (\ rho2 Pr2 -> (u2 : BX.LidT eS X rho2) (r2 : Nat) (S2 : Fin r2 -> BX.Side[X, rho2]) (cs2 : BX.CsTy X rho2 r2 S2)
+         (cb2 : BX.CbTy eS X rho2 u2 r2 S2) -> Id Nat b.br r2
+         -> Id (BoxD X) (boxD eS X b) (boxD eS X ((BX.mkBox eS X rho2 u2 r2 S2 cs2 cb2)))
+         -> Id (BX.Box[eS, X]) b ((BX.mkBox eS X rho2 u2 r2 S2 cs2 cb2)))
+      (\ u2 r2 S2 cs2 cb2 Pn2 ->
+         idJ Nat b.br
+           (\ r3 Pn3 -> (S3 : Fin r3 -> BX.Side[X, b.brho]) (cs3 : BX.CsTy X b.brho r3 S3) (cb3 : BX.CbTy eS X b.brho u2 r3 S3)
+              -> Id (BoxD X) (boxD eS X b) (boxD eS X ((BX.mkBox eS X b.brho u2 r3 S3 cs3 cb3)))
+              -> Id (BX.Box[eS, X]) b ((BX.mkBox eS X b.brho u2 r3 S3 cs3 cb3)))
+           (\ S3 cs3 cb3 Q3 ->
+              inj2 eS X b.brho b.bu u2 b.br b.bs S3 b.bcs cs3 b.bcb cb3
+                (apH (\ w -> w.2.1) Q3)
+                (sidesEq X b.br (\ j -> sideD X b.brho (b.bs j)) (\ j -> sideD X b.brho (S3 j)) (apH (\ w -> w.2.2) Q3)))
+           r2 Pn2 S2 cs2 cb2)
+      b'.brho (apH (\ w -> w.1) P) b'.bu b'.br b'.bs b'.bcs b'.bcb (apH (\ w -> w.2.2.1) P) P ;
+
+  encBox (eS : El Iv) (X : Ob) : Enc (BX.Box[eS, X]) = encInj (BX.Box[eS, X]) (BoxD X) (boxD eS X) (inj1 eS X) (encBoxD X) ;
+} ;
+
+------------------------------------------------------------------------
+-- Types and ESI-fibrant types over y X
+
+module EncU (X : Ob) {
+  G : PCtx = yP X ;
+
+  TyD : U a+ = (o : TOb G) * TactTy G o ;
+
+  tyD (A : PTy[G]) : TyD = (A.tob, A.tact) ;
+
+  encTyD : Enc TyD =
+    encSig (TOb G) (\ o -> TactTy G o)
+      (encPi0 Ob (\ I -> W0.Ix (G.ob I) -> W0.V) encOb (\ I -> encPi0 (W0.Ix (G.ob I)) (\ x -> W0.V) (encIx0 (G.ob I)) (\ x -> encV0)))
+      (\ o ->
+        encPi0 Ob (\ J -> (I : Ob) (f : Hom J I) (x : W0.Ix (G.ob I)) (y : W0.Ix (G.ob J))
+                          -> Id (W0.Ix (G.ob J)) (G.act J I f x) y -> W0.Ix (o I x) -> W0.Ix (o J y)) encOb (\ J ->
+        encPi0 Ob (\ I -> (f : Hom J I) (x : W0.Ix (G.ob I)) (y : W0.Ix (G.ob J))
+                          -> Id (W0.Ix (G.ob J)) (G.act J I f x) y -> W0.Ix (o I x) -> W0.Ix (o J y)) encOb (\ I ->
+        encPi0 (Hom J I) (\ f -> (x : W0.Ix (G.ob I)) (y : W0.Ix (G.ob J))
+                          -> Id (W0.Ix (G.ob J)) (G.act J I f x) y -> W0.Ix (o I x) -> W0.Ix (o J y)) (encHom J I) (\ f ->
+        encPi0 (W0.Ix (G.ob I)) (\ x -> (y : W0.Ix (G.ob J))
+                          -> Id (W0.Ix (G.ob J)) (G.act J I f x) y -> W0.Ix (o I x) -> W0.Ix (o J y)) (encIx0 (G.ob I)) (\ x ->
+        encPi0 (W0.Ix (G.ob J)) (\ y -> Id (W0.Ix (G.ob J)) (G.act J I f x) y -> W0.Ix (o I x) -> W0.Ix (o J y)) (encIx0 (G.ob J)) (\ y ->
+        encPi0 (Id (W0.Ix (G.ob J)) (G.act J I f x) y) (\ e -> W0.Ix (o I x) -> W0.Ix (o J y))
+               (encProp (Id (W0.Ix (G.ob J)) (G.act J I f x) y) (W0.isSetIx (G.ob J) (G.act J I f x) y)) (\ e ->
+        encPi0 (W0.Ix (o I x)) (\ z -> W0.Ix (o J y)) (encIx0 (o I x)) (\ z -> encIx0 (o J y))))))))) ;
+
+  tyInj (A A' : PTy[G]) (P : Id TyD (tyD A) (tyD A')) : Id (PTy[G]) A A' =
+    idJ TyD (tyD A)
+      (\ w Q -> (hi : IdLaw G w.1 w.2) (ho : OLaw G w.1 w.2) -> Id (PTy[G]) A ((mkTy G w.1 w.2 hi ho)))
+      (\ hi ho -> ty-ext G A.tob A.tact A.tact A.tact-id hi A.tact-o ho (\ J I f x y e z -> refl (A.tact J I f x y e z)))
+      (tyD A') P A'.tact-id A'.tact-o ;
+
+  encTy : Enc (PTy[G]) = encInj (PTy[G]) TyD tyD tyInj encTyD ;
+
+  CopD (A : PTy[G]) : U a = FE.CompExt[G, A].CopTy e0 e1 * FE.CompExt[G, A].CopTy e1 e0 ;
+
+  encCop (A : PTy[G]) (eS eT : El Iv) : Enc (FE.CompExt[G, A].CopTy eS eT) =
+    encPi0 Ob (\ Y -> (b : BXm.Boxes[G, A].Box[eS, Y]) -> W0.Ix (A.tob Y (G.act Y (prodP Y Iv) (lid Y eT) b.brho))) encOb (\ Y ->
+      encPi0 (BXm.Boxes[G, A].Box[eS, Y]) (\ b -> W0.Ix (A.tob Y (G.act Y (prodP Y Iv) (lid Y eT) b.brho)))
+        (EncBox[G, A].encBox eS Y) (\ b -> encIx0 (A.tob Y (G.act Y (prodP Y Iv) (lid Y eT) b.brho)))) ;
+
+  UD : U a+ = (A : PTy[G]) * CopD A ;
+
+  uD (F : FE.FibE G) : UD = (F.1, (F.2.1.1.cop, F.2.1.2.cop)) ;
+
+  uInj (F F' : FE.FibE G) (P : Id UD (uD F) (uD F')) : Id (FE.FibE G) F F' =
+    idJ (PTy[G]) F.1
+      (\ A2 Q2 -> (c2 : BXm.Boxes[G, A2].Comp) (e2 : ES.EsiDef[G, A2].ESIC c2)
+         -> Id (CopD A2) (subst (PTy[G]) (\ A3 -> CopD A3) F.1 A2 Q2 (uD F).2) (c2.1.cop, c2.2.cop)
+         -> Id (FE.FibE G) F (A2, (c2, e2)))
+      (\ c2 e2 R ->
+         apH {(cc : BXm.Boxes[G, F.1].Comp) * ES.EsiDef[G, F.1].ESIC cc} {FE.FibE G} (\ cc -> (F.1, cc))
+           (Sigma-eq (BXm.Boxes[G, F.1].Comp) (\ cc -> ES.EsiDef[G, F.1].ESIC cc) F.2.1 c2 F.2.2 e2
+              (FE.FX[G].pairC F.1 F.2.1 c2
+                 (FE.CompExt[G, F.1].CompOp-ext e0 e1 F.2.1.1 c2.1 (\ Y b ->
+                    apH (\ k -> (G.act Y (prodP Y Iv) (lid Y e1) b.brho, k Y b)) (apH (\ z -> z.1) R)))
+                 (FE.CompExt[G, F.1].CompOp-ext e1 e0 F.2.1.2 c2.2 (\ Y b ->
+                    apH (\ k -> (G.act Y (prodP Y Iv) (lid Y e0) b.brho, k Y b)) (apH (\ z -> z.2) R))))
+              (FE.CompExt[G, F.1].isProp-ESIC c2)))
+      F'.1 (ap UD (PTy[G]) (\ w -> w.1) (uD F) (uD F') P) F'.2.1 F'.2.2
+      (Sigma-snd (PTy[G]) (\ A3 -> CopD A3) F.1 F'.1 (uD F).2 (uD F').2 P) ;
+
+  encU : Enc (FE.FibE G) =
+    encInj (FE.FibE G) UD uD uInj
+      (encSig (PTy[G]) (\ A -> CopD A) encTy (\ A ->
+         encSig (FE.CompExt[G, A].CopTy e0 e1) (\ z -> FE.CompExt[G, A].CopTy e1 e0) (encCop A e0 e1) (\ z -> encCop A e1 e0))) ;
+} ;
+
+-- the embedding is opaque: two codes are then compared by their
+-- arguments only, never by unfolding the (large) encoding
+encUf (X : Ob) (F : FE.FibE (yP X)) : V1.V = EncU[X].encU.1 F ;
+
+encUinj (X : Ob) : V1.Inj (FE.FibE (yP X)) (encUf X) = EncU[X].encU.2 ;
+
+opaque encUf ; opaque encUinj ;
+
+codeU (X : Ob) : V1.V = V1.mkV (FE.FibE (yP X)) (encUf X) (encUinj X) ;

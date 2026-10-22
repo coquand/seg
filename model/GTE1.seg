@@ -1,0 +1,110 @@
+-- GTE1.seg (inside IvBase.Cn: with connections): transport along a line,
+-- line form, any base.  Part 1: the map.
+--
+-- Data: A over G with a composition ca from src d to tgt d (and its line
+-- ESI), a context D and a line ln x in G at every point x of D, natural
+-- (ln : D -> GI).  SB = A at the start of the line, SA = A at its end
+-- (A (src d) and A (tgt d) along ln).
+--
+--   uF X w      the transport filler of b (w = (x , b)): the extension, at
+--               src d (GFillFib.fibAt, the line MkFill of ca), of the
+--               problem with point (ln x , b) and no side: a line in A over
+--               ln x from b
+--   tr          its end at tgt d: a map SB -> SA over D (tr-nat by the
+--               uniformity of the filler)
+--   uF-start    the filler starts at b;  uF-end  it ends at tr b (by
+--               definition);  uF-nat  it is natural
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module TE (G : PCtx) (A : PTy[G]) (d : Bool) (ca : CompAtP[GFam[lv].famPath, G, A, src d, tgt d].CompAt)
+  (D : PCtx) (ln : PSub[D, GFam[lv].famPath.pth G]) {
+  module FM = GFam[lv] ;
+  module FF = GFillFib[lv].FillLineFib[FM.famPath, FM.famConn, G, A, d, ca] ;
+  module CA = CompAtP[FM.famPath, G, A, src d, tgt d] ;
+  module LP = LineFibP[FM.famPath, G, A] ;
+
+  k : LP.FibAt (src d) = FF.fibAt ;
+
+  SB : PTy[D] = subTy D (FM.famPath.pth G) (LP.Aev (src d)) ln ;
+  SA : PTy[D] = subTy D (FM.famPath.pth G) (LP.Aev (tgt d)) ln ;
+
+  module TB = GPR.TyL[D, SB] ;
+  module TA' = GPR.TyL[D, SA] ;
+
+  LB : PSub[extP D SB, extP (FM.famPath.pth G) (LP.Aev (src d))] = liftP D (FM.famPath.pth G) (LP.Aev (src d)) ln ;
+  LA : PSub[extP D SA, extP (FM.famPath.pth G) (LP.Aev (tgt d))] = liftP D (FM.famPath.pth G) (LP.Aev (tgt d)) ln ;
+
+  ----------------------------------------------------------------------
+  -- the problem with no side
+
+  emptyP (X : Ob) (z : CA.TV.EI X) : CA.PT.Partial[X, z] =
+    new CA.PT.Partial[X, z, zero, \ l -> absurd _ (false-true l.2), \ l j W f i i' -> absurd _ (false-true l.2)] ;
+
+  -- the restricted empty partial is the empty partial
+  emptyR (Y X : Ob) (h : Hom Y X) (z : CA.TV.EI X) (z' : CA.TV.EI Y) (P : Id (CA.TV.EI Y) (CA.TV.E.act Y X h z) z')
+    : Id (CA.PT.Partial[Y, z']) (subst (CA.TV.EI Y) (\ q -> CA.PT.Partial[Y, q]) (CA.TV.E.act Y X h z) z' P (CA.PT.restrictP Y X h z (emptyP X z)))
+         (emptyP Y z') =
+    CA.PT.partExtH Y (CA.TV.E.act Y X h z) z' P (CA.PT.restrictP Y X h z (emptyP X z)) (emptyP Y z') (refl zero)
+      (\ l -> absurd _ (false-true l.2)) (\ l -> absurd _ (false-true l.2)) ;
+
+  opaque emptyR ;
+
+  ----------------------------------------------------------------------
+  -- the filler and the map
+
+  uF (X : Ob) (w : TB.EI X) : CA.TS.EI X = (LB.nt X w, k.kop X (LB.nt X w) (emptyP X (LB.nt X w))) ;
+
+  trv (X : Ob) (w : TB.EI X) : W0.Ix (SA.tob X w.1) = (CA.endL X (uF X w)).2 ;
+
+  -- the end of the filler is tr b
+  uF-end (X : Ob) (w : TB.EI X) : Id (CA.TV'.EI X) (CA.endL X (uF X w)) (LA.nt X (w.1, trv X w)) = refl (CA.endL X (uF X w)) ;
+
+  -- its point is (ln x , b)
+  uF-pt (X : Ob) (w : TB.EI X) : Id (CA.TV.EI X) (uF X w).1 (LB.nt X w) = refl (LB.nt X w) ;
+
+  -- the filler starts at b
+  uF-start (X : Ob) (w : TB.EI X) : Id (CA.TV.EI X) ((FM.famPath.pevA G A (src d)).mE X (CA.EK.lineL X (uF X w))) (LB.nt X w) =
+    (uF X w).2.2 ;
+
+  -- the filler is natural (uniformity of the extension)
+  uF-nat (Y X : Ob) (h : Hom Y X) (w : TB.EI X) : Id (CA.TS.EI Y) (CA.TS.E.act Y X h (uF X w)) (uF Y (TB.E.act Y X h w)) =
+    transH (k.kunif Y X h (LB.nt X w) (emptyP X (LB.nt X w)))
+      (CA.PT.kop-cong k Y (CA.TV.E.act Y X h (LB.nt X w)) (LB.nt Y (TB.E.act Y X h w)) (symH (LB.nt-nat Y X h w))
+         (CA.PT.restrictP Y X h (LB.nt X w) (emptyP X (LB.nt X w))) (emptyP Y (LB.nt Y (TB.E.act Y X h w)))
+         (emptyR Y X h (LB.nt X w) (LB.nt Y (TB.E.act Y X h w)) (symH (LB.nt-nat Y X h w)))) ;
+
+  opaque uF-nat ;
+
+  -- so is its end
+  trN (Y X : Ob) (h : Hom Y X) (w : TB.EI X)
+    : Id (CA.TV'.EI Y) (CA.TV'.E.act Y X h (CA.endL X (uF X w))) (CA.endL Y (uF Y (TB.E.act Y X h w))) =
+    transH (symH (CA.endL-act Y X h (uF X w))) (apH (CA.endL Y) (uF-nat Y X h w)) ;
+
+  opaque trN ;
+
+  -- an element of SA is determined by its point and its image along ln
+  laInj (W : Ob) (x : W0.Ix (D.ob W)) (a0 a1 : W0.Ix (SA.tob W x)) (Q : Id (CA.TV'.EI W) (LA.nt W (x, a0)) (LA.nt W (x, a1)))
+    : Id (TA'.EI W) (x, a0) (x, a1) =
+    apH {W0.Ix (SA.tob W x)} {TA'.EI W} (\ v -> (x, v)) (CA.TV'.pr-inj W (ln.nt W x) a0 a1 Q) ;
+
+  trE (X : Ob) (w : TB.EI X) : TA'.EI X = (w.1, trv X w) ;
+
+  trNat (Y X : Ob) (h : Hom Y X) (w : TB.EI X) : Id (TA'.EI Y) (trE Y (TB.E.act Y X h w)) (TA'.E.act Y X h (trE X w)) =
+    laInj Y (D.act Y X h w.1) (trv Y (TB.E.act Y X h w)) (TA'.E.act Y X h (trE X w)).2
+      (transH (symH (trN Y X h w)) (symH (LA.nt-nat Y X h (trE X w)))) ;
+
+  opaque trNat ;
+
+  tr : PMap[D, SB, SA] = new PMap[D, SB, SA, trE, \ X w -> refl w.1, trNat] ;
+} ;

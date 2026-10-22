@@ -1,0 +1,79 @@
+-- GSmall.seg (inside IvBase, any base): small types over large contexts.
+-- A type over a level-a+ context G whose fibres are level-a codes (SPTy),
+-- the same type read at level a+ (up: its fibres smallC, the same sets),
+-- maps from a level-a context into G (XSub), and substitution along them
+-- (xsub), with its composition law proved once for all small types
+-- (xsub-o).  El is the instance G = UCtx (GUniv.El); a type former given
+-- as a small type over a context of data is another.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+module L1 = GPre[a+].PS ;
+
+-- an iterative set of level a as one of level a+
+smallF (v : W0.V) (z : W0.Ix v) : V1.V = (Encode[a, a+].encIx0 v).1 z ;
+
+smallInj (v : W0.V) : V1.Inj (W0.Ix v) (smallF v) = (Encode[a, a+].encIx0 v).2 ;
+
+opaque smallF ; opaque smallInj ;
+
+smallC (v : W0.V) : V1.V = V1.mkV (W0.Ix v) (smallF v) (smallInj v) ;
+
+module SPTy (G : L1.PCtx) {
+  tob (I : Ob) (x : V1.Ix (G.ob I)) : W0.V ;
+  tact (J I : Ob) (f : Hom J I) (x : V1.Ix (G.ob I)) (y : V1.Ix (G.ob J))
+    (e : Id (V1.Ix (G.ob J)) (G.act J I f x) y) (a : W0.Ix (tob I x)) : W0.Ix (tob J y) ;
+  tact-id (I : Ob) (x : V1.Ix (G.ob I)) (e : Id (V1.Ix (G.ob I)) (G.act I I (idH I) x) x)
+    (a : W0.Ix (tob I x)) : Id (W0.Ix (tob I x)) (tact I I (idH I) x x e a) a ;
+  tact-o (K J I : Ob) (f : Hom J I) (g : Hom K J)
+    (x : V1.Ix (G.ob I)) (y : V1.Ix (G.ob J)) (z : V1.Ix (G.ob K))
+    (e1 : Id (V1.Ix (G.ob J)) (G.act J I f x) y) (e2 : Id (V1.Ix (G.ob K)) (G.act K J g y) z)
+    (e3 : Id (V1.Ix (G.ob K)) (G.act K I (compH K J I f g) x) z) (a : W0.Ix (tob I x))
+    : Id (W0.Ix (tob K z)) (tact K I (compH K J I f g) x z e3 a) (tact K J g y z e2 (tact J I f x y e1 a)) ;
+} ;
+
+-- a small type read at level a+ (the same fibres and action)
+up (G : L1.PCtx) (A : SPTy[G]) : L1.PTy[G] = new L1.PTy[G, \ I x -> smallC (A.tob I x), A.tact, A.tact-id, A.tact-o] ;
+
+module XSub (D : PCtx) (G : L1.PCtx) {
+  nt (I : Ob) (x : W0.Ix (D.ob I)) : V1.Ix (G.ob I) ;
+  nt-nat (J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) : Id (V1.Ix (G.ob J)) (nt J (D.act J I f x)) (G.act J I f (nt I x)) ;
+} ;
+
+xntEq (D : PCtx) (G : L1.PCtx) (s : XSub[D, G]) (J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) (y : W0.Ix (D.ob J))
+  (e : Id (W0.Ix (D.ob J)) (D.act J I f x) y) : Id (V1.Ix (G.ob J)) (G.act J I f (s.nt I x)) (s.nt J y) =
+  transH (symH (s.nt-nat J I f x)) (apH (s.nt J) e) ;
+
+-- substitution of a small type along a map into its context
+xsub (D : PCtx) (G : L1.PCtx) (A : SPTy[G]) (s : XSub[D, G]) : PTy[D] =
+  mkTy D (\ I x -> A.tob I (s.nt I x))
+    (\ J I f x y e a -> A.tact J I f (s.nt I x) (s.nt J y) (xntEq D G s J I f x y e) a)
+    (\ I x e a -> A.tact-id I (s.nt I x) (xntEq D G s I I (idH I) x x e) a)
+    (\ K J I f g x y z e1 e2 e3 a -> A.tact-o K J I f g (s.nt I x) (s.nt J y) (s.nt K z)
+       (xntEq D G s J I f x y e1) (xntEq D G s K J g y z e2) (xntEq D G s K I (compH K J I f g) x z e3) a) ;
+
+-- a map into G after a map of level-a contexts
+xoS (T D : PCtx) (G : L1.PCtx) (s : XSub[D, G]) (t : PSub[T, D]) : XSub[T, G] =
+  new XSub[T, G, \ I x -> s.nt I (t.nt I x),
+    \ J I f x -> transH (apH (s.nt J) (t.nt-nat J I f x)) (s.nt-nat J I f (t.nt I x))] ;
+
+-- the action does not depend on the path (the context is a set)
+tact-irr (G : L1.PCtx) (A : SPTy[G]) (J I : Ob) (f : Hom J I) (x : V1.Ix (G.ob I)) (y : V1.Ix (G.ob J))
+  (e e' : Id (V1.Ix (G.ob J)) (G.act J I f x) y) (a : W0.Ix (A.tob I x))
+  : Id (W0.Ix (A.tob J y)) (A.tact J I f x y e a) (A.tact J I f x y e' a) =
+  apH (\ q -> A.tact J I f x y q a) (V1.isSetIx (G.ob J) (G.act J I f x) y e e') ;
+
+-- the composition law, once for all small types
+xsub-o (T D : PCtx) (G : L1.PCtx) (A : SPTy[G]) (s : XSub[D, G]) (t : PSub[T, D])
+  : Id (PTy[T]) (subTy T D (xsub D G A s) t) (xsub T G A (xoS T D G s t)) =
+  ty-ext2 T (subTy T D (xsub D G A s) t) (xsub T G A (xoS T D G s t))
+    (refl (\ I x -> A.tob I (s.nt I (t.nt I x))))
+    (\ J I f x y e a -> tact-irr G A J I f (s.nt I (t.nt I x)) (s.nt J (t.nt J y))
+       (xntEq D G s J I f (t.nt I x) (t.nt J y) (ntEq T D t J I f x y e)) (xntEq T G (xoS T D G s t) J I f x y e) a) ;
+
+opaque tact-irr ; opaque xsub-o ;

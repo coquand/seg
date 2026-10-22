@@ -1,0 +1,195 @@
+-- GCompU2.seg (inside IvBase.Cn): the fibrancy of the universe from
+-- univalence (G7), part 2: the side data is natural in W.  Along
+-- h : W' -> W, the side data of l restricted along y h (GEqLaws.eqDSub) is
+-- the side data of l h: by GTransferEqSub (the restricted moved structure
+-- is the structure moved along sg o y h) and GTransferEqCong (along the
+-- path of triples tri: El at the codes of l h is El at the codes of l
+-- along y h, ElCong by actC; the transfers agree, pairB / pairA).
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+module L1 = GPre[a+].PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open Trees[a] ;
+open Arith[a] ;
+open GLine[a] ;
+
+
+module N (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GFibE[a+].FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GFibE[a+].FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE)
+  (d : Bool) (W' W : Ob) (h : Hom W' W)
+  (l : V[a+].Ix ((GFam[a+].famPath.pth GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx).ob W)) {
+  module S = GCompU1.SD[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, d] ;
+  module EC = S.EC ;
+  module UU = S.UU ;
+  module LW = S.Ln[W, l] ;
+  l' : V1.Ix (S.PU.ob W') = S.PU.act W' W h l ;
+  module LW' = S.Ln[W', l'] ;
+
+  module ES = GTransferEqSub[a+, a, a+].TrEqSub[yP W, LW.FB.ElTy, LW.FA.ElTy, LW.al, S.PU, S.SBU, S.SAU, S.TU.triU.2.2, LW.sg, LW.sg-nat,
+    \ V g b -> b, \ V g b -> b, \ V g b -> refl b, \ V g b -> refl b, \ V g b -> b, \ V g b -> b, \ V g b -> refl b, \ V g b -> refl b, LW.PhNA, LW.PhNB, S.TU.eqU.1, LW.TM.alSq, yP W', yH W' W h] ;
+
+  -- the codes of l h are those of l along y h
+  sgEq (V : Ob) (g : Hom V W') : Id (V1.Ix (S.PU.ob V)) (LW'.sg V g) (LW.sg V (compH V W' W h g)) =
+    GPre[a+].PshL[S.PU].actC V W' W h g l ;
+
+  Pc (e : IPt) (V : Ob) (g : Hom V W') : Id (UU.U0 V) (LW'.cod e V g) (LW.cod e V (compH V W' W h g)) =
+    apH ((GFam[a+].famPath.pev UU.UCtx e).nt V) (sgEq V g) ;
+
+  c2 (e : IPt) (V : Ob) (g : Hom V W') : UU.U0 V = LW.cod e V (compH V W' W h g) ;
+
+  cn2 (e : IPt) (Y' Y : Ob) (k : Hom Y' Y) (x : Hom Y W') : Id (UU.U0 Y') (c2 e Y' (compH Y' Y W' x k)) (UU.uAct Y' Y k (c2 e Y x)) =
+    transH (apH (LW.cod e Y') ((yH W' W h).nt-nat Y' Y k x)) (LW.codN e Y' Y k ((yH W' W h).nt Y x)) ;
+
+  module CB = EC.ElCong[yP W', LW'.cod (src d), c2 (src d), LW'.codN (src d), cn2 (src d), Pc (src d)] ;
+  module CA = EC.ElCong[yP W', LW'.cod (tgt d), c2 (tgt d), LW'.codN (tgt d), cn2 (tgt d), Pc (tgt d)] ;
+
+  -- an element of E_EGen at two equal codes
+  teSub (V : Ob) (c c' : UU.U0 V) (P : Id (UU.U0 V) c c') (a0 : W0.Ix (UU.fib0 V c))
+    : Id (S.TE.EI V) (c, a0) (c', subst W0.V (\ z -> W0.Ix z) (UU.fib0 V c) (UU.fib0 V c') (ap (UU.U0 V) W0.V (UU.fib0 V) c c' P) a0) =
+    idJ (UU.U0 V) c (\ c2' P2 -> Id (S.TE.EI V) (c, a0) (c2', subst W0.V (\ z -> W0.Ix z) (UU.fib0 V c) (UU.fib0 V c2') (ap (UU.U0 V) W0.V (UU.fib0 V) c c2' P2) a0))
+      (refl (c, a0)) c' P ;
+
+  pairB (V : Ob) (g : Hom V W') (a0 : W0.Ix (UU.fib0 V (LW'.cod (src d) V g)))
+    : Id (S.TB0.EI V) (LW'.sg V g, a0) (LW.sg V (compH V W' W h g), subst W0.V (\ z -> W0.Ix z) (UU.fib0 V (LW'.cod (src d) V g)) (UU.fib0 V (c2 (src d) V g)) (CB.Po V g) a0) =
+    S.tbEq (src d) V (LW'.sg V g, a0) (LW.sg V (compH V W' W h g), subst W0.V (\ z -> W0.Ix z) (UU.fib0 V (LW'.cod (src d) V g)) (UU.fib0 V (c2 (src d) V g)) (CB.Po V g) a0)
+      (sgEq V g) (teSub V (LW'.cod (src d) V g) (c2 (src d) V g) (Pc (src d) V g) a0) ;
+
+  pairA (V : Ob) (g : Hom V W') (a0 : W0.Ix (UU.fib0 V (LW'.cod (tgt d) V g)))
+    : Id (S.TA0.EI V) (LW'.sg V g, a0) (LW.sg V (compH V W' W h g), subst W0.V (\ z -> W0.Ix z) (UU.fib0 V (LW'.cod (tgt d) V g)) (UU.fib0 V (c2 (tgt d) V g)) (CA.Po V g) a0) =
+    S.tbEq (tgt d) V (LW'.sg V g, a0) (LW.sg V (compH V W' W h g), subst W0.V (\ z -> W0.Ix z) (UU.fib0 V (LW'.cod (tgt d) V g)) (UU.fib0 V (c2 (tgt d) V g)) (CA.Po V g) a0)
+      (sgEq V g) (teSub V (LW'.cod (tgt d) V g) (c2 (tgt d) V g) (Pc (tgt d) V g) a0) ;
+
+  opaque teSub ; opaque pairB ; opaque pairA ;
+  H1B (J I : Ob) (f : Hom J I) (x : Hom I W') (y : Hom J W') (e : Id (Hom J W') (compH J I W' x f) y)
+    (a0 : W0.Ix (UU.fib0 I (LW'.cod (src d) I x)))
+    : Id (W0.Ix (UU.fib0 J (c2 (src d) J y)))
+         (subst W0.V (\ z -> W0.Ix z) (UU.fib0 J (LW'.cod (src d) J y)) (UU.fib0 J (c2 (src d) J y)) (CB.Po J y) (LW'.FB.ElTy.tact J I f x y e a0))
+         (ES.FI.B'.tact J I f x y e (subst W0.V (\ z -> W0.Ix z) (UU.fib0 I (LW'.cod (src d) I x)) (UU.fib0 I (c2 (src d) I x)) (CB.Po I x) a0)) =
+    transH (CB.H1 J I f x y e a0)
+      (EC.tactG-irr J I f (c2 (src d) I x) (c2 (src d) J y)
+         (EC.Fam[yP W', c2 (src d), cn2 (src d)].ep J I f x y e)
+         (LW.FB.ep J I f (compH I W' W h x) (compH J W' W h y) (ntEq (yP W') (yP W) (yH W' W h) J I f x y e))
+         (subst W0.V (\ z -> W0.Ix z) (UU.fib0 I (LW'.cod (src d) I x)) (UU.fib0 I (c2 (src d) I x)) (CB.Po I x) a0)) ;
+
+  H1A (J I : Ob) (f : Hom J I) (x : Hom I W') (y : Hom J W') (e : Id (Hom J W') (compH J I W' x f) y)
+    (a0 : W0.Ix (UU.fib0 I (LW'.cod (tgt d) I x)))
+    : Id (W0.Ix (UU.fib0 J (c2 (tgt d) J y)))
+         (subst W0.V (\ z -> W0.Ix z) (UU.fib0 J (LW'.cod (tgt d) J y)) (UU.fib0 J (c2 (tgt d) J y)) (CA.Po J y) (LW'.FA.ElTy.tact J I f x y e a0))
+         (ES.FI.A'.tact J I f x y e (subst W0.V (\ z -> W0.Ix z) (UU.fib0 I (LW'.cod (tgt d) I x)) (UU.fib0 I (c2 (tgt d) I x)) (CA.Po I x) a0)) =
+    transH (CA.H1 J I f x y e a0)
+      (EC.tactG-irr J I f (c2 (tgt d) I x) (c2 (tgt d) J y)
+         (EC.Fam[yP W', c2 (tgt d), cn2 (tgt d)].ep J I f x y e)
+         (LW.FA.ep J I f (compH I W' W h x) (compH J W' W h y) (ntEq (yP W') (yP W) (yH W' W h) J I f x y e))
+         (subst W0.V (\ z -> W0.Ix z) (UU.fib0 I (LW'.cod (tgt d) I x)) (UU.fib0 I (c2 (tgt d) I x)) (CA.Po I x) a0)) ;
+
+  opaque H1B ; opaque H1A ;
+
+  -- the maps
+  module TA1 = GPR.TyL[yP W', LW'.FA.ElTy] ;
+  module TB2 = GPR.TyL[yP W', ES.FI.B'] ;
+  module TA2 = GPR.TyL[yP W', ES.FI.A'] ;
+
+  b1 (X : Ob) (w : TB2.EI X) : W0.Ix (UU.fib0 X (LW'.cod (src d) X w.1)) =
+    subst W0.V (\ z -> W0.Ix z) (UU.fib0 X (c2 (src d) X w.1)) (UU.fib0 X (LW'.cod (src d) X w.1)) (symH (CB.Po X w.1)) w.2 ;
+
+  yA (X : Ob) (w : TB2.EI X) : W0.Ix (UU.fib0 X (LW'.cod (tgt d) X w.1)) =
+    TA1.fromE X w.1 (LW'.al.mE X (w.1, b1 X w)) (LW'.al.mpt X (w.1, b1 X w)) ;
+
+  PhBeq (X : Ob) (w : TB2.EI X) : Id (S.TB0.EI X) (LW'.TM.PhB X (w.1, b1 X w)) (ES.T'.PhB X w) =
+    transH (pairB X w.1 (b1 X w))
+      (apH {W0.Ix (UU.fib0 X (c2 (src d) X w.1))} {S.TB0.EI X} (\ v -> (LW.sg X (compH X W' W h w.1), v))
+         (GExtFull.subst-sym-r (UU.fib0 X (LW'.cod (src d) X w.1)) (UU.fib0 X (c2 (src d) X w.1)) (CB.Po X w.1) w.2)) ;
+
+  Hm (X : Ob) (w : TB2.EI X)
+    : Id (TA2.EI X) (ES.FI.al'.mE X w)
+         (w.1, subst W0.V (\ z -> W0.Ix z) (UU.fib0 X (LW'.cod (tgt d) X w.1)) (UU.fib0 X (c2 (tgt d) X w.1)) (CA.Po X w.1) (yA X w)) =
+    ES.T'.tbEqA X (ES.FI.al'.mE X w)
+      (w.1, subst W0.V (\ z -> W0.Ix z) (UU.fib0 X (LW'.cod (tgt d) X w.1)) (UU.fib0 X (c2 (tgt d) X w.1)) (CA.Po X w.1) (yA X w))
+      (refl w.1)
+      (transH (ES.alSq' X w)
+        (transH (apH (S.TU.triU.2.2.mE X) (symH (PhBeq X w)))
+          (transH (symH (LW'.TM.alSq X (w.1, b1 X w)))
+            (transH (apH (LW'.TM.PhA X) (symH (TA1.fromE-eq X w.1 (LW'.al.mE X (w.1, b1 X w)) (LW'.al.mpt X (w.1, b1 X w)))))
+                    (pairA X w.1 (yA X w)))))) ;
+
+  opaque PhBeq ; opaque Hm ;
+
+  tri : Id (GEqExt[a].EqDat[yP W'].Tri) (LW'.FB.ElTy, (LW'.FA.ElTy, LW'.al)) (ES.FI.B', (ES.FI.A', ES.FI.al')) =
+    GEqLaws[a].TriL[yP W'].triExtPw LW'.FB.ElTy LW'.FA.ElTy LW'.al ES.FI.B' ES.FI.A' ES.FI.al' CB.Po H1B CA.Po H1A Hm ;
+
+  ----------------------------------------------------------------------
+  -- along tri the fibre maps commute; then the data agree
+
+  module GXD = GEqExt[a].EqDat[yP W'] ;
+  t1 : GXD.Tri = (LW'.FB.ElTy, (LW'.FA.ElTy, LW'.al)) ;
+  t2 : GXD.Tri = (ES.FI.B', (ES.FI.A', ES.FI.al')) ;
+
+  PsiA (X : Ob) (w : GPR.TyL[yP W', ES.FI.A'].EI X)
+    : Id (GPR.TyL[yP W', LW'.FA.ElTy].EI X) (GXD.Psi t1 t2 tri X w)
+         (w.1, subst W0.V (\ z -> W0.Ix z) (UU.fib0 X (c2 (tgt d) X w.1)) (UU.fib0 X (LW'.cod (tgt d) X w.1)) (symH (CA.Po X w.1)) w.2) =
+    transH (GXD.Psi-tob t1 t2 tri X w)
+      (transH (GEqLaws[a].TriL[yP W'].substEIo X ES.FI.A'.tob LW'.FA.ElTy.tob (apH (\ u -> u.2.1.tob) (symH tri)) w)
+              (apH {W0.Ix (UU.fib0 X (LW'.cod (tgt d) X w.1))} {GPR.TyL[yP W', LW'.FA.ElTy].EI X} (\ v -> (w.1, v))
+                 (GEqLaws[a].TriL[yP W'].substPw X w.1 ES.FI.A'.tob LW'.FA.ElTy.tob (apH (\ u -> u.2.1.tob) (symH tri))
+                    (symH (CA.Po X w.1)) w.2))) ;
+
+  CA' (X : Ob) (w : GPR.TyL[yP W', ES.FI.A'].EI X)
+    : Id (S.TA0.EI X) (LW'.TM.PhA X (GXD.Psi t1 t2 tri X w)) (ES.T'.PhA X w) =
+    transH (apH (LW'.TM.PhA X) (PsiA X w))
+      (transH (pairA X w.1 (subst W0.V (\ z -> W0.Ix z) (UU.fib0 X (c2 (tgt d) X w.1)) (UU.fib0 X (LW'.cod (tgt d) X w.1)) (symH (CA.Po X w.1)) w.2))
+              (apH {W0.Ix (UU.fib0 X (c2 (tgt d) X w.1))} {S.TA0.EI X} (\ v -> (LW.sg X (compH X W' W h w.1), v))
+                 (GExtFull.subst-sym-r (UU.fib0 X (LW'.cod (tgt d) X w.1)) (UU.fib0 X (c2 (tgt d) X w.1)) (CA.Po X w.1) w.2))) ;
+
+  PsiB (X : Ob) (w : GPR.TyL[yP W', ES.FI.B'].EI X)
+    : Id (GPR.TyL[yP W', LW'.FB.ElTy].EI X) (GXD.PsiB t1 t2 tri X w)
+         (w.1, subst W0.V (\ z -> W0.Ix z) (UU.fib0 X (c2 (src d) X w.1)) (UU.fib0 X (LW'.cod (src d) X w.1)) (symH (CB.Po X w.1)) w.2) =
+    transH (GXD.PsiB-tob t1 t2 tri X w)
+      (transH (GEqLaws[a].TriL[yP W'].substEIo X ES.FI.B'.tob LW'.FB.ElTy.tob (apH (\ u -> u.1.tob) (symH tri)) w)
+              (apH {W0.Ix (UU.fib0 X (LW'.cod (src d) X w.1))} {GPR.TyL[yP W', LW'.FB.ElTy].EI X} (\ v -> (w.1, v))
+                 (GEqLaws[a].TriL[yP W'].substPw X w.1 ES.FI.B'.tob LW'.FB.ElTy.tob (apH (\ u -> u.1.tob) (symH tri))
+                    (symH (CB.Po X w.1)) w.2))) ;
+
+  CB' (X : Ob) (w : GPR.TyL[yP W', ES.FI.B'].EI X)
+    : Id (S.TB0.EI X) (LW'.TM.PhB X (GXD.PsiB t1 t2 tri X w)) (ES.T'.PhB X w) =
+    transH (apH (LW'.TM.PhB X) (PsiB X w))
+      (transH (pairB X w.1 (subst W0.V (\ z -> W0.Ix z) (UU.fib0 X (c2 (src d) X w.1)) (UU.fib0 X (LW'.cod (src d) X w.1)) (symH (CB.Po X w.1)) w.2))
+              (apH {W0.Ix (UU.fib0 X (c2 (src d) X w.1))} {S.TB0.EI X} (\ v -> (LW.sg X (compH X W' W h w.1), v))
+                 (GExtFull.subst-sym-r (UU.fib0 X (LW'.cod (src d) X w.1)) (UU.fib0 X (c2 (src d) X w.1)) (CB.Po X w.1) w.2))) ;
+
+  opaque PsiA ; opaque PsiB ; opaque CA' ; opaque CB' ;
+
+  module CG = GTransferEqCong[a+, a, a+].TrEqCong[yP W', S.PU, S.SBU, S.SAU, S.TU.triU.2.2, S.TU.eqU.1,
+    LW'.FB.ElTy, LW'.FA.ElTy, LW'.al, LW'.sg, LW'.sg-nat, \ V g b -> b, \ V g b -> b, \ V g b -> refl b, \ V g b -> refl b, \ V g b -> b, \ V g b -> b, \ V g b -> refl b, \ V g b -> refl b, LW'.PhNA, LW'.PhNB, LW'.TM.alSq,
+    ES.FI.B', ES.FI.A', ES.FI.al', ES.sg', ES.sg'-nat, \ V g b -> b, \ V g b -> b, \ V g b -> refl b, \ V g b -> refl b, \ V g b -> b, \ V g b -> b, \ V g b -> refl b, \ V g b -> refl b, ES.PhNA', ES.PhNB', ES.alSq',
+    tri, CA', CB'] ;
+
+  -- the substituted structure is the structure moved along sg o y h
+  stepA : Id ((u : GXD.Tri) * GXD.EqOn u) (GEqLaws[a].eqDSub (yP W') (yP W) (yH W' W h) LW.dat.1 LW.dat.2)
+             (t2, (CG.T2.trEq, CG.T2.trKesi S.TU.eqU.2)) =
+    apH {GXD.EqOn t2} {(u : GXD.Tri) * GXD.EqOn u} (\ z -> (t2, z))
+      (Sigma-eq (GEquiv[a].EquivOp (yP W') ES.FI.B' ES.FI.A' ES.FI.al')
+         (\ k -> GCofEsi[a].PartialsEsi[CG.T2.HD.EA, CG.T2.HD.FibT].KESI k)
+         (GEqLaws[a].eqDSub (yP W') (yP W) (yH W' W h) LW.dat.1 LW.dat.2).2.1 CG.T2.trEq
+         (GEqLaws[a].eqDSub (yP W') (yP W) (yH W' W h) LW.dat.1 LW.dat.2).2.2 (CG.T2.trKesi S.TU.eqU.2)
+         ES.eqNat (GCofEsi[a].PartialsEsi[CG.T2.HD.EA, CG.T2.HD.FibT].isProp-KESI CG.T2.trEq)) ;
+
+  -- the result: the side data is natural
+  natDat : Id ((u : GXD.Tri) * GXD.EqOn u) (GEqLaws[a].eqDSub (yP W') (yP W) (yH W' W h) LW.dat.1 LW.dat.2) LW'.dat =
+    transH stepA (symH (CG.res S.TU.eqU.2)) ;
+
+  opaque stepA ; opaque natDat ;
+} ;

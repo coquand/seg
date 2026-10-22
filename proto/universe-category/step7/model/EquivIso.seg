@@ -1,0 +1,77 @@
+-- EquivIso.seg: MODEL/Univ/EquivIso.agda.  Moving a map with an
+-- (empty-side invariant) equivalence structure along a fibrewise
+-- identification of its codomain.
+--
+-- Data: B, A, A' over D, Po I x : tob A I x = tob A' I x (iterative sets),
+-- and H1: transport along Po commutes with the actions.  Then A = A'
+-- (tyEq) and any (al , e , ke) for A is transported to A'.
+--   pack       the transported triple
+--   pack-map   its map is al followed by transport along Po
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+module W0 = V[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module CF = Cofib[a] ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+
+-- a map with an empty-side invariant equivalence structure
+EqvPack (D : PCtx) (B A : PTy[D]) : U a+ =
+  (al : PMap[D, B, A]) * ((e : EquivOp D B A al) * BaseP.GCofEsi[a].PartialsEsi[extP D A, FibTy[D, B, A, al].FibT].KESI e) ;
+
+module EI (D : PCtx) (B A A' : PTy[D])
+  (Po : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A.tob I x) (A'.tob I x))
+  (H1 : (J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) (y : W0.Ix (D.ob J)) (e : Id (W0.Ix (D.ob J)) (D.act J I f x) y)
+        (a0 : W0.Ix (A.tob I x))
+        -> Id (W0.Ix (A'.tob J y)) (subst W0.V (\ z -> W0.Ix z) (A.tob J y) (A'.tob J y) (Po J y) (A.tact J I f x y e a0))
+                                   (A'.tact J I f x y e (subst W0.V (\ z -> W0.Ix z) (A.tob I x) (A'.tob I x) (Po I x) a0))) {
+
+  P : Id (TOb D) A.tob A'.tob =
+    funext Ob (\ I -> W0.Ix (D.ob I) -> W0.V) A.tob A'.tob
+      (\ I -> funext (W0.Ix (D.ob I)) (\ x -> W0.V) (A.tob I) (A'.tob I) (\ x -> Po I x)) ;
+
+  -- transport along P is transport along Po (V is a set)
+  substP (I : Ob) (x : W0.Ix (D.ob I)) (a0 : W0.Ix (A.tob I x))
+    : Id (W0.Ix (A'.tob I x)) (subst (TOb D) (\ o -> W0.Ix (o I x)) A.tob A'.tob P a0)
+                              (subst W0.V (\ z -> W0.Ix z) (A.tob I x) (A'.tob I x) (Po I x) a0) =
+    transH (subst-ap (TOb D) W0.V (\ o -> o I x) (\ z -> W0.Ix z) A.tob A'.tob P a0)
+           (apH (\ q -> subst W0.V (\ z -> W0.Ix z) (A.tob I x) (A'.tob I x) q a0)
+                (W0.isSetV (A.tob I x) (A'.tob I x) (ap (TOb D) W0.V (\ o -> o I x) A.tob A'.tob P) (Po I x))) ;
+
+  tyEq : Id (PTy[D]) A A' =
+    ty-ext2 D A A' P (\ J I f x y e a0 ->
+      transH (substP J y (A.tact J I f x y e a0))
+       (transH (H1 J I f x y e a0) (apH (A'.tact J I f x y e) (symH (substP I x a0))))) ;
+
+  opaque substP ; opaque tyEq ;
+
+  pack (k : EqvPack D B A) : EqvPack D B A' = subst (PTy[D]) (\ A2 -> EqvPack D B A2) A A' tyEq k ;
+
+  packMap (A'' : PTy[D]) (Q : Id (PTy[D]) A A'') (Po' : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A.tob I x) (A''.tob I x))
+    (k : EqvPack D B A) (W : Ob) (w : PR.TyL[D, B].EI W)
+    : Id (PR.TyL[D, A''].EI W) ((subst (PTy[D]) (\ A2 -> EqvPack D B A2) A A'' Q k).1.mE W w)
+         ((k.1.mE W w).1, subst W0.V (\ z -> W0.Ix z) (A.tob W (k.1.mE W w).1) (A''.tob W (k.1.mE W w).1) (Po' W (k.1.mE W w).1) (k.1.mE W w).2) =
+    idJ (PTy[D]) A
+      (\ A3 Q3 -> (Po3 : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A.tob I x) (A3.tob I x))
+         -> Id (PR.TyL[D, A3].EI W) ((subst (PTy[D]) (\ A2 -> EqvPack D B A2) A A3 Q3 k).1.mE W w)
+               ((k.1.mE W w).1, subst W0.V (\ z -> W0.Ix z) (A.tob W (k.1.mE W w).1) (A3.tob W (k.1.mE W w).1) (Po3 W (k.1.mE W w).1) (k.1.mE W w).2))
+      (\ Po3 -> apH {W0.Ix (A.tob W (k.1.mE W w).1)} {PR.TyL[D, A].EI W} (\ z -> ((k.1.mE W w).1, z))
+                  (symH (apH (\ q -> subst W0.V (\ z -> W0.Ix z) (A.tob W (k.1.mE W w).1) (A.tob W (k.1.mE W w).1) q (k.1.mE W w).2)
+                             (W0.isSetV (A.tob W (k.1.mE W w).1) (A.tob W (k.1.mE W w).1) (Po3 W (k.1.mE W w).1) (refl (A.tob W (k.1.mE W w).1))))))
+      A'' Q Po' ;
+
+  pack-map (k : EqvPack D B A) (W : Ob) (w : PR.TyL[D, B].EI W)
+    : Id (PR.TyL[D, A'].EI W) ((pack k).1.mE W w)
+         ((k.1.mE W w).1, subst W0.V (\ z -> W0.Ix z) (A.tob W (k.1.mE W w).1) (A'.tob W (k.1.mE W w).1) (Po W (k.1.mE W w).1) (k.1.mE W w).2) =
+    packMap A' tyEq Po k W w ;
+
+  opaque packMap ; opaque pack-map ;
+} ;

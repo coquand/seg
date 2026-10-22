@@ -1,0 +1,81 @@
+-- DFibToHornSub.seg: the classifier map of Delta from fibrancy structures
+-- to horn filling, toCl (= DeltaRetr.BoxToHorn, box => horn), commutes
+-- with substitution, as an EQUALITY in Sigma A'. ClD D A' (strict: equal
+-- codes, not a fibrewise iso):
+--
+--   toCl-sub   clSub s (toCl F) = toCl (subFibEL s F)
+--
+-- The fillers agree problem by problem (GHornRetrSub.RFS.fill-sub: the
+-- extension along a retraction line commutes with substitution); the side
+-- conditions are propositions (DeltaClassifier.FExt.base).
+-- Constructive.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ;
+module DBm = DeltaBase[a] ;
+module DB = DBm.DB ;
+module DS = DBm.DS ;
+module PS = DB.GPre[a].PS ;
+module DCl = DeltaClassifier[a] ;
+module DR = DeltaRetr[a, a] ;
+module GE = DB.GFibE[a] ;
+module GS = DB.GSubst[a] ;
+
+toCl (G : PS.PCtx) (F : GE.FibEL G) : DCl.ClD G F.1 = DR.BoxToHorn[G, F.1, F.2.1.1, F.2.1.2].isFib-of-comp ;
+
+module TS (D G : PS.PCtx) (s : PS.PSub[D, G]) (F : GE.FibEL G) {
+  module BG = DR.BoxToHorn[G, F.1, F.2.1.1, F.2.1.2] ;
+  module BD = DR.BoxToHorn[D, PS.subTy D G F.1 s, (GS.subFibEL D G s F).2.1.1, (GS.subFibEL D G s F).2.1.2] ;
+  module SB = DCl.Sub[D, G, s, F.1, toCl G F] ;
+  module HD = DHornFib[a, a].DH[D, PS.subTy D G F.1 s] ;
+
+  -- the moved horn data have the values of the moved partial element
+  vq (m k : Nat) (rho : W0.Ix (D.ob (suc m))) (h : HD.HornData m k rho) (l : Fin (suc zero)) (W : Nat) (f : Hom (lin W) (lin (suc m)))
+    (i i2 : DS.Lands W (suc m) (DeltaHorn[a].hornS m k) f)
+    : Id (DB.GPre[a].TyL[G, F.1].EI W) ((PS.liftP D G F.1 s).nt W (h.1 W f i)) ((SB.mv m k rho h).1 W f i2) =
+    apH (\ z -> (PS.liftP D G F.1 s).nt W (h.1 W f z)) (DS.isProp-Lands W (suc m) (DeltaHorn[a].hornS m k) f i i2) ;
+
+  fill0 (m : Nat) (rho : W0.Ix (D.ob (suc m))) (h : HD.HornData m zero rho)
+    : Id (W0.Ix (F.1.tob (suc m) (s.nt (suc m) rho))) BD.K0[m, rho, h].F.fill BG.K0[m, s.nt (suc m) rho, SB.mv m zero rho h].F.fill =
+    DB.GHornRetrSub[a].RFS[D, G, s, F.1, DB.e0, DB.e1, F.2.1.1, suc m, rho, BD.hornP m zero rho h, (zero, refl true),
+      BG.hornP m zero (s.nt (suc m) rho) (SB.mv m zero rho h), (zero, refl true), refl (suc zero),
+      \ l -> refl (DeltaHorn[a].hornS m zero), \ l W f i i2 -> vq m zero rho h l W f i i2,
+      \ W -> DR.DT[m].RD.rD (lin W), \ V W -> DR.DT[m].RD.rDn (lin V) (lin W),
+      \ W -> DR.DT[m].RD.rD-end e1 (\ j -> refl j) (lin W), DR.DT[m].r2, \ l -> DR.DT[m].HH.rD-horn,
+      DR.DT[m].r2, \ l -> DR.DT[m].HH.rD-horn].fill-sub ;
+
+  fill1 (m k : Nat) (hk : IsT (leb (suc k) (suc m))) (rho : W0.Ix (D.ob (suc m))) (h : HD.HornData m (suc k) rho)
+    : Id (W0.Ix (F.1.tob (suc m) (s.nt (suc m) rho))) BD.K1[m, k, hk, rho, h].F.fill BG.K1[m, k, hk, s.nt (suc m) rho, SB.mv m (suc k) rho h].F.fill =
+    DB.GHornRetrSub[a].RFS[D, G, s, F.1, DB.e1, DB.e0, F.2.1.2, suc m, rho, BD.hornP m (suc k) rho h, (zero, refl true),
+      BG.hornP m (suc k) (s.nt (suc m) rho) (SB.mv m (suc k) rho h), (zero, refl true), refl (suc zero),
+      \ l -> refl (DeltaHorn[a].hornS m (suc k)), \ l W f i i2 -> vq m (suc k) rho h l W f i i2,
+      \ W -> DR.DF[m, k, hk].RD.rD (lin W), \ V W -> DR.DF[m, k, hk].RD.rDn (lin V) (lin W),
+      \ W -> DR.DF[m, k, hk].RD.rD-end e0 (\ j -> refl j) (lin W), DR.DF[m, k, hk].r2, \ l -> DR.DF[m, k, hk].HH.rD-horn,
+      DR.DF[m, k, hk].r2, \ l -> DR.DF[m, k, hk].HH.rD-horn].fill-sub ;
+
+  -- the fillers agree, by cases on the vertex of the horn
+  fillK (m : Nat) : (k : Nat) (hk : IsT (leb k (suc m))) (rho : W0.Ix (D.ob (suc m))) (h : HD.HornData m k rho)
+    -> Id (W0.Ix (F.1.tob (suc m) (s.nt (suc m) rho))) (SB.cl m k hk rho h).1 (toCl D (GS.subFibEL D G s F) m k hk rho h).1 = split {
+    zero -> \ hk rho h -> symH (fill0 m rho h) ;
+    suc k -> \ hk rho h -> symH (fill1 m k hk rho h) } ;
+
+  res : Id ((A' : PS.PTy[D]) * DCl.ClD D A') (PS.subTy D G F.1 s, DCl.clSubD D G s F.1 (toCl G F))
+                                             ((GS.subFibEL D G s F).1, toCl D (GS.subFibEL D G s F)) =
+    DCl.FExt[D, PS.subTy D G F.1 s].base (DCl.clSubD D G s F.1 (toCl G F)) (toCl D (GS.subFibEL D G s F))
+      (\ m k hk rho v pp pnA pnB ->
+         transH (apH {HD.HornData m k rho} {W0.Ix (F.1.tob (suc m) (s.nt (suc m) rho))} (\ hd -> (SB.cl m k hk rho hd).1)
+                   (DCl.FExt[D, PS.subTy D G F.1 s].hd-eq m k rho (v, (pp, pnA)) (v, (pp, pnB)) (refl v)))
+                (fillK m k hk rho (v, (pp, pnB)))) ;
+} ;
+
+toCl-sub (D G : PS.PCtx) (s : PS.PSub[D, G]) (F : GE.FibEL G)
+  : Id ((A' : PS.PTy[D]) * DCl.ClD D A') (PS.subTy D G F.1 s, DCl.clSubD D G s F.1 (toCl G F))
+                                         ((GS.subFibEL D G s F).1, toCl D (GS.subFibEL D G s F)) = TS[D, G, s, F].res ;

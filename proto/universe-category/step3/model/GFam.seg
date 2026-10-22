@@ -1,0 +1,241 @@
+-- GFam.seg: the path object of presheaves over ANY base, by families
+-- (CYLINDER.md: "Simplicial sets: GI(X) = the natural families on
+-- y X * Delta[1]").  No product, no cylinder object in the base:
+--
+--   GI(X)        natural families  t W f i : G(W)  over the generalised
+--                points (f , i) : W -> X * I        (FC[G].GI)
+--   AI(X , x)    lines in the total presheaf E of A lying over x
+--                (FT[G, A].AI: a line L in E with  pi L = x)
+--   ev e         the value at (id , e)
+--
+-- famPath : PathStr, and famConn : PathConn[famPath] (the exponential
+-- law holds by definition: lev is application, lam is the family).
+-- Families are equal when their values are (fam-eq: funext, naturality is
+-- a proposition).  Presheaves at a level l >= a of the base.
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+open Axioms[lv+].FunExtLemmas[fe @(lv+)] ;
+module W0 = V[lv] ;
+module VL = VLift[a, lv] ;
+  module GPR = GPre[lv] ;
+  open GPR.PS ;
+  open GLine[lv] ;
+
+  ----------------------------------------------------------------------
+  -- lines in a context
+
+  -- Pi codes over the objects and maps of the base (level a), at level l
+  piO (B : Ob -> W0.V) : W0.V = VL.PiS Ob (VL.encIx obV) (VL.encIx-inj obV) B ;
+  piH (W X : Ob) (B : Hom W X -> W0.V) : W0.V = VL.PiS (Hom W X) (VL.encIx (homV W X)) (VL.encIx-inj (homV W X)) B ;
+
+  module FC (G : PCtx) {
+    ftV (X : Ob) : W0.V =
+      piO (\ W -> piH W X (\ f -> piH W Iv (\ i -> G.ob W))) ;
+
+    ntV (X : Ob) (t : W0.Ix (ftV X)) : W0.V =
+      piO (\ V -> piO (\ W -> piH V W (\ g -> piH W X (\ f ->
+        piH W Iv (\ i ->
+          W0.IdV (G.ob V) (G.act V W g (t W f i)) (t V (compH V W X f g) (compH V W Iv i g))))))) ;
+
+    ob (X : Ob) : W0.V = W0.SigV (ftV X) (ntV X) ;
+
+    -- naturality is a proposition
+    nt-prop (X : Ob) (t : W0.Ix (ftV X)) : isProp (W0.Ix (ntV X t)) =
+      isProp-Pi Ob (\ V -> (W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+                     -> Id (W0.Ix (G.ob V)) (G.act V W g (t W f i)) (t V (compH V W X f g) (compH V W Iv i g))) (\ V ->
+      isProp-Pi Ob (\ W -> (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+                     -> Id (W0.Ix (G.ob V)) (G.act V W g (t W f i)) (t V (compH V W X f g) (compH V W Iv i g))) (\ W ->
+      isProp-Pi (Hom V W) (\ g -> (f : Hom W X) (i : Hom W Iv)
+                     -> Id (W0.Ix (G.ob V)) (G.act V W g (t W f i)) (t V (compH V W X f g) (compH V W Iv i g))) (\ g ->
+      isProp-Pi (Hom W X) (\ f -> (i : Hom W Iv)
+                     -> Id (W0.Ix (G.ob V)) (G.act V W g (t W f i)) (t V (compH V W X f g) (compH V W Iv i g))) (\ f ->
+      isProp-Pi (Hom W Iv) (\ i -> Id (W0.Ix (G.ob V)) (G.act V W g (t W f i)) (t V (compH V W X f g) (compH V W Iv i g))) (\ i ->
+        W0.isSetIx (G.ob V) (G.act V W g (t W f i)) (t V (compH V W X f g) (compH V W Iv i g))))))) ;
+
+    -- two lines with the same values are equal
+    fam-eq (X : Ob) (x y : W0.Ix (ob X))
+      (q : (W : Ob) (f : Hom W X) (i : Hom W Iv) -> Id (W0.Ix (G.ob W)) (x.1 W f i) (y.1 W f i)) : Id (W0.Ix (ob X)) x y =
+      Sigma-path (W0.Ix (ftV X)) (\ t -> W0.Ix (ntV X t)) x.1 y.1 x.2 y.2
+        (funext Ob (\ W -> (f : Hom W X) -> Hom W Iv -> W0.Ix (G.ob W)) x.1 y.1 (\ W ->
+          funext (Hom W X) (\ f -> Hom W Iv -> W0.Ix (G.ob W)) (x.1 W) (y.1 W) (\ f ->
+            funext (Hom W Iv) (\ i -> W0.Ix (G.ob W)) (x.1 W f) (y.1 W f) (\ i -> q W f i))))
+        (nt-prop X y.1 _ y.2) ;
+
+    actF (Y X : Ob) (h : Hom Y X) (x : W0.Ix (ob X)) : W0.Ix (ob Y) =
+      (\ W f i -> x.1 W (compH W Y X h f) i,
+       \ V W g f i -> transH (x.2 V W g (compH W Y X h f) i)
+                             (apH (\ k -> x.1 V k (compH V W Iv i g)) (comp-assoc V W Y X h f g))) ;
+
+    actF-id (X : Ob) (x : W0.Ix (ob X)) : Id (W0.Ix (ob X)) (actF X X (idH X) x) x =
+      fam-eq X (actF X X (idH X) x) x (\ W f i -> apH (\ k -> x.1 W k i) (comp-idl W X f)) ;
+
+    actF-o (K J I : Ob) (f : Hom J I) (g : Hom K J) (x : W0.Ix (ob I))
+      : Id (W0.Ix (ob K)) (actF K I (compH K J I f g) x) (actF K J g (actF J I f x)) =
+      fam-eq K (actF K I (compH K J I f g) x) (actF K J g (actF J I f x))
+        (\ W f' i -> apH (\ k -> x.1 W k i) (comp-assoc W K J I f g f')) ;
+
+    GI : PCtx = new PCtx[ob, actF, actF-id, actF-o] ;
+
+    -- the constant line at a point
+    constF (X : Ob) (u : W0.Ix (G.ob X)) : W0.Ix (ob X) =
+      (\ W f i -> G.act W X f u, \ V W g f i -> GPR.PshL[G].actC V W X f g u) ;
+
+    -- the end at e: the value at (id , e)
+    evN (e : IPt) (Y X : Ob) (h : Hom Y X) (x : W0.Ix (ob X))
+      : Id (W0.Ix (G.ob Y)) ((actF Y X h x).1 Y (idH Y) (ptH Y e)) (G.act Y X h (x.1 X (idH X) (ptH X e))) =
+      symH (transH (x.2 Y X h (idH X) (ptH X e))
+             (transH (apH (\ k -> x.1 Y k (compH Y X Iv (ptH X e) h)) (transH (comp-idl Y X h) (symH (comp-idr Y X h))))
+                     (apH (\ k -> x.1 Y (compH Y Y X h (idH Y)) k) (ptH-nat Y X h e)))) ;
+
+    ev (e : IPt) : PSub[GI, G] = new PSub[GI, G, \ X x -> x.1 X (idH X) (ptH X e), evN e] ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- lines in a type: lines in its total presheaf over a line in G
+
+  module FT (G : PCtx) (A : PTy[G]) {
+    module TA = GPR.TyL[G, A] ;
+    module FG = FC[G] ;
+    module FE = FC[TA.E] ;
+
+    -- the line in G under a line in E
+    piL (X : Ob) (L : W0.Ix (FE.ob X)) : W0.Ix (FG.ob X) =
+      (\ W f i -> (L.1 W f i).1, \ V W g f i -> apH (\ z -> z.1) (L.2 V W g f i)) ;
+
+    piL-act (Y X : Ob) (h : Hom Y X) (L : W0.Ix (FE.ob X))
+      : Id (W0.Ix (FG.ob Y)) (piL Y (FE.actF Y X h L)) (FG.actF Y X h (piL X L)) =
+      FG.fam-eq Y (piL Y (FE.actF Y X h L)) (FG.actF Y X h (piL X L)) (\ W f i -> refl (L.1 W (compH W Y X h f) i).1) ;
+
+    tobF (X : Ob) (x : W0.Ix (FG.ob X)) : W0.V = W0.SigV (FE.ob X) (\ L -> W0.IdV (FG.ob X) (piL X L) x) ;
+
+    -- an element is determined by its line in E
+    tob-eq (X : Ob) (x : W0.Ix (FG.ob X)) (u v : W0.Ix (tobF X x)) (p : Id (W0.Ix (FE.ob X)) u.1 v.1)
+      : Id (W0.Ix (tobF X x)) u v =
+      Sigma-path (W0.Ix (FE.ob X)) (\ L -> Id (W0.Ix (FG.ob X)) (piL X L) x) u.1 v.1 u.2 v.2 p
+        (W0.isSetIx (FG.ob X) (piL X v.1) x _ v.2) ;
+
+    tactF : TactTy FG.GI tobF = \ J I h x y e u ->
+      (FE.actF J I h u.1, transH (piL-act J I h u.1) (transH (apH (FG.actF J I h) u.2) e)) ;
+
+    tactF-id : IdLaw FG.GI tobF tactF = \ I x e u ->
+      tob-eq I x (tactF I I (idH I) x x e u) u (FE.actF-id I u.1) ;
+
+    tactF-o : OLaw FG.GI tobF tactF = \ K J I f g x y z e1 e2 e3 u ->
+      tob-eq K z (tactF K I (compH K J I f g) x z e3 u) (tactF K J g y z e2 (tactF J I f x y e1 u)) (FE.actF-o K J I f g u.1) ;
+
+    AI : PTy[FG.GI] = (mkTy FG.GI tobF tactF tactF-id tactF-o) ;
+
+    module TL = GPR.TyL[FG.GI, AI] ;
+
+    ----------------------------------------------------------------------
+    -- evaluation at an end point
+
+    module Ev (e : IPt) {
+      Aev : PTy[FG.GI] = subTy FG.GI G A (FG.ev e) ;
+      module TV = GPR.TyL[FG.GI, Aev] ;
+
+      -- the element of A at the end: the value of the line in E at (id , e)
+      endB (X : Ob) (w : TL.EI X) : TV.T X w.1 =
+        TA.coeT X (w.2.1.1 X (idH X) (ptH X e)).1 (w.1.1 X (idH X) (ptH X e))
+          (apH (\ y -> y.1 X (idH X) (ptH X e)) w.2.2) (w.2.1.1 X (idH X) (ptH X e)).2 ;
+
+      endB-E (X : Ob) (w : TL.EI X)
+        : Id (TA.EI X) (w.1.1 X (idH X) (ptH X e), endB X w) (w.2.1.1 X (idH X) (ptH X e)) =
+        symH (TA.pr-coe X (w.2.1.1 X (idH X) (ptH X e)).1 (w.1.1 X (idH X) (ptH X e))
+                (apH (\ y -> y.1 X (idH X) (ptH X e)) w.2.2) (w.2.1.1 X (idH X) (ptH X e)).2) ;
+
+      mE (X : Ob) (w : TL.EI X) : TV.EI X = (w.1, endB X w) ;
+
+      -- the end of the restricted line, read in E
+      endAct (Y X : Ob) (h : Hom Y X) (w : TL.EI X)
+        : Id (TA.EI Y) (w.2.1.1 Y (compH Y Y X h (idH Y)) (ptH Y e)) (TA.E.act Y X h (w.2.1.1 X (idH X) (ptH X e))) =
+        symH (transH (w.2.1.2 Y X h (idH X) (ptH X e))
+               (transH (apH (\ k -> w.2.1.1 Y k (compH Y X Iv (ptH X e) h)) (transH (comp-idl Y X h) (symH (comp-idr Y X h))))
+                       (apH (\ k -> w.2.1.1 Y (compH Y Y X h (idH Y)) k) (ptH-nat Y X h e)))) ;
+
+      mnat (Y X : Ob) (h : Hom Y X) (w : TL.EI X) : Id (TV.EI Y) (mE Y (TL.E.act Y X h w)) (TV.E.act Y X h (mE X w)) =
+        apH {TV.T Y (FG.actF Y X h w.1)} {TV.EI Y} (\ z -> (FG.actF Y X h w.1, z))
+          (TA.pr-inj Y ((FG.ev e).nt Y (FG.actF Y X h w.1)) _ _
+            (calc (TA.EI Y) {
+                ((FG.ev e).nt Y (FG.actF Y X h w.1), endB Y (TL.E.act Y X h w))
+              =< endB-E Y (TL.E.act Y X h w) >
+                w.2.1.1 Y (compH Y Y X h (idH Y)) (ptH Y e)
+              =< endAct Y X h w >
+                TA.E.act Y X h (w.2.1.1 X (idH X) (ptH X e))
+              =< apH (TA.E.act Y X h) (symH (endB-E X w)) >
+                TA.E.act Y X h (w.1.1 X (idH X) (ptH X e), endB X w)
+              =< TA.pr-tact Y X h (w.1.1 X (idH X) (ptH X e)) ((FG.ev e).nt Y (FG.actF Y X h w.1))
+                   (ntEq FG.GI G (FG.ev e) Y X h w.1 (FG.actF Y X h w.1) (refl (FG.actF Y X h w.1))) (endB X w) >
+                ((FG.ev e).nt Y (FG.actF Y X h w.1),
+                 Aev.tact Y X h w.1 (FG.actF Y X h w.1) (refl (FG.actF Y X h w.1)) (endB X w)) })) ;
+
+      evA : PMap[FG.GI, AI, Aev] = new PMap[FG.GI, AI, Aev, mE, \ X w -> refl w.1, mnat] ;
+    } ;
+
+    ----------------------------------------------------------------------
+    -- lines in A from families in E
+
+    lamA (X : Ob) (x : W0.Ix (FG.ob X)) (t : (W : Ob) -> Hom W X -> Hom W Iv -> TA.EI W)
+      (tp : (W : Ob) (f : Hom W X) (i : Hom W Iv) -> Id (W0.Ix (G.ob W)) (t W f i).1 (x.1 W f i))
+      (tn : (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+            -> Id (TA.EI V) (TA.E.act V W g (t W f i)) (t V (compH V W X f g) (compH V W Iv i g)))
+      : W0.Ix (tobF X x) =
+      ((t, tn), FG.fam-eq X (piL X (t, tn)) x tp) ;
+
+    -- an element of TL is determined by its line in E
+    tl-norm (X : Ob) (w : TL.EI X) : Id (TL.EI X) (piL X w.2.1, (w.2.1, refl (piL X w.2.1))) w =
+      idJ (W0.Ix (FG.ob X)) (piL X w.2.1)
+        (\ x2 p2 -> Id (TL.EI X) (piL X w.2.1, (w.2.1, refl (piL X w.2.1))) (x2, (w.2.1, p2)))
+        (refl (piL X w.2.1, (w.2.1, refl (piL X w.2.1)))) w.1 w.2.2 ;
+
+    tl-ext (X : Ob) (w w' : TL.EI X) (q : (W : Ob) (f : Hom W X) (i : Hom W Iv) -> Id (TA.EI W) (w.2.1.1 W f i) (w'.2.1.1 W f i))
+      : Id (TL.EI X) w w' =
+      transH (symH (tl-norm X w))
+        (transH (apH (\ L -> (piL X L, (L, refl (piL X L)))) (FE.fam-eq X w.2.1 w'.2.1 q)) (tl-norm X w')) ;
+  } ;
+
+  ------------------------------------------------------------------------
+  -- lines along a substitution
+
+  module FMap (G1 G2 : PCtx) (m : PSub[G1, G2]) {
+    module F1 = FC[G1] ;
+    module F2 = FC[G2] ;
+
+    mapF (X : Ob) (x : W0.Ix (F1.ob X)) : W0.Ix (F2.ob X) =
+      (\ W f i -> m.nt W (x.1 W f i),
+       \ V W g f i -> transH (symH (m.nt-nat V W g (x.1 W f i))) (apH (m.nt V) (x.2 V W g f i))) ;
+
+    mapF-act (Y X : Ob) (h : Hom Y X) (x : W0.Ix (F1.ob X))
+      : Id (W0.Ix (F2.ob Y)) (F2.actF Y X h (mapF X x)) (mapF Y (F1.actF Y X h x)) =
+      F2.fam-eq Y (F2.actF Y X h (mapF X x)) (mapF Y (F1.actF Y X h x)) (\ W f i -> refl (m.nt W (x.1 W (compH W Y X h f) i))) ;
+
+    map : PSub[F1.GI, F2.GI] = new PSub[F1.GI, F2.GI, mapF, \ Y X h x -> symH (mapF-act Y X h x)] ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- the instance
+
+  famPath : PathStr =
+    new PathStr[\ G -> FC[G].GI, \ G e -> FC[G].ev e, \ G A -> FT[G, A].AI, \ G A e -> FT[G, A].Ev[e].evA] ;
+
+  famConn : PathConn[famPath] =
+    new PathConn[famPath,
+      \ G X x -> x.1,
+      \ G X x -> x.2,
+      \ G Y X h x W f i -> refl (x.1 W (compH W Y X h f) i),
+      \ G e X x -> refl (x.1 X (idH X) (ptH X e)),
+      \ G X t tn -> (t, tn),
+      \ G X t tn W f i -> refl (t W f i),
+      \ G X x x' q -> FC[G].fam-eq X x x' q,
+      \ G A X w W f i -> w.2.1.1 W f i,
+      \ G A X w W f i -> apH (\ y -> y.1 W f i) w.2.2,
+      \ G A X w -> w.2.1.2,
+      \ G A Y X h w W f i -> refl (w.2.1.1 W (compH W Y X h f) i),
+      \ G A e X w -> FT[G, A].Ev[e].endB-E X w,
+      \ G A X x t tp tn -> FT[G, A].lamA X x t tp tn,
+      \ G A X x t tp tn W f i -> refl (t W f i),
+      \ G A X w w' q -> FT[G, A].tl-ext X w w' q] ;

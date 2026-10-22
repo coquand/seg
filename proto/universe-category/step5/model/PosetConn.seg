@@ -1,0 +1,305 @@
+-- PosetConn.seg: the poset path structure has connections (IvBase GLine
+-- PathConn, with the interval connections of IvBase Cn).
+--
+--   lev x W f i   x acted on along (f , i) : W -> X * Iv
+--   lam t         t at the generic point (pX , pr2) : X * Iv -> X * Iv
+--   cI d W i j    pr2 (conn d W ((id , i) , j))      (CylCat's conn)
+--
+-- The laws are the product laws of the base: pair-comp ((f , i) g =
+-- (f g , i g)), cyl-pair ((h * Iv) (f , i) = (h f , i)), pair-gen
+-- ((pX , pr2) = id), and the faces and naturality of conn.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+open Conn[a] ; open PCn ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open FibTriv[a] ;
+
+------------------------------------------------------------------------
+-- product laws
+
+-- (f , i) g = (f g , i g)
+pair-comp (V W X : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+  : Id (Hom V (prodP X Iv)) (compH V W (prodP X Iv) (pairH X Iv W f i) g) (pairH X Iv V (compH V W X f g) (compH V W Iv i g)) =
+  pair-ext X Iv V (compH V W (prodP X Iv) (pairH X Iv W f i) g) (pairH X Iv V (compH V W X f g) (compH V W Iv i g))
+    (transH (symH (comp-assoc V W (prodP X Iv) X (pr1 X Iv) (pairH X Iv W f i) g))
+      (transH (apH (\ k -> compH V W X k g) (pr1-pair X Iv W f i))
+              (symH (pr1-pair X Iv V (compH V W X f g) (compH V W Iv i g)))))
+    (transH (symH (comp-assoc V W (prodP X Iv) Iv (pr2 X Iv) (pairH X Iv W f i) g))
+      (transH (apH (\ k -> compH V W Iv k g) (pr2-pair X Iv W f i))
+              (symH (pr2-pair X Iv V (compH V W X f g) (compH V W Iv i g))))) ;
+
+-- (h * Iv) (f , i) = (h f , i)
+cyl-pair (W Y X : Ob) (h : Hom Y X) (f : Hom W Y) (i : Hom W Iv)
+  : Id (Hom W (prodP X Iv)) (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) (pairH Y Iv W f i)) (pairH X Iv W (compH W Y X h f) i) =
+  pair-ext X Iv W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) (pairH Y Iv W f i)) (pairH X Iv W (compH W Y X h f) i)
+    (calc (Hom W X) {
+        compH W (prodP X Iv) X (pr1 X Iv) (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) (pairH Y Iv W f i))
+      =< symH (comp-assoc W (prodP Y Iv) (prodP X Iv) X (pr1 X Iv) (cylH Y X h) (pairH Y Iv W f i)) >
+        compH W (prodP Y Iv) X (compH (prodP Y Iv) (prodP X Iv) X (pr1 X Iv) (cylH Y X h)) (pairH Y Iv W f i)
+      =< apH (\ k -> compH W (prodP Y Iv) X k (pairH Y Iv W f i)) (pX-cyl Y X h) >
+        compH W (prodP Y Iv) X (compH (prodP Y Iv) Y X h (pr1 Y Iv)) (pairH Y Iv W f i)
+      =< comp-assoc W (prodP Y Iv) Y X h (pr1 Y Iv) (pairH Y Iv W f i) >
+        compH W Y X h (compH W (prodP Y Iv) Y (pr1 Y Iv) (pairH Y Iv W f i))
+      =< apH (\ k -> compH W Y X h k) (pr1-pair Y Iv W f i) >
+        compH W Y X h f
+      =< symH (pr1-pair X Iv W (compH W Y X h f) i) >
+        compH W (prodP X Iv) X (pr1 X Iv) (pairH X Iv W (compH W Y X h f) i) })
+    (calc (Hom W Iv) {
+        compH W (prodP X Iv) Iv (pr2 X Iv) (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) (pairH Y Iv W f i))
+      =< symH (comp-assoc W (prodP Y Iv) (prodP X Iv) Iv (pr2 X Iv) (cylH Y X h) (pairH Y Iv W f i)) >
+        compH W (prodP Y Iv) Iv (compH (prodP Y Iv) (prodP X Iv) Iv (pr2 X Iv) (cylH Y X h)) (pairH Y Iv W f i)
+      =< apH (\ k -> compH W (prodP Y Iv) Iv k (pairH Y Iv W f i)) (pr2-cyl Y X h) >
+        compH W (prodP Y Iv) Iv (pr2 Y Iv) (pairH Y Iv W f i)
+      =< pr2-pair Y Iv W f i >
+        i
+      =< symH (pr2-pair X Iv W (compH W Y X h f) i) >
+        compH W (prodP X Iv) Iv (pr2 X Iv) (pairH X Iv W (compH W Y X h f) i) }) ;
+
+-- the generic point (pX , pr2) is the identity
+pair-gen (X : Ob) : Id (Hom (prodP X Iv) (prodP X Iv)) (pairH X Iv (prodP X Iv) (pr1 X Iv) (pr2 X Iv)) (idH (prodP X Iv)) =
+  pair-ext X Iv (prodP X Iv) (pairH X Iv (prodP X Iv) (pr1 X Iv) (pr2 X Iv)) (idH (prodP X Iv))
+    (transH (pr1-pair X Iv (prodP X Iv) (pr1 X Iv) (pr2 X Iv)) (symH (comp-idr (prodP X Iv) X (pr1 X Iv))))
+    (transH (pr2-pair X Iv (prodP X Iv) (pr1 X Iv) (pr2 X Iv)) (symH (comp-idr (prodP X Iv) Iv (pr2 X Iv)))) ;
+
+-- (q , e) = (lid e) q
+pair-lid (W Z : Ob) (e : El Iv) (q : Hom W Z)
+  : Id (Hom W (prodP Z Iv)) (pairH Z Iv W q (ptH W e)) (compH W Z (prodP Z Iv) (lid Z e) q) =
+  pair-ext Z Iv W (pairH Z Iv W q (ptH W e)) (compH W Z (prodP Z Iv) (lid Z e) q)
+    (transH (pr1-pair Z Iv W q (ptH W e)) (symH (pX-lid-comp W Z e q)))
+    (transH (pr2-pair Z Iv W q (ptH W e)) (symH (pr2-lid W Z e q))) ;
+
+------------------------------------------------------------------------
+-- connections on maps into the interval
+
+cIp (d : Bool) (W : Ob) (i j : Hom W Iv) : Hom W Iv =
+  compH W (prodP W Iv) Iv (pr2 W Iv)
+    (compH W (prodP (prodP W Iv) Iv) (prodP W Iv) (conn d W) (pairH (prodP W Iv) Iv W (pairH W Iv W (idH W) i) j)) ;
+
+-- pr2 (c (k r)) = pr2 ((c k) r)
+cI-assoc (d : Bool) (W : Ob) (k : Hom W (prodP (prodP W Iv) Iv)) (Z : Ob) (k' : Hom Z (prodP (prodP W Iv) Iv)) (r : Hom W Z)
+  (E : Id (Hom W (prodP (prodP W Iv) Iv)) k (compH W Z (prodP (prodP W Iv) Iv) k' r))
+  : Id (Hom W (prodP W Iv)) (compH W (prodP (prodP W Iv) Iv) (prodP W Iv) (conn d W) k)
+       (compH W Z (prodP W Iv) (compH Z (prodP (prodP W Iv) Iv) (prodP W Iv) (conn d W) k') r) =
+  transH (apH (\ u -> compH W (prodP (prodP W Iv) Iv) (prodP W Iv) (conn d W) u) E)
+         (symH (comp-assoc W Z (prodP (prodP W Iv) Iv) (prodP W Iv) (conn d W) k' r)) ;
+
+-- an end point: pr2 (lid e r) = e
+cI-end (W : Ob) (e : El Iv) (r : Hom W W) (L : Hom (prodP W Iv) (prodP W Iv)) (q : Hom W (prodP W Iv))
+  (E : Id (Hom W (prodP W Iv)) (compH W (prodP W Iv) (prodP W Iv) L q) (compH W W (prodP W Iv) (lid W e) r))
+  : Id (Hom W Iv) (compH W (prodP W Iv) Iv (pr2 W Iv) (compH W (prodP W Iv) (prodP W Iv) L q)) (ptH W e) =
+  transH (apH (\ u -> compH W (prodP W Iv) Iv (pr2 W Iv) u) E) (pr2-lid W W e r) ;
+
+cIp-jsrc (d : Bool) (W : Ob) (i : Hom W Iv) : Id (Hom W Iv) (cIp d W i (ptH W (src d))) (ptH W (src d)) =
+  transH (apH (\ u -> compH W (prodP W Iv) Iv (pr2 W Iv) u)
+            (cI-assoc d W (pairH (prodP W Iv) Iv W (pairH W Iv W (idH W) i) (ptH W (src d))) (prodP W Iv) (lid (prodP W Iv) (src d))
+               (pairH W Iv W (idH W) i) (pair-lid W (prodP W Iv) (src d) (pairH W Iv W (idH W) i))))
+    (cI-end W (src d) (compH W (prodP W Iv) W (pX W) (pairH W Iv W (idH W) i))
+       (compH (prodP W Iv) (prodP (prodP W Iv) Iv) (prodP W Iv) (conn d W) (lid (prodP W Iv) (src d))) (pairH W Iv W (idH W) i)
+       (transH (apH (\ u -> compH W (prodP W Iv) (prodP W Iv) u (pairH W Iv W (idH W) i)) (conn-jsrc d W))
+               (comp-assoc W (prodP W Iv) W (prodP W Iv) (lid W (src d)) (pX W) (pairH W Iv W (idH W) i)))) ;
+
+cIp-jtgt (d : Bool) (W : Ob) (i : Hom W Iv) : Id (Hom W Iv) (cIp d W i (ptH W (tgt d))) i =
+  transH (apH (\ u -> compH W (prodP W Iv) Iv (pr2 W Iv) u)
+            (transH (cI-assoc d W (pairH (prodP W Iv) Iv W (pairH W Iv W (idH W) i) (ptH W (tgt d))) (prodP W Iv) (lid (prodP W Iv) (tgt d))
+                       (pairH W Iv W (idH W) i) (pair-lid W (prodP W Iv) (tgt d) (pairH W Iv W (idH W) i)))
+              (transH (apH (\ u -> compH W (prodP W Iv) (prodP W Iv) u (pairH W Iv W (idH W) i)) (conn-jtgt d W))
+                      (comp-idl W (prodP W Iv) (pairH W Iv W (idH W) i)))))
+    (pr2-pair W Iv W (idH W) i) ;
+
+-- (lid src , j) = (lid src * Iv) (id , j)
+cIp-isrc (d : Bool) (W : Ob) (j : Hom W Iv) : Id (Hom W Iv) (cIp d W (ptH W (src d)) j) (ptH W (src d)) =
+  transH (apH (\ u -> compH W (prodP W Iv) Iv (pr2 W Iv) u)
+            (cI-assoc d W (pairH (prodP W Iv) Iv W (pairH W Iv W (idH W) (ptH W (src d))) j) (prodP W Iv)
+               (cylH W (prodP W Iv) (lid W (src d))) (pairH W Iv W (idH W) j)
+               (symH (transH (cyl-pair W W (prodP W Iv) (lid W (src d)) (idH W) j)
+                             (apH (\ u -> pairH (prodP W Iv) Iv W u j) (comp-idr W (prodP W Iv) (lid W (src d))))))))
+    (cI-end W (src d) (compH W (prodP W Iv) W (pX W) (pairH W Iv W (idH W) j))
+       (compH (prodP W Iv) (prodP (prodP W Iv) Iv) (prodP W Iv) (conn d W) (cylH W (prodP W Iv) (lid W (src d)))) (pairH W Iv W (idH W) j)
+       (transH (apH (\ u -> compH W (prodP W Iv) (prodP W Iv) u (pairH W Iv W (idH W) j)) (conn-isrc d W))
+               (comp-assoc W (prodP W Iv) W (prodP W Iv) (lid W (src d)) (pX W) (pairH W Iv W (idH W) j)))) ;
+
+-- (lid tgt , j) = (lid tgt * Iv) (id , j), and conn there is the identity
+cIp-itgt (d : Bool) (W : Ob) (j : Hom W Iv) : Id (Hom W Iv) (cIp d W (ptH W (tgt d)) j) j =
+  transH (apH (\ u -> compH W (prodP W Iv) Iv (pr2 W Iv) u)
+            (transH (cI-assoc d W (pairH (prodP W Iv) Iv W (pairH W Iv W (idH W) (ptH W (tgt d))) j) (prodP W Iv)
+                       (cylH W (prodP W Iv) (lid W (tgt d))) (pairH W Iv W (idH W) j)
+                       (symH (transH (cyl-pair W W (prodP W Iv) (lid W (tgt d)) (idH W) j)
+                                     (apH (\ u -> pairH (prodP W Iv) Iv W u j) (comp-idr W (prodP W Iv) (lid W (tgt d)))))))
+              (transH (apH (\ u -> compH W (prodP W Iv) (prodP W Iv) u (pairH W Iv W (idH W) j)) (conn-itgt d W))
+                      (comp-idl W (prodP W Iv) (pairH W Iv W (idH W) j)))))
+    (pr2-pair W Iv W (idH W) j) ;
+
+module CINat (d : Bool) (V W : Ob) (g : Hom V W) (i j : Hom W Iv) {
+  qW : Hom W (prodP W Iv) = pairH W Iv W (idH W) i ;
+  qV : Hom V (prodP V Iv) = pairH V Iv V (idH V) (compH V W Iv i g) ;
+  kW : Hom W (prodP (prodP W Iv) Iv) = pairH (prodP W Iv) Iv W qW j ;
+  kV : Hom V (prodP (prodP V Iv) Iv) = pairH (prodP V Iv) Iv V qV (compH V W Iv j g) ;
+
+  -- (id , i) g = (g * Iv) (id , i g)
+  qEq : Id (Hom V (prodP W Iv)) (compH V W (prodP W Iv) qW g) (compH V (prodP V Iv) (prodP W Iv) (cylH V W g) qV) =
+    transH (pair-comp V W W g (idH W) i)
+     (transH (apH (\ u -> pairH W Iv V u (compH V W Iv i g)) (transH (comp-idl V W g) (symH (comp-idr V W g))))
+             (symH (cyl-pair V V W g (idH V) (compH V W Iv i g)))) ;
+
+  -- ((id , i) , j) g = (g * Iv * Iv) ((id , i g) , j g)
+  kEq : Id (Hom V (prodP (prodP W Iv) Iv)) (compH V W (prodP (prodP W Iv) Iv) kW g)
+           (compH V (prodP (prodP V Iv) Iv) (prodP (prodP W Iv) Iv) (cylH (prodP V Iv) (prodP W Iv) (cylH V W g)) kV) =
+    transH (pair-comp V W (prodP W Iv) g qW j)
+     (transH (apH (\ u -> pairH (prodP W Iv) Iv V u (compH V W Iv j g)) qEq)
+             (symH (cyl-pair V (prodP V Iv) (prodP W Iv) (cylH V W g) qV (compH V W Iv j g)))) ;
+
+  res : Id (Hom V Iv) (compH V W Iv (cIp d W i j) g) (cIp d V (compH V W Iv i g) (compH V W Iv j g)) =
+    calc (Hom V Iv) {
+        compH V W Iv (cIp d W i j) g
+      =< comp-assoc V W (prodP W Iv) Iv (pr2 W Iv) (compH W (prodP (prodP W Iv) Iv) (prodP W Iv) (conn d W) kW) g >
+        compH V (prodP W Iv) Iv (pr2 W Iv) (compH V W (prodP W Iv) (compH W (prodP (prodP W Iv) Iv) (prodP W Iv) (conn d W) kW) g)
+      =< apH (\ u -> compH V (prodP W Iv) Iv (pr2 W Iv) u)
+          (calc (Hom V (prodP W Iv)) {
+              compH V W (prodP W Iv) (compH W (prodP (prodP W Iv) Iv) (prodP W Iv) (conn d W) kW) g
+            =< comp-assoc V W (prodP (prodP W Iv) Iv) (prodP W Iv) (conn d W) kW g >
+              compH V (prodP (prodP W Iv) Iv) (prodP W Iv) (conn d W) (compH V W (prodP (prodP W Iv) Iv) kW g)
+            =< apH (\ u -> compH V (prodP (prodP W Iv) Iv) (prodP W Iv) (conn d W) u) kEq >
+              compH V (prodP (prodP W Iv) Iv) (prodP W Iv) (conn d W)
+                (compH V (prodP (prodP V Iv) Iv) (prodP (prodP W Iv) Iv) (cylH (prodP V Iv) (prodP W Iv) (cylH V W g)) kV)
+            =< symH (comp-assoc V (prodP (prodP V Iv) Iv) (prodP (prodP W Iv) Iv) (prodP W Iv) (conn d W)
+                       (cylH (prodP V Iv) (prodP W Iv) (cylH V W g)) kV) >
+              compH V (prodP (prodP V Iv) Iv) (prodP W Iv)
+                (compH (prodP (prodP V Iv) Iv) (prodP (prodP W Iv) Iv) (prodP W Iv) (conn d W) (cylH (prodP V Iv) (prodP W Iv) (cylH V W g))) kV
+            =< apH (\ u -> compH V (prodP (prodP V Iv) Iv) (prodP W Iv) u kV) (conn-cyl d V W g) >
+              compH V (prodP (prodP V Iv) Iv) (prodP W Iv)
+                (compH (prodP (prodP V Iv) Iv) (prodP V Iv) (prodP W Iv) (cylH V W g) (conn d V)) kV
+            =< comp-assoc V (prodP (prodP V Iv) Iv) (prodP V Iv) (prodP W Iv) (cylH V W g) (conn d V) kV >
+              compH V (prodP V Iv) (prodP W Iv) (cylH V W g) (compH V (prodP (prodP V Iv) Iv) (prodP V Iv) (conn d V) kV) }) >
+        compH V (prodP W Iv) Iv (pr2 W Iv) (compH V (prodP V Iv) (prodP W Iv) (cylH V W g) (compH V (prodP (prodP V Iv) Iv) (prodP V Iv) (conn d V) kV))
+      =< symH (comp-assoc V (prodP V Iv) (prodP W Iv) Iv (pr2 W Iv) (cylH V W g) (compH V (prodP (prodP V Iv) Iv) (prodP V Iv) (conn d V) kV)) >
+        compH V (prodP V Iv) Iv (compH (prodP V Iv) (prodP W Iv) Iv (pr2 W Iv) (cylH V W g)) (compH V (prodP (prodP V Iv) Iv) (prodP V Iv) (conn d V) kV)
+      =< apH (\ u -> compH V (prodP V Iv) Iv u (compH V (prodP (prodP V Iv) Iv) (prodP V Iv) (conn d V) kV)) (pr2-cyl V W g) >
+        cIp d V (compH V W Iv i g) (compH V W Iv j g) } ;
+} ;
+
+cIp-nat (d : Bool) (V W : Ob) (g : Hom V W) (i j : Hom W Iv)
+  : Id (Hom V Iv) (compH V W Iv (cIp d W i j) g) (cIp d V (compH V W Iv i g) (compH V W Iv j g)) = CINat[d, V, W, g, i, j].res ;
+
+------------------------------------------------------------------------
+-- the exponential law
+
+module PosetLev (G : PCtx) {
+  module GL = PR.PshL[G] ;
+
+  levP (X : Ob) (x : W0.Ix (G.ob (prodP X Iv))) (W : Ob) (f : Hom W X) (i : Hom W Iv) : W0.Ix (G.ob W) =
+    G.act W (prodP X Iv) (pairH X Iv W f i) x ;
+
+  levP-nat (X : Ob) (x : W0.Ix (G.ob (prodP X Iv))) (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+    : Id (W0.Ix (G.ob V)) (G.act V W g (levP X x W f i)) (levP X x V (compH V W X f g) (compH V W Iv i g)) =
+    GL.actTri V W (prodP X Iv) (pairH X Iv W f i) g (pairH X Iv V (compH V W X f g) (compH V W Iv i g)) (pair-comp V W X g f i) x ;
+
+  levP-act (Y X : Ob) (h : Hom Y X) (x : W0.Ix (G.ob (prodP X Iv))) (W : Ob) (f : Hom W Y) (i : Hom W Iv)
+    : Id (W0.Ix (G.ob W)) (levP Y (G.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) x) W f i) (levP X x W (compH W Y X h f) i) =
+    GL.actTri W (prodP Y Iv) (prodP X Iv) (cylH Y X h) (pairH Y Iv W f i) (pairH X Iv W (compH W Y X h f) i) (cyl-pair W Y X h f i) x ;
+
+  -- at the generic point
+  levP-gen (X : Ob) (x : W0.Ix (G.ob (prodP X Iv))) : Id (W0.Ix (G.ob (prodP X Iv))) (levP X x (prodP X Iv) (pr1 X Iv) (pr2 X Iv)) x =
+    GL.actId (prodP X Iv) (pairH X Iv (prodP X Iv) (pr1 X Iv) (pr2 X Iv)) (pair-gen X) x ;
+
+  lamP (X : Ob) (t : (W : Ob) -> Hom W X -> Hom W Iv -> W0.Ix (G.ob W)) : W0.Ix (G.ob (prodP X Iv)) = t (prodP X Iv) (pr1 X Iv) (pr2 X Iv) ;
+
+  levP-ext (X : Ob) (x x' : W0.Ix (G.ob (prodP X Iv)))
+    (q : (W : Ob) (f : Hom W X) (i : Hom W Iv) -> Id (W0.Ix (G.ob W)) (levP X x W f i) (levP X x' W f i))
+    : Id (W0.Ix (G.ob (prodP X Iv))) x x' =
+    transH (symH (levP-gen X x)) (transH (q (prodP X Iv) (pr1 X Iv) (pr2 X Iv)) (levP-gen X x')) ;
+} ;
+
+-- a family at (pr1 (f , i) , pr2 (f , i)) is the family at (f , i)
+fam-pair (R : Ob -> U a) (X W : Ob) (t : (W : Ob) -> Hom W X -> Hom W Iv -> R W) (f : Hom W X) (i : Hom W Iv)
+  : Id (R W) (t W (compH W (prodP X Iv) X (pr1 X Iv) (pairH X Iv W f i)) (compH W (prodP X Iv) Iv (pr2 X Iv) (pairH X Iv W f i))) (t W f i) =
+  transH (apH (\ k -> t W k (compH W (prodP X Iv) Iv (pr2 X Iv) (pairH X Iv W f i))) (pr1-pair X Iv W f i))
+         (apH (\ k -> t W f k) (pr2-pair X Iv W f i)) ;
+
+module PosetLevA (G : PCtx) (A : PTy[G]) {
+  module TA = PR.TyL[G, A] ;
+  module PL = PosetLev[G] ;
+
+  levAP (X : Ob) (w : TA.EI (prodP X Iv)) (W : Ob) (f : Hom W X) (i : Hom W Iv) : TA.EI W =
+    TA.E.act W (prodP X Iv) (pairH X Iv W f i) w ;
+
+  levAP-nat (X : Ob) (w : TA.EI (prodP X Iv)) (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+    : Id (TA.EI V) (TA.E.act V W g (levAP X w W f i)) (levAP X w V (compH V W X f g) (compH V W Iv i g)) =
+    TA.PE.actTri V W (prodP X Iv) (pairH X Iv W f i) g (pairH X Iv V (compH V W X f g) (compH V W Iv i g)) (pair-comp V W X g f i) w ;
+
+  levAP-act (Y X : Ob) (h : Hom Y X) (w : TA.EI (prodP X Iv)) (W : Ob) (f : Hom W Y) (i : Hom W Iv)
+    : Id (TA.EI W) (levAP Y (TA.E.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) w) W f i) (levAP X w W (compH W Y X h f) i) =
+    TA.PE.actTri W (prodP Y Iv) (prodP X Iv) (cylH Y X h) (pairH Y Iv W f i) (pairH X Iv W (compH W Y X h f) i) (cyl-pair W Y X h f i) w ;
+
+  levAP-gen (X : Ob) (w : TA.EI (prodP X Iv)) : Id (TA.EI (prodP X Iv)) (levAP X w (prodP X Iv) (pr1 X Iv) (pr2 X Iv)) w =
+    TA.PE.actId (prodP X Iv) (pairH X Iv (prodP X Iv) (pr1 X Iv) (pr2 X Iv)) (pair-gen X) w ;
+
+  lamAP (X : Ob) (x : W0.Ix (G.ob (prodP X Iv))) (t : (W : Ob) -> Hom W X -> Hom W Iv -> TA.EI W)
+    (tp : (W : Ob) (f : Hom W X) (i : Hom W Iv) -> Id (W0.Ix (G.ob W)) (t W f i).1 (PL.levP X x W f i))
+    : TA.T (prodP X Iv) x =
+    TA.coeT (prodP X Iv) (t (prodP X Iv) (pr1 X Iv) (pr2 X Iv)).1 x
+      (transH (tp (prodP X Iv) (pr1 X Iv) (pr2 X Iv)) (PL.levP-gen X x)) (t (prodP X Iv) (pr1 X Iv) (pr2 X Iv)).2 ;
+
+  levAP-lam (X : Ob) (x : W0.Ix (G.ob (prodP X Iv))) (t : (W : Ob) -> Hom W X -> Hom W Iv -> TA.EI W)
+    (tp : (W : Ob) (f : Hom W X) (i : Hom W Iv) -> Id (W0.Ix (G.ob W)) (t W f i).1 (PL.levP X x W f i))
+    (tn : (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+          -> Id (TA.EI V) (TA.E.act V W g (t W f i)) (t V (compH V W X f g) (compH V W Iv i g)))
+    (W : Ob) (f : Hom W X) (i : Hom W Iv)
+    : Id (TA.EI W) (levAP X (x, lamAP X x t tp) W f i) (t W f i) =
+    calc (TA.EI W) {
+        TA.E.act W (prodP X Iv) (pairH X Iv W f i) (x, lamAP X x t tp)
+      =< apH (TA.E.act W (prodP X Iv) (pairH X Iv W f i))
+             (symH (TA.pr-coe (prodP X Iv) (t (prodP X Iv) (pr1 X Iv) (pr2 X Iv)).1 x
+                      (transH (tp (prodP X Iv) (pr1 X Iv) (pr2 X Iv)) (PL.levP-gen X x)) (t (prodP X Iv) (pr1 X Iv) (pr2 X Iv)).2)) >
+        TA.E.act W (prodP X Iv) (pairH X Iv W f i) (t (prodP X Iv) (pr1 X Iv) (pr2 X Iv))
+      =< tn W (prodP X Iv) (pairH X Iv W f i) (pr1 X Iv) (pr2 X Iv) >
+        t W (compH W (prodP X Iv) X (pr1 X Iv) (pairH X Iv W f i)) (compH W (prodP X Iv) Iv (pr2 X Iv) (pairH X Iv W f i))
+      =< fam-pair (\ V -> TA.EI V) X W t f i >
+        t W f i } ;
+
+  levAP-ext (X : Ob) (w w' : TA.EI (prodP X Iv))
+    (q : (W : Ob) (f : Hom W X) (i : Hom W Iv) -> Id (TA.EI W) (levAP X w W f i) (levAP X w' W f i))
+    : Id (TA.EI (prodP X Iv)) w w' =
+    transH (symH (levAP-gen X w)) (transH (q (prodP X Iv) (pr1 X Iv) (pr2 X Iv)) (levAP-gen X w')) ;
+} ;
+
+------------------------------------------------------------------------
+-- the instance
+
+posetConn : PathConn[posetPath] =
+  new PathConn[posetPath,
+    \ G X x -> PosetLev[G].levP X x,
+    \ G X x -> PosetLev[G].levP-nat X x,
+    \ G Y X h x W f i -> PosetLev[G].levP-act Y X h x W f i,
+    \ G e X x -> refl (G.act X (prodP X Iv) (lid X e) x),
+    \ G X t tn -> PosetLev[G].lamP X t,
+    \ G X t tn W f i -> transH (tn W (prodP X Iv) (pairH X Iv W f i) (pr1 X Iv) (pr2 X Iv)) (fam-pair (\ V -> W0.Ix (G.ob V)) X W t f i),
+    \ G X x x' q -> PosetLev[G].levP-ext X x x' q,
+    \ G A X w -> PosetLevA[G, A].levAP X w,
+    \ G A X w W f i -> refl (G.act W (prodP X Iv) (pairH X Iv W f i) w.1),
+    \ G A X w -> PosetLevA[G, A].levAP-nat X w,
+    \ G A Y X h w W f i -> PosetLevA[G, A].levAP-act Y X h w W f i,
+    \ G A e X w -> PosetEv[G, A, e].endT-E X w.1 w.2,
+    \ G A X x t tp tn -> PosetLevA[G, A].lamAP X x t tp,
+    \ G A X x t tp tn W f i -> PosetLevA[G, A].levAP-lam X x t tp tn W f i,
+    \ G A X w w' q -> PosetLevA[G, A].levAP-ext X w w' q] ;
+
+-- the connections on the poset interval, as an instance of the base's
+module PCnB = BaseP.Cn[cIp, cIp-nat, cIp-jsrc, cIp-jtgt, cIp-isrc, cIp-itgt] ;
+
+-- for posets: composition in line form gives fibrancy, with no box over a cylinder
+module PosetFill (G : PCtx) (A : PTy[G]) (d : Bool) (ca : CompAtP[posetPath, G, A, src d, tgt d].CompAt) {
+  fibAt : LineFib[G, A].FibAt (src d) = PCnB.GFillFib[a].FillLineFib[posetPath, posetConn, G, A, d, ca].fibAt ;
+} ;

@@ -1,0 +1,13 @@
+-- CompDA.seg: MODEL/Poset/CompDA.agda.  A composition structure on A gives
+-- a composition for DA from 0 to 1: box filling gives horn filling
+-- (BoxHorn), and horn filling gives composition for DA (Lemma 2.1,
+-- FillComp).
+
+level a ;
+open Constr[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+
+compDA (G : PCtx) (A : PTy[G]) (c : Box[a, a].Boxes[G, A].Comp)
+  : Box[a, a].Boxes[G, D[a].DT[G, A].DA].CompOp[e0, e1] =
+  FillComp[a].lemma21 G A (BoxHorn[a].CH[G, A].comp-to-horn c) ;

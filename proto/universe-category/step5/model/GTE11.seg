@@ -1,0 +1,83 @@
+-- GTE11.seg (inside IvBase.Cn): transport along a line, part 11: the
+-- extension agrees with the sides (kside).  On a side l of p at f, the
+-- extension restricted is the side's fibre element v: the same point, the
+-- B part by GTE5's bside, and the path read pointwise (saInj): the
+-- composite pnew agrees with the side of the path problem (cside), whose
+-- end at tgt d is, by GTE8, the square at i = tgt d, i.e. the path of v.
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module KS (G : PCtx) (A : PTy[G]) (d : Bool) (ca : CompAtP[GFam[lv].famPath, G, A, src d, tgt d].CompAt)
+  (cb : CompAtP[GFam[lv].famPath, G, A, tgt d, src d].CompAt)
+  (c01 : CompAtP[GFam[lv].famPath, G, A, e0, e1].CompAt)
+  (D : PCtx) (ln : PSub[D, GFam[lv].famPath.pth G]) {
+  module FM = GFam[lv] ;
+  module EX = GTE10[lv].Ext[G, A, d, ca, cb, c01, D, ln] ;
+  module PN = EX.PN ;
+  module B = EX.B ;
+  module KK = EX.KK ;
+  module HF = EX.HF ;
+  module TA = EX.TA ;
+  module KP = EX.KP ;
+  module CP2 = EX.CP2 ;
+  module L2T = LevKit[FM.famPath, FM.famConn, KP.K2, KP.PT2.PathP, tgt d] ;
+
+  module Sd (X : Ob) (w : HF.TA.EI X) (p : B.FP.Partial[X, w]) (l : Fin p.pr) (W : Ob) (f : Hom W X)
+    (h : Lands W X (p.ps l).pQ f) {
+    module XB = EX.Bx[X, w, p] ;
+    module P9 = XB.P9 ;
+    module SL = P9.SL[l, W, f, h] ;
+    module Q = SL.Q ;
+
+    v : HF.TF.EI W = (p.ps l).pv W f h ;
+
+    kv : HF.TF.EI X = (w, XB.kop) ;
+
+    -- the end of the side of the path problem, read at (g , i)
+    sE (W' : Ob) (g : Hom W' W) (i : Hom W' Iv) : TA.EI W' = (CP2.endL W SL.pv).2.1.1 W' g i ;
+
+    sE-v (W' : Ob) (g : Hom W' W) (i : Hom W' Iv) : Id (TA.EI W') (sE W' g i) (EX.rdA W' (HF.fibL W v W' g i)) =
+      calc (TA.EI W') {
+          (CP2.endL W SL.pv).2.1.1 W' g i
+        =< apH (\ z -> z.2.1.1 W' g i) (L2T.endL-lev W (CP2.EK.lineL W SL.pv)) >
+          (FM.famConn.levA KP.K2 KP.PT2.PathP W (CP2.EK.lineL W SL.pv) W (idH W) (ptH W (tgt d))).2.1.1 W' g i
+        =< apH (\ z -> z.2.1.1 W' g i) (SL.pv-lev W (idH W) (ptH W (tgt d))) >
+          (Q.sqV W' (compH W' W W (idH W) g) i).2.1.1 W' (idH W') (compH W' W Iv (ptH W (tgt d)) g)
+        =< apH (\ k -> (Q.sqV W' (compH W' W W (idH W) g) i).2.1.1 W' (idH W') k) (ptH-nat W' W g (tgt d)) >
+          (Q.sqV W' (compH W' W W (idH W) g) i).2.1.1 W' (idH W') (ptH W' (tgt d))
+        =< KK.PT.end1g W' (Q.sqV W' (compH W' W W (idH W) g) i).1 (Q.sqV W' (compH W' W W (idH W) g) i).2 W' (idH W') >
+          KK.bE W' (KK.K.act W' W' (idH W') (Q.sqV W' (compH W' W W (idH W) g) i).1)
+        =< apH (KK.bE W') (transH (KK.K.act-id W' (Q.sqV W' (compH W' W W (idH W) g) i).1)
+                                  (FM.famConn.levA-pt KK.K KK.PT.PathP W Q.sqL W' (compH W' W W (idH W) g) i)) >
+          KK.bE W' (Q.OW.L.lw W' (compH W' W W (idH W) g) i)
+        =< apH (\ k -> EX.rdA W' (HF.fibL W v W' k i)) (comp-idl W' W g) >
+          EX.rdA W' (HF.fibL W v W' g i) } ;
+
+    -- the path of the extension, along f, is that of v
+    ql (W' : Ob) (g : Hom W' W) (i : Hom W' Iv)
+      : Id (HF.TA.EI W') (HF.fibL W (HF.TF.E.act W X f kv) W' g i) (HF.fibL W v W' g i) =
+      EX.saInj W' (XB.t W' (compH W' W X f g) i) (HF.fibL W v W' g i)
+        (transH (symH (GPR.PshL[D].actC W' W X f g w.1))
+          (transH (apH (D.act W' W g) (symH (apH {HF.TA.EI W} {W0.Ix (D.ob W)} (\ z -> z.1) ((p.ps l).ppt W f h))))
+                  (symH (HF.fibL-pt W v W' g i))))
+        (transH (XB.t-rd W' (compH W' W X f g) i)
+          (transH (apH (\ z -> z.2.1.1 W' g i) (P9.pnew-cs l W f h)) (sE-v W' g i))) ;
+
+    kside : Id (HF.TF.EI W) (HF.TF.E.act W X f kv) v =
+      HF.fibE-eq W (HF.TF.E.act W X f kv) v (symH ((p.ps l).ppt W f h))
+        (transH (HF.fibB-act W X f kv) (B.Box[X, w, p].BS[l, W, f, h].bside))
+        ql ;
+
+    opaque sE-v ; opaque ql ;
+  } ;
+} ;

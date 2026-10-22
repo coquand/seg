@@ -1,0 +1,225 @@
+-- Equiv.seg: MODEL/Poset/Equiv.agda.  Maps between types, their fibres,
+-- and equivalence structures (sumcoll2 3.6).
+--
+--   PMap[D, B, A]   a map alpha : B -> A over D, given on the total
+--                   presheaves (mE), over the identity of D, natural
+--   FibT alpha      the fibre type over D.A: at (X , (x , a)) the triples
+--                   (b , p , ends) with b in B(X , x), p a path in A at
+--                   X * [1] from alpha b (at 0) to a (at 1); end point
+--                   conditions stated in E
+--   EquivOp alpha   ContrOp (D.A) (FibT alpha): a uniform extension of
+--                   partial elements of the fibres.  A STRUCTURE, like
+--                   CompOp.
+--   mkFibE, fibB, fibP and their laws: elements of the fibre type read in
+--   E, so that Theorem 7 never transports.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module FibM = Fib[a, a] ;
+module FPa = FibPath[a, a] ;
+module CN = Conn[a] ;
+open VCode[a] ;
+module CF = Cofib[a] ;
+
+------------------------------------------------------------------------
+-- Maps between types over the same context
+
+module PMap (D : PCtx) (B A : PTy[D]) {
+  mE (X : Ob) (w : W0.Ix ((extP D B).ob X)) : W0.Ix ((extP D A).ob X) ;
+  mpt (X : Ob) (w : W0.Ix ((extP D B).ob X)) : Id (W0.Ix (D.ob X)) (mE X w).1 w.1 ;
+  mnat (Y X : Ob) (h : Hom Y X) (w : W0.Ix ((extP D B).ob X))
+    : Id (W0.Ix ((extP D A).ob Y)) (mE Y ((extP D B).act Y X h w)) ((extP D A).act Y X h (mE X w)) ;
+} ;
+
+------------------------------------------------------------------------
+-- The fibre type
+
+module FibTy (D : PCtx) (B A : PTy[D]) (al : PMap[D, B, A]) {
+  module TA = PR.TyL[D, A] ;
+  module TB = PR.TyL[D, B] ;
+  module DL = PR.PshL[D] ;
+  module KA = FibM.Kit[D, A] ;
+  module KB = FibM.Kit[D, B] ;
+
+  EA : PCtx = TA.E ;
+  EB : PCtx = TB.E ;
+
+  pXO (X : Ob) (x : W0.Ix (D.ob X)) : W0.Ix (D.ob (prodP X Iv)) = D.act (prodP X Iv) X (pX X) x ;
+
+  -- the two ends of a path p at X * [1] over pXO x
+  endE (X : Ob) (x : W0.Ix (D.ob X)) (p : TA.T (prodP X Iv) (pXO X x)) (e : El Iv) : TA.EI X =
+    EA.act X (prodP X Iv) (lid X e) (pXO X x, p) ;
+
+  EndsT (X : Ob) (w : TA.EI X) (b : TB.T X w.1) (p : TA.T (prodP X Iv) (pXO X w.1)) : U a =
+    (q : Id (TA.EI X) (endE X w.1 p e0) (al.mE X (w.1, b))) * Id (TA.EI X) (endE X w.1 p e1) w ;
+
+  -- the code is mkV with an opaque embedding, so that two codes are
+  -- compared through their arguments only
+  fibCode (X : Ob) (w : TA.EI X) : W0.V =
+    W0.SigV (B.tob X w.1) (\ b ->
+    W0.SigV (A.tob (prodP X Iv) (pXO X w.1)) (\ p ->
+    W0.SigV (W0.IdV (EA.ob X) (endE X w.1 p e0) (al.mE X (w.1, b))) (\ q ->
+            W0.IdV (EA.ob X) (endE X w.1 p e1) w))) ;
+
+  fibF (X : Ob) (w : TA.EI X) (z : W0.Ix (fibCode X w)) : W0.V = W0.ev (fibCode X w) z ;
+
+  fibInj (X : Ob) (w : TA.EI X) : W0.Inj (W0.Ix (fibCode X w)) (fibF X w) =
+    \ z z' P -> W0.emb-inj (W0.Ix (fibCode X w)) (W0.elt (fibCode X w).1) (W0.embV (fibCode X w)) z z' P ;
+
+  fibF-ev (X : Ob) (w : TA.EI X) (z : W0.Ix (fibCode X w)) : Id W0.V (fibF X w z) (W0.ev (fibCode X w) z) = refl (W0.ev (fibCode X w) z) ;
+
+  opaque fibF ; opaque fibInj ; opaque fibF-ev ;
+
+  FibO (X : Ob) (w : TA.EI X) : W0.V = W0.mkV (W0.Ix (fibCode X w)) (fibF X w) (fibInj X w) ;
+
+  -- the bridge to the raw code (propositional; see VCode)
+  FibO-code (X : Ob) (w : TA.EI X) : Id W0.V (FibO X w) (fibCode X w) = mkV-f (fibCode X w) (fibF X w) (fibInj X w) (fibF-ev X w) ;
+
+  eqPX (J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) (y : W0.Ix (D.ob J)) (e : Id (W0.Ix (D.ob J)) (D.act J I f x) y)
+    : Id (W0.Ix (D.ob (prodP J Iv))) (D.act (prodP J Iv) (prodP I Iv) (cylH J I f) (pXO I x)) (pXO J y) =
+    transH (DL.actSq (prodP J Iv) (prodP I Iv) J I (pX I) (cylH J I f) f (pX J) (CN.Nat[true, J, I, f].pX-cylPW) x) (apH (pXO J) e) ;
+
+  pAct (J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) (y : W0.Ix (D.ob J)) (e : Id (W0.Ix (D.ob J)) (D.act J I f x) y)
+    (p : TA.T (prodP I Iv) (pXO I x)) : TA.T (prodP J Iv) (pXO J y) =
+    A.tact (prodP J Iv) (prodP I Iv) (cylH J I f) (pXO I x) (pXO J y) (eqPX J I f x y e) p ;
+
+  pAct-E (J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) (y : W0.Ix (D.ob J)) (e : Id (W0.Ix (D.ob J)) (D.act J I f x) y)
+    (p : TA.T (prodP I Iv) (pXO I x))
+    : Id (TA.EI (prodP J Iv)) (pXO J y, pAct J I f x y e p) (EA.act (prodP J Iv) (prodP I Iv) (cylH J I f) (pXO I x, p)) =
+    symH (TA.pr-tact (prodP J Iv) (prodP I Iv) (cylH J I f) (pXO I x) (pXO J y) (eqPX J I f x y e) p) ;
+
+  bAct-E (J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) (y : W0.Ix (D.ob J)) (e : Id (W0.Ix (D.ob J)) (D.act J I f x) y)
+    (b : TB.T I x) : Id (TB.EI J) (y, B.tact J I f x y e b) (EB.act J I f (x, b)) = symH (TB.pr-tact J I f x y e b) ;
+
+  -- the end of an acted path is the acted end
+  endAct (e' : El Iv) (J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) (y : W0.Ix (D.ob J)) (e : Id (W0.Ix (D.ob J)) (D.act J I f x) y)
+    (p : TA.T (prodP I Iv) (pXO I x))
+    : Id (TA.EI J) (endE J y (pAct J I f x y e p) e') (EA.act J I f (endE I x p e')) =
+    transH (apH (EA.act J (prodP J Iv) (lid J e')) (pAct-E J I f x y e p))
+           (TA.PE.actSq J (prodP J Iv) I (prodP I Iv) (cylH J I f) (lid J e') (lid I e') f (FPa.pwCL J I f e') (pXO I x, p)) ;
+
+  opaque eqPX ; opaque pAct-E ; opaque bAct-E ; opaque endAct ;
+
+  fibAct : TactTy EA FibO = \ J I f w w' e u ->
+    (B.tact J I f w.1 w'.1 (apH (\ z -> z.1) e) u.1,
+     (pAct J I f w.1 w'.1 (apH (\ z -> z.1) e) u.2.1,
+      (transH (endAct e0 J I f w.1 w'.1 (apH (\ z -> z.1) e) u.2.1)
+        (transH (apH (EA.act J I f) u.2.2.1)
+         (transH (symH (al.mnat J I f (w.1, u.1)))
+                 (apH (al.mE J) (symH (bAct-E J I f w.1 w'.1 (apH (\ z -> z.1) e) u.1))))),
+       transH (endAct e1 J I f w.1 w'.1 (apH (\ z -> z.1) e) u.2.1)
+        (transH (apH (EA.act J I f) u.2.2.2) e)))) ;
+
+  isProp-ends (X : Ob) (w : TA.EI X) (b : TB.T X w.1) (p : TA.T (prodP X Iv) (pXO X w.1)) : isProp (EndsT X w b p) =
+    isProp-Sigma (Id (TA.EI X) (endE X w.1 p e0) (al.mE X (w.1, b))) (\ q -> Id (TA.EI X) (endE X w.1 p e1) w)
+      (W0.isSetIx (EA.ob X) (endE X w.1 p e0) (al.mE X (w.1, b))) (\ q -> W0.isSetIx (EA.ob X) (endE X w.1 p e1) w) ;
+
+  fib-eq (X : Ob) (w : TA.EI X) (u u' : W0.Ix (FibO X w)) (P1 : Id (TB.T X w.1) u.1 u'.1)
+    (P2 : Id (TA.T (prodP X Iv) (pXO X w.1)) u.2.1 u'.2.1) : Id (W0.Ix (FibO X w)) u u' =
+    idJ (TB.T X w.1) u.1
+      (\ b2 E2 -> (p2 : TA.T (prodP X Iv) (pXO X w.1)) (q2 : EndsT X w b2 p2) -> Id (TA.T (prodP X Iv) (pXO X w.1)) u.2.1 p2
+         -> Id (W0.Ix (FibO X w)) u (b2, (p2, q2)))
+      (\ p2 q2 E3 ->
+         idJ (TA.T (prodP X Iv) (pXO X w.1)) u.2.1
+           (\ p3 E4 -> (q3 : EndsT X w u.1 p3) -> Id (W0.Ix (FibO X w)) u (u.1, (p3, q3)))
+           (\ q3 -> apH {EndsT X w u.1 u.2.1} {W0.Ix (FibO X w)} (\ z -> (u.1, (u.2.1, z))) (isProp-ends X w u.1 u.2.1 u.2.2 q3))
+           p2 E3 q2)
+      u'.1 P1 u'.2.1 u'.2.2 P2 ;
+
+  fibId : IdLaw EA FibO fibAct = \ I w e u ->
+    fib-eq I w (fibAct I I (idH I) w w e u) u (B.tact-id I w.1 (apH (\ z -> z.1) e) u.1)
+      (TA.pr-inj (prodP I Iv) (pXO I w.1) (pAct I I (idH I) w.1 w.1 (apH (\ z -> z.1) e) u.2.1) u.2.1
+        (transH (pAct-E I I (idH I) w.1 w.1 (apH (\ z -> z.1) e) u.2.1)
+                (TA.PE.actId (prodP I Iv) (cylH I I (idH I)) (FPa.pwCylId I) (pXO I w.1, u.2.1)))) ;
+
+  fibO : OLaw EA FibO fibAct = \ K J I f g w w' w'' e1 e2 e3 u ->
+    fib-eq K w'' (fibAct K I (compH K J I f g) w w'' e3 u) (fibAct K J g w' w'' e2 (fibAct J I f w w' e1 u))
+      (B.tact-o K J I f g w.1 w'.1 w''.1 (apH (\ z -> z.1) e1) (apH (\ z -> z.1) e2) (apH (\ z -> z.1) e3) u.1)
+      (TA.pr-inj (prodP K Iv) (pXO K w''.1) (pAct K I (compH K J I f g) w.1 w''.1 (apH (\ z -> z.1) e3) u.2.1)
+         (pAct K J g w'.1 w''.1 (apH (\ z -> z.1) e2) (pAct J I f w.1 w'.1 (apH (\ z -> z.1) e1) u.2.1))
+        (transH (pAct-E K I (compH K J I f g) w.1 w''.1 (apH (\ z -> z.1) e3) u.2.1)
+         (transH (symH (TA.PE.actTri (prodP K Iv) (prodP J Iv) (prodP I Iv) (cylH J I f) (cylH K J g) (cylH K I (compH K J I f g))
+                          (pw-cyl-comp K J I f g) (pXO I w.1, u.2.1)))
+          (transH (apH (EA.act (prodP K Iv) (prodP J Iv) (cylH K J g)) (symH (pAct-E J I f w.1 w'.1 (apH (\ z -> z.1) e1) u.2.1)))
+                  (symH (pAct-E K J g w'.1 w''.1 (apH (\ z -> z.1) e2) (pAct J I f w.1 w'.1 (apH (\ z -> z.1) e1) u.2.1))))))) ;
+
+  opaque fibId ; opaque fibO ;
+
+  FibT : PTy[EA] = (mkTy EA FibO fibAct fibId fibO) ;
+
+  ----------------------------------------------------------------------
+  -- Elements of the fibre type, read in E
+
+  module TF = PR.TyL[EA, FibT] ;
+
+  EF : PCtx = TF.E ;
+
+  -- the B component and the path, in E
+  fibB (X : Ob) (v : TF.EI X) : TB.EI X = (v.1.1, v.2.1) ;
+
+  fibP (X : Ob) (v : TF.EI X) : TA.EI (prodP X Iv) = (pXO X v.1.1, v.2.2.1) ;
+
+  fibB-act (Y X : Ob) (h : Hom Y X) (v : TF.EI X) : Id (TB.EI Y) (fibB Y (EF.act Y X h v)) (EB.act Y X h (fibB X v)) =
+    bAct-E Y X h v.1.1 (D.act Y X h v.1.1) (refl (D.act Y X h v.1.1)) v.2.1 ;
+
+  fibP-act (Y X : Ob) (h : Hom Y X) (v : TF.EI X)
+    : Id (TA.EI (prodP Y Iv)) (fibP Y (EF.act Y X h v)) (EA.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) (fibP X v)) =
+    pAct-E Y X h v.1.1 (D.act Y X h v.1.1) (refl (D.act Y X h v.1.1)) v.2.2.1 ;
+
+  -- the end points of the path
+  fibP-0 (X : Ob) (v : TF.EI X) : Id (TA.EI X) (EA.act X (prodP X Iv) (lid X e0) (fibP X v)) (al.mE X (fibB X v)) = v.2.2.2.1 ;
+
+  fibP-1 (X : Ob) (v : TF.EI X) : Id (TA.EI X) (EA.act X (prodP X Iv) (lid X e1) (fibP X v)) v.1 = v.2.2.2.2 ;
+
+  -- an element of the fibre type given in E
+  mkFibE (X : Ob) (w : TA.EI X) (bE : TB.EI X) (pE : TA.EI (prodP X Iv))
+    (qb : Id (W0.Ix (D.ob X)) bE.1 w.1) (qp : Id (W0.Ix (D.ob (prodP X Iv))) pE.1 (pXO X w.1))
+    (q0 : Id (TA.EI X) (EA.act X (prodP X Iv) (lid X e0) pE) (al.mE X bE)) (q1 : Id (TA.EI X) (EA.act X (prodP X Iv) (lid X e1) pE) w)
+    : TF.EI X =
+    (w, (KB.fromE X w.1 bE qb, (KA.fromE (prodP X Iv) (pXO X w.1) pE qp,
+      (transH (apH (EA.act X (prodP X Iv) (lid X e0)) (KA.fromE-eq (prodP X Iv) (pXO X w.1) pE qp))
+              (transH q0 (apH (al.mE X) (symH (KB.fromE-eq X w.1 bE qb)))),
+       transH (apH (EA.act X (prodP X Iv) (lid X e1)) (KA.fromE-eq (prodP X Iv) (pXO X w.1) pE qp)) q1)))) ;
+
+  mkFibE-pt (X : Ob) (w : TA.EI X) (bE : TB.EI X) (pE : TA.EI (prodP X Iv))
+    (qb : Id (W0.Ix (D.ob X)) bE.1 w.1) (qp : Id (W0.Ix (D.ob (prodP X Iv))) pE.1 (pXO X w.1))
+    (q0 : Id (TA.EI X) (EA.act X (prodP X Iv) (lid X e0) pE) (al.mE X bE)) (q1 : Id (TA.EI X) (EA.act X (prodP X Iv) (lid X e1) pE) w)
+    : Id (TA.EI X) (mkFibE X w bE pE qb qp q0 q1).1 w = refl w ;
+
+  mkFibE-B (X : Ob) (w : TA.EI X) (bE : TB.EI X) (pE : TA.EI (prodP X Iv))
+    (qb : Id (W0.Ix (D.ob X)) bE.1 w.1) (qp : Id (W0.Ix (D.ob (prodP X Iv))) pE.1 (pXO X w.1))
+    (q0 : Id (TA.EI X) (EA.act X (prodP X Iv) (lid X e0) pE) (al.mE X bE)) (q1 : Id (TA.EI X) (EA.act X (prodP X Iv) (lid X e1) pE) w)
+    : Id (TB.EI X) (fibB X (mkFibE X w bE pE qb qp q0 q1)) bE = KB.fromE-eq X w.1 bE qb ;
+
+  mkFibE-P (X : Ob) (w : TA.EI X) (bE : TB.EI X) (pE : TA.EI (prodP X Iv))
+    (qb : Id (W0.Ix (D.ob X)) bE.1 w.1) (qp : Id (W0.Ix (D.ob (prodP X Iv))) pE.1 (pXO X w.1))
+    (q0 : Id (TA.EI X) (EA.act X (prodP X Iv) (lid X e0) pE) (al.mE X bE)) (q1 : Id (TA.EI X) (EA.act X (prodP X Iv) (lid X e1) pE) w)
+    : Id (TA.EI (prodP X Iv)) (fibP X (mkFibE X w bE pE qb qp q0 q1)) pE = KA.fromE-eq (prodP X Iv) (pXO X w.1) pE qp ;
+
+  opaque mkFibE ; opaque mkFibE-pt ; opaque mkFibE-B ; opaque mkFibE-P ;
+
+  -- elements of the fibre type are determined by their point, B component and path
+  fibE-eq (X : Ob) (v v' : TF.EI X) (P : Id (TA.EI X) v.1 v'.1) (qb : Id (TB.EI X) (fibB X v) (fibB X v'))
+    (qp : Id (TA.EI (prodP X Iv)) (fibP X v) (fibP X v')) : Id (TF.EI X) v v' =
+    idJ (TA.EI X) v.1
+      (\ w2 P2 -> (u2 : W0.Ix (FibO X w2)) -> Id (TB.EI X) (fibB X v) (fibB X (w2, u2)) -> Id (TA.EI (prodP X Iv)) (fibP X v) (fibP X (w2, u2))
+         -> Id (TF.EI X) v (w2, u2))
+      (\ u2 qb2 qp2 -> apH {W0.Ix (FibO X v.1)} {TF.EI X} (\ z -> (v.1, z))
+         (fib-eq X v.1 v.2 u2 (TB.pr-inj X v.1.1 v.2.1 u2.1 qb2) (TA.pr-inj (prodP X Iv) (pXO X v.1.1) v.2.2.1 u2.2.1 qp2)))
+      v'.1 P v'.2 qb qp ;
+} ;
+
+------------------------------------------------------------------------
+-- Equivalence structures
+
+EquivOp (D : PCtx) (B A : PTy[D]) (al : PMap[D, B, A]) : U a+ = CF.Partials[extP D A, FibTy[D, B, A, al].FibT].ContrOp ;

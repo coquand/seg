@@ -1,0 +1,159 @@
+-- GConn.seg: the exponential law of a path structure over any base
+-- (generic home of PathConn.seg): lines as natural families over the
+-- generalised points (f , i) : W -> X * I (lev / lam, levA / lamA, read in
+-- E), and ConnKit: the connection line connL (with the interval
+-- connections of IvConn), the connected line connA, the constant lines.
+
+level l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+module W0 = V[l] ;
+open Arith[a] ;
+
+  module GPR = GPre[l] ;
+  open GPR.PS ;
+  open GLine[l] ;
+
+  ------------------------------------------------------------------------
+  -- The constructions on lines used by the line form of MkFill
+
+  module ConnKit (P : PathStr) (C : PathConn[P]) (G : PCtx) (A : PTy[G]) (d : Bool) {
+    module GL = GPR.PshL[G] ;
+    module TA = GPR.TyL[G, A] ;
+    module TL = GPR.TyL[P.pth G, P.pthTy G A] ;
+    module LP = LineFibP[P, G, A] ;
+
+    ----------------------------------------------------------------------
+    -- the connection line  j |-> z (c (i , j))
+
+    cIeq (V' V W : Ob) (g : Hom V' V) (f : Hom V W) (i : Hom W Iv) (j : Hom V Iv)
+      : Id (Hom V' Iv) (compH V' V Iv (cI d V (compH V W Iv i f) j) g)
+                       (cI d V' (compH V' W Iv i (compH V' V W f g)) (compH V' V Iv j g)) =
+      transH (cI-nat d V' V g (compH V W Iv i f) j)
+             (apH (\ k -> cI d V' k (compH V' V Iv j g)) (comp-assoc V' V W Iv i f g)) ;
+
+    connT (W : Ob) (z : W0.Ix ((P.pth G).ob W)) (i : Hom W Iv) : C.FamTy G W =
+      \ V g j -> C.lev G W z V g (cI d V (compH V W Iv i g) j) ;
+
+    connN (W : Ob) (z : W0.Ix ((P.pth G).ob W)) (i : Hom W Iv) : C.FamNat G W (connT W z i) = \ V' V g f j ->
+      transH (C.lev-nat G W z V' V g f (cI d V (compH V W Iv i f) j))
+             (apH (\ k -> C.lev G W z V' (compH V' V W f g) k) (cIeq V' V W g f i j)) ;
+
+    connL (W : Ob) (z : W0.Ix ((P.pth G).ob W)) (i : Hom W Iv) : W0.Ix ((P.pth G).ob W) = C.lam G W (connT W z i) (connN W z i) ;
+
+    connL-lev (W : Ob) (z : W0.Ix ((P.pth G).ob W)) (i : Hom W Iv) (V : Ob) (g : Hom V W) (j : Hom V Iv)
+      : Id (W0.Ix (G.ob V)) (C.lev G W (connL W z i) V g j) (C.lev G W z V g (cI d V (compH V W Iv i g) j)) =
+      C.lev-lam G W (connT W z i) (connN W z i) V g j ;
+
+    opaque connL ;
+
+    -- the restricted connection line is the connection line of the restriction
+    connL-act (W' W : Ob) (g : Hom W' W) (z : W0.Ix ((P.pth G).ob W)) (i : Hom W Iv)
+      : Id (W0.Ix ((P.pth G).ob W')) ((P.pth G).act W' W g (connL W z i)) (connL W' ((P.pth G).act W' W g z) (compH W' W Iv i g)) =
+      C.lev-ext G W' ((P.pth G).act W' W g (connL W z i)) (connL W' ((P.pth G).act W' W g z) (compH W' W Iv i g)) (\ V f j ->
+        calc (W0.Ix (G.ob V)) {
+            C.lev G W' ((P.pth G).act W' W g (connL W z i)) V f j
+          =< C.lev-act G W' W g (connL W z i) V f j >
+            C.lev G W (connL W z i) V (compH V W' W g f) j
+          =< connL-lev W z i V (compH V W' W g f) j >
+            C.lev G W z V (compH V W' W g f) (cI d V (compH V W Iv i (compH V W' W g f)) j)
+          =< apH (\ k -> C.lev G W z V (compH V W' W g f) (cI d V k j)) (symH (comp-assoc V W' W Iv i g f)) >
+            C.lev G W z V (compH V W' W g f) (cI d V (compH V W' Iv (compH W' W Iv i g) f) j)
+          =< symH (C.lev-act G W' W g z V f (cI d V (compH V W' Iv (compH W' W Iv i g) f) j)) >
+            C.lev G W' ((P.pth G).act W' W g z) V f (cI d V (compH V W' Iv (compH W' W Iv i g) f) j)
+          =< symH (connL-lev W' ((P.pth G).act W' W g z) (compH W' W Iv i g) V f j) >
+            C.lev G W' (connL W' ((P.pth G).act W' W g z) (compH W' W Iv i g)) V f j }) ;
+
+    ----------------------------------------------------------------------
+    -- constant lines
+
+    constT (W : Ob) (u : W0.Ix (G.ob W)) : C.FamTy G W = \ V g j -> G.act V W g u ;
+
+    constN (W : Ob) (u : W0.Ix (G.ob W)) : C.FamNat G W (constT W u) = \ V' V g f j -> GL.actC V' V W f g u ;
+
+    constG (W : Ob) (u : W0.Ix (G.ob W)) : W0.Ix ((P.pth G).ob W) = C.lam G W (constT W u) (constN W u) ;
+
+    constG-lev (W : Ob) (u : W0.Ix (G.ob W)) (V : Ob) (g : Hom V W) (j : Hom V Iv)
+      : Id (W0.Ix (G.ob V)) (C.lev G W (constG W u) V g j) (G.act V W g u) =
+      C.lev-lam G W (constT W u) (constN W u) V g j ;
+
+    opaque constG ;
+
+    -- the end at e, restricted along g, is the evaluation at (g , e)
+    ev-act (e : IPt) (W : Ob) (z : W0.Ix ((P.pth G).ob W)) (V : Ob) (g : Hom V W)
+      : Id (W0.Ix (G.ob V)) (G.act V W g ((P.pev G e).nt W z)) (C.lev G W z V g (ptH V e)) =
+      calc (W0.Ix (G.ob V)) {
+          G.act V W g ((P.pev G e).nt W z)
+        =< apH (G.act V W g) (C.lev-ev G e W z) >
+          G.act V W g (C.lev G W z W (idH W) (ptH W e))
+        =< C.lev-nat G W z V W g (idH W) (ptH W e) >
+          C.lev G W z V (compH V W W (idH W) g) (compH V W Iv (ptH W e) g)
+        =< apH (\ k -> C.lev G W z V k (compH V W Iv (ptH W e) g)) (comp-idl V W g) >
+          C.lev G W z V g (compH V W Iv (ptH W e) g)
+        =< apH (\ k -> C.lev G W z V g k) (ptH-nat V W g e) >
+          C.lev G W z V g (ptH V e) } ;
+
+    -- on the face i = src d the connection line is constant
+    connL-src (W : Ob) (z : W0.Ix ((P.pth G).ob W)) (i : Hom W Iv) (q : Id (Hom W Iv) i (ptH W (src d)))
+      : Id (W0.Ix ((P.pth G).ob W)) (connL W z i) (constG W ((P.pev G (src d)).nt W z)) =
+      C.lev-ext G W (connL W z i) (constG W ((P.pev G (src d)).nt W z)) (\ V g j ->
+        calc (W0.Ix (G.ob V)) {
+            C.lev G W (connL W z i) V g j
+          =< connL-lev W z i V g j >
+            C.lev G W z V g (cI d V (compH V W Iv i g) j)
+          =< apH (\ k -> C.lev G W z V g (cI d V k j))
+                 (transH (apH (\ k -> compH V W Iv k g) q) (ptH-nat V W g (src d))) >
+            C.lev G W z V g (cI d V (ptH V (src d)) j)
+          =< apH (\ k -> C.lev G W z V g k) (cI-isrc d V j) >
+            C.lev G W z V g (ptH V (src d))
+          =< symH (ev-act (src d) W z V g) >
+            G.act V W g ((P.pev G (src d)).nt W z)
+          =< symH (constG-lev W ((P.pev G (src d)).nt W z) V g j) >
+            C.lev G W (constG W ((P.pev G (src d)).nt W z)) V g j }) ;
+
+    ----------------------------------------------------------------------
+    -- the connected line in A, and constant lines in A
+
+    connAT (W : Ob) (L : TL.EI W) (i : Hom W Iv) : C.FamA G A W =
+      \ V g j -> C.levA G A W L V g (cI d V (compH V W Iv i g) j) ;
+
+    connAP (W : Ob) (L : TL.EI W) (i : Hom W Iv) : C.FamAPt G A W (connL W L.1 i) (connAT W L i) = \ V g j ->
+      transH (C.levA-pt G A W L V g (cI d V (compH V W Iv i g) j)) (symH (connL-lev W L.1 i V g j)) ;
+
+    connAN (W : Ob) (L : TL.EI W) (i : Hom W Iv) : C.FamANat G A W (connAT W L i) = \ V' V g f j ->
+      transH (C.levA-nat G A W L V' V g f (cI d V (compH V W Iv i f) j))
+             (apH (\ k -> C.levA G A W L V' (compH V' V W f g) k) (cIeq V' V W g f i j)) ;
+
+    connA (W : Ob) (L : TL.EI W) (i : Hom W Iv) : TL.EI W =
+      (connL W L.1 i, C.lamA G A W (connL W L.1 i) (connAT W L i) (connAP W L i) (connAN W L i)) ;
+
+    connA-lev (W : Ob) (L : TL.EI W) (i : Hom W Iv) (V : Ob) (g : Hom V W) (j : Hom V Iv)
+      : Id (TA.EI V) (C.levA G A W (connA W L i) V g j) (C.levA G A W L V g (cI d V (compH V W Iv i g) j)) =
+      C.levA-lam G A W (connL W L.1 i) (connAT W L i) (connAP W L i) (connAN W L i) V g j ;
+
+    connA-pt (W : Ob) (L : TL.EI W) (i : Hom W Iv) : Id (W0.Ix ((P.pth G).ob W)) (connA W L i).1 (connL W L.1 i) =
+      refl (connL W L.1 i) ;
+
+    constAT (W : Ob) (u : TA.EI W) : C.FamA G A W = \ V g j -> TA.E.act V W g u ;
+
+    constAP (W : Ob) (u : TA.EI W) : C.FamAPt G A W (constG W u.1) (constAT W u) = \ V g j -> symH (constG-lev W u.1 V g j) ;
+
+    constAN (W : Ob) (u : TA.EI W) : C.FamANat G A W (constAT W u) = \ V' V g f j -> TA.PE.actC V' V W f g u ;
+
+    constA (W : Ob) (u : TA.EI W) : TL.EI W = (constG W u.1, C.lamA G A W (constG W u.1) (constAT W u) (constAP W u) (constAN W u)) ;
+
+    constA-lev (W : Ob) (u : TA.EI W) (V : Ob) (g : Hom V W) (j : Hom V Iv)
+      : Id (TA.EI V) (C.levA G A W (constA W u) V g j) (TA.E.act V W g u) =
+      C.levA-lam G A W (constG W u.1) (constAT W u) (constAP W u) (constAN W u) V g j ;
+
+    constA-pt (W : Ob) (u : TA.EI W) : Id (W0.Ix ((P.pth G).ob W)) (constA W u).1 (constG W u.1) = refl (constG W u.1) ;
+
+    opaque connA ; opaque constA ;
+
+    -- the end of a constant line
+    constA-end (e : IPt) (W : Ob) (u : TA.EI W)
+      : Id (TA.EI W) (EndKit[P, G, A, e].endE W ((P.pevA G A e).mE W (constA W u))) u =
+      transH (LevKit[P, C, G, A, e].endL-lev W (constA W u)) (transH (constA-lev W u W (idH W) (ptH W e)) (TA.E.act-id W u)) ;
+  } ;

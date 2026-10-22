@@ -1,0 +1,71 @@
+-- GExtFibU.seg (inside IvBase.FaU, any base; Step 2 probe): Theorem 7 once,
+-- at level a+, on the universal glue data.  The fillers of AU and BU are
+-- El's universal fillers (kU0 , kU1, the instance's) pulled back along the
+-- code maps pA / bmap (GTransfer.TrF with identity fibre maps); the
+-- equivalence is the glued eqU (GExtEq); GExtFib gives the fibration of
+-- ExtBig.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open Encode[a, a+] ;
+module L = GPre[a+].PS ;
+module LP = GPre[a+] ;
+
+module FU (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[GYon[a].yP X]) -> Enc (Cl (GYon[a].yP X) A))
+  (kU0 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e0)
+  (kU1 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e1)
+  (kU0e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].SFm.SF].KESI kU0)
+  (kU1e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].SFm.SF].KESI kU1) {
+  module UU = GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module UB = GExtBig.UB[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module EQm = GExtEq.EQ[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module TE = LP.TyL[UU.UCtx, UU.EGen] ;
+
+  -- an element of E_EGen read at two equal codes
+  pairT (V W : Ob) (g : Hom V W) (F : UU.U0 W) (F' : UU.U0 V) (e : Id (UU.U0 V) (UU.uAct V W g F) F') (z : W0.Ix (UU.fib0 W F))
+    : Id (TE.EI V) (F', UU.tactG V W g F F' e z) (UU.uAct V W g F, UU.tactG V W g F (UU.uAct V W g F) (refl (UU.uAct V W g F)) z) =
+    idJ (UU.U0 V) (UU.uAct V W g F)
+      (\ F2 e2 -> Id (TE.EI V) (F2, UU.tactG V W g F F2 e2 z) (UU.uAct V W g F, UU.tactG V W g F (UU.uAct V W g F) (refl (UU.uAct V W g F)) z))
+      (refl (UU.uAct V W g F, UU.tactG V W g F (UU.uAct V W g F) (refl (UU.uAct V W g F)) z)) F' e ;
+
+  module TAU = LP.TyL[UB.GDr, UB.AU] ;
+
+  PhNA (V W : Ob) (g : Hom V W) (w : TAU.EI W)
+    : Id (TE.EI V) (UB.pA.nt V (TAU.E.act V W g w).1, (TAU.E.act V W g w).2) (TE.E.act V W g (UB.pA.nt W w.1, w.2)) =
+    pairT V W g (UB.pA.nt W w.1) (UB.pA.nt V (UB.GDr.act V W g w.1))
+      (L.ntEq UB.GDr UU.UCtx UB.pA V W g w.1 (UB.GDr.act V W g w.1) (refl (UB.GDr.act V W g w.1))) w.2 ;
+
+  PhNB (V W : Ob) (g : Hom V W) (w : UB.TBU.EI W)
+    : Id (TE.EI V) (UB.bmap.nt V (UB.TBU.E.act V W g w).1, (UB.TBU.E.act V W g w).2) (TE.E.act V W g (UB.bmap.nt W w.1, w.2)) =
+    pairT V W g (UB.bmap.nt W w.1) (UB.bmap.nt V (UB.CU.resCtx.act V W g w.1))
+      (L.ntEq UB.CU.resCtx UU.UCtx UB.bmap V W g w.1 (UB.CU.resCtx.act V W g w.1) (refl (UB.CU.resCtx.act V W g w.1))) w.2 ;
+
+  module FA0 = GTransfer[a+, a+, a+].TrF[UB.GDr, UB.AU, UU.UCtx, UU.EGen, UB.pA.nt, UB.pA.nt-nat,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, PhNA, e0, kU0, kU0e] ;
+  module FA1 = GTransfer[a+, a+, a+].TrF[UB.GDr, UB.AU, UU.UCtx, UU.EGen, UB.pA.nt, UB.pA.nt-nat,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, PhNA, e1, kU1, kU1e] ;
+  module FB0 = GTransfer[a+, a+, a+].TrF[UB.CU.resCtx, UB.BU, UU.UCtx, UU.EGen, UB.bmap.nt, UB.bmap.nt-nat,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, PhNB, e0, kU0, kU0e] ;
+  module FB1 = GTransfer[a+, a+, a+].TrF[UB.CU.resCtx, UB.BU, UU.UCtx, UU.EGen, UB.bmap.nt, UB.bmap.nt-nat,
+    \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, PhNB, e1, kU1, kU1e] ;
+
+  -- Theorem 7, once, at the universal data
+  module EF = GExtFib[a+].ExtFib[UB.GDr, UB.AU, UB.psiU, UB.BU, UB.alU, FA0.fibAt, FA1.fibAt, FB0.fibAt, FB1.fibAt,
+    FA0.kesi, FA1.kesi, FB0.kesi, FB1.kesi, EQm.eqU.1, EQm.eqU.2] ;
+
+  fibBig : GFibE[a+].FibEL UB.GDr = EF.extFib ;
+} ;

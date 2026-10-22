@@ -1,0 +1,130 @@
+-- ExtBox.seg: MODEL/Poset/ExtBox.agda.  Two operations on open boxes, for
+-- Theorem 7.
+--
+--   MapBox m     a box for C mapped along a map m : C -> A over G
+--                (unglueing a box of Ext(alpha) along ext(alpha)); mapB
+--                commutes with restriction (mapB-restr).
+--   BoxPlus      in ExtBox2 (split for the 10 s rule).
+--
+-- Agda's where-blocks are the segments MB, MR.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module FPa = FibPath[a, a] ;
+module CN = Conn[a] ;
+open Cofib[a] ;
+open Equiv[a] ;
+open ExtKit[a] ;
+
+------------------------------------------------------------------------
+-- Boxes along a map
+
+module MapBox (G : PCtx) (C A : PTy[G]) (m : PMap[G, C, A]) (eS : El Iv) {
+  module TC = PR.TyL[G, C] ;
+  module TA = PR.TyL[G, A] ;
+  module BC = BXm.Boxes[G, C] ;
+  module BA = BXm.Boxes[G, A] ;
+  module KA = FibM.Kit[G, A] ;
+
+  EC : PCtx = TC.E ;
+  EA : PCtx = TA.E ;
+
+  module MB (X : Ob) (b : BC.Box[eS, X]) {
+    rho : TA.Pt (prodP X Iv) = b.brho ;
+
+    uE : TA.EI X = m.mE X (BC.lidE eS X rho b.bu) ;
+
+    upt : Id (TA.Pt X) uE.1 (G.act X (prodP X Iv) (lid X eS) rho) = m.mpt X (BC.lidE eS X rho b.bu) ;
+
+    v (j : Fin b.br) : KA.VTy X (b.bs j).sQ = \ W psi i -> m.mE W ((b.bs j).svE W psi i) ;
+
+    vpt (j : Fin b.br) : KA.VPt X rho (b.bs j).sQ (v j) = \ W psi i -> m.mpt W ((b.bs j).svE W psi i) ;
+
+    vnat (j : Fin b.br) : KA.VNat X (b.bs j).sQ (v j) = \ W' W chi psi i i' ->
+      transH (symH (m.mnat W' W chi ((b.bs j).svE W psi i))) (apH (m.mE W') ((b.bs j).snat W' W chi psi i i')) ;
+
+    S (j : Fin b.br) : BA.Side[X, rho] = KA.mkSideE X rho (b.bs j).sQ (v j) (vpt j) (vnat j) ;
+
+    S-E (j : Fin b.br) (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X (b.bs j).sQ psi)
+      : Id (TA.EI W) ((S j).svE W psi i) (v j W psi i) = KA.mkSideE-E X rho (b.bs j).sQ (v j) (vpt j) (vnat j) W psi i ;
+
+    u : TA.T X (G.act X (prodP X Iv) (lid X eS) rho) = KA.fromE X (G.act X (prodP X Iv) (lid X eS) rho) uE upt ;
+
+    u-E : Id (TA.EI X) (BA.lidE eS X rho u) uE = KA.fromE-eq X (G.act X (prodP X Iv) (lid X eS) rho) uE upt ;
+
+    cs : BA.CsTy X rho b.br S = \ j k W psi i i' ->
+      TA.pr-inj W (G.act W (prodP X Iv) psi rho) ((S j).sv W psi i) ((S k).sv W psi i')
+        (transH (S-E j W psi i)
+         (transH (apH (m.mE W) (apH {TC.T W (G.act W (prodP X Iv) psi rho)} {TC.EI W} (\ z -> (G.act W (prodP X Iv) psi rho, z)) (b.bcs j k W psi i i')))
+                 (symH (S-E k W psi i')))) ;
+
+    cb : BA.CbTy eS X rho u b.br S = \ j W phi i ->
+      transH (apH (EA.act W X phi) u-E)
+       (transH (symH (m.mnat W X phi (BC.lidE eS X rho b.bu)))
+        (transH (apH (m.mE W) (b.bcb j W phi i))
+                (symH (S-E j W (compH W X (prodP X Iv) (lid X eS) phi) i)))) ;
+
+    opaque cs ; opaque cb ;
+
+    box : BA.Box[eS, X] = (BA.mkBox eS X rho u b.br S cs cb) ;
+  } ;
+
+  mapB (X : Ob) (b : BC.Box[eS, X]) : BA.Box[eS, X] = MB[X, b].box ;
+
+  mapB-lid (X : Ob) (b : BC.Box[eS, X])
+    : Id (TA.EI X) (BA.lidE eS X (mapB X b).brho (mapB X b).bu) (m.mE X (BC.lidE eS X b.brho b.bu)) = MB[X, b].u-E ;
+
+  mapB-sv (X : Ob) (b : BC.Box[eS, X]) (j : Fin b.br) (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X (b.bs j).sQ psi)
+    : Id (TA.EI W) (((mapB X b).bs j).svE W psi i) (m.mE W ((b.bs j).svE W psi i)) = MB[X, b].S-E j W psi i ;
+
+  module MR (Y X : Ob) (h : Hom Y X) (b : BC.Box[eS, X]) {
+    module MX = MB[X, b] ;
+    module MY = MB[Y, BC.restrict eS Y X h b] ;
+    module RA = BA.Restrict[eS, Y, X, h] ;
+    module RC = BC.Restrict[eS, Y, X, h] ;
+
+    bb : BA.Box[eS, Y] = BA.restrict eS Y X h (mapB X b) ;
+    bb' : BA.Box[eS, Y] = mapB Y (BC.restrict eS Y X h b) ;
+
+    cyl : Hom (prodP Y Iv) (prodP X Iv) = cylH Y X h ;
+
+    Elid : Id (TA.EI Y) (BA.lidE eS Y bb.brho bb.bu) (BA.lidE eS Y bb'.brho bb'.bu) =
+      transH (RA.ruE b.brho MX.u)
+       (transH (apH (EA.act Y X h) MX.u-E)
+        (transH (symH (m.mnat Y X h (BC.lidE eS X b.brho b.bu)))
+         (transH (apH (m.mE Y) (symH (RC.ruE b.brho b.bu)))
+                 (symH MY.u-E)))) ;
+
+    Ev (j : Fin b.br) (W : Ob) (psi : Hom W (prodP Y Iv)) (i : InQ W Y (bb.bs j).sQ psi) (i' : InQ W Y (bb'.bs j).sQ psi)
+      : Id (TA.EI W) ((bb.bs j).svE W psi i) ((bb'.bs j).svE W psi i') =
+      transH (RA.rsvE b.brho (MX.S j) W psi i)
+       (transH (MX.S-E j W (compH W (prodP Y Iv) (prodP X Iv) cyl psi) (inQ-cyl W Y X h (b.bs j).sQ psi i))
+        (transH (apH (m.mE W) ((b.bs j).pw W (compH W (prodP Y Iv) (prodP X Iv) cyl psi) (compH W (prodP Y Iv) (prodP X Iv) cyl psi)
+                                  (\ s -> refl (app W (prodP X Iv) (compH W (prodP Y Iv) (prodP X Iv) cyl psi) s).1)
+                                  (inQ-cyl W Y X h (b.bs j).sQ psi i) (inQ-cyl W Y X h (b.bs j).sQ psi i')))
+         (transH (apH (m.mE W) (symH (RC.rsvE b.brho (b.bs j) W psi i')))
+                 (symH (MY.S-E j W psi i'))))) ;
+
+    res : Id (BA.Box[eS, Y]) bb bb' =
+      BA.box-ext eS Y bb.brho bb'.brho bb.bu bb'.bu b.br bb.bs bb'.bs bb.bcs bb'.bcs bb.bcb bb'.bcb
+        (refl bb.brho) Elid (\ j t -> refl ((bb.bs j).sQ t)) Ev ;
+  } ;
+
+  mapB-restr (Y X : Ob) (h : Hom Y X) (b : BC.Box[eS, X])
+    : Id (BA.Box[eS, Y]) (BA.restrict eS Y X h (mapB X b)) (mapB Y (BC.restrict eS Y X h b)) = MR[Y, X, h, b].res ;
+
+  opaque mapB-lid ; opaque mapB-sv ; opaque mapB-restr ;
+} ;

@@ -1,0 +1,116 @@
+-- GUaOp7.seg (inside IvBase.FaU, any base): the univalence operation,
+-- step K3 (inputs of the restricted problem), part 1: Out by groups.
+--   comb3     a path of data, of fillers and of classifiers over the same
+--             B make one path of the B group (PTy is a set)
+--   OutBG     Out from (A group , psi , B group , PT : the A of the data is
+--             A restricted)
+--   OutCong   equal A groups and equal B groups give equal outputs (J;
+--             QF and PT are paths in a set)
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open Trees[a] ;
+open Arith[a] ;
+module GP = GCofib[a] ;
+module GE1 = GFibE[a+] ;
+module GX = GEqExt[a] ;
+open GLine[a] ;
+
+module G7 (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE) 
+  (kU0 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e0)
+  (kU1 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e1)
+  (kU0e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].SFm.SF].KESI kU0)
+  (kU1e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].SFm.SF].KESI kU1)
+  (X : Ob) (F : GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].U0 X)
+  (p : GCofib[a+].Partials[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx,
+                           GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].UaTy].Partial[X, F])
+  (tautCl : (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].U0 Y)
+     (cnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y))
+        -> Id (GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].U0 Y') (c Y' (D.act Y' Y h x))
+              (GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].uAct Y' Y h (c Y x)))
+     -> Cl D GElC.ElC[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE].Fam[D, c, cnat].ElTy)
+  (glueCl : (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+     (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+     (hB : Cl GP.CofL[G, psi].resCtx B)
+     (c : GFibE[a].FE[G, GExt2[a].ExtB2[G, A, psi, B, al].ExtT].Comp) (e : GFibE[a].FE[G, GExt2[a].ExtB2[G, A, psi, B, al].ExtT].ESIC c)
+     -> Cl G GExt2[a].ExtB2[G, A, psi, B, al].ExtT) {
+  module EF0 = GElC.ElF[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e] ;
+  module UA = GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl] ;
+
+  -- the B group over a context
+  BGT (D : PCtx) : U a+ =
+    (u : (v : GX.EqDat[D].Tri) * GX.EqDat[D].EqOn v) * (EF0.FilT D u.1.1 * Cl D u.1.1) ;
+
+  comb3 (D : PCtx) (u1 u2 : (v : GX.EqDat[D].Tri) * GX.EqDat[D].EqOn v) (P : Id ((v : GX.EqDat[D].Tri) * GX.EqDat[D].EqOn v) u1 u2)
+    (f1 : EF0.FilT D u1.1.1) (f2 : EF0.FilT D u2.1.1) (Pf : Id ((T : PTy[D]) * EF0.FilT D T) (u1.1.1, f1) (u2.1.1, f2))
+    (c1 : Cl D u1.1.1) (c2 : Cl D u2.1.1) (Pc : Id ((T : PTy[D]) * Cl D T) (u1.1.1, c1) (u2.1.1, c2))
+    : Id (BGT D) (u1, (f1, c1)) (u2, (f2, c2)) =
+    idJ ((v : GX.EqDat[D].Tri) * GX.EqDat[D].EqOn v) u1
+      (\ u3 P3 -> (f3 : EF0.FilT D u3.1.1) -> Id ((T : PTy[D]) * EF0.FilT D T) (u1.1.1, f1) (u3.1.1, f3)
+         -> (c3 : Cl D u3.1.1) -> Id ((T : PTy[D]) * Cl D T) (u1.1.1, c1) (u3.1.1, c3) -> Id (BGT D) (u1, (f1, c1)) (u3, (f3, c3)))
+      (\ f3 Pf3 c3 Pc3 -> apH {EF0.FilT D u1.1.1 * Cl D u1.1.1} {BGT D} (\ z -> (u1, z))
+         (transH (apH {EF0.FilT D u1.1.1} {EF0.FilT D u1.1.1 * Cl D u1.1.1} (\ z -> (z, c1)) (GUnivEq.sndSet D (EF0.FilT D) u1.1.1 f1 f3 Pf3))
+                 (apH {Cl D u1.1.1} {EF0.FilT D u1.1.1 * Cl D u1.1.1} (\ z -> (f3, z)) (GUnivEq.sndSet D (Cl D) u1.1.1 c1 c3 Pc3))))
+      u2 P f2 Pf c2 Pc ;
+
+  opaque comb3 ;
+
+  -- the A group
+  AGT (Z : Ob) (F : UA.UU.U0 Z) : U a+ = (A : PTy[yP Z]) * ((QF : Id (PTy[yP Z]) A F.1) * EF0.FilT (yP Z) A) ;
+
+  RS (Z : Ob) (psi : GP.Cof[yP Z]) : PCtx = GP.CofL[yP Z, psi].resCtx ;
+
+  PTT (Z : Ob) (A : PTy[yP Z]) (psi : GP.Cof[yP Z]) (bg : BGT (RS Z psi)) : U a+ =
+    Id (PTy[RS Z psi]) bg.1.1.2.1 (subTy (RS Z psi) (yP Z) A GP.CofL[yP Z, psi].inclR) ;
+
+  mOf (Z : Ob) (A : PTy[yP Z]) (psi : GP.Cof[yP Z]) (bg : BGT (RS Z psi)) (PT : PTT Z A psi bg)
+    : GUaOp6.Rep[RS Z psi].MS3 bg.1.1.1 (subTy (RS Z psi) (yP Z) A GP.CofL[yP Z, psi].inclR) =
+    subst (PTy[RS Z psi]) (GUaOp6.Rep[RS Z psi].MS3 bg.1.1.1) bg.1.1.2.1 (subTy (RS Z psi) (yP Z) A GP.CofL[yP Z, psi].inclR) PT
+      (bg.1.1.2.2, bg.1.2) ;
+
+  OutBG (Z : Ob) (F : UA.UU.U0 Z) (ag : AGT Z F) (psi : GP.Cof[yP Z]) (bg : BGT (RS Z psi)) (PT : PTT Z ag.1 psi bg) : UA.UaT0 Z F =
+    GUaOp6.Out[Cl, clSub, clSub-id, clSub-o, encCl, glueCl, Z, F, ag.1, ag.2.1,
+      ag.2.2.1, ag.2.2.2.1, ag.2.2.2.2.1, ag.2.2.2.2.2, psi, bg.1.1.1,
+      bg.2.1.1, bg.2.1.2.1, bg.2.1.2.2.1, bg.2.1.2.2.2,
+      (mOf Z ag.1 psi bg PT).1, (mOf Z ag.1 psi bg PT).2.1, (mOf Z ag.1 psi bg PT).2.2, bg.2.2].res ;
+
+  -- equal groups, equal outputs
+  OutCong (Z : Ob) (F : UA.UU.U0 Z) (ag1 ag2 : AGT Z F)
+    (PA : Id ((T : PTy[yP Z]) * EF0.FilT (yP Z) T) (ag1.1, ag1.2.2) (ag2.1, ag2.2.2))
+    (psi : GP.Cof[yP Z]) (bg1 bg2 : BGT (RS Z psi)) (PB : Id (BGT (RS Z psi)) bg1 bg2)
+    (PT1 : PTT Z ag1.1 psi bg1) (PT2 : PTT Z ag2.1 psi bg2)
+    : Id (UA.UaT0 Z F) (OutBG Z F ag1 psi bg1 PT1) (OutBG Z F ag2 psi bg2 PT2) =
+    idJ ((T : PTy[yP Z]) * EF0.FilT (yP Z) T) (ag1.1, ag1.2.2)
+      (\ z Q -> (QF2 : Id (PTy[yP Z]) z.1 F.1) (PT3 : PTT Z z.1 psi bg2)
+         -> Id (UA.UaT0 Z F) (OutBG Z F ag1 psi bg1 PT1) (OutBG Z F (z.1, (QF2, z.2)) psi bg2 PT3))
+      (\ QF2 PT3 ->
+         transH (apH {Id (PTy[yP Z]) ag1.1 F.1} {UA.UaT0 Z F} (\ q -> OutBG Z F (ag1.1, (q, ag1.2.2)) psi bg1 PT1)
+                   (isSet-PTy (yP Z) ag1.1 F.1 ag1.2.1 QF2))
+           (idJ (BGT (RS Z psi)) bg1
+              (\ b2 Q2 -> (PT4 : PTT Z ag1.1 psi b2) -> Id (UA.UaT0 Z F) (OutBG Z F (ag1.1, (QF2, ag1.2.2)) psi bg1 PT1)
+                                                            (OutBG Z F (ag1.1, (QF2, ag1.2.2)) psi b2 PT4))
+              (\ PT4 -> apH {PTT Z ag1.1 psi bg1} {UA.UaT0 Z F} (\ q -> OutBG Z F (ag1.1, (QF2, ag1.2.2)) psi bg1 q)
+                          (isSet-PTy (RS Z psi) bg1.1.1.2.1 (subTy (RS Z psi) (yP Z) ag1.1 GP.CofL[yP Z, psi].inclR) PT1 PT4))
+              bg2 PB PT3))
+      (ag2.1, ag2.2.2) PA ag2.2.1 PT2 ;
+
+  opaque OutCong ;
+} ;

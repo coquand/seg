@@ -1,0 +1,154 @@
+-- UAct.seg: MODEL/Univ/UAct.agda.  The poset universe's classifier (for
+-- IvBase.GUniv): box compositions with ESI (FibExt.FibE), their
+-- substitution (FibSub / EsiSub) and the two laws, for ANY contexts (the
+-- laws were stated at y X; UIdB / UOB generalise them: the actions agree
+-- by tact-irr, the composites because the boxes built by subComp are the
+-- same boxes; the conclusion is fibExt).  The universe itself (U0, uAct
+-- and its laws, codeU, UCtx, EGen) is GUniv's, instantiated in UnivCtx
+-- (PU).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FS = FibSub[a, a] ;
+module ESS = EsiSub[a, a] ;
+module FE = FibExt[a, a] ;
+open BaseP.GYon[a] ;
+
+-- the classifier: box compositions both ways with ESI
+ClB (G : PCtx) (A : PTy[G]) : U a+ = (c : BXm.Boxes[G, A].Comp) * ESS.ES.EsiDef[G, A].ESIC c ;
+
+clSubB (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : ClB G A) : ClB D (subTy D G A s) =
+  (FS.subCompC D G A s c.1, ESS.esiSubC D G A s c.1 c.2) ;
+
+------------------------------------------------------------------------
+-- Identity
+
+module UIdB (G : PCtx) (A0 : PTy[G]) (cc : ClB G A0) {
+
+  A : PTy[G] = A0 ;
+  c : BXm.Boxes[G, A].Comp = cc.1 ;
+  e : ESS.ES.EsiDef[G, A].ESIC c = cc.2 ;
+
+  s : PSub[G, G] = idS G ;
+
+  A' : PTy[G] = subTy G G A s ;
+
+  Ht : FE.HtTy G A A'.tact = \ J I f x y e1 a ->
+    tact-irr G A J I f x y e1 (ntEq G G s J I f x y e1) a ;
+
+  module BT = FE.BoxTr[G, A, A'.tact, A'.tact-id, A'.tact-o, Ht] ;
+
+  module UIdC (eS eT : El Iv) (co : BXm.Boxes[G, A].CompOp[eS, eT]) {
+    open FS.SubComp[G, G, A, s, eS, eT, co] ;
+
+    boxEq (Z : Ob) (b : BD.Box[eS, Z]) : Id (BG.Box[eS, Z]) (BT.boxTr eS Z b) MB[eS, Z, b].box =
+      BG.box-ext eS Z (BT.boxTr eS Z b).brho MB[eS, Z, b].box.brho (BT.boxTr eS Z b).bu MB[eS, Z, b].box.bu b.br
+        (BT.boxTr eS Z b).bs MB[eS, Z, b].box.bs (BT.boxTr eS Z b).bcs MB[eS, Z, b].box.bcs
+        (BT.boxTr eS Z b).bcb MB[eS, Z, b].box.bcb
+        (refl b.brho)
+        (symH (KGE.fromE-eq Z (G.act Z (prodP Z Iv) (lid Z eS) MB[eS, Z, b].rho) MB[eS, Z, b].uE MB[eS, Z, b].upt))
+        (\ j -> refl ((b.bs j).sQ))
+        (\ j W psi i i' ->
+          transH (apH (\ k -> (b.bs j).svE W psi k) (isProp-InQ W Z (b.bs j).sQ psi i i'))
+                 (symH (MB[eS, Z, b].S-E j W psi i'))) ;
+
+    agree (Z : Ob) (b : BD.Box[eS, Z])
+      : Id (TG.EI Z) (BG.topE eT Z b.brho (co.cop Z (BT.boxTr eS Z b))) (BD.topE eT Z b.brho (subComp.cop Z b)) =
+      transH (apH (\ bb -> BG.topE eT Z bb.brho (co.cop Z bb)) (boxEq Z b)) (symH (copS-E Z b)) ;
+  } ;
+
+  res : Id ((A' : PTy[G]) * ClB G A') (A, cc) (subTy G G A s, clSubB G G s A cc) =
+    (FE.FX[G].fibExt A c e A'.tact A'.tact-id A'.tact-o Ht
+            (FS.subCompC G G A s c) (ESS.esiSubC G G A s c e)
+            (UIdC[e0, e1, c.1].agree, UIdC[e1, e0, c.2].agree)) ;
+} ;
+
+clSub-idB (G : PCtx) (A : PTy[G]) (c : ClB G A)
+  : Id ((A' : PTy[G]) * ClB G A') (A, c) (subTy G G A (idS G), clSubB G G (idS G) A c) = UIdB[G, A, c].res ;
+
+opaque clSub-idB ;
+
+------------------------------------------------------------------------
+-- Composition
+
+module UOB (T D G : PCtx) (sf : PSub[D, G]) (sg : PSub[T, D]) (A0 : PTy[G]) (cc : ClB G A0) {
+
+  A : PTy[G] = A0 ;
+  c : BXm.Boxes[G, A].Comp = cc.1 ;
+  e : ESS.ES.EsiDef[G, A].ESIC c = cc.2 ;
+
+
+  Af : PTy[D] = subTy D G A sf ;
+  A1 : PTy[T] = subTy T G A (oS T D G sf sg) ;
+  A2 : PTy[T] = subTy T D Af sg ;
+
+  Ht : FE.HtTy T A1 A2.tact = \ J I h x y e1 a ->
+    tact-irr G A J I h ((oS T D G sf sg).nt I x) ((oS T D G sf sg).nt J y) (ntEq T G (oS T D G sf sg) J I h x y e1)
+      (ntEq D G sf J I h (sg.nt I x) (sg.nt J y) (ntEq T D sg J I h x y e1)) a ;
+
+  module BT = FE.BoxTr[T, A1, A2.tact, A2.tact-id, A2.tact-o, Ht] ;
+
+  module UOC (eS eT : El Iv) (co : BXm.Boxes[G, A].CompOp[eS, eT]) {
+    module S1 = FS.SubComp[T, G, A, (oS T D G sf sg), eS, eT, co] ;
+    module Sf = FS.SubComp[D, G, A, sf, eS, eT, co] ;
+    module S2 = FS.SubComp[T, D, Af, sg, eS, eT, Sf.subComp] ;
+
+    module BE (W : Ob) (b : S2.BD.Box[eS, W]) {
+      module M1 = S1.MB[eS, W, BT.boxTr eS W b] ;
+      module M2 = S2.MB[eS, W, b] ;
+      module Mf = Sf.MB[eS, W, M2.box] ;
+
+      boxEq : Id (S1.BG.Box[eS, W]) M1.box Mf.box =
+        S1.BG.box-ext eS W M1.box.brho Mf.box.brho M1.box.bu Mf.box.bu b.br M1.box.bs Mf.box.bs
+          M1.box.bcs Mf.box.bcs M1.box.bcb Mf.box.bcb
+          (refl M1.box.brho)
+          (transH (S1.KGE.fromE-eq W (G.act W (prodP W Iv) (lid W eS) M1.rho) M1.uE M1.upt)
+           (transH (apH (Sf.Ls W) (symH (S2.KGE.fromE-eq W (D.act W (prodP W Iv) (lid W eS) M2.rho) M2.uE M2.upt)))
+                   (symH (Sf.KGE.fromE-eq W (G.act W (prodP W Iv) (lid W eS) Mf.rho) Mf.uE Mf.upt))))
+          (\ j -> refl ((b.bs j).sQ))
+          (\ j V psi i i' ->
+            transH (M1.S-E j V psi i)
+             (transH (apH (\ k -> Sf.Ls V (S2.Ls V ((b.bs j).svE V psi k))) (isProp-InQ V W (b.bs j).sQ psi i i'))
+              (transH (apH (Sf.Ls V) (symH (M2.S-E j V psi i')))
+                      (symH (Mf.S-E j V psi i'))))) ;
+
+      agree : Id (S1.TD.EI W) (S1.BD.topE eT W b.brho (S1.copS W (BT.boxTr eS W b))) (S2.BD.topE eT W b.brho (S2.copS W b)) =
+        S1.Ls-inj W (S1.BD.topE eT W b.brho (S1.copS W (BT.boxTr eS W b))) (S2.BD.topE eT W b.brho (S2.copS W b))
+          (refl (T.act W (prodP W Iv) (lid W eT) b.brho))
+          (transH (S1.copS-E W (BT.boxTr eS W b))
+           (transH (apH (\ bb -> S1.BG.topE eT W bb.brho (co.cop W bb)) boxEq)
+            (transH (symH (Sf.copS-E W M2.box))
+                    (apH (Sf.Ls W) (symH (S2.copS-E W b)))))) ;
+    } ;
+
+    agree (W : Ob) (b : S2.BD.Box[eS, W])
+      : Id (S1.TD.EI W) (S1.BD.topE eT W b.brho (S1.copS W (BT.boxTr eS W b))) (S2.BD.topE eT W b.brho (S2.copS W b)) =
+      BE[W, b].agree ;
+  } ;
+
+  res : Id ((A' : PTy[T]) * ClB T A') (subTy T G A (oS T D G sf sg), clSubB T G (oS T D G sf sg) A cc)
+          (subTy T D Af sg, clSubB T D sg Af (clSubB D G sf A cc)) =
+    FE.FX[T].fibExt A1 (FS.subCompC T G A (oS T D G sf sg) c) (ESS.esiSubC T G A (oS T D G sf sg) c e)
+      A2.tact A2.tact-id A2.tact-o Ht
+      (FS.subCompC T D Af sg (FS.subCompC D G A sf c))
+      (ESS.esiSubC T D Af sg (FS.subCompC D G A sf c) (ESS.esiSubC D G A sf c e))
+      (UOC[e0, e1, c.1].agree, UOC[e1, e0, c.2].agree) ;
+} ;
+
+clSub-oB (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : ClB G A)
+  : Id ((A' : PTy[T]) * ClB T A') (subTy T G A (oS T D G s s'), clSubB T G (oS T D G s s') A c)
+                                  (subTy T D (subTy D G A s) s', clSubB T D s' (subTy D G A s) (clSubB D G s A c)) =
+  UOB[T, D, G, s, s', A, c].res ;
+
+opaque clSub-oB ;

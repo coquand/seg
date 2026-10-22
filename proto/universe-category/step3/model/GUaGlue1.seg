@@ -1,0 +1,153 @@
+-- GUaGlue1.seg (inside IvBase, any base): gluing along a classifying map,
+-- part 1: the types and the map (step G3c of the univalence plan).
+--
+-- D a context, kap : D -> Q4 natural (kap (x h) = q4Act (y h) (kap x)):
+-- every point x of D carries local data over y Z: codes F_x, B_x, a map
+-- al_x : B_x -> F_x and an equivalence structure.  Glued over D:
+--   B, A      El along the code maps x |-> B_x, x |-> F_x (GElC: fibrant)
+--   al        al_x read at the identity (aOfq), natural by aNat (al_(x h)
+--             is al_x substituted along y h, kap's naturality)
+-- The equivalence structure is glued in GUaGlue2.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open GLine[a] ;
+module GE1 = GFibE[a+] ;
+
+module Loc (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE) {
+  module UA = GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module UU = UA.UU ;
+  module EC = GElC.ElC[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE] ;
+
+  ----------------------------------------------------------------------
+  -- local maps read at the identity (no D, no kap)
+
+  aOfq (Y : Ob) (q : UA.Q4 Y) (b : W0.Ix (UU.fib0 Y q.2.1)) : W0.Ix (UU.fib0 Y q.1) =
+    GPR.TyL[yP Y, q.1.1].fromE Y (idH Y) (q.2.2.1.mE Y (idH Y, b)) (q.2.2.1.mpt Y (idH Y, b)) ;
+
+  aOfq-E (Y : Ob) (q : UA.Q4 Y) (b : W0.Ix (UU.fib0 Y q.2.1))
+    : Id (GPR.TyL[yP Y, q.1.1].EI Y) (idH Y, aOfq Y q b) (q.2.2.1.mE Y (idH Y, b)) =
+    GPR.TyL[yP Y, q.1.1].fromE-eq Y (idH Y) (q.2.2.1.mE Y (idH Y, b)) (q.2.2.1.mpt Y (idH Y, b)) ;
+
+  -- at the canonical restriction of q along h
+  aNat0 (Y' Y : Ob) (h : Hom Y' Y) (q : UA.Q4 Y) (b : W0.Ix (UU.fib0 Y q.2.1))
+    : Id (W0.Ix (UU.fib0 Y' (UA.q4Act Y' Y (yH Y' Y h) q).1))
+         (aOfq Y' (UA.q4Act Y' Y (yH Y' Y h) q) (UU.tactG Y' Y h q.2.1 (UU.uAct Y' Y h q.2.1) (refl (UU.uAct Y' Y h q.2.1)) b))
+         (UU.tactG Y' Y h q.1 (UU.uAct Y' Y h q.1) (refl (UU.uAct Y' Y h q.1)) (aOfq Y q b)) =
+    GPR.TyL[yP Y, q.1.1].pr-inj Y' hid
+      (aOfq Y' (UA.q4Act Y' Y (yH Y' Y h) q) (UU.tactG Y' Y h q.2.1 (UU.uAct Y' Y h q.2.1) (refl (UU.uAct Y' Y h q.2.1)) b))
+      (UU.tactG Y' Y h q.1 (UU.uAct Y' Y h q.1) (refl (UU.uAct Y' Y h q.1)) (aOfq Y q b))
+      (calc (GPR.TyL[yP Y, q.1.1].EI Y') {
+          (hid, aOfq Y' (UA.q4Act Y' Y (yH Y' Y h) q) b')
+        =< apH {W0.Ix (q.1.1.tob Y' hid)} {GPR.TyL[yP Y, q.1.1].EI Y'} (\ z -> (hid, z))
+             (GPR.TyL[yP Y', (UA.q4Act Y' Y (yH Y' Y h) q).1.1].pr-inj Y' (idH Y')
+                (aOfq Y' (UA.q4Act Y' Y (yH Y' Y h) q) b')
+                (GPR.TyL[yP Y, q.1.1].fromE Y' hid (q.2.2.1.mE Y' (hid, b')) (q.2.2.1.mpt Y' (hid, b')))
+                (aOfq-E Y' (UA.q4Act Y' Y (yH Y' Y h) q) b')) >
+          (hid, GPR.TyL[yP Y, q.1.1].fromE Y' hid (q.2.2.1.mE Y' (hid, b')) (q.2.2.1.mpt Y' (hid, b')))
+        =< GPR.TyL[yP Y, q.1.1].fromE-eq Y' hid (q.2.2.1.mE Y' (hid, b')) (q.2.2.1.mpt Y' (hid, b')) >
+          q.2.2.1.mE Y' (hid, b')
+        =< apH (q.2.2.1.mE Y') (symH (GPR.TyL[yP Y, q.2.1.1].pr-tact Y' Y h (idH Y) hid (UU.idf-eq Y' Y h) b)) >
+          q.2.2.1.mE Y' (GPR.TyL[yP Y, q.2.1.1].E.act Y' Y h (idH Y, b))
+        =< q.2.2.1.mnat Y' Y h (idH Y, b) >
+          GPR.TyL[yP Y, q.1.1].E.act Y' Y h (q.2.2.1.mE Y (idH Y, b))
+        =< apH (GPR.TyL[yP Y, q.1.1].E.act Y' Y h) (symH (aOfq-E Y q b)) >
+          GPR.TyL[yP Y, q.1.1].E.act Y' Y h (idH Y, aOfq Y q b)
+        =< GPR.TyL[yP Y, q.1.1].pr-tact Y' Y h (idH Y) hid (UU.idf-eq Y' Y h) (aOfq Y q b) >
+          (hid, UU.tactG Y' Y h q.1 (UU.uAct Y' Y h q.1) (refl (UU.uAct Y' Y h q.1)) (aOfq Y q b)) })
+   where {
+     hid : Hom Y' Y = compH Y' Y' Y h (idH Y') ;
+     b' : W0.Ix (q.2.1.1.tob Y' hid) = UU.tactG Y' Y h q.2.1 (UU.uAct Y' Y h q.2.1) (refl (UU.uAct Y' Y h q.2.1)) b ; } ;
+
+  -- for any restriction of q along h
+  aNat (Y' Y : Ob) (h : Hom Y' Y) (q : UA.Q4 Y) (q' : UA.Q4 Y') (P : Id (UA.Q4 Y') (UA.q4Act Y' Y (yH Y' Y h) q) q')
+    (eB : Id (UU.U0 Y') (UU.uAct Y' Y h q.2.1) q'.2.1) (eF : Id (UU.U0 Y') (UU.uAct Y' Y h q.1) q'.1) (b : W0.Ix (UU.fib0 Y q.2.1))
+    : Id (W0.Ix (UU.fib0 Y' q'.1)) (aOfq Y' q' (UU.tactG Y' Y h q.2.1 q'.2.1 eB b)) (UU.tactG Y' Y h q.1 q'.1 eF (aOfq Y q b)) =
+    idJ (UA.Q4 Y') (UA.q4Act Y' Y (yH Y' Y h) q)
+      (\ q2 P2 -> (eB2 : Id (UU.U0 Y') (UU.uAct Y' Y h q.2.1) q2.2.1) (eF2 : Id (UU.U0 Y') (UU.uAct Y' Y h q.1) q2.1)
+         -> Id (W0.Ix (UU.fib0 Y' q2.1)) (aOfq Y' q2 (UU.tactG Y' Y h q.2.1 q2.2.1 eB2 b)) (UU.tactG Y' Y h q.1 q2.1 eF2 (aOfq Y q b)))
+      (\ eB2 eF2 ->
+         transH (apH (aOfq Y' (UA.q4Act Y' Y (yH Y' Y h) q))
+                     (EC.tactG-irr Y' Y h q.2.1 (UU.uAct Y' Y h q.2.1) eB2 (refl (UU.uAct Y' Y h q.2.1)) b))
+           (transH (aNat0 Y' Y h q b)
+                   (EC.tactG-irr Y' Y h q.1 (UU.uAct Y' Y h q.1) (refl (UU.uAct Y' Y h q.1)) eF2 (aOfq Y q b))))
+      q' P eB eF ;
+
+  opaque aNat0 ; opaque aNat ;
+
+} ;
+
+module Glue (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE)
+  (D : PCtx)
+  (kap : (Y : Ob) -> W0.Ix (D.ob Y) -> GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].Q4 Y)
+  (kapnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y))
+     -> Id (GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].Q4 Y') (kap Y' (D.act Y' Y h x))
+           (GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].q4Act Y' Y (yH Y' Y h) (kap Y x))) {
+  module UA = GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl] ;
+  module UU = UA.UU ;
+  module EC = GElC.ElC[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE] ;
+
+  cF (Y : Ob) (x : W0.Ix (D.ob Y)) : UU.U0 Y = (kap Y x).1 ;
+  cB (Y : Ob) (x : W0.Ix (D.ob Y)) : UU.U0 Y = (kap Y x).2.1 ;
+
+  cnatF (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y)) : Id (UU.U0 Y') (cF Y' (D.act Y' Y h x)) (UU.uAct Y' Y h (cF Y x)) =
+    apH (\ q -> q.1) (kapnat Y' Y h x) ;
+  cnatB (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y)) : Id (UU.U0 Y') (cB Y' (D.act Y' Y h x)) (UU.uAct Y' Y h (cB Y x)) =
+    apH (\ q -> q.2.1) (kapnat Y' Y h x) ;
+
+  module FB = EC.Fam[D, cB, cnatB] ;
+  module FA = EC.Fam[D, cF, cnatF] ;
+
+  B : PTy[D] = FB.ElTy ;
+  A : PTy[D] = FA.ElTy ;
+
+  module TB = GPR.TyL[D, B] ;
+  module TA = GPR.TyL[D, A] ;
+
+  module LC = Loc[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE] ;
+
+  aOfq (Y : Ob) (q : UA.Q4 Y) (b : W0.Ix (UU.fib0 Y q.2.1)) : W0.Ix (UU.fib0 Y q.1) = LC.aOfq Y q b ;
+
+  aOfq-E (Y : Ob) (q : UA.Q4 Y) (b : W0.Ix (UU.fib0 Y q.2.1))
+    : Id (GPR.TyL[yP Y, q.1.1].EI Y) (idH Y, aOfq Y q b) (q.2.2.1.mE Y (idH Y, b)) = LC.aOfq-E Y q b ;
+
+  ----------------------------------------------------------------------
+  -- the glued map
+
+  mE (Y : Ob) (w : TB.EI Y) : TA.EI Y = (w.1, aOfq Y (kap Y w.1) w.2) ;
+
+  mnat (Y' Y : Ob) (h : Hom Y' Y) (w : TB.EI Y) : Id (TA.EI Y') (mE Y' (TB.E.act Y' Y h w)) (TA.E.act Y' Y h (mE Y w)) =
+    apH {W0.Ix (UU.fib0 Y' (cF Y' (D.act Y' Y h w.1)))} {TA.EI Y'} (\ z -> (D.act Y' Y h w.1, z))
+      (LC.aNat Y' Y h (kap Y w.1) (kap Y' (D.act Y' Y h w.1)) (symH (kapnat Y' Y h w.1))
+         (FB.ep Y' Y h w.1 (D.act Y' Y h w.1) (refl (D.act Y' Y h w.1)))
+         (FA.ep Y' Y h w.1 (D.act Y' Y h w.1) (refl (D.act Y' Y h w.1))) w.2) ;
+
+  opaque mnat ;
+
+  al : PMap[D, B, A] = new PMap[D, B, A, mE, \ Y w -> refl w.1, mnat] ;
+} ;

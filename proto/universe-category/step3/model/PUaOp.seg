@@ -1,0 +1,40 @@
+-- PUaOp.seg: univalence for the poset universe U_L, as the instance of
+-- the generic operation at the line classifier (GUaOpL.UaL): El's
+-- fibration is PElL2.fibEGen, the fillers of EGen are made from it with
+-- the poset connections (GFillFib), their ends are fibEGen (EndC, by
+-- cI-itgt and ESI), and El at a Yoneda code is the code (PElYon).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ;
+module BaseP = Constr[a].PosB ;
+module UL = BaseP.GUnivL.UL ;
+module PE2 = PElL2[a] ;
+module PY = PElYon2[a] ;
+
+cE : BaseP.GFibE[a+].FE[UL.UCtx, UL.EGen].Comp = PE2.fibEGen.2.1 ;
+eE : BaseP.GFibE[a+].FE[UL.UCtx, UL.EGen].ESIC cE = PE2.fibEGen.2.2 ;
+
+module FL0 = PosetConn[a].PCnB.GFillFib[a+].FillLineFib[BaseP.GFam[a+].famPath, BaseP.GFam[a+].famConn, UL.UCtx, UL.EGen, true, cE.1] ;
+module FL1 = PosetConn[a].PCnB.GFillFib[a+].FillLineFib[BaseP.GFam[a+].famPath, BaseP.GFam[a+].famConn, UL.UCtx, UL.EGen, false, cE.2] ;
+
+module UA = PFaU.GUaOpL.UaL[cE, eE, FL0.fibAt, FL1.fibAt, FL0.Kesi[eE.1].kesi, FL1.Kesi[eE.2].kesi,
+  FL0.EndC[eE.1].endCa, FL1.EndC[eE.2].endCa, \ Z F1 -> PY.EY[Z, F1].elYonCl] ;
+
+-- Sigma (X : U_L) Equiv (X , A) is contractible, uniformly
+ua : BaseP.GCofib[a+].Partials[UL.UCtx, BaseP.GUnivEq.UaU[BaseP.GUnivL.ClL, BaseP.GUnivL.clSubL, BaseP.GUnivL.clSub-idL, BaseP.GUnivL.clSub-oL, \ X A -> BaseP.GUnivL.encClL (BaseP.GYon[a].yP X) A].UaTy].ContrOp = UA.ua ;
+
+-- ... and it does not see an inserted empty side (GUaOp10: U6)
+uaKesi : BaseP.GCofEsi[a+].PartialsEsi[UL.UCtx, BaseP.GUnivEq.UaU[BaseP.GUnivL.ClL, BaseP.GUnivL.clSubL, BaseP.GUnivL.clSub-idL, BaseP.GUnivL.clSub-oL, UA.UO.encCl].UaTy].KESI ua =
+  PFaU.GUaOp10.UaK[BaseP.GUnivL.ClL, BaseP.GUnivL.clSubL, BaseP.GUnivL.clSub-idL, BaseP.GUnivL.clSub-oL, UA.UO.encCl, cE, eE, UA.UO.kU0, UA.UO.kU1, UA.UO.kU0e, UA.UO.kU1e,
+    UA.UO.tautCl, UA.UO.glueCl, UA.UO.glueCl-sub, UA.UO.tautCl-sub, UA.UO.tautCl-yon, UA.UO.clFullOp].uaKesi ;
+
+-- the same, from the universal datum (Step 3: GUaOpN at ClL)
+module UAN = PFaU.GUaOpNL.UaNL[FL0.fibAt, FL1.fibAt, FL0.Kesi[eE.1].kesi, FL1.Kesi[eE.2].kesi, cE, eE,
+  FL0.EndC[eE.1].endCa, FL1.EndC[eE.2].endCa, \ Z F1 -> PY.EY[Z, F1].elYonCl] ;
+
+uaN : BaseP.GCofib[a+].Partials[UL.UCtx, BaseP.GUnivEq.UaU[BaseP.GUnivL.ClL, BaseP.GUnivL.clSubL, BaseP.GUnivL.clSub-idL, BaseP.GUnivL.clSub-oL, \ X A -> BaseP.GUnivL.encClL (BaseP.GYon[a].yP X) A].UaTy].ContrOp = UAN.ua ;

@@ -1,0 +1,24 @@
+-- DFibU.seg (inside Classical.Cl): the universe of Delta is fibrant.
+--   uaKesi   the univalence operation (DUaOp.ua) ignores an inserted empty
+--            side (GCofOne.Wrap)
+--   fibU     Comp(1, U) from ua, its ESI from uaKesi (GCompU5.FibU): U is a
+--            FibEL over any context
+-- Classical only through elFibEL (DeltaHornBox.decDeg).
+
+level a ;
+open Base ;
+module DBm = DeltaBase[a] ;
+module DB = DBm.DB ;
+module DCl = DeltaClassifier[a] ;
+module DU = DCl.DU ;
+module YO = DB.GYon[a] ;
+module DF = DeltaForall[a].DFaU ;
+open DUaOp[a] ;
+
+-- it does not see an inserted empty side (the union is the same sieve)
+uaKesi : DB.GCofEsi[a+].PartialsEsi[DU.UCtx, DB.GUnivEq.UaU[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A].UaTy].KESI ua = W.kesi ;
+
+-- the universe of Delta is fibrant (GCompU5: Comp(1, U) from ua, ESI from uaKesi)
+fibU (G : DB.GPre[a+].PS.PCtx) : DB.GFibE[a+].FibEL G =
+  DBm.DCn.GCompU5.FibU[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A, cE, eE, ua, uaKesi, G].fibU ;
+

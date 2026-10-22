@@ -1,0 +1,106 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.6cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{xcolor}
+\newcommand{\seg}[1]{\textcolor{gray}{\texttt{\small #1}}}
+\newcommand{\El}{\mathrm{El}}
+\newcommand{\U}{\mathcal{U}}
+\newcommand{\Id}{\mathrm{Id}}
+\newcommand{\tr}{\mathrm{tr}}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\title{Why substitution costs so much in \texttt{seg/model},\\
+and a proposal: irrelevant equality proofs in sets}
+\date{15 October 2026}
+\author{}
+
+\begin{document}
+\maketitle
+
+\section{The feature: El along a code map}
+
+The base category is generic.  Let $D$ be a context and $c : D \to \U$ a
+map into the universe: codes $c(x) \in \U(I)$ for $x \in D(I)$, with
+naturality proofs
+\[ n_c(f, x) : c(x \cdot f) = c(x)\cdot f \qquad (f : J \to I). \]
+The type $\El_c$ over $D$ has fibres $\El_c(x) = \El(c(x))$.  For a map of
+contexts $s : D' \to D$ (with naturality proofs $n_s$) we want
+\[ \El_c[s] \;=\; \El_{c\circ s}. \tag{$\ast$} \]
+
+\section{What happens now}
+
+\paragraph{Types act along proofs.}  A type $A$ over $G$ consists of fibres
+and an action $A(x) \to A(y)$ for $f : J\to I$ and \emph{a proof}
+$e : x\cdot f = y$ (\seg{Presheaf.PTy}, field \seg{tact}).  The action of
+$\El_c$ is: act in $\El$ from $c(x)$ to $c(x)\cdot f$, then \emph{transport}
+the result along a proof of $c(x)\cdot f = c(y)$, namely
+\[ p_c(e) \;=\; n_c(f,x)^{-1}\cdot c(e). \]
+Transport along a proof is an operation on terms: different proofs give, a
+priori, different terms.
+
+\paragraph{The two sides of $(\ast)$.}  Both sides have the same fibres,
+$\El(c(s(x)))$.  Their actions differ only in the proof transported along:
+\begin{align*}
+ \El_c[s]:&\quad p_c\big(n_s(f,x)^{-1}\cdot s(e)\big) \\
+ \El_{c\circ s}:&\quad p_{c\circ s}(e) \;=\; \big(c(n_s(f,x))\cdot n_c(f, s(x))\big)^{-1}\cdot c(s(e))
+\end{align*}
+These are two proofs of the \emph{same} equation $c(s(x))\cdot f = c(s(y))$
+in $\U(J)$.  Since $\U(J)$ is a set, they are equal, but only by a proof
+(using that $\U(J)$ is a set), not by computation.  So $(\ast)$ is a
+theorem, \seg{elSub}, and not a definitional equality: in the checker
+\texttt{refl} fails on $(\ast)$ but succeeds on its fibre part.
+
+\paragraph{The cost.}  Every structure we put on $\El_c$ (its compositions,
+its fillers, the classifier, equivalence data) must then be moved along
+$(\ast)$ and shown to agree with the structure on $\El_{c\circ s}$.  For the
+compositions this is \seg{GElC.ElF.FibSub} (60 lines), which is in turn an
+obligation of the univalence operation (\seg{tautCl-sub}).  The same
+pattern, ``two constructions agree up to proofs, so transport the structure
+and prove coherence'', accounts for a large part of the development: of
+about 9800 lines, 39\% prove that substitution commutes with a
+construction and 15\% transport structures along equations of types.
+
+\section{The proposal}
+
+\paragraph{The rule.}  Make any two proofs of an equation between elements
+of a set \emph{definitionally} equal:
+\[ \frac{p,\ q : \Id_A(a, b) \qquad A \text{ a set}}{p \equiv q} \]
+In \texttt{seg} the sets we use are all of the form $\mathrm{Ix}(v)$ for a
+code $v$ (fibres, codes, maps of the base), so the rule can be stated
+syntactically: two terms whose type is $\Id_{\mathrm{Ix}(v)}(a, b)$ are
+convertible.  This is a rule of the checker (a kernel change), comparable
+to a sort of definitionally irrelevant propositions.  Its consistency with the
+rest of the metatheory (univalence of the ambient universe) and the
+decidability of conversion with it have to be checked; we do not claim them
+here.
+
+\paragraph{What it gives for $(\ast)$.}  The two proofs above are then the
+same, the two actions are the same term, and $(\ast)$ holds by definition.
+Consequently the substituted structure is \emph{literally} the structure
+of $\El_{c\circ s}$: nothing is transported, and \seg{elSub},
+\seg{FibSub}, and the obligation \seg{tautCl-sub} become \texttt{refl}.
+The statements of the development do not change, and the base stays
+generic: the rule only concerns proofs, never the maps of the base.
+
+\paragraph{What it does not give.}  Equations between \emph{data} remain
+theorems.  Examples: $\El$ along the Yoneda code of $F$ is $F$
+(\seg{elYon}) uses $g\circ\mathrm{id} = g$, an equation between maps of the
+generic base; the codes of Ext at a full point use $\mathrm{full} = \mathrm{true}$
+(\seg{extOb-B}); a restricted cofibration is the substituted one only up to
+$\mathrm{pre}(g, \mathrm{pre}(h, Q)) = \mathrm{pre}(hg, Q)$.  Transports along
+these stay.  The rule removes exactly the transports whose only cause is that
+two \emph{proofs} differ.
+
+\begin{remark}
+This is the analogue of Ehrhard's presentation of categories with families
+(\texttt{cwf2.pdf}) compared with Dybjer's: there, the lifted substitution
+$\sigma^+ = (\sigma\mathrm{p}, \mathrm{q})$ forces $\mathrm{q}$ to be
+transported along $A\sigma\mathrm{p} = A(\sigma\mathrm{p})$, and taking
+$\sigma^+$ primitive removes these transports while keeping the equations
+between types.  Here the rule removes the transports along \emph{proofs},
+while the equations themselves stay.  The moves between universe levels
+(8\% of the development) are a separate issue and are not affected.
+\end{remark}
+
+\end{document}

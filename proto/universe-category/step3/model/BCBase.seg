@@ -1,0 +1,140 @@
+-- BCBase.seg: MODEL/Univ/BCBase.agda.  Base change of the transport
+-- construction, part 1.
+--
+-- Data: sR : D' -> D, sg : L' -> L, S over L, S' = S [sg]; lines ln' over
+-- D' and ln over D with  sg (ln' x) = ln (sR x)  (lnEq); fillers of S and
+-- of S' with LBF.FillSubOK (the filler of S' is the filler of S read back,
+-- e.g. both from a composition and its substitution).  Everything primed
+-- is read in E_S through Ls (the lifted sg):
+--   enEq      the ends of the lines correspond
+--   uF-bc     the transport filler
+--   trS-bc    its end
+--   mapFD     raw fibre data of the primed transport as raw data
+--   omF-bc    the square omega
+-- PT/PS (primed) and UT/US (unprimed) are the Tp and Sq instances.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module CN = Conn[a] ;
+open CN ;
+open Cofib[a] ; open GP ;
+open Transp[a] ;
+
+module BC0 (D' D : PCtx) (sR : PSub[D', D]) (L' L : PCtx) (sg : PSub[L', L]) (S : PTy[L])
+  (ln' : (W : Ob) -> W0.Ix (D'.ob W) -> W0.Ix (L'.ob (prodP W Iv)))
+  (lnat' : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D'.ob W))
+          -> Id (W0.Ix (L'.ob (prodP W' Iv))) (L'.act (prodP W' Iv) (prodP W Iv) (cylH W' W g) (ln' W x)) (ln' W' (D'.act W' W g x)))
+  (ln : (W : Ob) -> W0.Ix (D.ob W) -> W0.Ix (L.ob (prodP W Iv)))
+  (lnat : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D.ob W))
+          -> Id (W0.Ix (L.ob (prodP W' Iv))) (L.act (prodP W' Iv) (prodP W Iv) (cylH W' W g) (ln W x)) (ln W' (D.act W' W g x)))
+  (lnEq : (W : Ob) (x : W0.Ix (D'.ob W)) -> Id (W0.Ix (L.ob (prodP W Iv))) (sg.nt (prodP W Iv) (ln' W x)) (ln W (sR.nt W x)))
+  (d : Bool) (fS : FibM.FillDef[L, S].FillOp[src d]) (f0 : FibM.FillDef[L, S].FillOp[e0])
+  (fS' : FibM.FillDef[L', subTy L' L S sg].FillOp[src d]) (f0' : FibM.FillDef[L', subTy L' L S sg].FillOp[e0])
+  (okS : LBSub[a].LBS[L', L, sg, S, src d].LBF[fS, fS'].FillSubOK)
+  (ok0 : LBSub[a].LBS[L', L, sg, S, e0].LBF[f0, f0'].FillSubOK) {
+  module PT = Transp[a].Tp[D', L', subTy L' L S sg, ln', lnat', d, fS'] ;
+  module PS = TranspSq[a].Sq[D', L', subTy L' L S sg, ln', lnat', d, fS', f0'] ;
+  module UT = Transp[a].Tp[D, L, S, ln, lnat, d, fS] ;
+  module US = TranspSq[a].Sq[D, L, S, ln, lnat, d, fS, f0] ;
+  module SG = Transp[a].SubE[L', L, S, sg] ;
+  module LSs = LBSub[a].LBS[L', L, sg, S, src d].LBF[fS, fS'] ;
+  module LS0 = LBSub[a].LBS[L', L, sg, S, e0].LBF[f0, f0'] ;
+  module TS = PR.TyL[L, S] ;
+
+  s : El Iv = src d ;
+  t : El Iv = tgt d ;
+
+  Ls (I : Ob) (w : PR.TyL[L', subTy L' L S sg].EI I) : TS.EI I = SG.Ls I w ;
+
+  ----------------------------------------------------------------------
+  -- The ends
+
+  enEq (e : El Iv) (W : Ob) (x : W0.Ix (D'.ob W)) : Id (W0.Ix (L.ob W)) (sg.nt W (PT.en e W x)) (UT.en e W (sR.nt W x)) =
+    transH (sg.nt-nat W (prodP W Iv) (lid W e) (ln' W x)) (apH (L.act W (prodP W Iv) (lid W e)) (lnEq W x)) ;
+
+  opaque enEq ;
+
+  ----------------------------------------------------------------------
+  -- The transport filler and its end
+
+  uF-bc (W : Ob) (x : W0.Ix (D'.ob W)) (bS : PT.TS.EI W) (bpt : Id (W0.Ix (L'.ob W)) bS.1 (PT.en s W x))
+    (bpt' : Id (W0.Ix (L.ob W)) (Ls W bS).1 (UT.en s W (sR.nt W x)))
+    : Id (TS.EI (prodP W Iv)) (Ls (prodP W Iv) (PT.uF W x bS bpt)) (UT.uF W (sR.nt W x) (Ls W bS) bpt') =
+    transH (LSs.FS[okS].FE-sub W (ln' W x) zero zero (PT.uD W x bS bpt))
+      (UT.LBs.FE-congH W (sg.nt (prodP W Iv) (ln' W x)) (ln W (sR.nt W x)) zero zero (lnEq W x)
+         (LSs.mapLD W (ln' W x) zero zero (PT.uD W x bS bpt)) (UT.uD W (sR.nt W x) (Ls W bS) bpt')
+         (refl (Ls W bS)) (\ l -> absurd _ (fz l)) (\ l -> absurd _ (fz l))
+         (\ l V f i i' -> absurd _ (fz l)) (\ l V f i i' -> absurd _ (fz l))) ;
+
+  trS-bc (W : Ob) (x : W0.Ix (D'.ob W)) (bS : PT.TS.EI W) (bpt : Id (W0.Ix (L'.ob W)) bS.1 (PT.en s W x))
+    (bpt' : Id (W0.Ix (L.ob W)) (Ls W bS).1 (UT.en s W (sR.nt W x)))
+    : Id (TS.EI W) (Ls W (PT.trS W x bS bpt)) (UT.trS W (sR.nt W x) (Ls W bS) bpt') =
+    transH (SG.Ls-act W (prodP W Iv) (lid W t) (PT.uF W x bS bpt))
+           (apH (UT.ES.act W (prodP W Iv) (lid W t)) (uF-bc W x bS bpt bpt')) ;
+
+  opaque uF-bc ; opaque trS-bc ;
+
+  ----------------------------------------------------------------------
+  -- Raw fibre data
+
+  mbpt (V : Ob) (nu : PS.FD[V]) : Id (W0.Ix (L.ob V)) (Ls V nu.bS).1 (UT.en s V (sR.nt V nu.x')) =
+    transH (apH (sg.nt V) nu.bpt) (enEq s V nu.x') ;
+
+  mppt (V : Ob) (nu : PS.FD[V])
+    : Id (W0.Ix (L.ob (prodP V Iv))) (Ls (prodP V Iv) nu.pS).1 (UT.en t (prodP V Iv) (D.act (prodP V Iv) V (pX V) (sR.nt V nu.x'))) =
+    transH (apH (sg.nt (prodP V Iv)) nu.ppt)
+     (transH (enEq t (prodP V Iv) (D'.act (prodP V Iv) V (pX V) nu.x'))
+             (apH (UT.en t (prodP V Iv)) (sR.nt-nat (prodP V Iv) V (pX V) nu.x'))) ;
+
+  mq0 (V : Ob) (nu : PS.FD[V])
+    : Id (TS.EI V) (UT.ES.act V (prodP V Iv) (lid V e0) (Ls (prodP V Iv) nu.pS)) (UT.trS V (sR.nt V nu.x') (Ls V nu.bS) (mbpt V nu)) =
+    transH (symH (SG.Ls-act V (prodP V Iv) (lid V e0) nu.pS))
+     (transH (apH (Ls V) nu.q0) (trS-bc V nu.x' nu.bS nu.bpt (mbpt V nu))) ;
+
+  opaque mbpt ; opaque mppt ; opaque mq0 ;
+
+  mapFD (V : Ob) (nu : PS.FD[V]) : US.FD[V] =
+    (US.mkFD V (sR.nt V nu.x') (Ls V nu.bS) (mbpt V nu) (Ls (prodP V Iv) nu.pS) (mppt V nu) (mq0 V nu)) ;
+
+  ----------------------------------------------------------------------
+  -- The square omega
+
+  module OB (V : Ob) (nu : PS.FD[V]) {
+    nu' : US.FD[V] = mapFD V nu ;
+
+    Pline : Id (W0.Ix (L.ob (prodP (prodP V Iv) Iv))) (sg.nt (prodP (prodP V Iv) Iv) PS.Om[V, nu].rho) US.Om[V, nu'].rho =
+      transH (sg.nt-nat (prodP (prodP V Iv) Iv) (prodP V Iv) (pX (prodP V Iv)) (ln' V nu.x'))
+             (apH (L.act (prodP (prodP V Iv) Iv) (prodP V Iv) (pX (prodP V Iv))) (lnEq V nu.x')) ;
+
+    res : Id (TS.EI (prodP (prodP V Iv) Iv)) (Ls (prodP (prodP V Iv) Iv) (PS.omF V nu)) (US.omF V nu') =
+      transH (apH (Ls (prodP (prodP V Iv) Iv)) (PS.omF-def V nu))
+       (transH (LS0.FS[ok0].FE-sub (prodP V Iv) PS.Om[V, nu].rho (suc zero) (suc zero) PS.Om[V, nu].LD)
+        (transH (US.LB0.FE-congH (prodP V Iv) (sg.nt (prodP (prodP V Iv) Iv) PS.Om[V, nu].rho) US.Om[V, nu'].rho (suc zero) (suc zero) Pline
+                   (LS0.mapLD (prodP V Iv) PS.Om[V, nu].rho (suc zero) (suc zero) PS.Om[V, nu].LD) US.Om[V, nu'].LD
+                   (uF-bc V nu.x' nu.bS nu.bpt (mbpt V nu))
+                   (\ l -> refl (endQ t V)) (\ l -> refl (endQ s V))
+                   (\ l W f i i' -> SG.Ls-act (prodP W Iv) (prodP V Iv) (cylH W V (PS.pXf W V f)) nu.pS)
+                   (\ l W f i i' -> SG.Ls-act (prodP W Iv) V (compH (prodP W Iv) W V (PS.pXf W V f) (pX W)) nu.bS))
+                (symH (US.omF-def V nu')))) ;
+  } ;
+
+  omF-bc (V : Ob) (nu : PS.FD[V]) : Id (TS.EI (prodP (prodP V Iv) Iv)) (Ls (prodP (prodP V Iv) Iv) (PS.omF V nu)) (US.omF V (mapFD V nu)) =
+    OB[V, nu].res ;
+
+  opaque omF-bc ;
+} ;

@@ -1,0 +1,179 @@
+-- GExtNat1.seg (inside IvBase, any base): Theorem 7 along a substitution,
+-- step B1 (beta and the B-filler, GExtComp1).
+--
+-- Problems of Ext(alpha[s]) over D' are moved to problems of Ext(alpha)
+-- over G by GTransfer.TrM along (s , Phi) (Phi: the transport along
+-- extObEq, natural by PhiNat); problems of B[sR] by GSubst.MorP along sR.
+-- Hypothesis HB: the B-filler of alpha[s] is the moved B-filler of alpha
+-- (the moved filler line is the filler line of the moved problem).
+--   FBv-S    the B-filler of a full problem of alpha[s], lifted along sR,
+--            is the B-filler of the moved problem (ONE congruence)
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+open VCode[a] ;
+module GP = GCofib[a] ;
+module GCF = GCofib[a] ;
+open GLine[a] ;
+module S5 = GExtSub5 ;
+module S6 = GExtSub6 ;
+
+module ExtMove (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D'])
+  (fullS : (X : Ob) (d : W0.Ix (D'.ob X)) -> Id Bool (GP.CofL[D', psi'].full X d) (GP.CofL[G, psi].full X (s.nt X d))) {
+  module AS = S6.ActS[G, A, psi, B, al, D', s, psi', fullS] ;
+  module PS = AS.PS ;
+  module ES = PS.ES ;
+
+  phX (W : Ob) (d : W0.Ix (D'.ob W)) (u : W0.Ix (PS.E2'.extOb W d)) : W0.Ix (PS.E2.extOb W (s.nt W d)) =
+    substIx (PS.E2'.extOb W d) (PS.E2.extOb W (s.nt W d)) (PS.OS.extObEq W d) u ;
+
+  psX (W : Ob) (d : W0.Ix (D'.ob W)) (u : W0.Ix (PS.E2.extOb W (s.nt W d))) : W0.Ix (PS.E2'.extOb W d) =
+    substIx (PS.E2.extOb W (s.nt W d)) (PS.E2'.extOb W d) (symH (PS.OS.extObEq W d)) u ;
+
+  phps (W : Ob) (d : W0.Ix (D'.ob W)) (u : W0.Ix (PS.E2.extOb W (s.nt W d))) : Id (W0.Ix (PS.E2.extOb W (s.nt W d))) (phX W d (psX W d u)) u =
+    transH (S5.sxx (PS.E2.extOb W (s.nt W d)) (PS.E2'.extOb W d) (PS.E2.extOb W (s.nt W d)) (symH (PS.OS.extObEq W d)) (PS.OS.extObEq W d)
+              (refl (PS.E2.extOb W (s.nt W d))) u)
+           (refl u) ;
+
+  psph (W : Ob) (d : W0.Ix (D'.ob W)) (u : W0.Ix (PS.E2'.extOb W d)) : Id (W0.Ix (PS.E2'.extOb W d)) (psX W d (phX W d u)) u =
+    S5.sxx (PS.E2'.extOb W d) (PS.E2.extOb W (s.nt W d)) (PS.E2'.extOb W d) (PS.OS.extObEq W d) (symH (PS.OS.extObEq W d))
+      (refl (PS.E2'.extOb W d)) u ;
+
+  ----------------------------------------------------------------------
+  -- ext commutes with Phi (by cases on full only)
+
+  module E4 = GExt4[a].ExtB4[G, A, psi, B, al] ;
+  module E4' = GExt4[a].ExtB4[D', ES.A', ES.psi', ES.B', ES.al'] ;
+  module TA = PR.TyL[G, A] ;
+  module TA' = PR.TyL[D', ES.A'] ;
+
+  -- an element of A[s], read in A
+  PhA (W : Ob) (u : TA'.EI W) : TA.EI W = (s.nt W u.1, u.2) ;
+
+  -- alpha commutes with the lift along sR
+  alPhi (W : Ob) (w : PS.TB'.EI W) : Id (TA.EI W) (ES.ED.toEA W (al.mE W (PS.LB.mV W w))) (PhA W (ES.ED'.toEA W (ES.al'.mE W w))) =
+    transH (symH (ES.EB.alF-E W (ES.sRnt W w.1) w.2))
+      (transH (apH {W0.Ix (A.tob W (s.nt W w.1.1))} {TA.EI W} (\ a0 -> (s.nt W w.1.1, a0)) (symH (ES.alFeq W w.1 w.2)))
+              (apH (PhA W) (ES.EB'.alF-E W w.1 w.2))) ;
+
+  extPhiB (W : Ob) (w : PS.TB'.EI W) : Id (TA.EI W) (E4.extE W (PS.PhiE W (PS.E3'.fromB W w))) (PhA W (E4'.extE W (PS.E3'.fromB W w))) =
+    transH (apH (E4.extE W) (PS.PhiB W w))
+      (transH (E4.extE-B W (PS.LB.mV W w))
+        (transH (alPhi W w) (apH (PhA W) (symH (E4'.extE-B W w))))) ;
+
+  extPhiP (W : Ob) (d : W0.Ix (D'.ob W)) (np' : Id Bool (ES.CL'.full W d) false) (u : ES.EB'.Pairs W d)
+    : Id (TA.EI W) (E4.extE W (PS.PhiE W (PS.E3'.fromP W d np' u))) (PhA W (E4'.extE W (PS.E3'.fromP W d np' u))) =
+    transH (apH (E4.extE W) (PS.PhiP W d np' u))
+      (transH (E4.extE-P W (s.nt W d) (PS.np W d np') (PS.mvPair W d u))
+        (transH (apH {W0.Ix (A.tob W (s.nt W d))} {TA.EI W} (\ a0 -> (s.nt W d, a0)) (PS.MV[W, d, u].pa-mv))
+                (apH (PhA W) (symH (E4'.extE-P W d np' u))))) ;
+
+  extPhi' (W : Ob) (v : PS.TX'.EI W)
+    : (c : Bool) (e : Id Bool (ES.CL'.full W v.1) c) -> Id (TA.EI W) (E4.extE W (PS.PhiE W v)) (PhA W (E4'.extE W v)) = split {
+    true -> \ e -> transH (apH (\ z -> E4.extE W (PS.PhiE W z)) (symH (PS.E3'.fromB-toB W v e)))
+                    (transH (extPhiB W (PS.E3'.toB W v e)) (apH (\ z -> PhA W (E4'.extE W z)) (PS.E3'.fromB-toB W v e))) ;
+    false -> \ e -> transH (apH (\ z -> E4.extE W (PS.PhiE W z)) (symH (PS.E3'.fromP-toP W v e)))
+                     (transH (extPhiP W v.1 e (PS.E3'.toP W v e)) (apH (\ z -> PhA W (E4'.extE W z)) (PS.E3'.fromP-toP W v e))) } ;
+
+  extPhi (W : Ob) (v : PS.TX'.EI W) : Id (TA.EI W) (E4.extE W (PS.PhiE W v)) (PhA W (E4'.extE W v)) =
+    extPhi' W v (ES.CL'.full W v.1) (refl (ES.CL'.full W v.1)) ;
+
+  opaque alPhi ; opaque extPhi ;
+} ;
+
+------------------------------------------------------------------------
+-- B1: the B-filler
+
+module B1 (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D'])
+  (fullS : (X : Ob) (d : W0.Ix (D'.ob X)) -> Id Bool (GP.CofL[D', psi'].full X d) (GP.CofL[G, psi].full X (s.nt X d))) (eS : IPt)
+  (kBS : LineFibP[GFam[a].famPath, GP.CofL[G, psi].resCtx, B].FibAt eS)
+  (kBS' : LineFibP[GFam[a].famPath, GP.CofL[D', GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].psi'].resCtx,
+                   GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS].B'].FibAt eS) {
+  module EM = ExtMove[G, A, psi, B, al, D', s, psi', fullS] ;
+  module PS = EM.PS ;
+  module ES = PS.ES ;
+  module TXM = GTransfer[a, a, a].TrM[D', PS.E2'.ExtT, G, PS.E2.ExtT, s.nt, \ V W g d -> s.nt-nat V W g d,
+      EM.phX, EM.psX, EM.phps, EM.psph, EM.AS.PhiNat, eS] ;
+  module MB = GTransfer[a, a, a].TrM[ES.CL'.resCtx, ES.B', ES.CL.resCtx, B, ES.sRnt, ES.sR.nt-nat,
+      \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b,
+      (liftP ES.CL'.resCtx ES.CL.resCtx B ES.sR).nt-nat, eS] ;
+
+  -- the hypothesis: the filler of B[sR] is the moved filler of B
+  HBTy : U a = (X : Ob) (x : MB.CD.TV.EI X) (p : MB.CD.PT.Partial[X, x])
+    -> Id (MB.CD0.TS.EI X) (MB.tsN X (x, kBS'.kop X x p)) (MB.tvN X x, kBS.kop X (MB.tvN X x) (MB.mapP X x p)) ;
+  module C1 = GExtComp1[a].C1[G, A, psi, B, al, eS, kBS] ;
+  module C1' = GExtComp1[a].C1[D', ES.A', ES.psi', ES.B', ES.al', eS, kBS'] ;
+
+  module LB = PS.LB ;
+
+  -- one full problem of alpha[s] and its move
+  module Sx (HB : HBTy) (X : Ob) (x' : C1'.KX.TV.EI X) (p' : C1'.KX.PT.Partial[X, x']) (fl' : C1'.FlTy X x') (fl : C1.FlTy X (TXM.tvN X x')) {
+    module BX' = C1'.Beta[X, x', p', fl'] ;
+    module BX = C1.Beta[X, TXM.tvN X x', TXM.mapP X x' p', fl] ;
+
+    xBeq : Id (C1.KB.TV.EI X) (MB.tvN X BX'.xB) BX.xB =
+      C1.KB.tv-eq X (MB.tvN X BX'.xB) BX.xB
+        (C1.FG'.fam-eq X (MB.tvN X BX'.xB).1 BX.xB.1 (\ W f j -> ES.CL.res-eq W ((MB.tvN X BX'.xB).1.1 W f j) (BX.xB.1.1 W f j) (refl (s.nt W (x'.1.1 W f j)))))
+        (symH (EM.AS.toBPhi0 X (C1'.KX.endE X x') (fl' X (idH X) (ptH X eS)) (fl X (idH X) (ptH X eS)))) ;
+
+    pS (V : Ob) (f : Hom V X) (v' : C1'.KX.TS.EI V)
+      (vp : Id (C1.KX.TV.EI V) (TXM.tsN V v').1 (C1.KX.TV.E.act V X f (TXM.tvN X x'))) (W : Ob) (g : Hom W V) (j : Hom W Iv)
+      : IsT (ES.CL.full W (s.nt W (C1'.lvX V v' W g j).1)) =
+      ES.CL.full-eq W (C1.lvX V (TXM.tsN V v') W g j).1 (s.nt W (C1'.lvX V v' W g j).1)
+        (apH (\ z -> z.1) (TXM.TSN[V, v'].res-lev W g j)) (BX.SV[V, f, TXM.tsN V v', vp].qv W g j) ;
+
+    -- a side value of alpha[s], moved, is the side value of the moved problem
+    svEq (V : Ob) (f : Hom V X) (v' : C1'.KX.TS.EI V) (vp' : Id (C1'.KX.TV.EI V) v'.1 (C1'.KX.TV.E.act V X f x'))
+      (vp : Id (C1.KX.TV.EI V) (TXM.tsN V v').1 (C1.KX.TV.E.act V X f (TXM.tvN X x')))
+      : Id (C1.KB.TS.EI V) (MB.tsN V (BX'.SV[V, f, v', vp'].sv)) (BX.SV[V, f, TXM.tsN V v', vp].sv) =
+      C1.LB.ts-ext V (MB.tsN V (BX'.SV[V, f, v', vp'].sv)) (BX.SV[V, f, TXM.tsN V v', vp].sv)
+        (transH MB.TSN[V, BX'.SV[V, f, v', vp'].sv].res-pt
+          (transH (apH (MB.tvN V) (BX'.SV[V, f, v', vp'].sv-pt))
+            (transH (MB.tvN-act V X f BX'.xB)
+              (transH (apH (C1.KB.TV.E.act V X f) xBeq) (symH (BX.SV[V, f, TXM.tsN V v', vp].sv-pt))))))
+        (\ W g j -> transH (MB.TSN[V, BX'.SV[V, f, v', vp'].sv].res-lev W g j)
+           (transH (apH (LB.mV W) (BX'.SV[V, f, v', vp'].sv-lev W g j))
+             (transH (symH (EM.AS.toBPhi0 W (C1'.lvX V v' W g j) (BX'.SV[V, f, v', vp'].qv W g j) (pS V f v' vp W g j)))
+               (transH (PS.E3.toB-cong W (PS.PhiE W (C1'.lvX V v' W g j)) (C1.lvX V (TXM.tsN V v') W g j)
+                          (symH (TXM.TSN[V, v'].res-lev W g j)) (pS V f v' vp W g j) (BX.SV[V, f, TXM.tsN V v', vp].qv W g j))
+                       (symH (BX.SV[V, f, TXM.tsN V v', vp].sv-lev W g j)))))) ;
+
+    -- the moved side value does not depend on the presentation of the side
+    svIrr (V : Ob) (f : Hom V X) (v1 v2 : C1'.KX.TS.EI V) (P : Id (C1'.KX.TS.EI V) v1 v2)
+      (vp1 : Id (C1'.KX.TV.EI V) v1.1 (C1'.KX.TV.E.act V X f x')) (vp2 : Id (C1'.KX.TV.EI V) v2.1 (C1'.KX.TV.E.act V X f x'))
+      : Id (C1.KB.TS.EI V) (MB.tsN V (BX'.SV[V, f, v1, vp1].sv)) (MB.tsN V (BX'.SV[V, f, v2, vp2].sv)) =
+      idJ (C1'.KX.TS.EI V) v1
+        (\ v3 P3 -> (vp3 : Id (C1'.KX.TV.EI V) v3.1 (C1'.KX.TV.E.act V X f x'))
+           -> Id (C1.KB.TS.EI V) (MB.tsN V (BX'.SV[V, f, v1, vp1].sv)) (MB.tsN V (BX'.SV[V, f, v3, vp3].sv)))
+        (\ vp3 -> apH (\ z -> MB.tsN V (BX'.SV[V, f, v1, z].sv))
+                     (W0.isSetIx (C1'.KX.TV.E.ob V) v1.1 (C1'.KX.TV.E.act V X f x') vp1 vp3))
+        v2 P vp2 ;
+
+    R : Id (C1.KB.PT.Partial[X, BX.xB])
+           (subst (C1.KB.TV.EI X) (\ z -> C1.KB.PT.Partial[X, z]) (MB.tvN X BX'.xB) BX.xB xBeq (MB.mapP X BX'.xB BX'.pB)) BX.pB =
+      C1.KB.PT.partExtH X (MB.tvN X BX'.xB) BX.xB xBeq (MB.mapP X BX'.xB BX'.pB) BX.pB (refl p'.pr) (\ l -> refl (p'.ps l).pQ)
+        (\ l V f i i' -> transH (svIrr V f ((p'.ps l).pv V f i) ((p'.ps l).pv V f i') (C1'.KX.PT.pv-irr X x' (p'.ps l) V f i i')
+                                    ((p'.ps l).ppt V f i) ((p'.ps l).ppt V f i'))
+           (svEq V f ((p'.ps l).pv V f i') ((p'.ps l).ppt V f i') (((TXM.mapP X x' p').ps l).ppt V f i'))) ;
+
+    fillEq : Id (C1.KB.TS.EI X) (MB.tsN X (BX'.xB, BX'.fillB)) (BX.xB, BX.fillB) =
+      transH (HB X BX'.xB BX'.pB)
+        (C1.KB.PT.kop-cong kBS X (MB.tvN X BX'.xB) BX.xB xBeq (MB.mapP X BX'.xB BX'.pB) BX.pB R) ;
+
+    -- the congruence of B1
+    FBv-S (W : Ob) (g : Hom W X) (j : Hom W Iv) : Id (PS.TB.EI W) (LB.mV W (BX'.FBv W g j)) (BX.FBv W g j) =
+      transH (symH (MB.TSN[X, (BX'.xB, BX'.fillB)].res-lev W g j)) (apH (\ u -> C1.lvB X u W g j) fillEq) ;
+
+    opaque xBeq ; opaque svEq ; opaque R ; opaque fillEq ; opaque FBv-S ;
+  } ;
+} ;

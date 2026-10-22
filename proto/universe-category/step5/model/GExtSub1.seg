@@ -1,0 +1,229 @@
+-- GExtSub1.seg (inside IvBase, any base): extensionality for the local
+-- data of Ext (GExt.LD), step (A) of making Ext a function of its local
+-- data.  Two local data are equal when their codes agree pointwise (paths
+-- of codes, any of them: V is a set) and their maps agree read through
+-- those paths; the B-codes are compared at any two proofs of fullness (a
+-- proposition), so no transport of proofs is needed.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+open VCode[a] ;
+
+-- a loop in V transports trivially
+loopIx (v : W0.V) (q : Id W0.V v v) (z : W0.Ix v) : Id (W0.Ix v) (substIx v v q z) z =
+  apH (\ q' -> substIx v v q' z) (W0.isSetV v v q (refl v)) ;
+
+module LDX (X : Ob) {
+
+  FlTy : U a = (W : Ob) -> Hom W X -> Bool ;
+  BVTy (fl : FlTy) : U a+ = (W : Ob) (f : Hom W X) -> IsT (fl W f) -> W0.V ;
+  AWTy : U a+ = (W : Ob) -> Hom W X -> W0.V ;
+
+  ARTy (aV : W0.V) (aW : AWTy) : U a = (W : Ob) (f : Hom W X) -> W0.Ix aV -> W0.Ix (aW W f) ;
+  ALTy (fl : FlTy) (bV : BVTy fl) (aW : AWTy) : U a = (W : Ob) (f : Hom W X) (q : IsT (fl W f)) -> W0.Ix (bV W f q) -> W0.Ix (aW W f) ;
+  BRTy (fl : FlTy) (bV : BVTy fl) : U a =
+    (W' W : Ob) (chi : Hom W' W) (f : Hom W X) (q : IsT (fl W f)) (f2 : Hom W' X)
+    -> Id (Hom W' X) (compH W' W X f chi) f2 -> (q2 : IsT (fl W' f2)) -> W0.Ix (bV W f q) -> W0.Ix (bV W' f2 q2) ;
+
+  -- the values agree, once the codes are the same
+  aRp (aV : W0.V) (aW : AWTy) (aR aR' : ARTy aV aW) (PaW : (W : Ob) (f : Hom W X) -> Id W0.V (aW W f) (aW W f))
+    (PaR : (W : Ob) (f : Hom W X) (u : W0.Ix aV) -> Id (W0.Ix (aW W f)) (substIx (aW W f) (aW W f) (PaW W f) (aR W f u)) (aR' W f u))
+    : Id (ARTy aV aW) aR aR' =
+    funext Ob (\ W -> (f : Hom W X) -> W0.Ix aV -> W0.Ix (aW W f)) aR aR' (\ W ->
+      funext (Hom W X) (\ f -> W0.Ix aV -> W0.Ix (aW W f)) (aR W) (aR' W) (\ f ->
+        funext (W0.Ix aV) (\ u -> W0.Ix (aW W f)) (aR W f) (aR' W f) (\ u ->
+          transH (symH (loopIx (aW W f) (PaW W f) (aR W f u))) (PaR W f u)))) ;
+
+  alWp (fl : FlTy) (bV : BVTy fl) (aW : AWTy) (alW alW' : ALTy fl bV aW)
+    (PbV : (W : Ob) (f : Hom W X) (q1 q2 : IsT (fl W f)) -> Id W0.V (bV W f q1) (bV W f q2))
+    (PaW : (W : Ob) (f : Hom W X) -> Id W0.V (aW W f) (aW W f))
+    (PalW : (W : Ob) (f : Hom W X) (q1 q2 : IsT (fl W f)) (b : W0.Ix (bV W f q1))
+       -> Id (W0.Ix (aW W f)) (substIx (aW W f) (aW W f) (PaW W f) (alW W f q1 b)) (alW' W f q2 (substIx (bV W f q1) (bV W f q2) (PbV W f q1 q2) b)))
+    : Id (ALTy fl bV aW) alW alW' =
+    funext Ob (\ W -> (f : Hom W X) (q : IsT (fl W f)) -> W0.Ix (bV W f q) -> W0.Ix (aW W f)) alW alW' (\ W ->
+      funext (Hom W X) (\ f -> (q : IsT (fl W f)) -> W0.Ix (bV W f q) -> W0.Ix (aW W f)) (alW W) (alW' W) (\ f ->
+        funext (IsT (fl W f)) (\ q -> W0.Ix (bV W f q) -> W0.Ix (aW W f)) (alW W f) (alW' W f) (\ q ->
+          funext (W0.Ix (bV W f q)) (\ b -> W0.Ix (aW W f)) (alW W f q) (alW' W f q) (\ b ->
+            transH (symH (loopIx (aW W f) (PaW W f) (alW W f q b)))
+              (transH (PalW W f q q b) (apH (alW' W f q) (loopIx (bV W f q) (PbV W f q q) b))))))) ;
+
+  bRp (fl : FlTy) (bV : BVTy fl) (bR bR' : BRTy fl bV)
+    (PbV : (W : Ob) (f : Hom W X) (q1 q2 : IsT (fl W f)) -> Id W0.V (bV W f q1) (bV W f q2))
+    (PbR : (W' W : Ob) (chi : Hom W' W) (f : Hom W X) (q1 q1' : IsT (fl W f)) (f2 : Hom W' X) (E : Id (Hom W' X) (compH W' W X f chi) f2)
+       (q2 q2' : IsT (fl W' f2)) (b : W0.Ix (bV W f q1))
+       -> Id (W0.Ix (bV W' f2 q2')) (substIx (bV W' f2 q2) (bV W' f2 q2') (PbV W' f2 q2 q2') (bR W' W chi f q1 f2 E q2 b))
+                                   (bR' W' W chi f q1' f2 E q2' (substIx (bV W f q1) (bV W f q1') (PbV W f q1 q1') b)))
+    : Id (BRTy fl bV) bR bR' =
+    funext Ob (\ W' -> (W : Ob) (chi : Hom W' W) (f : Hom W X) (q : IsT (fl W f)) (f2 : Hom W' X)
+                        -> Id (Hom W' X) (compH W' W X f chi) f2 -> (q2 : IsT (fl W' f2)) -> W0.Ix (bV W f q) -> W0.Ix (bV W' f2 q2))
+      bR bR' (\ W' ->
+    funext Ob (\ W -> (chi : Hom W' W) (f : Hom W X) (q : IsT (fl W f)) (f2 : Hom W' X)
+                        -> Id (Hom W' X) (compH W' W X f chi) f2 -> (q2 : IsT (fl W' f2)) -> W0.Ix (bV W f q) -> W0.Ix (bV W' f2 q2))
+      (bR W') (bR' W') (\ W ->
+    funext (Hom W' W) (\ chi -> (f : Hom W X) (q : IsT (fl W f)) (f2 : Hom W' X)
+                        -> Id (Hom W' X) (compH W' W X f chi) f2 -> (q2 : IsT (fl W' f2)) -> W0.Ix (bV W f q) -> W0.Ix (bV W' f2 q2))
+      (bR W' W) (bR' W' W) (\ chi ->
+    funext (Hom W X) (\ f -> (q : IsT (fl W f)) (f2 : Hom W' X)
+                        -> Id (Hom W' X) (compH W' W X f chi) f2 -> (q2 : IsT (fl W' f2)) -> W0.Ix (bV W f q) -> W0.Ix (bV W' f2 q2))
+      (bR W' W chi) (bR' W' W chi) (\ f ->
+    funext (IsT (fl W f)) (\ q -> (f2 : Hom W' X)
+                        -> Id (Hom W' X) (compH W' W X f chi) f2 -> (q2 : IsT (fl W' f2)) -> W0.Ix (bV W f q) -> W0.Ix (bV W' f2 q2))
+      (bR W' W chi f) (bR' W' W chi f) (\ q ->
+    funext (Hom W' X) (\ f2 -> Id (Hom W' X) (compH W' W X f chi) f2 -> (q2 : IsT (fl W' f2)) -> W0.Ix (bV W f q) -> W0.Ix (bV W' f2 q2))
+      (bR W' W chi f q) (bR' W' W chi f q) (\ f2 ->
+    funext (Id (Hom W' X) (compH W' W X f chi) f2) (\ E -> (q2 : IsT (fl W' f2)) -> W0.Ix (bV W f q) -> W0.Ix (bV W' f2 q2))
+      (bR W' W chi f q f2) (bR' W' W chi f q f2) (\ E ->
+    funext (IsT (fl W' f2)) (\ q2 -> W0.Ix (bV W f q) -> W0.Ix (bV W' f2 q2))
+      (bR W' W chi f q f2 E) (bR' W' W chi f q f2 E) (\ q2 ->
+    funext (W0.Ix (bV W f q)) (\ b -> W0.Ix (bV W' f2 q2))
+      (bR W' W chi f q f2 E q2) (bR' W' W chi f q f2 E q2) (\ b ->
+      transH (symH (loopIx (bV W' f2 q2) (PbV W' f2 q2 q2) (bR W' W chi f q f2 E q2 b)))
+        (transH (PbR W' W chi f q q f2 E q2 q2 b) (apH (bR' W' W chi f q f2 E q2) (loopIx (bV W f q) (PbV W f q q) b)))))))))))) ;
+
+  vals (aV : W0.V) (fl : FlTy) (bV : BVTy fl) (aW : AWTy) (aR aR' : ARTy aV aW) (alW alW' : ALTy fl bV aW) (bR bR' : BRTy fl bV)
+    (PbV : (W : Ob) (f : Hom W X) (q1 q2 : IsT (fl W f)) -> Id W0.V (bV W f q1) (bV W f q2))
+    (PaW : (W : Ob) (f : Hom W X) -> Id W0.V (aW W f) (aW W f))
+    (PaR : (W : Ob) (f : Hom W X) (u : W0.Ix aV) -> Id (W0.Ix (aW W f)) (substIx (aW W f) (aW W f) (PaW W f) (aR W f u)) (aR' W f u))
+    (PalW : (W : Ob) (f : Hom W X) (q1 q2 : IsT (fl W f)) (b : W0.Ix (bV W f q1))
+       -> Id (W0.Ix (aW W f)) (substIx (aW W f) (aW W f) (PaW W f) (alW W f q1 b)) (alW' W f q2 (substIx (bV W f q1) (bV W f q2) (PbV W f q1 q2) b)))
+    (PbR : (W' W : Ob) (chi : Hom W' W) (f : Hom W X) (q1 q1' : IsT (fl W f)) (f2 : Hom W' X) (E : Id (Hom W' X) (compH W' W X f chi) f2)
+       (q2 q2' : IsT (fl W' f2)) (b : W0.Ix (bV W f q1))
+       -> Id (W0.Ix (bV W' f2 q2')) (substIx (bV W' f2 q2) (bV W' f2 q2') (PbV W' f2 q2 q2') (bR W' W chi f q1 f2 E q2 b))
+                                   (bR' W' W chi f q1' f2 E q2' (substIx (bV W f q1) (bV W f q1') (PbV W f q1 q1') b)))
+    : Id (GExt[a].LD[X]) (new GExt[a].LD[X, aV, fl, bV, aW, aR, alW, bR]) (new GExt[a].LD[X, aV, fl, bV, aW, aR', alW', bR']) =
+    transH (apH {ARTy aV aW} {GExt[a].LD[X]} (\ z -> new GExt[a].LD[X, aV, fl, bV, aW, z, alW, bR]) (aRp aV aW aR aR' PaW PaR))
+      (transH (apH {ALTy fl bV aW} {GExt[a].LD[X]} (\ z -> new GExt[a].LD[X, aV, fl, bV, aW, aR', z, bR]) (alWp fl bV aW alW alW' PbV PaW PalW))
+              (apH {BRTy fl bV} {GExt[a].LD[X]} (\ z -> new GExt[a].LD[X, aV, fl, bV, aW, aR', alW', z]) (bRp fl bV bR bR' PbV PbR))) ;
+
+  opaque vals ;
+
+  -- the extensionality principle
+  LD-ext (l1 l2 : GExt[a].LD[X])
+    (PaV : Id W0.V l1.aV l2.aV)
+    (Pfl : (W : Ob) (f : Hom W X) -> Id Bool (l1.fl W f) (l2.fl W f))
+    (PbV : (W : Ob) (f : Hom W X) (q1 : IsT (l1.fl W f)) (q2 : IsT (l2.fl W f)) -> Id W0.V (l1.bV W f q1) (l2.bV W f q2))
+    (PaW : (W : Ob) (f : Hom W X) -> Id W0.V (l1.aW W f) (l2.aW W f))
+    (PaR : (W : Ob) (f : Hom W X) (u : W0.Ix l1.aV)
+       -> Id (W0.Ix (l2.aW W f)) (substIx (l1.aW W f) (l2.aW W f) (PaW W f) (l1.aR W f u)) (l2.aR W f (substIx l1.aV l2.aV PaV u)))
+    (PalW : (W : Ob) (f : Hom W X) (q1 : IsT (l1.fl W f)) (q2 : IsT (l2.fl W f)) (b : W0.Ix (l1.bV W f q1))
+       -> Id (W0.Ix (l2.aW W f)) (substIx (l1.aW W f) (l2.aW W f) (PaW W f) (l1.alW W f q1 b))
+             (l2.alW W f q2 (substIx (l1.bV W f q1) (l2.bV W f q2) (PbV W f q1 q2) b)))
+    (PbR : (W' W : Ob) (chi : Hom W' W) (f : Hom W X) (q1 : IsT (l1.fl W f)) (q1' : IsT (l2.fl W f)) (f2 : Hom W' X)
+       (E : Id (Hom W' X) (compH W' W X f chi) f2) (q2 : IsT (l1.fl W' f2)) (q2' : IsT (l2.fl W' f2)) (b : W0.Ix (l1.bV W f q1))
+       -> Id (W0.Ix (l2.bV W' f2 q2')) (substIx (l1.bV W' f2 q2) (l2.bV W' f2 q2') (PbV W' f2 q2 q2') (l1.bR W' W chi f q1 f2 E q2 b))
+             (l2.bR W' W chi f q1' f2 E q2' (substIx (l1.bV W f q1) (l2.bV W f q1') (PbV W f q1 q1') b)))
+    : Id (GExt[a].LD[X]) l1 l2 =
+    idJ W0.V l1.aV
+      (\ aV2 P2 -> (fl2 : FlTy) (bV2 : BVTy fl2) (aW2 : AWTy) (aR2 : ARTy aV2 aW2) (alW2 : ALTy fl2 bV2 aW2) (bR2 : BRTy fl2 bV2)
+         -> ((W : Ob) (f : Hom W X) -> Id Bool (l1.fl W f) (fl2 W f))
+         -> (PbV2 : (W : Ob) (f : Hom W X) (q1 : IsT (l1.fl W f)) (q2 : IsT (fl2 W f)) -> Id W0.V (l1.bV W f q1) (bV2 W f q2))
+         -> (PaW2 : (W : Ob) (f : Hom W X) -> Id W0.V (l1.aW W f) (aW2 W f))
+         -> ((W : Ob) (f : Hom W X) (u : W0.Ix l1.aV)
+             -> Id (W0.Ix (aW2 W f)) (substIx (l1.aW W f) (aW2 W f) (PaW2 W f) (l1.aR W f u)) (aR2 W f (substIx l1.aV aV2 P2 u)))
+         -> ((W : Ob) (f : Hom W X) (q1 : IsT (l1.fl W f)) (q2 : IsT (fl2 W f)) (b : W0.Ix (l1.bV W f q1))
+             -> Id (W0.Ix (aW2 W f)) (substIx (l1.aW W f) (aW2 W f) (PaW2 W f) (l1.alW W f q1 b))
+                   (alW2 W f q2 (substIx (l1.bV W f q1) (bV2 W f q2) (PbV2 W f q1 q2) b)))
+         -> ((W' W : Ob) (chi : Hom W' W) (f : Hom W X) (q1 : IsT (l1.fl W f)) (q1' : IsT (fl2 W f)) (f2 : Hom W' X)
+             (E : Id (Hom W' X) (compH W' W X f chi) f2) (q2 : IsT (l1.fl W' f2)) (q2' : IsT (fl2 W' f2)) (b : W0.Ix (l1.bV W f q1))
+             -> Id (W0.Ix (bV2 W' f2 q2')) (substIx (l1.bV W' f2 q2) (bV2 W' f2 q2') (PbV2 W' f2 q2 q2') (l1.bR W' W chi f q1 f2 E q2 b))
+                   (bR2 W' W chi f q1' f2 E q2' (substIx (l1.bV W f q1) (bV2 W f q1') (PbV2 W f q1 q1') b)))
+         -> Id (GExt[a].LD[X]) l1 (new GExt[a].LD[X, aV2, fl2, bV2, aW2, aR2, alW2, bR2]))
+      (\ fl2 bV2 aW2 aR2 alW2 bR2 Pfl2 ->
+         idJ FlTy l1.fl
+           (\ fl3 F3 -> (bV3 : BVTy fl3) (aW3 : AWTy) (aR3 : ARTy l1.aV aW3) (alW3 : ALTy fl3 bV3 aW3) (bR3 : BRTy fl3 bV3)
+              -> (PbV3 : (W : Ob) (f : Hom W X) (q1 : IsT (l1.fl W f)) (q2 : IsT (fl3 W f)) -> Id W0.V (l1.bV W f q1) (bV3 W f q2))
+              -> (PaW3 : (W : Ob) (f : Hom W X) -> Id W0.V (l1.aW W f) (aW3 W f))
+              -> ((W : Ob) (f : Hom W X) (u : W0.Ix l1.aV)
+                  -> Id (W0.Ix (aW3 W f)) (substIx (l1.aW W f) (aW3 W f) (PaW3 W f) (l1.aR W f u)) (aR3 W f u))
+              -> ((W : Ob) (f : Hom W X) (q1 : IsT (l1.fl W f)) (q2 : IsT (fl3 W f)) (b : W0.Ix (l1.bV W f q1))
+                  -> Id (W0.Ix (aW3 W f)) (substIx (l1.aW W f) (aW3 W f) (PaW3 W f) (l1.alW W f q1 b))
+                        (alW3 W f q2 (substIx (l1.bV W f q1) (bV3 W f q2) (PbV3 W f q1 q2) b)))
+              -> ((W' W : Ob) (chi : Hom W' W) (f : Hom W X) (q1 : IsT (l1.fl W f)) (q1' : IsT (fl3 W f)) (f2 : Hom W' X)
+                  (E : Id (Hom W' X) (compH W' W X f chi) f2) (q2 : IsT (l1.fl W' f2)) (q2' : IsT (fl3 W' f2)) (b : W0.Ix (l1.bV W f q1))
+                  -> Id (W0.Ix (bV3 W' f2 q2')) (substIx (l1.bV W' f2 q2) (bV3 W' f2 q2') (PbV3 W' f2 q2 q2') (l1.bR W' W chi f q1 f2 E q2 b))
+                        (bR3 W' W chi f q1' f2 E q2' (substIx (l1.bV W f q1) (bV3 W f q1') (PbV3 W f q1 q1') b)))
+              -> Id (GExt[a].LD[X]) l1 (new GExt[a].LD[X, l1.aV, fl3, bV3, aW3, aR3, alW3, bR3]))
+           (\ bV3 aW3 aR3 alW3 bR3 PbV3 PaW3 ->
+              idJ (BVTy l1.fl) l1.bV
+                (\ bV4 B4 -> (aR4 : ARTy l1.aV aW3) (alW4 : ALTy l1.fl bV4 aW3) (bR4 : BRTy l1.fl bV4)
+                   -> (PbV4 : (W : Ob) (f : Hom W X) (q1 q2 : IsT (l1.fl W f)) -> Id W0.V (l1.bV W f q1) (bV4 W f q2))
+                   -> ((W : Ob) (f : Hom W X) (u : W0.Ix l1.aV)
+                       -> Id (W0.Ix (aW3 W f)) (substIx (l1.aW W f) (aW3 W f) (PaW3 W f) (l1.aR W f u)) (aR4 W f u))
+                   -> ((W : Ob) (f : Hom W X) (q1 q2 : IsT (l1.fl W f)) (b : W0.Ix (l1.bV W f q1))
+                       -> Id (W0.Ix (aW3 W f)) (substIx (l1.aW W f) (aW3 W f) (PaW3 W f) (l1.alW W f q1 b))
+                             (alW4 W f q2 (substIx (l1.bV W f q1) (bV4 W f q2) (PbV4 W f q1 q2) b)))
+                   -> ((W' W : Ob) (chi : Hom W' W) (f : Hom W X) (q1 q1' : IsT (l1.fl W f)) (f2 : Hom W' X)
+                       (E : Id (Hom W' X) (compH W' W X f chi) f2) (q2 q2' : IsT (l1.fl W' f2)) (b : W0.Ix (l1.bV W f q1))
+                       -> Id (W0.Ix (bV4 W' f2 q2')) (substIx (l1.bV W' f2 q2) (bV4 W' f2 q2') (PbV4 W' f2 q2 q2') (l1.bR W' W chi f q1 f2 E q2 b))
+                             (bR4 W' W chi f q1' f2 E q2' (substIx (l1.bV W f q1) (bV4 W f q1') (PbV4 W f q1 q1') b)))
+                   -> Id (GExt[a].LD[X]) l1 (new GExt[a].LD[X, l1.aV, l1.fl, bV4, aW3, aR4, alW4, bR4]))
+                (\ aR4 alW4 bR4 PbV4 PaR4 PalW4 PbR4 ->
+                   idJ AWTy l1.aW
+                     (\ aW5 A5 -> (aR5 : ARTy l1.aV aW5) (alW5 : ALTy l1.fl l1.bV aW5)
+                        -> (PaW5 : (W : Ob) (f : Hom W X) -> Id W0.V (l1.aW W f) (aW5 W f))
+                        -> ((W : Ob) (f : Hom W X) (u : W0.Ix l1.aV)
+                            -> Id (W0.Ix (aW5 W f)) (substIx (l1.aW W f) (aW5 W f) (PaW5 W f) (l1.aR W f u)) (aR5 W f u))
+                        -> ((W : Ob) (f : Hom W X) (q1 q2 : IsT (l1.fl W f)) (b : W0.Ix (l1.bV W f q1))
+                            -> Id (W0.Ix (aW5 W f)) (substIx (l1.aW W f) (aW5 W f) (PaW5 W f) (l1.alW W f q1 b))
+                                  (alW5 W f q2 (substIx (l1.bV W f q1) (l1.bV W f q2) (PbV4 W f q1 q2) b)))
+                        -> Id (GExt[a].LD[X]) l1 (new GExt[a].LD[X, l1.aV, l1.fl, l1.bV, aW5, aR5, alW5, bR4]))
+                     (\ aR5 alW5 PaW5 PaR5 PalW5 ->
+                        vals l1.aV l1.fl l1.bV l1.aW l1.aR aR5 l1.alW alW5 l1.bR bR4 PbV4 PaW5 PaR5 PalW5 PbR4)
+                     aW3 (funext Ob (\ W -> Hom W X -> W0.V) l1.aW aW3 (\ W ->
+                            funext (Hom W X) (\ f -> W0.V) (l1.aW W) (aW3 W) (\ f -> PaW3 W f)))
+                     aR4 alW4 PaW3 PaR4 PalW4)
+                bV3 (funext Ob (\ W -> (f : Hom W X) -> IsT (l1.fl W f) -> W0.V) l1.bV bV3 (\ W ->
+                       funext (Hom W X) (\ f -> IsT (l1.fl W f) -> W0.V) (l1.bV W) (bV3 W) (\ f ->
+                         funext (IsT (l1.fl W f)) (\ q -> W0.V) (l1.bV W f) (bV3 W f) (\ q -> PbV3 W f q q))))
+                aR3 alW3 bR3 PbV3)
+           fl2 (funext Ob (\ W -> Hom W X -> Bool) l1.fl fl2 (\ W ->
+                  funext (Hom W X) (\ f -> Bool) (l1.fl W) (fl2 W) (\ f -> Pfl2 W f)))
+           bV2 aW2 aR2 alW2 bR2)
+      l2.aV PaV l2.fl l2.bV l2.aW l2.aR l2.alW l2.bR Pfl PbV PaW PaR PalW PbR ;
+
+  opaque LD-ext ;
+
+  ----------------------------------------------------------------------
+  -- reading a pair transported along an equation of local data
+
+  fstC (l : GExt[a].LD[X]) (c : W0.Ix (GExt[a].LocCode[X, l].pairsCode)) : W0.Ix l.aV =
+    fstO {l.aV} {GExt[a].LocCode[X, l].pcB1} c ;
+
+  famC (l : GExt[a].LD[X]) (c : W0.Ix (GExt[a].LocCode[X, l].pairsCode)) : GExt[a].LocCode[X, l].Fam =
+    fstO {GExt[a].LocCode[X, l].famV} {GExt[a].LocCode[X, l].pcB2 (fstC l c)} (sndO {l.aV} {GExt[a].LocCode[X, l].pcB1} c) ;
+
+  trC (l1 l2 : GExt[a].LD[X]) (P : Id (GExt[a].LD[X]) l1 l2) (c : W0.Ix (GExt[a].LocCode[X, l1].pairsCode)) : W0.Ix (GExt[a].LocCode[X, l2].pairsCode) =
+    substIx (GExt[a].LocCode[X, l1].pairsCode) (GExt[a].LocCode[X, l2].pairsCode) (apH (\ l -> GExt[a].LocCode[X, l].pairsCode) P) c ;
+
+  trFst (l1 l2 : GExt[a].LD[X]) (P : Id (GExt[a].LD[X]) l1 l2) (Q : Id W0.V l1.aV l2.aV) (c : W0.Ix (GExt[a].LocCode[X, l1].pairsCode))
+    : Id (W0.Ix l2.aV) (fstC l2 (trC l1 l2 P c)) (substIx l1.aV l2.aV Q (fstC l1 c)) =
+    idJ (GExt[a].LD[X]) l1
+      (\ l3 P3 -> (Q3 : Id W0.V l1.aV l3.aV) -> Id (W0.Ix l3.aV) (fstC l3 (trC l1 l3 P3 c)) (substIx l1.aV l3.aV Q3 (fstC l1 c)))
+      (\ Q3 -> symH (loopIx l1.aV Q3 (fstC l1 c))) l2 P Q ;
+
+  trFam (l1 l2 : GExt[a].LD[X]) (P : Id (GExt[a].LD[X]) l1 l2) (c : W0.Ix (GExt[a].LocCode[X, l1].pairsCode))
+    (W : Ob) (f : Hom W X) (q1 : IsT (l1.fl W f)) (q2 : IsT (l2.fl W f)) (Q : Id W0.V (l1.bV W f q1) (l2.bV W f q2))
+    : Id (W0.Ix (l2.bV W f q2)) (GExt[a].LocCode[X, l2].famAt (famC l2 (trC l1 l2 P c)) W f q2)
+         (substIx (l1.bV W f q1) (l2.bV W f q2) Q (GExt[a].LocCode[X, l1].famAt (famC l1 c) W f q1)) =
+    idJ (GExt[a].LD[X]) l1
+      (\ l3 P3 -> (q3 : IsT (l3.fl W f)) (Q3 : Id W0.V (l1.bV W f q1) (l3.bV W f q3))
+         -> Id (W0.Ix (l3.bV W f q3)) (GExt[a].LocCode[X, l3].famAt (famC l3 (trC l1 l3 P3 c)) W f q3)
+               (substIx (l1.bV W f q1) (l3.bV W f q3) Q3 (GExt[a].LocCode[X, l1].famAt (famC l1 c) W f q1)))
+      (\ q3 Q3 ->
+         idJ (IsT (l1.fl W f)) q1
+           (\ q4 E4 -> (Q4 : Id W0.V (l1.bV W f q1) (l1.bV W f q4))
+              -> Id (W0.Ix (l1.bV W f q4)) (GExt[a].LocCode[X, l1].famAt (famC l1 c) W f q4)
+                    (substIx (l1.bV W f q1) (l1.bV W f q4) Q4 (GExt[a].LocCode[X, l1].famAt (famC l1 c) W f q1)))
+           (\ Q4 -> symH (loopIx (l1.bV W f q1) Q4 (GExt[a].LocCode[X, l1].famAt (famC l1 c) W f q1)))
+           q3 (isProp-IsT' (l1.fl W f) q1 q3) Q3)
+      l2 P q2 Q ;
+
+  opaque trFst ; opaque trFam ;
+} ;

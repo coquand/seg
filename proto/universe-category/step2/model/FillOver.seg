@@ -1,0 +1,98 @@
+-- FillOver.seg: MODEL/Poset/FillOver.agda.  Fillers over a map of total
+-- presheaves: if the compositions co', co correspond along m (CopOver),
+-- so do the fillers MkFill built from them (fillOverOK).  The point is
+-- that mapping the filling box of b' is the filling box of the mapped box
+-- (BE), by box-ext.
+--
+-- Agda's where-helpers eQ / Ev (matches on Fin) are the segment FB with
+-- split helpers on the first component.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+open Conn[a] ;
+open PCn ;
+open UMapOver[a] ;
+
+module FO (L' L : PCtx) (sg : PSub[L', L]) (S' : PTy[L']) (S : PTy[L]) (m : EMap[L', L, sg, S', S]) (d : Bool)
+  (co' : BXm.Boxes[L', S'].CompOp[src d, tgt d]) (co : BXm.Boxes[L, S].CompOp[src d, tgt d])
+  (H : MapOver[L', L, sg, S', S, m].CopOver (src d) (tgt d) co' co) {
+
+  module MO = MapOver[L', L, sg, S', S, m] ;
+  module B = BXm.Boxes[L, S] ;
+  module B' = BXm.Boxes[L', S'] ;
+  module KG = FibM.Kit[L, S] ;
+  module KGE = FibM.PR.TyL[L, S] ;
+  module KG' = FibM.Kit[L', S'] ;
+  module MF = FibM.MkFill[L, S, d, co] ;
+  module MF' = FibM.MkFill[L', S', d, co'] ;
+  module T = PR.TyL[L, S] ;
+
+  mapB (X : Ob) (b : B'.Box[src d, X]) : B.Box[src d, X] = MO.mapBox (src d) X b ;
+
+  module FB (X : Ob) (b : B'.Box[src d, X]) {
+    module F' = MF'.FBox[X, b] ;
+    module F = MF.FBox[X, mapB X b] ;
+    module MX = MO.MB[src d, prodP X Iv, F'.fbox] ;
+    module MB0 = MO.MB[src d, X, b] ;
+
+    eQ'' : (n : Nat) (h : IsT (ltb n (suc b.br))) -> Id (Subset (prodP X Iv)) ((MX.Sd (n, h)).sQ) ((F.S' (n, h)).sQ) = split {
+      zero -> \ h -> refl ((F.S' (zero, h)).sQ) ;
+      suc n -> \ h -> refl ((F.S' (suc n, h)).sQ) } ;
+
+    Ev'' : (n : Nat) (h : IsT (ltb n (suc b.br))) (W : Ob) (psi : Hom W (prodP (prodP X Iv) Iv))
+      (i : InQ W (prodP X Iv) (MX.Sd (n, h)).sQ psi) (i' : InQ W (prodP X Iv) (F.S' (n, h)).sQ psi)
+      -> Id (T.EI W) ((MX.Sd (n, h)).svE W psi i) ((F.S' (n, h)).svE W psi i') = split {
+      zero -> \ h W psi i i' ->
+        transH (MX.S-E (zero, h) W psi i)
+         (transH (apH (m.mE W) (F'.vAll-E (zero, h) W psi i))
+          (transH (m.mE-act W X (F'.kOf W psi) F'.uE)
+           (transH (apH (T.E.act W X (F'.kOf W psi)) (symH MB0.u-E))
+                   (symH (F.vAll-E (zero, h) W psi i'))))) ;
+      suc n -> \ h W psi i i' ->
+        transH (MX.S-E (suc n, h) W psi i)
+         (transH (apH (m.mE W) (F'.vAll-E (suc n, h) W psi i))
+          (transH (symH (MB0.S-E (n, h) W (F'.cOf W psi) (F'.inQc (n, h) W psi i)))
+           (transH (apH ((MB0.Sd (n, h)).svE W (F'.cOf W psi))
+                        (isProp-InQ W X (b.bs (n, h)).sQ (F'.cOf W psi) (F'.inQc (n, h) W psi i) (F.inQc (n, h) W psi i')))
+                   (symH (F.vAll-E (suc n, h) W psi i'))))) } ;
+
+    BE : Id (B.Box[src d, prodP X Iv]) (MO.mapBox (src d) (prodP X Iv) F'.fbox) F.fbox =
+      B.box-ext (src d) (prodP X Iv) _ _ _ _ (suc b.br) MX.Sd F.S' _ _ _ _
+        (sg.nt-nat (prodP (prodP X Iv) Iv) (prodP X Iv) (conn d X) b.brho)
+        (transH MX.u-E
+         (transH (apH (m.mE (prodP X Iv)) (FibM.PR.TyL[L', S'].fromE-eq (prodP X Iv) _ F'.uE' F'.upt))
+          (transH (m.mE-act (prodP X Iv) X (pX X) F'.uE)
+           (transH (apH (T.E.act (prodP X Iv) X (pX X)) (symH MB0.u-E))
+                   (symH (FibM.PR.TyL[L, S].fromE-eq (prodP X Iv) _ F.uE' F.upt))))))
+        (\ l -> eQ'' l.1 l.2)
+        (\ l W psi i i' -> Ev'' l.1 l.2 W psi i i') ;
+
+    opaque BE ;
+
+    fillOverOK : Id (T.EI (prodP X Iv)) (m.mE (prodP X Iv) (b.brho, MF'.fill X b)) ((mapB X b).brho, MF.fill X (mapB X b)) =
+      transH (apH (m.mE (prodP X Iv)) (MF'.fill-E X b))
+       (transH (H (prodP X Iv) F'.fbox)
+        (transH (apH (\ bb -> B.topE (tgt d) (prodP X Iv) bb.brho (co.cop (prodP X Iv) bb)) BE)
+                (symH (MF.fill-E X (mapB X b))))) ;
+
+    opaque fillOverOK ;
+  } ;
+
+  fillOverOK (X : Ob) (b : B'.Box[src d, X])
+    : Id (T.EI (prodP X Iv)) (m.mE (prodP X Iv) (b.brho, MF'.fill X b)) ((mapB X b).brho, MF.fill X (mapB X b)) =
+    FB[X, b].fillOverOK ;
+} ;

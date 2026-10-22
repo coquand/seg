@@ -1,0 +1,114 @@
+-- GTE2.seg (inside IvBase.Cn): transport along a line, part 2: paths over
+-- the line between the two parts of a fibre element, and their
+-- composition (GPathComp.PathOverComp).
+--
+-- K = the context of the points (x , a , b) of the fibres of tr
+-- (GEquiv.HFib.EAB).  The path type over K: lines in A over ln x (s = the
+-- values of ln x), from b (at src d) to a (at tgt d).  PC: its composition
+-- from e0 to e1 (from A's c01).
+--
+--   ell V v     the line in K of a fibre element v = (b , q) over (x , a):
+--               j |-> (q j , b), from (tr b , b) at e0 to (a , b) at e1
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module OmK (G : PCtx) (A : PTy[G]) (d : Bool) (ca : CompAtP[GFam[lv].famPath, G, A, src d, tgt d].CompAt)
+  (c01 : CompAtP[GFam[lv].famPath, G, A, e0, e1].CompAt)
+  (D : PCtx) (ln : PSub[D, GFam[lv].famPath.pth G]) {
+  module FM = GFam[lv] ;
+  module T1 = GTE1[lv].TE[G, A, d, ca, D, ln] ;
+  module HF = GEquiv[lv].HFib[D, T1.SB, T1.SA, T1.tr] ;
+  module TA = GPR.TyL[G, A] ;
+  module EK0 = EndKit[FM.famPath, G, A, src d] ;
+  module EK1 = EndKit[FM.famPath, G, A, tgt d] ;
+
+  K : PCtx = HF.EAB ;
+  module FK = FM.FC[K] ;
+
+  -- the point of G at (f , i): the value of the line ln x
+  s (X : Ob) (y : W0.Ix (K.ob X)) (W : Ob) (f : Hom W X) (i : Hom W Iv) : W0.Ix (G.ob W) = (ln.nt X y.1.1).1 W f i ;
+
+  sN (J I : Ob) (h : Hom J I) (x : W0.Ix (K.ob I)) (y : W0.Ix (K.ob J)) (e : Id (W0.Ix (K.ob J)) (K.act J I h x) y)
+    (W : Ob) (f : Hom W J) (i : Hom W Iv) : Id (W0.Ix (G.ob W)) (s I x W (compH W J I h f) i) (s J y W f i) =
+    transH (apH (\ z -> z.1 W f i) (symH (ln.nt-nat J I h x.1.1))) (apH (\ z -> s J z W f i) e) ;
+
+  sF (X : Ob) (y : W0.Ix (K.ob X)) (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+    : Id (W0.Ix (G.ob V)) (G.act V W g (s X y W f i)) (s X y V (compH V W X f g) (compH V W Iv i g)) =
+    (ln.nt X y.1.1).2 V W g f i ;
+
+  -- the ends: b at src d, a at tgt d, read in E
+  aE (W : Ob) (y : W0.Ix (K.ob W)) : TA.EI W = EK0.endE W (T1.LB.nt W (y.1.1, y.2)) ;
+  bE (W : Ob) (y : W0.Ix (K.ob W)) : TA.EI W = EK1.endE W (T1.LA.nt W y.1) ;
+
+  aE-act (W X : Ob) (f : Hom W X) (x : W0.Ix (K.ob X)) : Id (TA.EI W) (TA.E.act W X f (aE X x)) (aE W (K.act W X f x)) =
+    transH (symH (EK0.endE-act W X f (T1.LB.nt X (x.1.1, x.2))))
+      (apH (EK0.endE W)
+        (transH (symH (T1.LB.nt-nat W X f (x.1.1, x.2))) (apH (T1.LB.nt W) (HF.bAct W X f x)))) ;
+
+  bE-act (W X : Ob) (f : Hom W X) (x : W0.Ix (K.ob X)) : Id (TA.EI W) (TA.E.act W X f (bE X x)) (bE W (K.act W X f x)) =
+    transH (symH (EK1.endE-act W X f (T1.LA.nt X x.1))) (apH (EK1.endE W) (symH (T1.LA.nt-nat W X f x.1))) ;
+
+  opaque aE-act ; opaque bE-act ;
+
+  aE-pt (W : Ob) (y : W0.Ix (K.ob W)) : Id (W0.Ix (G.ob W)) (aE W y).1 (s W y W (idH W) (ptH W (src d))) = refl (aE W y).1 ;
+  bE-pt (W : Ob) (y : W0.Ix (K.ob W)) : Id (W0.Ix (G.ob W)) (bE W y).1 (s W y W (idH W) (ptH W (tgt d))) = refl (bE W y).1 ;
+
+  module PC = GPathComp[lv].PathOverComp[K, G, A, d, s, sN, sF, aE, bE, aE-act, bE-act, aE-pt, bE-pt, e0, e1, c01] ;
+  module PT = PC.PT ;
+
+  ----------------------------------------------------------------------
+  -- points of K: determined by their A part and their B part
+
+  eabExt (W : Ob) (y y' : W0.Ix (K.ob W)) (P : Id (HF.TA.EI W) y.1 y'.1)
+    (Q : Id (HF.TB.EI W) (y.1.1, y.2) (y'.1.1, y'.2)) : Id (W0.Ix (K.ob W)) y y' =
+    idJ (HF.TA.EI W) y.1
+      (\ z P2 -> (c : W0.Ix (T1.SB.tob W z.1)) -> Id (HF.TB.EI W) (y.1.1, y.2) (z.1, c) -> Id (W0.Ix (K.ob W)) y (z, c))
+      (\ c Q2 -> apH {W0.Ix (T1.SB.tob W y.1.1)} {W0.Ix (K.ob W)} (\ u -> (y.1, u)) (HF.TB.pr-inj W y.1.1 y.2 c Q2))
+      y'.1 P y'.2 Q ;
+
+  opaque eabExt ;
+
+  ----------------------------------------------------------------------
+  -- the line in K of a fibre element
+
+  module FL (V : Ob) (v : HF.TF.EI V) {
+    q (W : Ob) (f : Hom W V) (j : Hom W Iv) : HF.TA.EI W = HF.fibL V v W f j ;
+
+    bf (W : Ob) (f : Hom W V) : HF.TB.EI W = HF.TB.E.act W V f (HF.fibB V v) ;
+
+    ptq (W : Ob) (f : Hom W V) (j : Hom W Iv) : Id (W0.Ix (D.ob W)) (q W f j).1 (bf W f).1 = HF.fibL-pt V v W f j ;
+
+    lw (W : Ob) (f : Hom W V) (j : Hom W Iv) : W0.Ix (K.ob W) =
+      (q W f j, HF.TB.coeT W (bf W f).1 (q W f j).1 (symH (ptq W f j)) (bf W f).2) ;
+
+    lvB (W : Ob) (f : Hom W V) (j : Hom W Iv) : Id (HF.TB.EI W) ((lw W f j).1.1, (lw W f j).2) (bf W f) =
+      symH (HF.TB.pr-coe W (bf W f).1 (q W f j).1 (symH (ptq W f j)) (bf W f).2) ;
+
+    lvN (V' W : Ob) (g : Hom V' W) (f : Hom W V) (j : Hom W Iv)
+      : Id (W0.Ix (K.ob V')) (K.act V' W g (lw W f j)) (lw V' (compH V' W V f g) (compH V' W Iv j g)) =
+      eabExt V' (K.act V' W g (lw W f j)) (lw V' (compH V' W V f g) (compH V' W Iv j g))
+        (HF.fibL-nat V v V' W g f j)
+        (calc (HF.TB.EI V') {
+            ((K.act V' W g (lw W f j)).1.1, (K.act V' W g (lw W f j)).2)
+          =< symH (HF.bAct V' W g (lw W f j)) >
+            HF.TB.E.act V' W g ((lw W f j).1.1, (lw W f j).2)
+          =< apH (HF.TB.E.act V' W g) (lvB W f j) >
+            HF.TB.E.act V' W g (bf W f)
+          =< HF.TB.PE.actC V' W V f g (HF.fibB V v) >
+            bf V' (compH V' W V f g)
+          =< symH (lvB V' (compH V' W V f g) (compH V' W Iv j g)) >
+            ((lw V' (compH V' W V f g) (compH V' W Iv j g)).1.1, (lw V' (compH V' W V f g) (compH V' W Iv j g)).2) }) ;
+
+    ell : W0.Ix (FK.ob V) = (lw, lvN) ;
+  } ;
+} ;

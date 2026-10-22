@@ -1,0 +1,22 @@
+-- Classical.seg: classical logic, as ONE segment parameter (Thierry,
+-- 2026-10-15): excluded middle for propositions, at every level.  Only the
+-- files imported inside this segment can use it.
+--
+-- lem is the only classical principle of the model.  (The axiom of choice
+-- would be needed only to obtain the horn filling OPERATION from the mere
+-- horn filling PROPERTY; the model never does that: fibrancy on Delta is a
+-- structure, DeltaHorn.DH.isFib.  Once propositional truncation is
+-- available, lem follows from choice by Diaconescu's argument.)
+--
+-- It is used at exactly one point: DeltaHornBox.decDeg, deciding whether a
+-- filling problem on Delta is degenerate along an elementary degeneracy.
+
+open Base ;
+
+module Cl (lem : [b] (P : U b) -> Prelude[b].isProp P -> Arith[b].Plus P (P -> Empty)) {
+  import DeltaHornBox ;
+  import DeltaFibIff ;
+  import DeltaElFib ;
+  import DUaOp ;
+  import DFibU ;
+} ;

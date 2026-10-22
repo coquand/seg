@@ -1,0 +1,307 @@
+-- UBoxData.seg: MODEL/Univ/UBoxData.agda.  The data of an open box in the
+-- universe (level 1, over any G1), with lid at eS = tgt d' (so the
+-- composite is at eT = src d'):
+--   psiC   the cofibration of its sides on y X; resC = (y X)|psiC
+--   psiL   the sides times [1] on y (X * [1]); L = (y (X*[1]))|psiL
+--   FmS    the sides as a natural family of fibrant types over L (a side
+--          containing the point is chosen; bcs: any side gives the same
+--          type; snat: natural)
+--   ElF/ElF4[L, FmS, natS]   El of the family (ESI-fibrant over L)
+--   ln     the line over resC: g |-> g * [1]
+--   udata  the partial type with its equivalence to the lid (UData)
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module L1 = BaseP.GPre[a+].PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module CN = Conn[a] ;
+open CN ;
+open BaseP.GYon[a] ;
+open UnivCtx[a].PU ;
+open Cofib[a] ; open GP ;
+open ElFam[a] ;
+open TranspPack[a] ;
+open TranspUData[a] ;
+
+-- the fillers of a pair, by direction
+selFS (L : PCtx) (S : PTy[L]) (fl : FibM.FillB[L, S].Fill) : (e : Bool) -> FibM.FillDef[L, S].FillOp[src e] = split {
+  true -> fl.1 ;
+  false -> fl.2 } ;
+
+selFT (L : PCtx) (S : PTy[L]) (fl : FibM.FillB[L, S].Fill) : (e : Bool) -> FibM.FillDef[L, S].FillOp[tgt e] = split {
+  true -> fl.2 ;
+  false -> fl.1 } ;
+
+fesFS (L : PCtx) (S : PTy[L]) (fl : FibM.FillB[L, S].Fill)
+  (fes : EsiFill[a, a].FesiDef[L, S].FESI e0 fl.1 * EsiFill[a, a].FesiDef[L, S].FESI e1 fl.2)
+  : (e : Bool) -> EsiFill[a, a].FesiDef[L, S].FESI (src e) (selFS L S fl e) = split {
+  true -> fes.1 ;
+  false -> fes.2 } ;
+
+fesFT (L : PCtx) (S : PTy[L]) (fl : FibM.FillB[L, S].Fill)
+  (fes : EsiFill[a, a].FesiDef[L, S].FESI e0 fl.1 * EsiFill[a, a].FesiDef[L, S].FESI e1 fl.2)
+  : (e : Bool) -> EsiFill[a, a].FesiDef[L, S].FESI (tgt e) (selFT L S fl e) = split {
+  true -> fes.2 ;
+  false -> fes.1 } ;
+
+-- the fibre of F restricted along f is the fibre of F at f (f o id = f)
+fib0-uAct (Y X : Ob) (f : Hom Y X) (F : U0 X) : Id W0.V (fib0 Y (uAct Y X f F)) (F.1.tob Y f) =
+  apH (F.1.tob Y) (comp-idr Y X f) ;
+
+-- to land in Q along the identity is to lie in Q
+lands-idH (X : Ob) (Q : Subset X) (i : Lands X X Q (idH X)) (s : El X) : IsT (Q s) =
+  substH (\ u -> IsT (Q u)) (app-idH X s) (i s) ;
+
+module UB (G1 : L1.PCtx) (d' : Bool) (X : Ob) (b : Box[a, a+].Boxes[G1, UTy G1].Box[tgt d', X]) {
+  module BG = Box[a, a+].Boxes[G1, UTy G1] ;
+
+  eS : El Iv = tgt d' ;
+  eT : El Iv = src d' ;
+
+  r : Nat = b.br ;
+
+  Q (l : Fin r) : Subset X = (b.bs l).sQ ;
+
+  lidU : U0 X = b.bu ;
+
+  sv (l : Fin r) (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X (Q l) psi) : U0 W = (b.bs l).sv W psi i ;
+
+  ----------------------------------------------------------------------
+  -- The cofibrations
+
+  psiC : GP.Cof[yP X] = GP.mkCof (yP X) r (\ W g l -> pre W X g (Q l))
+    (\ Y W h g l -> symH (pre-comp Y W X h g (Q l))) ;
+
+  QL (l : Fin r) : Subset (prodP X Iv) = pre (prodP X Iv) X (pX X) (Q l) ;
+
+  psiL : GP.Cof[yP (prodP X Iv)] = GP.mkCof (yP (prodP X Iv)) r (\ W psi l -> pre W (prodP X Iv) psi (QL l))
+    (\ Y W h psi l -> symH (pre-comp Y W (prodP X Iv) h psi (QL l))) ;
+
+  module CL = GP.CofL[yP (prodP X Iv), psiL] ;
+  module CC = GP.CofL[yP X, psiC] ;
+
+  L : PCtx = CL.resCtx ;
+
+  ----------------------------------------------------------------------
+  -- The side family
+
+  -- x.1 lands in the inverse image of QL l along itself, i.e. pX x.1 lands in Q l
+  inqOf (W : Ob) (x : W0.Ix (L.ob W)) : (l : Fin r) * InQ W X (Q l) x.1 =
+    ((CL.full-id W x.1 x.2).1,
+     lands-eq W X (Q (CL.full-id W x.1 x.2).1)
+       (compH W (prodP X Iv) X (pX X) (compH W W (prodP X Iv) x.1 (idH W)))
+       (compH W (prodP X Iv) X (pX X) x.1)
+       (apH (\ u -> compH W (prodP X Iv) X (pX X) u) (comp-idr W (prodP X Iv) x.1))
+       (lands-pre W (prodP X Iv) X (pX X) (Q (CL.full-id W x.1 x.2).1) (compH W W (prodP X Iv) x.1 (idH W))
+          (lands-pre W W (prodP X Iv) x.1 (QL (CL.full-id W x.1 x.2).1) (idH W) (CL.full-id W x.1 x.2).2))) ;
+
+  FmS (W : Ob) (x : W0.Ix (L.ob W)) : U0 W = sv (inqOf W x).1 W x.1 (inqOf W x).2 ;
+
+  FmS-def (W : Ob) (x : W0.Ix (L.ob W)) : Id (U0 W) (FmS W x) (sv (inqOf W x).1 W x.1 (inqOf W x).2) = refl (FmS W x) ;
+
+  FmS-any (W : Ob) (x : W0.Ix (L.ob W)) (l : Fin r) (i : InQ W X (Q l) x.1) : Id (U0 W) (FmS W x) (sv l W x.1 i) =
+    b.bcs (inqOf W x).1 l W x.1 (inqOf W x).2 i ;
+
+  natS (W' W : Ob) (g : Hom W' W) (x : W0.Ix (L.ob W)) : Id (U0 W') (uAct W' W g (FmS W x)) (FmS W' (L.act W' W g x)) =
+    transH (apH (\ z -> z.2) ((b.bs (inqOf W x).1).snat W' W g x.1 (inqOf W x).2 (\ s -> (inqOf W x).2 (app W' W g s))))
+           (symH (FmS-any W' (L.act W' W g x) (inqOf W x).1 (\ s -> (inqOf W x).2 (app W' W g s)))) ;
+
+  opaque FmS ; opaque FmS-def ; opaque FmS-any ; opaque natS ;
+
+
+  module ES = ElF[L, FmS, natS] ;
+  module ES4 = ElFam4[a].ElF4[L, FmS, natS] ;
+
+  S : FibExt[a, a].FibE L = ES4.ElFib ;
+
+  ----------------------------------------------------------------------
+  -- The line over resC
+
+  -- the cylinder of g lies in the sides times [1] when g lands in a side:
+  -- (g * [1]) s lies over g (pX s), and full is stable under id o (g * [1]) = g * [1]
+  -- c says that g lands in Q c.1
+  landsOf (W : Ob) (g : Hom W X) (c : (l : Fin r) * Lands W W (pre W X g (Q l)) (idH W)) : Lands W X (Q c.1) g =
+    lands-eq W X (Q c.1) (compH W W X g (idH W)) g (comp-idr W X g) (lands-pre W W X g (Q c.1) (idH W) c.2) ;
+
+  -- then g * [1] lands in QL c.1: pX (g * [1]) = g pX
+  landsCyl (W : Ob) (g : Hom W X) (c : (l : Fin r) * Lands W W (pre W X g (Q l)) (idH W))
+    : Lands (prodP W Iv) (prodP X Iv) (QL c.1) (cylH W X g) =
+    pre-lands (prodP W Iv) (prodP X Iv) X (pX X) (Q c.1) (cylH W X g)
+      (lands-eq (prodP W Iv) X (Q c.1) (compH (prodP W Iv) W X g (pX W)) (compH (prodP W Iv) (prodP X Iv) X (pX X) (cylH W X g))
+         (symH (pX-cyl W X g)) (lands-comp (prodP W Iv) W X (Q c.1) g (pX W) (landsOf W g c))) ;
+
+  -- the cylinder of g lies in the sides times [1] when g lands in a side,
+  -- and full is stable under id o (g * [1]) = g * [1]
+  lnFull' (W : Ob) (g : Hom W X) (c : (l : Fin r) * Lands W W (pre W X g (Q l)) (idH W))
+    : IsT (CL.full (prodP W Iv) (cylH W X g)) =
+    CL.full-eq (prodP W Iv) (compH (prodP W Iv) (prodP X Iv) (prodP X Iv) (idH (prodP X Iv)) (cylH W X g)) (cylH W X g)
+      (comp-idl (prodP W Iv) (prodP X Iv) (cylH W X g))
+      (CL.lands-full (prodP W Iv) (prodP X Iv) (cylH W X g) (idH (prodP X Iv)) c.1
+         (pre-lands (prodP W Iv) (prodP X Iv) (prodP X Iv) (idH (prodP X Iv)) (QL c.1) (cylH W X g)
+            (lands-eq (prodP W Iv) (prodP X Iv) (QL c.1) (cylH W X g) (compH (prodP W Iv) (prodP X Iv) (prodP X Iv) (idH (prodP X Iv)) (cylH W X g))
+               (symH (comp-idl (prodP W Iv) (prodP X Iv) (cylH W X g))) (landsCyl W g c)))) ;
+
+  opaque lnFull' ;
+
+  lnFull (W : Ob) (g : Hom W X) (q : IsT (CC.full W g)) : IsT (CL.full (prodP W Iv) (cylH W X g)) =
+    lnFull' W g (CC.full-id W g q) ;
+
+  ln (W : Ob) (x : W0.Ix (CC.resCtx.ob W)) : W0.Ix (L.ob (prodP W Iv)) = (cylH W X x.1, lnFull W x.1 x.2) ;
+
+  lnat (W' W : Ob) (h : Hom W' W) (x : W0.Ix (CC.resCtx.ob W))
+    : Id (W0.Ix (L.ob (prodP W' Iv))) (L.act (prodP W' Iv) (prodP W Iv) (cylH W' W h) (ln W x)) (ln W' (CC.resCtx.act W' W h x)) =
+    CL.res-eq (prodP W' Iv) (L.act (prodP W' Iv) (prodP W Iv) (cylH W' W h) (ln W x)) (ln W' (CC.resCtx.act W' W h x))
+      (hom-eq (prodP W' Iv) (prodP X Iv) (compH (prodP W' Iv) (prodP W Iv) (prodP X Iv) (cylH W X x.1) (cylH W' W h))
+         (cylH W' X (compH W' W X x.1 h)) (pw-cyl-comp W' W X x.1 h)) ;
+
+  opaque lnat ;
+
+  ----------------------------------------------------------------------
+  -- Fillers of S, transport, and its equivalence
+
+  fl : FibM.FillB[L, ES.ElT].Fill = FibM.FillB[L, ES.ElT].comp-to-fill ES4.ElComp ;
+
+  fes : EsiFill[a, a].FesiDef[L, ES.ElT].FESI e0 fl.1 * EsiFill[a, a].FesiDef[L, ES.ElT].FESI e1 fl.2 =
+    EsiFill[a, a].fesiC L ES.ElT ES4.ElComp ES4.ElEsi ;
+
+  selS (e : Bool) : FibM.FillDef[L, ES.ElT].FillOp[src e] = selFS L ES.ElT fl e ;
+  selT (e : Bool) : FibM.FillDef[L, ES.ElT].FillOp[tgt e] = selFT L ES.ElT fl e ;
+  fesS (e : Bool) : EsiFill[a, a].FesiDef[L, ES.ElT].FESI (src e) (selS e) = fesFS L ES.ElT fl fes e ;
+  fesT (e : Bool) : EsiFill[a, a].FesiDef[L, ES.ElT].FESI (tgt e) (selT e) = fesFT L ES.ElT fl fes e ;
+
+  module TT = Transp[a].Tp[CC.resCtx, L, ES.ElT, ln, lnat, d', selS d'] ;
+
+  SBt : PTy[CC.resCtx] = TT.SB ;
+  SAt : PTy[CC.resCtx] = TT.SA ;
+
+  Bf : FibExt[a, a].FibE CC.resCtx = trB CC.resCtx L ES.ElT ln lnat d' (selS d') ES4.ElComp ES4.ElEsi ;
+
+  ----------------------------------------------------------------------
+  -- The end eS of the line is the lid
+
+  A : PTy[yP X] = lidU.1 ;
+
+  -- a point of resC lands in some side
+  lq (W : Ob) (g : Hom W X) (q : IsT (CC.full W g)) : (l : Fin r) * Lands W X (Q l) g =
+    ((CC.full-id W g q).1, landsOf W g (CC.full-id W g q)) ;
+
+  module PU (W : Ob) (x : W0.Ix (CC.resCtx.ob W)) {
+    l : Fin r = (lq W x.1 x.2).1 ;
+
+    -- (lid o x) s = (x s , eS), whose first component lies in the side
+    iLid : InQ W X (Q l) (compH W X (prodP X Iv) (lid X eS) x.1) = lands-inQ-lid W X (Q l) eS x.1 (lq W x.1 x.2).2 ;
+
+    -- (x * [1]) o lid and lid o x agree pointwise (pw-lid)
+    -- (x * [1]) o lid = lid o x
+    iCyl : InQ W X (Q l) (compH W (prodP W Iv) (prodP X Iv) (cylH W X x.1) (lid W eS)) =
+      inQ-eq W X (Q l) (compH W X (prodP X Iv) (lid X eS) x.1) (compH W (prodP W Iv) (prodP X Iv) (cylH W X x.1) (lid W eS))
+        (symH (cyl-lid W X x.1 eS)) iLid ;
+
+    res : Id (U0 W) (FmS W (TT.en eS W x)) (uAct W X x.1 lidU) =
+      trans (U0 W) (FmS W (TT.en eS W x)) (sv l W (compH W (prodP W Iv) (prodP X Iv) (cylH W X x.1) (lid W eS)) iCyl) (uAct W X x.1 lidU)
+        (FmS-any W (TT.en eS W x) l iCyl)
+        (trans (U0 W) (sv l W (compH W (prodP W Iv) (prodP X Iv) (cylH W X x.1) (lid W eS)) iCyl) (sv l W (compH W X (prodP X Iv) (lid X eS) x.1) iLid) (uAct W X x.1 lidU)
+           (apH (\ z -> z.2) ((b.bs l).pw W (compH W (prodP W Iv) (prodP X Iv) (cylH W X x.1) (lid W eS)) (compH W X (prodP X Iv) (lid X eS) x.1) (\ s -> symH (pw-lid W X x.1 eS s)) iCyl iLid))
+           (symH (apH (\ z -> z.2) (b.bcb l W x.1 iLid)))) ;
+  } ;
+
+  PoU (W : Ob) (x : W0.Ix (CC.resCtx.ob W)) : Id (U0 W) (FmS W (TT.en eS W x)) (uAct W X x.1 lidU) = PU[W, x].res ;
+
+  opaque PoU ;
+
+  -- the fibre of S at the end of the line over x is that of lidU at x
+  Po (W : Ob) (x : W0.Ix (CC.resCtx.ob W)) : Id W0.V (SAt.tob W x) ((subTy CC.resCtx (yP X) A CC.inclR).tob W x) =
+    transH (ap (U0 W) W0.V (fib0 W) (FmS W (TT.en eS W x)) (uAct W X x.1 lidU) (PoU W x)) (fib0-uAct W X x.1 lidU) ;
+
+  module PH = EGenComp[a].Phi[X, lidU] ;
+
+  -- read in E_EGen, an element t0 of the fibre of S, carried to lidU at x by
+  -- Po, is the point (FmS , t0): phi (x, Po t0) = (uAct x lidU , PoU t0) by the
+  -- definition of phi (Po = PoU followed by fib0-uAct, which phi undoes), and
+  -- (uAct x lidU , PoU t0) = (FmS , t0) by coeE.
+  -- BLOCKED: the first step needs the repaired EGenComp.Phi.phi (its present
+  -- body (uAct W Z w.1 F , w.2) is ill-typed once compH is locked: w.2 lies in
+  -- A at w.1, the fibre of uAct at w.1 o id).  Below: the second step.
+  toEU (W : Ob) (x : W0.Ix (CC.resCtx.ob W)) (t0 : W0.Ix (fib0 W (FmS W (TT.en eS W x))))
+    : Id (EGenComp[a].EU W) (PH.phi W (x.1, subst W0.V (\ z -> W0.Ix z) (SAt.tob W x) ((subTy CC.resCtx (yP X) A CC.inclR).tob W x) (Po W x) t0))
+                            (FmS W (TT.en eS W x), t0) =
+    transH (apH {W0.Ix (fib0 W (uAct W X x.1 lidU))} {EGenComp[a].EU W} (\ z -> (uAct W X x.1 lidU, z)) moved)
+     (transH (apH {W0.Ix (fib0 W (uAct W X x.1 lidU))} {EGenComp[a].EU W} (\ z -> (uAct W X x.1 lidU, z))
+               (symH (substF W (FmS W (TT.en eS W x)) (uAct W X x.1 lidU) (PoU W x) t0)))
+             (coeE W (FmS W (TT.en eS W x)) (uAct W X x.1 lidU) (PoU W x) t0))
+   where {
+     -- phi moves t0 (already carried by Po) to the point x id; any two transports
+     -- of t0 between the same two fibres agree, since V is a set
+     g : PH.T0.Pt W = PH.gid W x.1 ;
+     Q1 : Id W0.V (lidU.1.tob W x.1) (lidU.1.tob W g) = ap (PH.T0.Pt W) W0.V (lidU.1.tob W) x.1 g (PH.gid-eq W x.1) ;
+     R : Id W0.V (fib0 W (FmS W (TT.en eS W x))) (fib0 W (uAct W X x.1 lidU)) =
+       ap (U0 W) W0.V (fib0 W) (FmS W (TT.en eS W x)) (uAct W X x.1 lidU) (PoU W x) ;
+     moved : Id (W0.Ix (fib0 W (uAct W X x.1 lidU)))
+               (PH.T0.coeT W x.1 g (PH.gid-eq W x.1) (subst W0.V (\ z -> W0.Ix z) (SAt.tob W x) (lidU.1.tob W x.1) (Po W x) t0))
+               (subst W0.V (\ z -> W0.Ix z) (fib0 W (FmS W (TT.en eS W x))) (fib0 W (uAct W X x.1 lidU)) R t0) =
+       transH (symH (fib-move (PH.T0.Pt W) (lidU.1.tob W) x.1 g (PH.gid-eq W x.1) Q1
+                       (subst W0.V (\ z -> W0.Ix z) (SAt.tob W x) (lidU.1.tob W x.1) (Po W x) t0)))
+              (EGenComp[a].subst-two W0.V W0.isSetV (\ z -> W0.Ix z) (SAt.tob W x) (lidU.1.tob W x.1) (lidU.1.tob W g) (Po W x) Q1 R t0) ; } ;
+
+  module HH (J I : Ob) (f : Hom J I) (x : W0.Ix (CC.resCtx.ob I)) (y : W0.Ix (CC.resCtx.ob J))
+    (e : Id (W0.Ix (CC.resCtx.ob J)) (CC.resCtx.act J I f x) y) (a0 : W0.Ix (SAt.tob I x)) {
+    E : Id (W0.Ix (L.ob J)) (L.act J I f (TT.en eS I x)) (TT.en eS J y) = ntEq CC.resCtx L (TT.enS eS) J I f x y e ;
+
+    -- Po is natural: read both sides through phi (injective); the left one is
+    -- the point (FmS , f.a0) of E_EGen, i.e. the action of f on (FmS , a0),
+    -- i.e. the action of f on phi (x, Po a0), i.e. phi of the action (phiAct)
+    pL : W0.Ix ((subTy CC.resCtx (yP X) A CC.inclR).tob J y) =
+      subst W0.V (\ z -> W0.Ix z) (SAt.tob J y) ((subTy CC.resCtx (yP X) A CC.inclR).tob J y) (Po J y) (SAt.tact J I f x y e a0) ;
+    pR : W0.Ix ((subTy CC.resCtx (yP X) A CC.inclR).tob J y) =
+      (subTy CC.resCtx (yP X) A CC.inclR).tact J I f x y e
+        (subst W0.V (\ z -> W0.Ix z) (SAt.tob I x) ((subTy CC.resCtx (yP X) A CC.inclR).tob I x) (Po I x) a0) ;
+
+    -- the steps
+    sx : W0.Ix (A.tob I x.1) = subst W0.V (\ z -> W0.Ix z) (SAt.tob I x) ((subTy CC.resCtx (yP X) A CC.inclR).tob I x) (Po I x) a0 ;
+    s1 : Id (EGenComp[a].EU J) (PH.phi J (y.1, pL)) (FmS J (TT.en eS J y), SAt.tact J I f x y e a0) = toEU J y (SAt.tact J I f x y e a0) ;
+    s2 : Id (EGenComp[a].EU J) (FmS J (TT.en eS J y), SAt.tact J I f x y e a0) (FmS J (TT.en eS J y), tactG J I f (FmS I (TT.en eS I x)) (FmS J (TT.en eS J y)) (ES.natE J I f (TT.en eS I x) (TT.en eS J y) E) a0) =
+      apH {W0.Ix (fib0 J (FmS J (TT.en eS J y)))} {EGenComp[a].EU J} (\ z -> (FmS J (TT.en eS J y), z))
+                  (ES.ElAct-def J I f (TT.en eS I x) (TT.en eS J y) E a0) ;
+    s3 : Id (EGenComp[a].EU J) (FmS J (TT.en eS J y), tactG J I f (FmS I (TT.en eS I x)) (FmS J (TT.en eS J y)) (ES.natE J I f (TT.en eS I x) (TT.en eS J y) E) a0) (EGenComp[a].TU.E.act J I f (FmS I (TT.en eS I x), a0)) =
+      tactGE J I f (FmS I (TT.en eS I x)) (FmS J (TT.en eS J y)) (ES.natE J I f (TT.en eS I x) (TT.en eS J y) E) a0 ;
+    s4 : Id (EGenComp[a].EU J) (EGenComp[a].TU.E.act J I f (FmS I (TT.en eS I x), a0)) (EGenComp[a].TU.E.act J I f (PH.phi I (x.1, sx))) =
+      apH (EGenComp[a].TU.E.act J I f) (symH (toEU I x a0)) ;
+    s5 : Id (EGenComp[a].EU J) (EGenComp[a].TU.E.act J I f (PH.phi I (x.1, sx))) (PH.phi J (PH.T0.E.act J I f (x.1, sx))) = PH.phiAct J I f (x.1, sx) ;
+    s6 : Id (EGenComp[a].EU J) (PH.phi J (PH.T0.E.act J I f (x.1, sx))) (PH.phi J (y.1, pR)) =
+      apH (PH.phi J) (PH.T0.pr-tact J I f x.1 y.1 (ntEq CC.resCtx (yP X) CC.inclR J I f x y e) sx) ;
+    inEU : Id (EGenComp[a].EU J) (PH.phi J (y.1, pL)) (PH.phi J (y.1, pR)) =
+      transH s1 (transH s2 (transH s3 (transH s4 (transH s5 s6)))) ;
+
+    res : Id (W0.Ix ((subTy CC.resCtx (yP X) A CC.inclR).tob J y)) pL pR = PH.phiInj J y.1 pL pR inEU ;
+  } ;
+
+  H1 (J I : Ob) (f : Hom J I) (x : W0.Ix (CC.resCtx.ob I)) (y : W0.Ix (CC.resCtx.ob J)) (e : Id (W0.Ix (CC.resCtx.ob J)) (CC.resCtx.act J I f x) y)
+    (a0 : W0.Ix (SAt.tob I x))
+    : Id (W0.Ix ((subTy CC.resCtx (yP X) A CC.inclR).tob J y))
+         (subst W0.V (\ z -> W0.Ix z) (SAt.tob J y) ((subTy CC.resCtx (yP X) A CC.inclR).tob J y) (Po J y) (SAt.tact J I f x y e a0))
+         ((subTy CC.resCtx (yP X) A CC.inclR).tact J I f x y e
+            (subst W0.V (\ z -> W0.Ix z) (SAt.tob I x) ((subTy CC.resCtx (yP X) A CC.inclR).tob I x) (Po I x) a0)) =
+    HH[J, I, f, x, y, e, a0].res ;
+
+  opaque toEU ; opaque H1 ;
+
+  ----------------------------------------------------------------------
+  -- The partial type with its equivalence to the lid
+
+  udata : UnivOp[a].UData[X, A] =
+    trUData X A psiC L ES.ElT ln lnat d' (selS d') fl.1 (selT d') (fesS d') (fesT d') ES4.ElComp ES4.ElEsi Po H1 ;
+} ;

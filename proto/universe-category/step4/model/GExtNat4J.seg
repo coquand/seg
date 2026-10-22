@@ -1,0 +1,115 @@
+-- GExtNat4J.seg (inside IvBase, any base): Theorem 7 along a substitution,
+-- step B4, part 2b: the A-filler at e1 of alpha[s]'s joined line moves to
+-- the one of the moved problem.  The joined line (the sides of p, then the
+-- generators of psi') is moved as a Join over G (Jm); by cases on the
+-- generators (Hg : GensIns), the same list (joinEq2 + kop-cong of kA) or one
+-- empty generator inserted (joinIns2 + kA's KESI); then HA1.
+--   fillJ    the joined line's filler moves
+--   FvS      the A-filler at e1 moves
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+
+module N4J (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D'])
+  (fullS : (X : Ob) (d : W0.Ix (D'.ob X)) -> Id Bool (GP.CofL[D', psi'].full X d) (GP.CofL[G, psi].full X (s.nt X d))) {
+  module N = GExtNat4.N4[G, A, psi, B, al, D', s, psi', fullS] ;
+  module ES = N.ES ;
+  module MA1 = N.MA1 ;
+
+  module Eq (kA : LineFibP[GFam[a].famPath, G, A].FibAt e1)
+    (kA' : LineFibP[GFam[a].famPath, D', ES.A'].FibAt e1)
+    (eal : GEquiv[a].EquivOp ES.CL.resCtx B ES.ED.A' al)
+    (eal' : GEquiv[a].EquivOp ES.CL'.resCtx ES.B' ES.ED'.A' ES.al') {
+    module NE = N.Eq[kA, kA', eal, eal'] ;
+    module E2 = NE.E2 ;
+
+    module Sx (Heal : N.FMA.HTy eal' eal) (HA1 : N.HA1Ty kA kA') (Hg : N.HgTy)
+      (kAe : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, e1].TV.E, EndKit[GFam[a].famPath, G, A, e1].SFm.SF].KESI kA)
+      (X : Ob) (w' : N.FMX.HD.TA.EI X) (p' : NE.E1'.PX.Partial[X, w']) {
+      module S0 = NE.Sx[Heal, X, w', p'] ;
+      module T3 = S0.T3 ;
+      module ThX' = S0.ThX' ;
+      module ThX = S0.ThX ;
+      module FM = GFam[a] ;
+
+      ------------------------------------------------------------------
+      -- the joined partial line, moved: a Join over G of the moved sides
+
+      S1m (l : Fin p'.pr) : E2.KA.PT.PSide[X, MA1.tvN X S0.ThX'.x0] = MA1.mside X S0.ThX'.x0 S0.ThX'.S1[l].SO.side ;
+      S2m (k' : Fin ES.CL'.r) : E2.KA.PT.PSide[X, MA1.tvN X S0.ThX'.x0] = MA1.mside X S0.ThX'.x0 S0.ThX'.S2[k'].SO.side ;
+
+      c11m : E2.KA.PT.PCsTy X (MA1.tvN X S0.ThX'.x0) p'.pr S1m = \ l l2 W f i i' -> apH {MA1.CD.TS.EI W} {MA1.CD0.TS.EI W} (MA1.tsN W) (S0.ThX'.c11 l l2 W f i i') ;
+
+      c12m (l : Fin p'.pr) (k' : Fin ES.CL'.r) (W : Ob) (f : Hom W X) (i : Lands W X (S1m l).pQ f) (i' : Lands W X (S2m k').pQ f)
+        : Id (E2.KA.TS.EI W) ((S1m l).pv W f i) ((S2m k').pv W f i') = apH {MA1.CD.TS.EI W} {MA1.CD0.TS.EI W} (MA1.tsN W) (S0.ThX'.c12 l k' W f i i') ;
+
+      c22m : E2.KA.PT.PCsTy X (MA1.tvN X S0.ThX'.x0) ES.CL'.r S2m = \ k k2 W f i i' -> apH {MA1.CD.TS.EI W} {MA1.CD0.TS.EI W} (MA1.tsN W) (S0.ThX'.c22 k k2 W f i i') ;
+
+      module Jm = E2.KA.PT.Join[X, MA1.tvN X S0.ThX'.x0, p'.pr, ES.CL'.r, S1m, S2m, c11m, c12m, c22m] ;
+
+      mAt : (sd : Plus (Fin p'.pr) (Fin ES.CL'.r))
+        -> Id (E2.KA.PT.PSide[X, MA1.tvN X S0.ThX'.x0]) (MA1.mside X S0.ThX'.x0 (S0.ThX'.J.sideAt sd)) (Jm.sideAt sd) = split {
+        inl l -> refl (S1m l) ;
+        inr k' -> refl (S2m k') } ;
+
+      pvSide (s1 s2 : E2.KA.PT.PSide[X, MA1.tvN X S0.ThX'.x0]) (E : Id (E2.KA.PT.PSide[X, MA1.tvN X S0.ThX'.x0]) s1 s2)
+        : E2.KA.PT.PvEq X s1.pQ s2.pQ s1.pv s2.pv =
+        idJ (E2.KA.PT.PSide[X, MA1.tvN X S0.ThX'.x0]) s1 (\ s3 E3 -> E2.KA.PT.PvEq X s1.pQ s3.pQ s1.pv s3.pv)
+          (\ W f i i' -> E2.KA.PT.pv-irr X (MA1.tvN X S0.ThX'.x0) s1 W f i i') s2 E ;
+
+      mpJ : Id (E2.KA.PT.Partial[X, MA1.tvN X S0.ThX'.x0]) (MA1.mapP X S0.ThX'.x0 S0.ThX'.J.part) Jm.part =
+        E2.KA.PT.partExtH X (MA1.tvN X S0.ThX'.x0) (MA1.tvN X S0.ThX'.x0) (refl (MA1.tvN X S0.ThX'.x0)) (MA1.mapP X S0.ThX'.x0 S0.ThX'.J.part) Jm.part
+          (refl (plus p'.pr ES.CL'.r))
+          (\ l -> apH (\ z -> z.pQ) (mAt (splitF p'.pr ES.CL'.r l)))
+          (\ l -> pvSide (MA1.mside X S0.ThX'.x0 (S0.ThX'.J.part.ps l)) (Jm.part.ps l) (mAt (splitF p'.pr ES.CL'.r l))) ;
+
+      finAt (r' : Nat) (m' : Fin r') (n : Nat) (P : Id Nat m'.1 n) : Fin r' = (n, subst Nat (\ z -> IsT (ltb z r')) m'.1 n P m'.2) ;
+
+      -- the generator sides, by an index path
+      eQR (n : Nat) (m' : Fin ES.CL'.r) (Pm : Id Nat m'.1 n) (Q0 : Phi X)
+        (E : (h' : IsT (ltb n ES.CL'.r)) -> Id (Phi X) (ES.CL'.Q X w'.1 (n, h')) Q0) : Id (Phi X) (S2m m').pQ Q0 =
+        transH (apH (ES.CL'.Q X w'.1) (fin-eq ES.CL'.r m' (finAt ES.CL'.r m' n Pm) Pm)) (E (finAt ES.CL'.r m' n Pm).2) ;
+
+      module JE = GCofEsi2[a].PartialsEsi2[E2.KA.TV.E, E2.KA.SFm.SF] ;
+
+      -- the A-filler of the moved joined line, by cases on the generators
+      fillCase : GensIns X ES.CL.r (\ k -> ES.CL.Q X (s.nt X w'.1) k) ES.CL'.r (\ k' -> ES.CL'.Q X w'.1 k')
+        -> Id (E2.KA.TS.EI X) (MA1.tvN X S0.ThX'.x0, kA.kop X (MA1.tvN X S0.ThX'.x0) Jm.part) (S0.ThX.x0, kA.kop X S0.ThX.x0 S0.ThX.J.part) = split {
+        inl w -> E2.KA.PT.kop-cong kA X (MA1.tvN X S0.ThX'.x0) S0.ThX.x0 S0.x0eq Jm.part S0.ThX.J.part
+          (JE.JE[X, S0.ThX.x0, MA1.tvN X S0.ThX'.x0, S0.x0eq, p'.pr, ES.CL.r, \ l -> S0.ThX.S1[l].SO.side, \ k -> S0.ThX.S2[k].SO.side,
+                 S0.ThX.c11, S0.ThX.c12, S0.ThX.c22, S1m, c11m, \ l -> refl (p'.ps l).pQ, \ l W f i i' -> S0.s1Eq l W f i i'].joinEq2 ES.CL'.r (symH w.1)
+             S2m c12m c22m
+             (\ m m' Pm -> eQR m.1 m' Pm (ES.CL.Q X (s.nt X w'.1) m) (\ h' -> w.2 m.1 m.2 h'))
+             (\ m m' Pm W f i i' -> S0.s2Eq m' m W f i i')) ;
+        inr w -> JE.PE.kesiH kA kAe X S0.ThX.x0 (MA1.tvN X S0.ThX'.x0) S0.x0eq (plus p'.pr w.1) S0.ThX.J.part Jm.part
+          (JE.joinIns2 X S0.ThX.x0 (MA1.tvN X S0.ThX'.x0) w.1 p'.pr ES.CL.r w.2.1 (\ l -> S0.ThX.S1[l].SO.side) (\ k -> S0.ThX.S2[k].SO.side)
+             S0.ThX.c11 S0.ThX.c12 S0.ThX.c22 S1m c11m (\ l -> refl (p'.ps l).pQ) (\ l W f i i' -> S0.s1Eq l W f i i') ES.CL'.r (symH w.2.2.1)
+             S2m c12m c22m
+             (\ m' Pm -> eQR w.1 m' Pm (emptyS X) (\ h' -> w.2.2.2.1 h'))
+             (\ m m' Pm -> eQR (skipN w.1 m.1) m' Pm (ES.CL.Q X (s.nt X w'.1) m) (\ h' -> w.2.2.2.2 m.1 m.2 h'))
+             (\ m m' Pm W f i i' -> S0.s2Eq m' m W f i i')) } ;
+
+      fillJ : Id (E2.KA.TS.EI X) (MA1.tsN X (S0.ThX'.x0, S0.ThX'.fill)) (S0.ThX.x0, S0.ThX.fill) =
+        transH (HA1 X S0.ThX'.x0 S0.ThX'.J.part)
+          (transH (apH {E2.KA.PT.Partial[X, MA1.tvN X S0.ThX'.x0]} {E2.KA.TS.EI X} (\ q -> (MA1.tvN X S0.ThX'.x0, kA.kop X (MA1.tvN X S0.ThX'.x0) q)) mpJ)
+                  (fillCase (Hg X w'.1))) ;
+
+      -- the A-filler at e1 moves
+      FvS (V : Ob) (g : Hom V X) (j : Hom V Iv) : Id (N.FMX.HG.TA.EI V) (MA1.PhE V (S0.ThX'.Fv V g j)) (S0.ThX.Fv V g j) =
+        transH (symH (MA1.TSN[X, (S0.ThX'.x0, S0.ThX'.fill)].res-lev V g j))
+               (apH (\ u -> FM.famConn.levA G A X (E2.KA.lineL X u) V g j) fillJ) ;
+
+      opaque mpJ ; opaque fillJ ; opaque FvS ;
+    } ;
+  } ;
+} ;

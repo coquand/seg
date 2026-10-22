@@ -1,0 +1,61 @@
+Worker A finished — checked API for worker B
+===========================================
+
+Restriction718[l].Over[R,setR,axioms].At[X,scheme,Mx,w].theorem-7-1-8
+  : Modules[l].Over[R,setR].Restriction X Mx
+where w : Modules[l].Over[R,setR].WqcBundle X Mx.
+The full open-subtype form is Open[X,scheme,Mx,w,sub,op].theorem.
+
+AffineVanishing[l].Over[R,setR,axioms].Torsors[X,Mx,w,T,ts]
+exports presented A fp e, affine aff, small-affine aff, each giving
+||(x:X) -> T x||. It calls your Theorem736 with Restriction proved above.
+No separate Restriction hypothesis remains. Your files are unchanged.
+
+Minimal new import order after Sections 2–5 and your Modules:
+  SchemeUniform; Iterates; SectionDescent; LocalSections; FractionSections;
+  ModuleFractions; Restriction718;
+then your ZBridge and Theorem736 followed by AffineVanishing.
+Optional concrete fraction APIs: ModuleEquality712 and ModuleDescent712.
+Tests: QCExamples.
+All files are in qc-schemes/, and can be linked read-only.
+
+The module records and fraction definitions are yours, used unchanged.
+Only Ring's Nat is used in worker A's bounds; ModuleFractions translates
+to/from Alg73's exponents when supplying the torsor interface.
+
+6415 declarations, zero failures, 1.88 s, direct All.seg.
+21 expected negative tests (19 imported, 2 new; unrelated gluing omitted).
+
+Scope of 7.1.2: see README.txt. M_f is not constructed. Uniform equality
+and compatible local fraction descent are proved concretely for modules;
+the end-to-end representation theorem is parameterised by a family of sets
+representing fractions and its laws. 7.1.8 instantiates those laws from
+pointwise WeaklyQC, with target unit(g x) -> Mx.
+
+No edits to shared interfaces or global sag.tex, to avoid concurrent writes.
+Nothing committed.
+
+Second part finished: 7.1.9–7.1.12
+---------------------------------
+Import after Restriction718:
+  BundleOperations; RegularQC; QCTransport; AlgebraQC;
+Optional boundary tests: BundleExamples.
+
+BundleOperations.Over[R,setR,axioms]:
+- Sections[X,scheme,Mx,w].theorem-7-1-10 : WeaklyQC (pi X Mx), for ANY scheme.
+- inverse X Y f Ny; inverse-qc X Y f Ny w (no scheme assumptions).
+- direct X Y f Mx; direct-qc X Y sx sy f Mx w (scheme source and target).
+RegularQC.Over[R,setR,axioms].theorem : WeaklyQC regular.
+AlgebraQC.Over[R,setR,axioms]:
+- module-structure A : Module, with scalar r*a = iota(r)*a;
+- theorem-7-1-9 A fp : WeaklyQC (module-structure A);
+- bundle X As fp : WqcBundle X (module-structure . As).
+QCTransport transfers WeaklyQC backwards along an equivalence preserving
+zero and scalar multiplication; no new linear-map record is introduced.
+
+7.1.9 is derived from RegularQC, scheme section closure, and SQC evaluation,
+not the paper's tensor argument. It therefore uses the full SAG bundle.
+No new module localization or tensor construction. No edits to bridge7/.
+notes/sag.tex documents the scheme form of 7.1.10 and this assumption qualification.
+
+Latest check: 6568 declarations, zero failures, 1.93 s; 22 expected negative tests.

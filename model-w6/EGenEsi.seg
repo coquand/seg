@@ -1,0 +1,77 @@
+-- EGenEsi.seg: MODEL/Univ/EGenEsi.agda.  The composition of EGen is ESI:
+-- an inserted empty side in a box of EGen is an inserted empty side in its
+-- box b0 of F, whose composition is ESI.
+--
+-- Agda's match on ins-rho (F' = b.brho) is an idJ; its where-block is the
+-- segment ESB.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module ES0 = Esi[a, a] ;
+module CN = Conn[a] ;
+open Yon[a] ;
+open UAct[a] ;
+open UnivCtx[a] ;
+open EGenComp[a] ;
+open EGenComp3[a] ;
+
+module EU = Esi[a, a+].EsiDef[UCtx, EGen] ;
+
+selE (Z : Ob) (A : PTy[yP Z]) (c : BXm.Boxes[yP Z, A].Comp) (e : ES0.EsiDef[yP Z, A].ESIC c)
+  : (d : Bool) -> ES0.EsiDef[yP Z, A].ESI (CN.src d) (CN.tgt d) (selC Z A c d) = split {
+  true -> e.1 ;
+  false -> e.2 } ;
+
+module GE (d : Bool) {
+  open GC[d] ;
+
+  module ESB (X : Ob) (k : Nat) (b : BU.Box[eS, X]) (u2 : BU.LidT eS X b.brho) (r2 : Nat)
+    (S2 : Fin r2 -> BU.Side[X, b.brho]) (cs2 : BU.CsTy X b.brho r2 S2) (cb2 : BU.CbTy eS X b.brho u2 r2 S2)
+    (ins2 : EU.InsE[eS, X, k, b, (BU.mkBox eS X b.brho u2 r2 S2 cs2 cb2)]) {
+    XI : Ob = prodP X Iv ;
+
+    b1 : BU.Box[eS, X] = (BU.mkBox eS X b.brho u2 r2 S2 cs2 cb2) ;
+
+    module Bx = Box0[eS, X, b] ;
+    module By = Box0[eS, X, b1] ;
+
+    ins0 : ES0.EsiDef[yP XI, Bx.A].InsE[eS, X, k, Bx.b0, By.b0] = new ES0.EsiDef[yP XI, Bx.A].InsE[eS, X, k, Bx.b0, By.b0,
+      ins2.ins-r,
+      ins2.ins-k,
+      refl (idH XI),
+      Bx.PH.phiEq X ((yP XI).act X XI (lid X eS) (idH XI)) u2 b.bu ins2.ins-lid,
+      ins2.ins-e,
+      ins2.ins-Q,
+      \ n h h' W psi i i' ->
+        Bx.PH.phiEq W ((yP XI).act W XI psi (idH XI)) ((S2 (ES0.skipN k n, h')).sv W psi i) ((b.bs (n, h)).sv W psi i')
+          (ins2.ins-v n h h' W psi i i')] ;
+
+    res : Id (TU.EI X) (BU.topE eT X b.brho (copG X b1)) (BU.topE eT X b.brho (copG X b)) =
+      transH (copG-E X b1)
+       (transH (apH (Bx.PH.phi X) (selE XI Bx.A Bx.F.2.1 Bx.F.2.2 d X k Bx.b0 By.b0 ins0))
+               (symH (copG-E X b))) ;
+  } ;
+
+  esiC (X : Ob) (k : Nat) (b b' : BU.Box[eS, X]) (ins : EU.InsE[eS, X, k, b, b'])
+    : Id (TU.EI X) (BU.topE eT X b'.brho (copG X b')) (BU.topE eT X b.brho (copG X b)) =
+    idJ (U0 (prodP X Iv)) b.brho
+      (\ F2 P2 -> (u3 : BU.LidT eS X F2) (r3 : Nat) (S3 : Fin r3 -> BU.Side[X, F2]) (cs3 : BU.CsTy X F2 r3 S3)
+         (cb3 : BU.CbTy eS X F2 u3 r3 S3) -> EU.InsE[eS, X, k, b, (BU.mkBox eS X F2 u3 r3 S3 cs3 cb3)]
+         -> Id (TU.EI X) (BU.topE eT X F2 (copG X ((BU.mkBox eS X F2 u3 r3 S3 cs3 cb3)))) (BU.topE eT X b.brho (copG X b)))
+      (\ u3 r3 S3 cs3 cb3 ins3 -> ESB[X, k, b, u3, r3, S3, cs3, cb3, ins3].res)
+      b'.brho (symH ins.ins-rho) b'.bu b'.br b'.bs b'.bcs b'.bcb ins ;
+
+  opaque esiC ;
+
+  esiG : EU.ESI eS eT GV[d].compG = \ X k b b' ins -> esiC X k b b' ins ;
+} ;
+
+esiEGen : EU.ESIC compEGen = (GE[true].esiG, GE[false].esiG) ;

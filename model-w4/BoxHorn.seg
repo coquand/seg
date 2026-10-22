@@ -1,0 +1,377 @@
+-- BoxHorn.seg: MODEL/Poset/BoxHorn.agda.  Box filling gives horn filling:
+-- comp(G , A) -> horn(G , A).
+--
+-- A horn F at the vertex k of [m+1] over tau is filled by the composite of
+-- ONE open box over X = [m+1] (Gabriel-Zisman).  Let r : X * [1] -> X be a
+-- retraction of the end tgt d,
+--
+--   k = 0      d = true  (0 -> 1):  r (j , 0) = 0 ,  r (j , 1) = j
+--   k = k'+1   d = false (1 -> 0):  r (j , 0) = j ,  r (j , 1) = max j k
+--
+-- so that r (lid tgt) = id, r (lid src) misses the vertex y0 (= m+1, resp.
+-- 0, a face of the horn), and r maps (X - {y}) * [1] into X - {y} for
+-- y /= k.  The box has point tau r, lid F_{y0} read along r (lid src), and
+-- for every y /= k a side on X - {y}, F_y read along r (HornFace.vF); for
+-- y = k the subset is empty.  Its composite lies over tau r (lid tgt) = tau
+-- and extends the horn: on the face y it is the side y read along
+-- r (lid tgt) dl_y = dl_y.
+--
+--   BH.filler      the filler, for a retraction with the three properties
+--   comp-to-horn   both instances (Agda's comp->horn)
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+open Conn[a] ;
+module FibM = Fib[a, a] ;
+
+------------------------------------------------------------------------
+-- max
+
+maxN : Nat -> Nat -> Nat = split {
+  zero -> \ k -> k ;
+  suc j -> split { zero -> suc j ; suc k -> suc (maxN j k) } } ;
+
+max-l : (j k : Nat) -> IsT (leb j (maxN j k)) = split {
+  zero -> \ k -> refl true ;
+  suc j -> split { zero -> leb-refl j ; suc k -> max-l j k } } ;
+
+max-r : (j k : Nat) -> IsT (leb k (maxN j k)) = split {
+  zero -> \ k -> leb-refl k ;
+  suc j -> split { zero -> refl true ; suc k -> max-r j k } } ;
+
+max-le : (j k n : Nat) -> IsT (leb j n) -> IsT (leb k n) -> IsT (leb (maxN j k) n) = split {
+  zero -> \ k n hj hk -> hk ;
+  suc j -> split {
+    zero -> \ n hj hk -> hj ;
+    suc k -> split {
+      zero -> \ hj hk -> hj ;
+      suc n -> \ hj hk -> max-le j k n hj hk } } } ;
+
+max-mono : (j j' k : Nat) -> IsT (leb j j') -> IsT (leb (maxN j k) (maxN j' k)) = split {
+  zero -> \ j' k h -> max-r j' k ;
+  suc j -> split {
+    zero -> \ k h -> absurd _ (false-true h) ;
+    suc j' -> split {
+      zero -> \ h -> h ;
+      suc k -> \ h -> max-mono j j' k h } } } ;
+
+max-or (P : Nat -> U a) : (j k : Nat) -> P j -> P k -> P (maxN j k) = split {
+  zero -> \ k pj pk -> pk ;
+  suc j -> split {
+    zero -> \ pj pk -> pj ;
+    suc k -> \ pj pk -> max-or (\ v -> P (suc v)) j k pj pk } } ;
+
+max-pos : (j k : Nat) -> IsT (not (eqN (maxN j (suc k)) zero)) = split {
+  zero -> \ k -> refl true ;
+  suc j -> \ k -> refl true } ;
+
+------------------------------------------------------------------------
+-- The box of a horn, along a retraction
+
+-- the subset X - {y}, empty when y = k
+QH (m k y : Nat) : Subset (lin (suc m)) = \ t -> and (not (eqN y k)) (not (eqN (vnum t) y)) ;
+
+-- a map into the cylinder whose first component misses y
+MissC (W : Ob) (m y : Nat) (psi : Hom W (prodP (lin (suc m)) Iv)) : U a =
+  (s : El W) -> IsT (not (eqN (vnum (pr1T (app W (prodP (lin (suc m)) Iv) psi s).1)) y)) ;
+
+module BH (G : PCtx) (A : PTy[G]) (d : Bool) (co : Box[a, a].Boxes[G, A].CompOp[src d, tgt d])
+  (m k : Nat) (hk : IsT (leb k (suc m))) (tau : W0.Ix (G.ob (lin (suc m))))
+  (F : Box[a, a].Horns[G, A].Faces m k tau) (hc : Box[a, a].Horns[G, A].HCompat m k tau F)
+  (r : Hom (prodP (lin (suc m)) Iv) (lin (suc m)))
+  (y0 : Nat) (hy0 : IsT (leb y0 (suc m))) (ky0 : IsT (not (eqN y0 k)))
+  (R1 : PW (lin (suc m)) (lin (suc m)) (compH (lin (suc m)) (prodP (lin (suc m)) Iv) (lin (suc m)) r (lid (lin (suc m)) (tgt d)))
+           (idH (lin (suc m))))
+  (R2 : Miss (lin (suc m)) m y0 (compH (lin (suc m)) (prodP (lin (suc m)) Iv) (lin (suc m)) r (lid (lin (suc m)) (src d))))
+  (R3 : (y : Nat) -> IsT (not (eqN y k)) -> (W : Ob) (psi : Hom W (prodP (lin (suc m)) Iv))
+        -> MissC W m y psi -> Miss W m y (compH W (prodP (lin (suc m)) Iv) (lin (suc m)) r psi)) {
+
+  open PR.TyL[G, A] ;
+  module BX = Box[a, a].Boxes[G, A] ;
+  open Box[a, a].Horns[G, A] ;
+  open FibM.Kit[G, A] ;
+  module HFm = HornFace[a].HF[G, A, m, k, hk, tau, F] ;
+  module HCm = HornFace[a].HC[G, A] ;
+  module GL = PR.PshL[G] ;
+
+  X : Ob = lin (suc m) ;
+  XI : Ob = prodP X Iv ;
+  eS : El Iv = src d ;
+  eT : El Iv = tgt d ;
+
+  rho : Pt XI = G.act XI X r tau ;
+
+  rOf (W : Ob) (psi : Hom W XI) : Hom W X = compH W XI X r psi ;
+
+  inq-k (y : Nat) (W : Ob) (psi : Hom W XI) (i : InQ W X (QH m k y) psi) : IsT (not (eqN y k)) =
+    and-l (not (eqN y k)) (not (eqN (vnum (pr1T (app W XI psi (pt W, pt-car W)).1)) y)) (i (pt W, pt-car W)) ;
+
+  inq-m (y : Nat) (W : Ob) (psi : Hom W XI) (i : InQ W X (QH m k y) psi) : MissC W m y psi = \ s ->
+    and-r (not (eqN y k)) (not (eqN (vnum (pr1T (app W XI psi s).1)) y)) (i s) ;
+
+  ----------------------------------------------------------------------
+  -- The sides
+
+  v (y : Nat) (hy : IsT (leb y (suc m))) : VTy X (QH m k y) = \ W psi i ->
+    HFm.vF y hy (inq-k y W psi i) W (rOf W psi) ;
+
+  vp (y : Nat) (hy : IsT (leb y (suc m))) : VPt X rho (QH m k y) (v y hy) = \ W psi i ->
+    transH (HFm.vF-pt y hy (inq-k y W psi i) W (rOf W psi) (R3 y (inq-k y W psi i) W psi (inq-m y W psi i)))
+           (symH (GL.actC W XI X r psi tau)) ;
+
+  vn (y : Nat) (hy : IsT (leb y (suc m))) : VNat X (QH m k y) (v y hy) = \ W' W chi psi i i' ->
+    transH (HFm.vF-nat y hy (inq-k y W psi i) W' W chi (rOf W psi))
+     (transH (HFm.vF-pw y hy (inq-k y W psi i) W' (compH W' W X (rOf W psi) chi) (rOf W' (compH W' W XI psi chi))
+                (\ s -> refl (app W' X (rOf W' (compH W' W XI psi chi)) s).1))
+             (HFm.vF-irr y hy hy (inq-k y W psi i) (inq-k y W' (compH W' W XI psi chi) i') W' (rOf W' (compH W' W XI psi chi)))) ;
+
+  S (j : Fin (suc (suc m))) : BX.Side[X, rho] = mkSideE X rho (QH m k j.1) (v j.1 j.2) (vp j.1 j.2) (vn j.1 j.2) ;
+
+  S-E (j : Fin (suc (suc m))) (W : Ob) (psi : Hom W XI) (i : InQ W X (QH m k j.1) psi)
+    : Id (EI W) ((S j).svE W psi i) (v j.1 j.2 W psi i) =
+    mkSideE-E X rho (QH m k j.1) (v j.1 j.2) (vp j.1 j.2) (vn j.1 j.2) W psi i ;
+
+  cs : BX.CsTy X rho (suc (suc m)) S = \ j j' W psi i i' ->
+    pr-inj W (G.act W XI psi rho) ((S j).sv W psi i) ((S j').sv W psi i')
+      (transH (S-E j W psi i)
+       (transH (HCm.vF-compat m k hk tau F hc j.1 j'.1 j.2 j'.2 (inq-k j.1 W psi i) (inq-k j'.1 W psi i') W (rOf W psi)
+                  (R3 j.1 (inq-k j.1 W psi i) W psi (inq-m j.1 W psi i)) (R3 j'.1 (inq-k j'.1 W psi i') W psi (inq-m j'.1 W psi i')))
+               (symH (S-E j' W psi i')))) ;
+
+  opaque cs ;
+
+  ----------------------------------------------------------------------
+  -- The lid
+
+  rl : Hom X X = compH X XI X r (lid X eS) ;
+
+  uE : EI X = HFm.vF y0 hy0 ky0 X rl ;
+
+  upt : Id (Pt X) uE.1 (G.act X XI (lid X eS) rho) =
+    transH (HFm.vF-pt y0 hy0 ky0 X rl R2) (symH (GL.actC X XI X r (lid X eS) tau)) ;
+
+  u : T X (G.act X XI (lid X eS) rho) = fromE X (G.act X XI (lid X eS) rho) uE upt ;
+
+  cb : BX.CbTy eS X rho u (suc (suc m)) S = \ j W phi i ->
+    transH (apH (E.act W X phi) (fromE-eq X (G.act X XI (lid X eS) rho) uE upt))
+     (transH (HFm.vF-nat y0 hy0 ky0 W X phi rl)
+      (transH (HCm.vF-compat m k hk tau F hc y0 j.1 hy0 j.2 ky0 (inq-k j.1 W (compH W X XI (lid X eS) phi) i) W (compH W X X rl phi)
+                 (\ s -> R2 (app W X phi s))
+                 (R3 j.1 (inq-k j.1 W (compH W X XI (lid X eS) phi) i) W (compH W X XI (lid X eS) phi)
+                     (inq-m j.1 W (compH W X XI (lid X eS) phi) i)))
+       (transH (HFm.vF-pw j.1 j.2 (inq-k j.1 W (compH W X XI (lid X eS) phi) i) W (compH W X X rl phi)
+                  (rOf W (compH W X XI (lid X eS) phi)) (\ s -> refl (app W X (compH W X X rl phi) s).1))
+               (symH (S-E j W (compH W X XI (lid X eS) phi) i))))) ;
+
+  opaque cb ;
+
+  box : BX.Box[eS, X] = (BX.mkBox eS X rho u (suc (suc m)) S cs cb) ;
+
+  ----------------------------------------------------------------------
+  -- The filler: the composite of the box
+
+  tpt : Id (Pt X) (G.act X XI (lid X eT) rho) tau =
+    transH (GL.actC X XI X r (lid X eT) tau) (GL.actId X (compH X XI X r (lid X eT)) R1 tau) ;
+
+  fill : T X tau = fromE X tau (BX.topE eT X rho (co.cop X box)) tpt ;
+
+  -- the side y of the box, on the face y at the top
+  i1' (y : Nat) (ky : IsT (not (eqN y k))) : (t : Tree) (h : IsT (car (lin m) t))
+    -> IsT (QH m k y (pr1T (app (lin m) XI (compH (lin m) X XI (lid X eT) (dl m y)) (t, h)).1)) = split {
+    leaf j -> \ h -> and-i (not (eqN y k)) (not (eqN (skip y j) y)) ky (skip-miss y j) ;
+    node s t -> \ h -> absurd _ (false-true h) } ;
+
+  i1 (y : Nat) (ky : IsT (not (eqN y k))) : InQ (lin m) X (QH m k y) (compH (lin m) X XI (lid X eT) (dl m y)) =
+    \ s -> i1' y ky s.1 s.2 ;
+
+  face (y : Nat) (hy : IsT (leb y (suc m))) (ky : IsT (not (eqN y k)))
+    : Id (EI (lin m)) (E.act (lin m) X (dl m y) (tau, fill)) (fE m k tau F y hy ky) =
+    transH (apH (E.act (lin m) X (dl m y)) (fromE-eq X tau (BX.topE eT X rho (co.cop X box)) tpt))
+     (transH (co.cside X box (y, hy) (lin m) (dl m y) (i1 y ky))
+      (transH (S-E (y, hy) (lin m) (compH (lin m) X XI (lid X eT) (dl m y)) (i1 y ky))
+       (transH (HFm.vF-pw y hy (inq-k y (lin m) (compH (lin m) X XI (lid X eT) (dl m y)) (i1 y ky)) (lin m)
+                  (rOf (lin m) (compH (lin m) X XI (lid X eT) (dl m y))) (dl m y)
+                  (\ s -> R1 (app (lin m) X (dl m y) s)))
+        (transH (HFm.vF-irr y hy hy (inq-k y (lin m) (compH (lin m) X XI (lid X eT) (dl m y)) (i1 y ky)) ky (lin m) (dl m y))
+                (PE.actId (lin m) (compH (lin m) X (lin m) (dgH m y) (dl m y)) (pw-dg-dl m y hy) (fE m k tau F y hy ky)))))) ;
+
+  filler : Filler m k tau F = (fill, face) ;
+} ;
+
+------------------------------------------------------------------------
+-- The two retractions
+
+-- k = 0, direction 0 -> 1:  r (j , 0) = 0 ,  r (j , 1) = j
+rTN (j : Nat) : Nat -> Nat = split { zero -> zero ; suc e -> j } ;
+
+-- k > 0, direction 1 -> 0:  r (j , 0) = j ,  r (j , 1) = max j k
+rFN (k j : Nat) : Nat -> Nat = split { zero -> j ; suc e -> maxN j k } ;
+
+module Retr (m : Nat) (rN : Nat -> Nat -> Nat)
+  (rng : (j e : Nat) -> IsT (leb j (suc m)) -> IsT (leb (rN j e) (suc m)))
+  (mon : (j e j' e' : Nat) -> IsT (leb e (suc zero)) -> IsT (leb e' (suc zero))
+         -> IsT (leb j j') -> IsT (leb e e') -> IsT (leb (rN j e) (rN j' e'))) {
+
+  X : Ob = lin (suc m) ;
+  Y : Ob = prodP X Iv ;
+
+  rE2 (j : Nat) : (c : Tree) (h : IsT (car Y (node (leaf j) c))) -> El X = split {
+    leaf e -> \ h -> (leaf (rN j e), rng j e (and-l (leb j (suc m)) (leb e (suc zero)) h)) ;
+    node s t -> \ h -> absurd _ (false-true (and-r (leb j (suc m)) false h)) } ;
+
+  rE1 : (s c : Tree) (h : IsT (car Y (node s c))) -> El X = split {
+    leaf j -> rE2 j ;
+    node s t -> \ c h -> absurd _ (false-true h) } ;
+
+  rE' : (t : Tree) (h : IsT (car Y t)) -> El X = split {
+    leaf n -> \ h -> absurd _ (false-true h) ;
+    node s c -> rE1 s c } ;
+
+  rE (w : El Y) : El X = rE' w.1 w.2 ;
+
+  -- monotonicity, once the first point is good
+  rM5 (j e : Nat) (h : IsT (car Y (node (leaf j) (leaf e)))) (j' : Nat) : (c' : Tree) (h' : IsT (car Y (node (leaf j') c')))
+    -> IsT (le Y (node (leaf j) (leaf e)) (node (leaf j') c')) -> IsT (le X (rE2 j (leaf e) h).1 (rE2 j' c' h').1) = split {
+    leaf e' -> \ h' l ->
+      mon j e j' e' (and-r (leb j (suc m)) (leb e (suc zero)) h) (and-r (leb j' (suc m)) (leb e' (suc zero)) h')
+          (and-l (leb j j') (leb e e') l) (and-r (leb j j') (leb e e') l) ;
+    node s t -> \ h' l -> absurd _ (false-true (and-r (leb j' (suc m)) false h')) } ;
+
+  rM4 (j e : Nat) (h : IsT (car Y (node (leaf j) (leaf e)))) : (s' c' : Tree) (h' : IsT (car Y (node s' c')))
+    -> IsT (le Y (node (leaf j) (leaf e)) (node s' c')) -> IsT (le X (rE2 j (leaf e) h).1 (rE1 s' c' h').1) = split {
+    leaf j' -> rM5 j e h j' ;
+    node s t -> \ c' h' l -> absurd _ (false-true h') } ;
+
+  rM3 (j e : Nat) (h : IsT (car Y (node (leaf j) (leaf e)))) : (t' : Tree) (h' : IsT (car Y t'))
+    -> IsT (le Y (node (leaf j) (leaf e)) t') -> IsT (le X (rE2 j (leaf e) h).1 (rE' t' h').1) = split {
+    leaf n -> \ h' l -> absurd _ (false-true h') ;
+    node s' c' -> rM4 j e h s' c' } ;
+
+  rM2 (j : Nat) : (c : Tree) (h : IsT (car Y (node (leaf j) c))) (t' : Tree) (h' : IsT (car Y t'))
+    -> IsT (le Y (node (leaf j) c) t') -> IsT (le X (rE2 j c h).1 (rE' t' h').1) = split {
+    leaf e -> rM3 j e ;
+    node s t -> \ h t' h' l -> absurd _ (false-true (and-r (leb j (suc m)) false h)) } ;
+
+  rM1 : (s c : Tree) (h : IsT (car Y (node s c))) (t' : Tree) (h' : IsT (car Y t'))
+    -> IsT (le Y (node s c) t') -> IsT (le X (rE1 s c h).1 (rE' t' h').1) = split {
+    leaf j -> rM2 j ;
+    node s t -> \ c h t' h' l -> absurd _ (false-true h) } ;
+
+  rM' : (t : Tree) (h : IsT (car Y t)) (t' : Tree) (h' : IsT (car Y t'))
+    -> IsT (le Y t t') -> IsT (le X (rE' t h).1 (rE' t' h').1) = split {
+    leaf n -> \ h t' h' l -> absurd _ (false-true h) ;
+    node s c -> rM1 s c } ;
+
+  rM : Mono Y X rE = \ s t l -> rM' s.1 s.2 t.1 t.2 l ;
+
+  r : Hom Y X = mkHom Y X rE rM ;
+
+  -- r on the lid at e
+  rl' : (et : Tree) (he : IsT (car Iv et)) (st : Tree) (hs : IsT (car X st))
+    -> Id Tree (app X X (compH X Y X r (lid X (et, he))) (st, hs)).1 (leaf (rN (vnum st) (vnum et))) = split {
+    leaf ee -> \ he -> split {
+      leaf j -> \ hs -> refl (leaf (rN j ee)) ;
+      node s t -> \ hs -> absurd _ (false-true hs) } ;
+    node c d -> \ he st hs -> absurd _ (false-true he) } ;
+
+  r-lid (e : El Iv) (s : El X) : Id Tree (app X X (compH X Y X r (lid X e)) s).1 (leaf (rN (vnum s.1) (vnum e.1))) =
+    rl' e.1 e.2 s.1 s.2 ;
+
+  -- r misses y if both coordinates' images do
+  rmiss2 (y : Nat) (P : (j e : Nat) -> IsT (leb e (suc zero)) -> IsT (not (eqN j y)) -> IsT (not (eqN (rN j e) y)))
+    (j : Nat) : (c : Tree) (h : IsT (car Y (node (leaf j) c))) -> IsT (not (eqN j y))
+    -> IsT (not (eqN (vnum (rE2 j c h).1) y)) = split {
+    leaf e -> \ h k -> P j e (and-r (leb j (suc m)) (leb e (suc zero)) h) k ;
+    node s t -> \ h k -> absurd _ (false-true (and-r (leb j (suc m)) false h)) } ;
+
+  rmiss1 (y : Nat) (P : (j e : Nat) -> IsT (leb e (suc zero)) -> IsT (not (eqN j y)) -> IsT (not (eqN (rN j e) y)))
+    : (s c : Tree) (h : IsT (car Y (node s c))) -> IsT (not (eqN (vnum s) y))
+    -> IsT (not (eqN (vnum (rE1 s c h).1) y)) = split {
+    leaf j -> rmiss2 y P j ;
+    node s t -> \ c h k -> absurd _ (false-true h) } ;
+
+  rmiss0 (y : Nat) (P : (j e : Nat) -> IsT (leb e (suc zero)) -> IsT (not (eqN j y)) -> IsT (not (eqN (rN j e) y)))
+    : (t : Tree) (h : IsT (car Y t)) -> IsT (not (eqN (vnum (pr1T t)) y)) -> IsT (not (eqN (vnum (rE' t h).1) y)) = split {
+    leaf n -> \ h k -> absurd _ (false-true h) ;
+    node s c -> rmiss1 y P s c } ;
+
+  r-miss (y : Nat) (P : (j e : Nat) -> IsT (leb e (suc zero)) -> IsT (not (eqN j y)) -> IsT (not (eqN (rN j e) y)))
+    (W : Ob) (psi : Hom W Y) (ms : MissC W m y psi) : Miss W m y (compH W Y X r psi) = \ s ->
+    rmiss0 y P (app W Y psi s).1 (app W Y psi s).2 (ms s) ;
+} ;
+
+module RT (m : Nat) {
+  rng (j : Nat) : (e : Nat) -> IsT (leb j (suc m)) -> IsT (leb (rTN j e) (suc m)) = split {
+    zero -> \ h -> refl true ;
+    suc e -> \ h -> h } ;
+
+  mon (j : Nat) : (e j' e' : Nat) -> IsT (leb e (suc zero)) -> IsT (leb e' (suc zero))
+    -> IsT (leb j j') -> IsT (leb e e') -> IsT (leb (rTN j e) (rTN j' e')) = split {
+    zero -> \ j' e' he he' hj hee -> refl true ;
+    suc e -> \ j' -> split {
+      zero -> \ he he' hj hee -> absurd _ (false-true hee) ;
+      suc e' -> \ he he' hj hee -> hj } } ;
+
+  module R = Retr[m, \ j e -> rTN j e, rng, mon] ;
+} ;
+
+module RF (m k : Nat) (hk : IsT (leb k (suc m))) {
+  rng (j : Nat) : (e : Nat) -> IsT (leb j (suc m)) -> IsT (leb (rFN k j e) (suc m)) = split {
+    zero -> \ h -> h ;
+    suc e -> \ h -> max-le j k (suc m) h hk } ;
+
+  mon (j : Nat) : (e j' e' : Nat) -> IsT (leb e (suc zero)) -> IsT (leb e' (suc zero))
+    -> IsT (leb j j') -> IsT (leb e e') -> IsT (leb (rFN k j e) (rFN k j' e')) = split {
+    zero -> \ j' -> split {
+      zero -> \ he he' hj hee -> hj ;
+      suc e' -> \ he he' hj hee -> leb-trans j j' (maxN j' k) hj (max-l j' k) } ;
+    suc e -> \ j' -> split {
+      zero -> \ he he' hj hee -> absurd _ (false-true hee) ;
+      suc e' -> \ he he' hj hee -> max-mono j j' k hj } } ;
+
+  module R = Retr[m, \ j e -> rFN k j e, rng, mon] ;
+} ;
+
+------------------------------------------------------------------------
+-- comp(G , A) -> horn(G , A)
+
+module CH (G : PCtx) (A : PTy[G]) {
+  open Box[a, a].Boxes[G, A] ;
+  open Box[a, a].Horns[G, A] ;
+
+  PT (y : Nat) (ky : IsT (not (eqN y zero))) (j : Nat)
+    : (e : Nat) -> IsT (leb e (suc zero)) -> IsT (not (eqN j y)) -> IsT (not (eqN (rTN j e) y)) = split {
+    zero -> \ he kj -> neq-sym y zero ky ;
+    suc e -> \ he kj -> kj } ;
+
+  PF (k y : Nat) (ky : IsT (not (eqN y (suc k)))) (j : Nat)
+    : (e : Nat) -> IsT (leb e (suc zero)) -> IsT (not (eqN j y)) -> IsT (not (eqN (rFN (suc k) j e) y)) = split {
+    zero -> \ he kj -> kj ;
+    suc e -> \ he kj -> max-or (\ v -> IsT (not (eqN v y))) j (suc k) kj (neq-sym y (suc k) ky) } ;
+
+  ch (c : Comp) (m : Nat) : (k : Nat) (hk : IsT (leb k (suc m))) (tau : W0.Ix (G.ob (lin (suc m))))
+    (F : Faces m k tau) (hc : HCompat m k tau F) -> Filler m k tau F = split {
+    zero -> \ hk tau F hc ->
+      BH[G, A, true, c.1, m, zero, hk, tau, F, hc, RT[m].R.r, suc m, leb-refl m, refl true,
+         \ s -> transH (RT[m].R.r-lid e1 s) (symH (lin-leaf (suc m) s.1 s.2)),
+         \ s -> substH (\ t -> IsT (not (eqN (vnum t) (suc m)))) (symH (RT[m].R.r-lid e0 s)) (refl true),
+         \ y ky -> RT[m].R.r-miss y (PT y ky)].filler ;
+    suc k -> \ hk tau F hc ->
+      BH[G, A, false, c.2, m, suc k, hk, tau, F, hc, RF[m, suc k, hk].R.r, zero, refl true, refl true,
+         \ s -> transH (RF[m, suc k, hk].R.r-lid e0 s) (symH (lin-leaf (suc m) s.1 s.2)),
+         \ s -> substH (\ t -> IsT (not (eqN (vnum t) zero))) (symH (RF[m, suc k, hk].R.r-lid e1 s)) (max-pos (vnum s.1) k),
+         \ y ky -> RF[m, suc k, hk].R.r-miss y (PF k y ky)].filler } ;
+
+  comp-to-horn (c : Comp) : HornOp = \ m k -> ch c m k ;
+} ;

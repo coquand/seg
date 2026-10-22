@@ -1,0 +1,94 @@
+-- CompFill.seg: filling and composition are equivalent (CYLINDER.md
+-- section 4).  The model stores composition (FibExt.FibE); filling is the
+-- notion of the slides (FibTriv.FibAt, equivalent to Fib.FillOp by
+-- FibTrivFill / FibTrivFib).
+--
+--   F2C eS eT fo     filling gives composition: the composite is the filler
+--                    evaluated at the other end eT
+--   fill-to-comp     both directions; comp-to-fill is Fib.FillB (MkFill,
+--                    along the connection)
+--   comp-fill-comp   composition -> filling -> composition is the identity,
+--                    given ESI (Esi.FillTop.fillTop: the top of the MkFill
+--                    filler is the composite)
+
+level a l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+module W0 = V[l] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[l] ;
+open PR.PS ;
+module BXm = Box[a, l] ;
+module FibM = Fib[a, l] ;
+module ES = Esi[a, l] ;
+module FX = FibExt[a, l] ;
+
+module CompFill (G : PCtx) (A : PTy[G]) {
+  open PR.TyL[G, A] ;
+  module BX = BXm.Boxes[G, A] ;
+  module FD = FibM.FillDef[G, A] ;
+  module FB = FibM.FillB[G, A] ;
+
+  ----------------------------------------------------------------------
+  -- filling gives composition: evaluate the filler at the other end
+
+  module F2C (eS eT : El Iv) (fo : FD.FillOp[eS]) {
+    cop (X : Ob) (b : BX.Box[eS, X]) : BX.LidT eT X b.brho =
+      A.tact X (prodP X Iv) (lid X eT) b.brho (G.act X (prodP X Iv) (lid X eT) b.brho)
+        (refl (G.act X (prodP X Iv) (lid X eT) b.brho)) (fo.fop X b) ;
+
+    -- the composite, read in E, is the end of the filler
+    top-E (X : Ob) (b : BX.Box[eS, X])
+      : Id (EI X) (BX.topE eT X b.brho (cop X b)) (E.act X (prodP X Iv) (lid X eT) (b.brho, fo.fop X b)) =
+      symH (pr-tact X (prodP X Iv) (lid X eT) b.brho (G.act X (prodP X Iv) (lid X eT) b.brho)
+              (refl (G.act X (prodP X Iv) (lid X eT) b.brho)) (fo.fop X b)) ;
+
+    cside (X : Ob) (b : BX.Box[eS, X]) (j : Arith[a].Fin b.br) (W : Ob) (phi : Hom W X)
+      (i : InQ W X (b.bs j).sQ (compH W X (BX.XI X) (lid X eT) phi))
+      : Id (EI W) (E.act W X phi (BX.topE eT X b.brho (cop X b))) ((b.bs j).svE W (compH W X (BX.XI X) (lid X eT) phi) i) =
+      transH (apH (E.act W X phi) (top-E X b))
+        (transH (PE.actC W X (prodP X Iv) (lid X eT) phi (b.brho, fo.fop X b))
+                (fo.fside X b j W (compH W X (prodP X Iv) (lid X eT) phi) i)) ;
+
+    cunif (Y X : Ob) (h : Hom Y X) (b : BX.Box[eS, X])
+      : Id (EI Y) (E.act Y X h (BX.topE eT X b.brho (cop X b)))
+                  (BX.topE eT Y (BX.restrict eS Y X h b).brho (cop Y (BX.restrict eS Y X h b))) =
+      calc (EI Y) {
+          E.act Y X h (BX.topE eT X b.brho (cop X b))
+        =< apH (E.act Y X h) (top-E X b) >
+          E.act Y X h (E.act X (prodP X Iv) (lid X eT) (b.brho, fo.fop X b))
+        =< PE.actSq Y X (prodP Y Iv) (prodP X Iv) (lid X eT) h (cylH Y X h) (lid Y eT) (symH (cyl-lid Y X h eT))
+             (b.brho, fo.fop X b) >
+          E.act Y (prodP Y Iv) (lid Y eT) (E.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) (b.brho, fo.fop X b))
+        =< apH (E.act Y (prodP Y Iv) (lid Y eT)) (fo.funif Y X h b) >
+          E.act Y (prodP Y Iv) (lid Y eT) ((BX.restrict eS Y X h b).brho, fo.fop Y (BX.restrict eS Y X h b))
+        =< symH (top-E Y (BX.restrict eS Y X h b)) >
+          BX.topE eT Y (BX.restrict eS Y X h b).brho (cop Y (BX.restrict eS Y X h b)) } ;
+
+    co : BX.CompOp[eS, eT] = new BX.CompOp[eS, eT, cop, cside, cunif] ;
+  } ;
+
+  fill-to-comp (f : FB.Fill) : BX.Comp = (F2C[e0, e1, f.1].co, F2C[e1, e0, f.2].co) ;
+
+  ----------------------------------------------------------------------
+  -- composition -> filling -> composition is the identity, given ESI
+
+  module Round (d : Bool) (co : BX.CompOp[src d, tgt d]) (esi : ES.EsiDef[G, A].ESI (src d) (tgt d) co) {
+    module MF = FibM.MkFill[G, A, d, co] ;
+    module FT = ES.FillTop[G, A, d, co, esi] ;
+    module C = F2C[src d, tgt d, MF.fillOp] ;
+
+    res : Id (BX.CompOp[src d, tgt d]) C.co co =
+      FX.CompExt[G, A].CompOp-ext (src d) (tgt d) C.co co (\ X b -> transH (C.top-E X b) (FT.fillTop X b)) ;
+  } ;
+
+  comp-fill-comp (c : BX.Comp) (esi : ES.EsiDef[G, A].ESIC c) : Id BX.Comp (fill-to-comp (FB.comp-to-fill c)) c =
+    transH (apH {BX.CompOp[e0, e1]} {BX.Comp} (\ u -> (u, (fill-to-comp (FB.comp-to-fill c)).2)) (Round[true, c.1, esi.1].res))
+           (apH {BX.CompOp[e1, e0]} {BX.Comp} (\ v -> (c.1, v)) (Round[false, c.2, esi.2].res)) ;
+} ;

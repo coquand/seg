@@ -1,0 +1,70 @@
+-- DSmallFullP.seg: smallCl-full for Delta, part 2 (DSmallFull has the
+-- data and fillEq): the two horn data El fills on have the same values
+-- (pv, dEq), and the first step of the statement along tyEq (st1).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ;
+module DBm = DeltaBase[a] ;
+module DB = DBm.DB ;
+module PS = DB.GPre[a].PS ;
+module DCl = DeltaClassifier[a] ;
+module DU = DCl.DU ;
+module YO = DB.GYon[a] ;
+module DF = DeltaForall[a].DFaU ;
+
+module SFP
+  (kU0 : DB.GLine[a+].LineFibP[DB.GFam[a+].famPath, DU.UCtx, DU.EGen].FibAt DB.e0)
+  (kU1 : DB.GLine[a+].LineFibP[DB.GFam[a+].famPath, DU.UCtx, DU.EGen].FibAt DB.e1)
+  (kU0e : DB.GCofEsi[a+].PartialsEsi[DB.GLine[a+].EndKit[DB.GFam[a+].famPath, DU.UCtx, DU.EGen, DB.e0].TV.E,
+            DB.GLine[a+].EndKit[DB.GFam[a+].famPath, DU.UCtx, DU.EGen, DB.e0].SFm.SF].KESI kU0)
+  (kU1e : DB.GCofEsi[a+].PartialsEsi[DB.GLine[a+].EndKit[DB.GFam[a+].famPath, DU.UCtx, DU.EGen, DB.e1].TV.E,
+            DB.GLine[a+].EndKit[DB.GFam[a+].famPath, DU.UCtx, DU.EGen, DB.e1].SFm.SF].KESI kU1)
+  (cE : DB.GFibE[a+].FE[DU.UCtx, DU.EGen].Comp) (eE : DB.GFibE[a+].FE[DU.UCtx, DU.EGen].ESIC cE)
+  (r : Nat) (X : Nat)
+  (w : DB.GExtBig.UB[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A, r].Pr X)
+  (fu : IsT (DB.GExtBig.UB[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A, r].CU.full X w)) {
+  module S0 = DSmallFull[a].SF[kU0, kU1, kU0e, kU1e, cE, eE, r, X, w, fu] ;
+
+  module At (m k : Nat) (hk : IsT (leb k (suc m))) (rho : Hom (lin (suc m)) (lin X))
+    (h : DHornFib[a, a].DH[YO.yP X, S0.FT0.E1].HornData m k rho) {
+    module A0 = S0.At[m, k, hk, rho, h] ;
+
+    pvL (W : Nat) (f : Hom (lin W) (lin (suc m))) (j : DBm.DS.Lands W (suc m) (DeltaHorn[a].hornS m k) f)
+      : Id (S0.SC0.UB.TBU.EI W) (A0.Fu.bv W f j)
+           (S0.FT0.E3u.toB W (A0.h'.1 W f j) (S0.FT0.yx.nt W (h.1 W f j).1).2) =
+      S0.FT0.E3u.toB-cong W (A0.h'.1 W f j) (A0.h'.1 W f j) (refl (A0.h'.1 W f j)) (A0.Fu.pW W f j) (S0.FT0.yx.nt W (h.1 W f j).1).2 ;
+
+    pvR (W : Nat) (f : Hom (lin W) (lin (suc m))) (j : DBm.DS.Lands W (suc m) (DeltaHorn[a].hornS m k) f)
+      : Id (S0.TC.TE.EI W) (A0.dR.1 W f j) (A0.TT.L W ((h.1 W f j).1, S0.FT0.FMx.phBR W (h.1 W f j).1 (h.1 W f j).2)) =
+      transH (apH (A0.TT.L W) (A0.TR.trH-v A0.T S0.FT0.TP.tyEq m k rho h W f j))
+             (apH (A0.TT.L W) (S0.FT0.trEv W (h.1 W f j).1 (h.1 W f j).2)) ;
+
+    pv (W : Nat) (f : Hom (lin W) (lin (suc m))) (j : DBm.DS.Lands W (suc m) (DeltaHorn[a].hornS m k) f)
+      : Id (S0.TC.TE.EI W) (A0.dL.1 W f j) (A0.dR.1 W f j) =
+      transH (apH {S0.SC0.UB.TBU.EI W} {S0.TC.TE.EI W} (\ v -> (S0.SC0.UB.bmap.nt W v.1, v.2)) (pvL W f j)) (symH (pvR W f j)) ;
+
+    dEq : Id (S0.TC.HEl.HornData m k (S0.FT0.c (suc m) rho)) A0.dL A0.dR =
+      S0.TC.hdE m k (S0.FT0.c (suc m) rho) A0.dL A0.dR
+        (funext Nat (\ W -> (f : Hom (lin W) (lin (suc m))) -> DBm.DS.Lands W (suc m) (DeltaHorn[a].hornS m k) f -> S0.TC.TE.EI W) A0.dL.1 A0.dR.1 (\ W ->
+         funext (Hom (lin W) (lin (suc m))) (\ f -> DBm.DS.Lands W (suc m) (DeltaHorn[a].hornS m k) f -> S0.TC.TE.EI W) (A0.dL.1 W) (A0.dR.1 W) (\ f ->
+         funext (DBm.DS.Lands W (suc m) (DeltaHorn[a].hornS m k) f) (\ j -> S0.TC.TE.EI W) (A0.dL.1 W f) (A0.dR.1 W f) (\ j -> pv W f j)))) ;
+
+    st1 : Id (DB.GPre[a].TyL[YO.yP X, A0.T].EI (suc m))
+             (A0.TR.trE (suc m) A0.T S0.FT0.TP.tyEq (rho, (S0.c1 m k hk rho h).1)) (rho, S0.FT0.FMx.phBR (suc m) rho (S0.FT0.FMx.psBR (suc m) rho A0.z)) =
+      transH (apH {W0.Ix (S0.FT0.E1.tob (suc m) rho)} {DB.GPre[a].TyL[YO.yP X, A0.T].EI (suc m)}
+                (\ b -> A0.TR.trE (suc m) A0.T S0.FT0.TP.tyEq (rho, b)) A0.fillEq)
+             (S0.FT0.trEv (suc m) rho (S0.FT0.FMx.psBR (suc m) rho A0.z)) ;
+
+    opaque pv ; opaque dEq ; opaque st1 ;
+  } ;
+} ;

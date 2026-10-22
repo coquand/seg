@@ -1,0 +1,148 @@
+diff -ru defenv/examples/basic.seg primrec/examples-defenv/basic.seg
+--- defenv/examples/basic.seg	2026-10-18 16:57:37
++++ primrec/examples-defenv/basic.seg	2026-10-19 10:19:24
+@@ -9,7 +9,7 @@
+ 
+ plus : N -> N -> N = split {
+   zero  -> \ n -> n ;
+-  suc p -> \ n -> suc (plus p n)
++  suc p | r -> \ n -> suc (r n)
+ } ;
+ 
+ one : N = suc zero ;
+diff -ru defenv/examples/locks.seg primrec/examples-defenv/locks.seg
+--- defenv/examples/locks.seg	2026-10-18 09:42:19
++++ primrec/examples-defenv/locks.seg	2026-10-19 10:19:24
+@@ -6,7 +6,7 @@
+ 
+ plus : N -> N -> N = split {
+   zero  -> \ n -> n ;
+-  suc p -> \ n -> suc (plus p n)
++  suc p | r -> \ n -> suc (r n)
+ } ;
+ one : N = suc zero ;
+ 
+@@ -34,9 +34,11 @@
+ transparent Mon.twice ;
+ compAgain : Id N (NM.twice one) (suc one) = refl (suc one) ;
+ 
+--- mutual recursion in a group
+-even : N -> N = split { zero -> one ; suc n -> odd n } ;
+-odd  : N -> N = split { zero -> zero ; suc n -> even n } ;
++-- mutual recursion: one eliminator computes both (PRIMREC.md: no
++-- recursion by name, no mutual groups)
++evenOdd : N -> N * N = split { zero -> (one, zero) ; suc n | r -> (r.2, r.1) } ;
++even (n : N) : N = (evenOdd n).1 ;
++odd (n : N) : N = (evenOdd n).2 ;
+ #normal even (suc (suc one)) ;
+ 
+ -- where blocks
+diff -ru defenv/examples/segtypes.seg primrec/examples-defenv/segtypes.seg
+--- defenv/examples/segtypes.seg	2026-10-18 17:23:43
++++ primrec/examples-defenv/segtypes.seg	2026-10-19 10:19:24
+@@ -2,7 +2,7 @@
+ 
+ level a ;
+ data N = zero | suc (n : N) ;
+-plus : N -> N -> N = split { zero -> \ n -> n ; suc p -> \ n -> suc (plus p n) } ;
++plus : N -> N -> N = split { zero -> \ n -> n ; suc p | r -> \ n -> suc (r n) } ;
+ 
+ -- a definition BETWEEN fields, used in the type of a later field:
+ -- the shape of MODEL's record CwF (p-lift-T between the fields)
+diff -ru defenv/examples/termination.seg primrec/examples-defenv/termination.seg
+--- defenv/examples/termination.seg	2026-10-19 09:36:13
++++ primrec/examples-defenv/termination.seg	2026-10-19 10:19:49
+@@ -1,5 +1,8 @@
+--- termination.seg: the restrictions R1 and R2, positivity and termination
+--- (Term.hs), enforced after resolution: each rejected case is a #fails.
++-- termination.seg (migrated to seg/primrec): the definitions that the
++-- size-change pass of defenv accepted, written with eliminators; and the
++-- cases it rejected, which now fail by scope (no recursion by name, no
++-- forward reference) or by positivity.  The tests of recursive results
++-- themselves are in examples/primrec.seg.
+ 
+ level a ;
+ data Empty = ;
+@@ -10,45 +13,45 @@
+ 
+ plus : N -> N -> N = split {
+   zero  -> \ n -> n ;
+-  suc m -> \ n -> suc (plus m n) } ;
++  suc m | r -> \ n -> suc (r n) } ;
+ 
+--- a split in a branch takes the next argument
++-- a split in a branch takes the next argument; r : N -> N
+ skipN : N -> N -> N = split {
+   zero -> \ n -> suc n ;
+-  suc k -> split { zero -> zero ; suc n -> suc (skipN k n) } } ;
++  suc k | r -> split { zero -> zero ; suc n -> suc (r n) } } ;
+ 
+--- lexicographic; suc m in the branch suc m is the argument itself
++-- the inner call ack (suc m) n is the inner result s
+ ack : N -> N -> N = split {
+   zero -> \ n -> suc n ;
+-  suc m -> split { zero -> ack m (suc zero) ; suc n -> ack m (ack (suc m) n) } } ;
++  suc m | r -> split { zero -> r (suc zero) ; suc n | s -> r s } } ;
+ 
+--- mutual
+-even : N -> N = split { zero -> suc zero ; suc m -> odd m } ;
+-odd  : N -> N = split { zero -> zero ; suc m -> even m } ;
++-- mutual: one eliminator computes both
++evenOdd : N -> N * N = split { zero -> (suc zero, zero) ; suc m | r -> (r.2, r.1) } ;
++even (n : N) : N = (evenOdd n).1 ;
++odd (n : N) : N = (evenOdd n).2 ;
+ 
+--- a W-type: f a is smaller than sup A f, in a local helper
++-- a W-type: r : (y : A) -> U a, the result for f y
+ data W : U a+ = sup (A : U a) (f : A -> W) ;
+-wsize (x : W) : U a = wsz x
+-  where { wsz : W -> U a = split { sup A f -> (y : A) -> wsz (f y) } ; } ;
++wsize : W -> U a = split { sup A f | r -> (y : A) -> r y } ;
+ 
+--- a local helper splitting a pattern variable, calling back the outer one
+-half : N -> N = split {
+-  zero -> zero ;
+-  suc m -> h m
+-    where { h : N -> N = split { zero -> zero ; suc k -> suc (half k) } ; } } ;
++-- course of values: half (suc (suc k)) = suc (half k), by computing
++-- (half n, half (suc n)) together
++halfPair : N -> N * N = split { zero -> (zero, zero) ; suc m | r -> (r.2, suc r.1) } ;
++half (n : N) : N = (halfPair n).1 ;
++#conv half (suc (suc (suc (suc (suc zero))))) = suc (suc zero) ;
+ 
+ ------------------------------------------------------------------------
+--- not shown to terminate
++-- rejected (now by scope: no recursion by name)
+ 
+ #fails { loop : Empty = loop ; } ;
+ #fails { same : N -> N = split { zero -> zero ; suc m -> same (suc m) } ; } ;
+ #fails { swap : N -> N -> N = \ x y -> swap y x ; } ;
+ 
+--- a group member passed to a module instance: a call with unknown arguments
++-- a definition passed to a module instance inside itself: not in scope
+ module App (g : N -> N) { run (x : N) : N = g x ; } ;
+ #fails { viaInst : N -> N = \ x -> App[viaInst].run x ; } ;
+ 
+--- a call only in a hidden argument, filled from the type of lem
++-- a call only in a hidden argument: lem refers to the later viaHole
+ idH {n : N} (p : Id N n n) : N = n ;
+ #fails {
+   lem (x : N) : Id N (viaHole x) (viaHole x) = refl (viaHole x) ;
+@@ -69,7 +72,7 @@
+ #fails { data D2 : U a = roll2 (k : Neg1 D2) ; } ;
+ 
+ ------------------------------------------------------------------------
+--- R2: a field mentions a definition of its group that is not a data type
++-- a field mentions a later definition (formerly R2): not in scope
+ 
+ #fails {
+   Neg : U a = D3 -> Empty ;
+@@ -83,7 +86,7 @@
+ } ;
+ 
+ ------------------------------------------------------------------------
+--- R1: local definitions only in the body of a definition
++-- local definitions in types (formerly R1): lp is not in scope in itself
+ 
+ #fails { f1 : (let { lp : U a = lp ; } in lp) = zero ; } ;
+ #fails { f2 : (let { lp : Empty = lp ; } in Empty -> Empty) = \ x -> x ; } ;

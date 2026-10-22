@@ -1,0 +1,69 @@
+-- GExtNat7.seg (inside IvBase.FaU, any base): Theorem 7 along a
+-- substitution, the result.  Ext(alpha[s]) with its fibration structure is
+-- Ext(alpha)'s substituted (subFibEL), along tyEq:
+--   FS = fibEq (trSub along tyEq, Hph = trPhi) after compS both ways.
+-- Hypotheses: the fillers of A[s] , B[sR] at both ends and the equivalence
+-- of al' are the moved ones (HA0 , HA1 , HB0 , HB1), delta's generators
+-- correspond (Hd0 , Hd1: GExtNat2.HdTy) and extEquiv moves (XS).
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+
+module N7 (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D'])
+  (fullS : (X : Ob) (d : W0.Ix (D'.ob X)) -> Id Bool (GP.CofL[D', psi'].full X d) (GP.CofL[G, psi].full X (s.nt X d)))
+  (kA0 : LineFibP[GFam[a].famPath, G, A].FibAt e0) (kA1 : LineFibP[GFam[a].famPath, G, A].FibAt e1)
+  (kB0 : LineFibP[GFam[a].famPath, GP.CofL[G, psi].resCtx, B].FibAt e0)
+  (kB1 : LineFibP[GFam[a].famPath, GP.CofL[G, psi].resCtx, B].FibAt e1)
+  (kA0e : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, e0].TV.E, EndKit[GFam[a].famPath, G, A, e0].SFm.SF].KESI kA0)
+  (kA1e : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, e1].TV.E, EndKit[GFam[a].famPath, G, A, e1].SFm.SF].KESI kA1)
+  (kB0e : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, GP.CofL[G, psi].resCtx, B, e0].TV.E,
+            EndKit[GFam[a].famPath, GP.CofL[G, psi].resCtx, B, e0].SFm.SF].KESI kB0)
+  (kB1e : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, GP.CofL[G, psi].resCtx, B, e1].TV.E,
+            EndKit[GFam[a].famPath, GP.CofL[G, psi].resCtx, B, e1].SFm.SF].KESI kB1)
+  (eal : GEquiv[a].EquivOp GP.CofL[G, psi].resCtx B (subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR) al)
+  (keal : GCofEsi[a].PartialsEsi[GExt[a].ExtDef[G, A, psi].EA', GEquiv[a].HFib[GP.CofL[G, psi].resCtx, B,
+            subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR, al].FibT].KESI eal) {
+  module ES = GExtSub2.ExtSub[G, A, psi, B, al, D', s, psi', fullS] ;
+  module EF = GExtFib[a].ExtFib[G, A, psi, B, al, kA0, kA1, kB0, kB1, kA0e, kA1e, kB0e, kB1e, eal, keal] ;
+
+  module Sb (kA0' : LineFibP[GFam[a].famPath, D', ES.A'].FibAt e0) (kA1' : LineFibP[GFam[a].famPath, D', ES.A'].FibAt e1)
+    (kB0' : LineFibP[GFam[a].famPath, ES.CL'.resCtx, ES.B'].FibAt e0)
+    (kB1' : LineFibP[GFam[a].famPath, ES.CL'.resCtx, ES.B'].FibAt e1)
+    (kA0e' : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, D', ES.A', e0].TV.E, EndKit[GFam[a].famPath, D', ES.A', e0].SFm.SF].KESI kA0')
+    (kA1e' : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, D', ES.A', e1].TV.E, EndKit[GFam[a].famPath, D', ES.A', e1].SFm.SF].KESI kA1')
+    (kB0e' : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, ES.CL'.resCtx, ES.B', e0].TV.E,
+               EndKit[GFam[a].famPath, ES.CL'.resCtx, ES.B', e0].SFm.SF].KESI kB0')
+    (kB1e' : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, ES.CL'.resCtx, ES.B', e1].TV.E,
+               EndKit[GFam[a].famPath, ES.CL'.resCtx, ES.B', e1].SFm.SF].KESI kB1')
+    (eal' : GEquiv[a].EquivOp ES.CL'.resCtx ES.B' ES.ED'.A' ES.al')
+    (keal' : GCofEsi[a].PartialsEsi[ES.ED'.EA', GEquiv[a].HFib[ES.CL'.resCtx, ES.B', ES.ED'.A', ES.al'].FibT].KESI eal') {
+    module EF' = GExtFib[a].ExtFib[D', ES.A', ES.psi', ES.B', ES.al', kA0', kA1', kB0', kB1', kA0e', kA1e', kB0e', kB1e', eal', keal'] ;
+    module M01 = GExtNat6.N6[G, A, psi, B, al, D', s, psi', fullS, e0, e1, kA0, kB0, kA0', kB0', kA1, kA1', eal, eal', kA0e, kA1e, keal] ;
+    module M10 = GExtNat6.N6[G, A, psi, B, al, D', s, psi', fullS, e1, e0, kA1, kB1, kA1', kB1', kA1, kA1', eal, eal', kA1e, kA1e, keal] ;
+    module EM = M01.EM ;
+    module TS = GTransferSub.TrSub[D', G, s, M01.PS.E2.ExtT, (EF.T01.extCompAt, EF.T10.extCompAt)] ;
+
+    -- the result: FS
+    FS (HB0 : M01.N2.N1.HBTy) (HB1 : M10.N2.N1.HBTy) (HA0 : M01.N2.HATy) (HA1 : M10.N2.HATy)
+      (Hd0 : M01.N2.HdTy) (Hd1 : M10.N2.HdTy) (XS : M01.FMX.HTy M01.C3'.E3.extEquiv M01.C3.E3.extEquiv)
+      : Id (GFibE[a].FibEL D') EF'.extFib (GSubst[a].subFibEL D' G s EF.extFib) =
+      TS.fibEq EF.extFib.2.2 M01.PS.E2'.ExtT (EF'.T01.extCompAt, EF'.T10.extCompAt) EF'.extFib.2.2
+        (transH
+          (apH {TS.ClTy M01.PS.E2'.ExtT} {(T : PTy[D']) * TS.ClTy T} (\ z -> (M01.PS.E2'.ExtT, z))
+            (transH (apH {CompAtP[GFam[a].famPath, D', M01.PS.E2'.ExtT, e0, e1].CompAt} {TS.ClTy M01.PS.E2'.ExtT}
+                       (\ z -> (z, EF'.T10.extCompAt)) (M01.compS HB0 HA0 Hd0 XS))
+                    (apH {CompAtP[GFam[a].famPath, D', M01.PS.E2'.ExtT, e1, e0].CompAt} {TS.ClTy M01.PS.E2'.ExtT}
+                       (\ z -> (M01.TrX.compAt, z)) (M10.compS HB1 HA1 Hd1 XS))))
+          (TS.trSub M01.PS.E2'.ExtT EM.AS.tyEq EM.phX EM.psX EM.phps EM.psph EM.AS.PhiNat (\ W d b -> EM.AS.trPhi W (d, b)))) ;
+  } ;
+} ;

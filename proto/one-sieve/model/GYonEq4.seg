@@ -1,0 +1,122 @@
+-- GYonEq4.seg (inside IvBase, any base): equivalence structures glue
+-- along Yoneda maps, part 4: the glued structure along the Yoneda map of a
+-- point x is the local one, L Z x (yonL; an Id of data).  Pointwise, read
+-- in the fibre of al over D (FibIso lifts, lam-inj): the glued extension
+-- at (x g , a) is L at x g (GYonEq1), which coh moves to L Z x at (g , a)
+-- (GYonEq2.lamPhi), as in GYonEq3.KU.mid.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon ;
+open GLine[a] ;
+module GCF = GCofib[a] ;
+module GCE = GCofEsi[a] ;
+module GQ = GEquiv[a] ;
+module GSB2 = GEquivSub2[a] ;
+module GX = GEqExt[a] ;
+module GL = GEqLaws[a] ;
+module GY1 = GYonEq1 ;
+module GY2 = GYonEq2 ;
+
+module YL (D : PCtx) (B A : PTy[D]) (al : PMap[D, B, A])
+  (L : (Z : Ob) (x : W0.Ix (D.ob Z)) -> GX.EqDat[yP Z].EqOn (GY1.triY D B A al Z x))
+  (coh : (Z Z' : Ob) (h : Hom Z' Z) (x : W0.Ix (D.ob Z))
+     -> Id ((u : GX.EqDat[yP Z'].Tri) * GX.EqDat[yP Z'].EqOn u)
+           (GL.eqDSub (yP Z') (yP Z) (yH Z' Z h) (GY1.triY D B A al Z x) (L Z x))
+           (GY1.triY D B A al Z' (D.act Z' Z h x), L Z' (D.act Z' Z h x)))
+  (Z : Ob) (x : W0.Ix (D.ob Z)) {
+  module Y1 = GY1.YE[D, B, A, al, L, coh] ;
+  module YE = GYonEq3.YE3[D, B, A, al, L, coh] ;
+  module HG = Y1.HG ;
+  module TA = Y1.TA ;
+  module LZ = Y1.Lx[Z, x] ;
+  module FI = LZ.FI ;
+  module ESg = GSB2.EqSub[yP Z, D, yPt D Z x, B, A, al, YE.contr] ;
+  module PD = GCF.Partials[FI.HD.EA, FI.HD.FibT] ;
+
+  module Pt (W : Ob) (u : FI.HD.TA.EI W) (p : PD.Partial[W, u]) {
+    g : Hom W Z = u.1 ;
+    module C = GY2.CohL[D, B, A, al, L, coh, Z, W, g, x] ;
+    module LW = C.LY ;
+    module ES = C.ES ;
+    module ED = C.ED ;
+
+    P0 : Y1.P.Partial[W, FI.ls.nt W u] = ESg.qP W u p ;
+    u0' : W0.Ix (LW.FI.HD.EA.ob W) = LW.u0 u.2 ;
+    qR : LW.PS.Partial[W, u0'] = LW.Pl[u.2].pull P0 ;
+    q2 : GCF.Partials[LW.FI.HD.EA, LW.FI.HD.FibT].Partial[W, u0'] = LW.CR.MS.mapP W u0' qR ;
+    vR : LW.FI.HD.TF.EI W = (u0', (L W C.xh).1.kop W u0' q2) ;
+
+    psu : W0.Ix (ES.HD.EA.ob W) = ED.Psi C.t C.t2 C.Pt W u0' ;
+    qm : GCF.Partials[ES.HD.EA, ES.HD.FibT].Partial[W, psu] = ED.mvP C.t C.t2 C.Pt W u0' q2 ;
+    qM : PD.Partial[W, ES.ls.nt W psu] = ES.CS.MP.mapP W psu (ES.CR.MS.mapP W psu qm) ;
+
+    -- the moved point is u
+    Pp : Id (W0.Ix (FI.HD.EA.ob W)) (ES.ls.nt W psu) u =
+      FI.SA.mV-inj W (ES.ls.nt W psu) u
+        (transH (apH (compH W W Z g) (C.psiFst W u0')) (comp-idr W Z g))
+        (transH (symH (C.liftTrA W u0')) (LW.p0 u.2)) ;
+
+    -- the sides
+    sideM (l : Fin p.pr) (V : Ob) (k : Hom V W) (i : Lands V W (p.ps l).pQ k)
+      : Id (HG.TF.EI V) (FI.sG V ((qM.ps l).pv V k i)) (FI.sG V ((p.ps l).pv V k i)) =
+      transH (symH (C.lamPhi V (LW.FI.r V (LW.Pl[u.2].pv (P0.ps l) V k i))))
+        (transH (LW.FI.sG-r V (LW.Pl[u.2].pv (P0.ps l) V k i))
+                (LW.Pl[u.2].pv-E (P0.ps l) V k i)) ;
+
+    R : Id (PD.Partial[W, u]) (subst (W0.Ix (FI.HD.EA.ob W)) (\ z -> PD.Partial[W, z]) (ES.ls.nt W psu) u Pp qM) p =
+      PD.partExtH W (ES.ls.nt W psu) u Pp qM p (refl p.pr) (\ l -> refl (p.ps l).pQ)
+        (\ l V k i i' -> FI.lam-inj V ((qM.ps l).pv V k i) ((p.ps l).pv V k i')
+           (transH ((qM.ps l).ppt V k i) (transH (apH (FI.HD.EA.act V W k) Pp) (symH ((p.ps l).ppt V k i'))))
+           (transH (sideM l V k i) (apH (FI.sG V) (PD.pv-irr W u (p.ps l) V k i i')))) ;
+
+    mid : Id (HG.TF.EI W) (LW.FI.sG W vR) (FI.sG W (u, (L Z x).1.kop W u p)) =
+      calc (HG.TF.EI W) {
+          LW.FI.sG W vR
+        =< C.lamPhi W vR >
+          FI.sG W (ES.FI.sG W (ED.PhiF C.t C.t2 C.Pt W vR))
+        =< apH (\ z -> FI.sG W (ES.FI.sG W z)) (C.HY W u0' q2) >
+          FI.sG W (ES.FI.sG W (psu, C.e.1.kop W psu qm))
+        =< apH (\ z -> FI.sG W (ES.FI.sG W z)) (ES.CR.kop-E W psu qm) >
+          FI.sG W (ES.FI.sG W (ES.FI.r W (psu, ES.CS.kop W psu (ES.CR.MS.mapP W psu qm))))
+        =< apH (FI.sG W) (ES.FI.sG-r W (psu, ES.CS.kop W psu (ES.CR.MS.mapP W psu qm))) >
+          FI.sG W (ES.ls.nt W psu, (L Z x).1.kop W (ES.ls.nt W psu) qM)
+        =< apH (FI.sG W) (PD.kop-cong (L Z x).1 W (ES.ls.nt W psu) u Pp qM p R) >
+          FI.sG W (u, (L Z x).1.kop W u p) } ;
+
+    -- the glued extension at (x g , a), lifted
+    lhs : Id (HG.TF.EI W) (FI.sG W (u, ESg.eqSub.kop W u p)) (LW.FI.sG W vR) =
+      calc (HG.TF.EI W) {
+          FI.sG W (u, ESg.eqSub.kop W u p)
+        =< apH (FI.sG W) (ESg.CR.kop-E W u p) >
+          FI.sG W (FI.r W (u, ESg.CS.kop W u (ESg.CR.MS.mapP W u p)))
+        =< FI.sG-r W (u, ESg.CS.kop W u (ESg.CR.MS.mapP W u p)) >
+          (FI.ls.nt W u, YE.contr.kop W (FI.ls.nt W u) P0)
+        =< LW.Pl[u.2].kop-E P0 >
+          LW.S.mV W (u0', LW.K1.kop W u0' qR)
+        =< apH (LW.S.mV W) (LW.CR.kop-E W u0' qR) >
+          LW.FI.sG W vR } ;
+
+    kopEq : Id (FI.HD.TF.T W u) (ESg.eqSub.kop W u p) ((L Z x).1.kop W u p) =
+      FI.HD.TF.pr-inj W u (ESg.eqSub.kop W u p) ((L Z x).1.kop W u p)
+        (FI.lam-inj W (u, ESg.eqSub.kop W u p) (u, (L Z x).1.kop W u p) (refl u) (transH lhs mid)) ;
+  } ;
+
+  -- the result
+  yonL : Id ((u : GX.EqDat[yP Z].Tri) * GX.EqDat[yP Z].EqOn u)
+            (GL.eqDSub (yP Z) D (yPt D Z x) (B, (A, al)) YE.eqOn) (GY1.triY D B A al Z x, L Z x) =
+    apH {GX.EqDat[yP Z].EqOn (GY1.triY D B A al Z x)} {(u : GX.EqDat[yP Z].Tri) * GX.EqDat[yP Z].EqOn u}
+      (\ e -> (GY1.triY D B A al Z x, e))
+      (Sigma-eq (GQ.EquivOp (yP Z) FI.B' FI.A' FI.al') (\ k -> GCE.PartialsEsi[FI.HD.EA, FI.HD.FibT].KESI k)
+         ESg.eqSub (L Z x).1 (GL.eqDSub (yP Z) D (yPt D Z x) (B, (A, al)) YE.eqOn).2.2 (L Z x).2
+         (PD.contr-ext ESg.eqSub (L Z x).1 (\ W u p -> Pt[W, u, p].kopEq))
+         (GCE.PartialsEsi[FI.HD.EA, FI.HD.FibT].isProp-KESI (L Z x).1)) ;
+
+  opaque yonL ;
+} ;

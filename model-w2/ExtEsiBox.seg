@@ -1,0 +1,166 @@
+-- ExtEsiBox.seg: MODEL/Poset/ExtEsiBox.agda.  Empty-side invariance of the
+-- two box constructions of Theorem 7, from FESI of the filler used:
+--   FEp-ins  (BoxPlus) a box b with a family F of extra sides: inserting an
+--            empty side in b (same family) does not change FEp
+--   FE-ins   (LineBox) inserting an empty side in the first family does
+--            not change FE
+-- Both by EsiSplit.SideIns (the extra sides come after the old ones).
+-- Agda's anonymous modules are the segments BPI and LBI; the record R is a
+-- new SI.Rel, and insB a new InsE.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module ES = Esi[a, a] ;
+module EF = EsiFill[a, a] ;
+open Cofib[a] ;
+open ExtKit[a] ;
+open ExtBox2[a] ;
+open EsiSplit[a] ;
+
+leb-plus : (k n r : Nat) -> IsT (leb k n) -> IsT (leb k (plus n r)) = split {
+  zero -> \ n r h -> refl true ;
+  suc k -> split {
+    zero -> \ r h -> absurd (IsT (leb (suc k) (plus zero r))) (false-true h) ;
+    suc n -> \ r h -> leb-plus k n r h } } ;
+
+-- an index presented at a given value
+finAt (r : Nat) (m : Fin r) (n : Nat) (P : Id Nat m.1 n) : IsT (ltb n r) = subst Nat (\ z -> IsT (ltb z r)) m.1 n P m.2 ;
+
+------------------------------------------------------------------------
+-- BoxPlus
+
+module BPIns (G : PCtx) (A : PTy[G]) (eS : El Iv) (fS : FibM.FillDef[G, A].FillOp[eS]) (fesi : EF.FesiDef[G, A].FESI eS fS) {
+  open PR.TyL[G, A] ;
+  module BX = BXm.Boxes[G, A] ;
+  module ED = ES.EsiDef[G, A] ;
+  module BP = BoxPlus[G, A, eS, fS] ;
+  module SIs = SideIns[G, A] ;
+  module FS = FinSide[G, A] ;
+
+  module BPI (X : Ob) (k : Nat) (c c' : BX.Box[eS, X]) (ins : ED.InsE[eS, X, k, c, c']) (r : Nat)
+    (F : BP.PFam[X, c, r]) (F' : BP.PFam[X, c', r])
+    (eQ : (j : Fin r) (s : El X) -> Id Bool (F'.pQ' j s.1) (F.pQ' j s.1))
+    (eV : (j : Fin r) (W : Ob) (f : Hom W X) (i : Lands W X (F'.pQ' j) f) (i' : Lands W X (F.pQ' j) f)
+          -> Id (EI (prodP W Iv)) (F'.pPv j W f i) (F.pPv j W f i')) {
+    module P = BP.Px[X, c, r, F] ;
+    module P' = BP.Px[X, c', r, F'] ;
+
+    eVL (m : Fin c.br) (m' : Fin c'.br) (P0 : Id Nat m'.1 (skipN k m.1))
+      (W : Ob) (psi : Hom W (prodP X Iv)) (i : InQ W X (c'.bs m').sQ psi) (i' : InQ W X (c.bs m).sQ psi)
+      : Id (EI W) ((c'.bs m').svE W psi i) ((c.bs m).svE W psi i') =
+      transH {EI W}
+        (FS.svE-fin X c'.brho c'.br c'.bs m' (skipN k m.1, finAt c'.br m' (skipN k m.1) P0) P0 W psi i
+           (\ s -> subst Bool (\ b -> IsT b) ((c'.bs m').sQ (pr1T (app W (prodP X Iv) psi s).1))
+                     ((c'.bs (skipN k m.1, finAt c'.br m' (skipN k m.1) P0)).sQ (pr1T (app W (prodP X Iv) psi s).1))
+                     (FS.sQ-fin X c'.brho c'.br c'.bs m' (skipN k m.1, finAt c'.br m' (skipN k m.1) P0) P0 (pr1T (app W (prodP X Iv) psi s).1))
+                     (i s)))
+        (ins.ins-v m.1 m.2 (finAt c'.br m' (skipN k m.1) P0) W psi
+           (\ s -> subst Bool (\ b -> IsT b) ((c'.bs m').sQ (pr1T (app W (prodP X Iv) psi s).1))
+                     ((c'.bs (skipN k m.1, finAt c'.br m' (skipN k m.1) P0)).sQ (pr1T (app W (prodP X Iv) psi s).1))
+                     (FS.sQ-fin X c'.brho c'.br c'.bs m' (skipN k m.1, finAt c'.br m' (skipN k m.1) P0) P0 (pr1T (app W (prodP X Iv) psi s).1))
+                     (i s))
+           i') ;
+
+    R : SIs.Rel[X, k, c.br, r, ins.ins-k, c.brho, c'.brho, P.sideAt, c'.br, P'.sideAt] =
+      new SIs.Rel[X, k, c.br, r, ins.ins-k, c.brho, c'.brho, P.sideAt, c'.br, P'.sideAt,
+        ins.ins-r,
+        \ m' P0 s -> transH {Bool} (FS.sQ-fin X c'.brho c'.br c'.bs m' (k, finAt c'.br m' k P0) P0 s.1) (ins.ins-e (finAt c'.br m' k P0) s),
+        \ m m' P0 s -> transH {Bool} (FS.sQ-fin X c'.brho c'.br c'.bs m' (skipN k m.1, finAt c'.br m' (skipN k m.1) P0) P0 s.1)
+                                     (ins.ins-Q m.1 m.2 (finAt c'.br m' (skipN k m.1) P0) s),
+        eQ,
+        eVL,
+        \ j W psi i i' ->
+          transH {EI W} (P'.valAt-E (inr j) W psi i)
+           (transH {EI W} (apH {EI (prodP W Iv)} {EI W} (E.act W (prodP W Iv) (evm X W psi))
+                              (eV j W (compH W (prodP X Iv) X (pX X) psi) (landsQ W X (F'.pQ' j) psi i) (landsQ W X (F.pQ' j) psi i')))
+                   (symH {EI W} (P.valAt-E (inr j) W psi i')))] ;
+
+    module SIi = SIs.SI[X, k, c.br, r, ins.ins-k, c.brho, c'.brho, P.sideAt, c'.br, P'.sideAt, R] ;
+
+    insB : ED.InsE[eS, X, k, P.box, P'.box] =
+      new ED.InsE[eS, X, k, P.box, P'.box,
+        apH (\ z -> plus z r) ins.ins-r,
+        leb-plus k c.br r ins.ins-k,
+        ins.ins-rho,
+        ins.ins-lid,
+        SIi.ins-e,
+        SIi.ins-Q,
+        SIi.ins-v] ;
+
+    FEp-ins : Id (EI (prodP X Iv)) (BP.FEp X c' r F') (BP.FEp X c r F) =
+      transH {EI (prodP X Iv)} (BP.FEp-def X c' r F')
+       (transH {EI (prodP X Iv)} (fesi X k P.box P'.box insB) (symH {EI (prodP X Iv)} (BP.FEp-def X c r F))) ;
+
+    opaque FEp-ins ;
+  } ;
+} ;
+
+------------------------------------------------------------------------
+-- LineBox
+
+module LBIns (G : PCtx) (A : PTy[G]) (fA1 : FibM.FillDef[G, A].FillOp[e1]) (fesi : EF.FesiDef[G, A].FESI e1 fA1) {
+  open PR.TyL[G, A] ;
+  module BX = BXm.Boxes[G, A] ;
+  module ED = ES.EsiDef[G, A] ;
+  module LB = LineBox[G, A, fA1] ;
+  module SIs = SideIns[G, A] ;
+
+  module LBI (X : Ob) (rho rho' : Pt X) (r1 r1' r2 : Nat) (k : Nat) (hk : IsT (leb k r1))
+    (D : LB.LData[X, rho, r1, r2]) (D' : LB.LData[X, rho', r1', r2]) (er1 : Id Nat r1' (suc r1)) (Prho : Id (Pt X) rho' rho)
+    (Plw : Id (EI X) D'.lw D.lw)
+    (eE : (m' : Fin r1') -> Id Nat m'.1 k -> (s : El X) -> Id Bool (D'.F1.fQ m' s.1) false)
+    (eQL : (m : Fin r1) (m' : Fin r1') -> Id Nat m'.1 (skipN k m.1) -> (s : El X) -> Id Bool (D'.F1.fQ m' s.1) (D.F1.fQ m s.1))
+    (eQR : (j : Fin r2) (s : El X) -> Id Bool (D'.F2.fQ j s.1) (D.F2.fQ j s.1))
+    (eVL : (m : Fin r1) (m' : Fin r1') -> Id Nat m'.1 (skipN k m.1)
+           -> (W : Ob) (f : Hom W X) (i : Lands W X (D'.F1.fQ m') f) (i' : Lands W X (D.F1.fQ m) f)
+           -> Id (EI (prodP W Iv)) (D'.F1.fP m' W f i) (D.F1.fP m W f i'))
+    (eVR : (j : Fin r2) (W : Ob) (f : Hom W X) (i : Lands W X (D'.F2.fQ j) f) (i' : Lands W X (D.F2.fQ j) f)
+           -> Id (EI (prodP W Iv)) (D'.F2.fP j W f i) (D.F2.fP j W f i')) {
+    module B = LB.Bx[X, rho, r1, r2, D] ;
+    module B' = LB.Bx[X, rho', r1', r2, D'] ;
+
+    R : SIs.Rel[X, k, r1, r2, hk, B.rho', B'.rho', B.sideAt, r1', B'.sideAt] =
+      new SIs.Rel[X, k, r1, r2, hk, B.rho', B'.rho', B.sideAt, r1', B'.sideAt,
+        er1, eE, eQL, eQR,
+        \ m m' P0 W psi i i' ->
+          transH {EI W} (B'.valAt-E (inl m') W psi i)
+           (transH {EI W} (apH {EI (prodP W Iv)} {EI W} (E.act W (prodP W Iv) (evm X W psi))
+                              (eVL m m' P0 W (compH W (prodP X Iv) X (pX X) psi) (landsQ W X (D'.F1.fQ m') psi i)
+                                 (landsQ W X (D.F1.fQ m) psi i')))
+                   (symH {EI W} (B.valAt-E (inl m) W psi i'))),
+        \ j W psi i i' ->
+          transH {EI W} (B'.valAt-E (inr j) W psi i)
+           (transH {EI W} (apH {EI (prodP W Iv)} {EI W} (E.act W (prodP W Iv) (evm X W psi))
+                              (eVR j W (compH W (prodP X Iv) X (pX X) psi) (landsQ W X (D'.F2.fQ j) psi i)
+                                 (landsQ W X (D.F2.fQ j) psi i')))
+                   (symH {EI W} (B.valAt-E (inr j) W psi i')))] ;
+
+    module SIi = SIs.SI[X, k, r1, r2, hk, B.rho', B'.rho', B.sideAt, r1', B'.sideAt, R] ;
+
+    insB : ED.InsE[e1, X, k, B.box, B'.box] =
+      new ED.InsE[e1, X, k, B.box, B'.box,
+        apH (\ z -> plus z r2) er1,
+        leb-plus k r1 r2 hk,
+        apH (G.act (prodP X Iv) X (pX X)) Prho,
+        transH {EI X} B'.lidE-u (transH {EI X} Plw (symH {EI X} B.lidE-u)),
+        SIi.ins-e,
+        SIi.ins-Q,
+        SIi.ins-v] ;
+
+    FE-ins : Id (EI (prodP X Iv)) (LB.FE X rho' r1' r2 D') (LB.FE X rho r1 r2 D) = fesi X k B.box B'.box insB ;
+
+    opaque FE-ins ;
+  } ;
+} ;

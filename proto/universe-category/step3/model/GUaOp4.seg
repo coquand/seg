@@ -1,0 +1,142 @@
+-- GUaOp4.seg (inside IvBase.FaU, any base): the univalence operation,
+-- step U4 (kfull), part 1: at a problem with a side l0 containing the
+-- identity, the extension's triple and structure are that side's.
+--   fl       psi_p is full everywhere (the generator l0)
+--   chain    (Ext , A_X , ext , extEquiv) = Ext over full psi (GExtFull.eqFull)
+--            = the glued data along sec (the move along QA)
+--            = the glued data along the Yoneda map of x0 (secEq)
+--            = (triY , L) at x0 (GYonEq4.yonL) = the local data of kap x0
+--            (GUaGlue2.Tx.Wx) = the side's (pcs)
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+module GPR = GPre[a] ;
+open GPR.PS ;
+open GYon[a] ;
+open Encode[a, a+] ;
+open Trees[a] ;
+open Arith[a] ;
+module GP = GCofib[a] ;
+module GE1 = GFibE[a+] ;
+module GX = GEqExt[a] ;
+open GLine[a] ;
+
+module U4 (Cl : (G : PCtx) -> PTy[G] -> U a+)
+  (clSub : (D G : PCtx) (s : PSub[D, G]) (A : PTy[G]) (c : Cl G A) -> Cl D (subTy D G A s))
+  (clSub-id : (G : PCtx) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[G]) * Cl G A') (A, c) (subTy G G A (idS G), clSub G G (idS G) A c))
+  (clSub-o : (T D G : PCtx) (s : PSub[D, G]) (s' : PSub[T, D]) (A : PTy[G]) (c : Cl G A)
+     -> Id ((A' : PTy[T]) * Cl T A') (subTy T G A (oS T D G s s'), clSub T G (oS T D G s s') A c)
+                                     (subTy T D (subTy D G A s) s', clSub T D s' (subTy D G A s) (clSub D G s A c)))
+  (encCl : (X : Ob) (A : PTy[yP X]) -> Enc (Cl (yP X) A))
+  (cE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].Comp)
+  (eE : GE1.FE[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].ESIC cE) 
+  (kU0 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e0)
+  (kU1 : GLine[a+].LineFibP[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen].FibAt e1)
+  (kU0e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e0].SFm.SF].KESI kU0)
+  (kU1e : GCofEsi[a+].PartialsEsi[GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].TV.E,
+            GLine[a+].EndKit[GFam[a+].famPath, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx, GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].EGen, e1].SFm.SF].KESI kU1)
+  (X : Ob) (F : GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].U0 X)
+  (p : GCofib[a+].Partials[GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].UCtx,
+                           GUnivEq.UaU[Cl, clSub, clSub-id, clSub-o, encCl].UaTy].Partial[X, F])
+  (tautCl : (D : PCtx) (c : (Y : Ob) -> W0.Ix (D.ob Y) -> GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].U0 Y)
+     (cnat : (Y' Y : Ob) (h : Hom Y' Y) (x : W0.Ix (D.ob Y))
+        -> Id (GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].U0 Y') (c Y' (D.act Y' Y h x))
+              (GUniv.Univ[Cl, clSub, clSub-id, clSub-o, encCl].uAct Y' Y h (c Y x)))
+     -> Cl D GElC.ElC[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE].Fam[D, c, cnat].ElTy)
+  (glueCl : (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+     (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+     (hB : Cl GP.CofL[G, psi].resCtx B)
+     (c : GFibE[a].FE[G, GExt2[a].ExtB2[G, A, psi, B, al].ExtT].Comp) (e : GFibE[a].FE[G, GExt2[a].ExtB2[G, A, psi, B, al].ExtT].ESIC c)
+     -> Cl G GExt2[a].ExtB2[G, A, psi, B, al].ExtT) (l0 : Fin p.pr) (il0 : Lands X X (p.ps l0).pQ (idH X)) {
+  module O3 = GUaOp3.U3[Cl, clSub, clSub-id, clSub-o, encCl, cE, eE, kU0, kU1, kU0e, kU1e, X, F, p, tautCl, glueCl] ;
+  module O2 = O3.O2 ;
+  module O1 = O2.O1 ;
+  module UA = O2.UA ;
+  module G = O2.G ;
+  module CL = O1.CL ;
+  module EDX = GX.EqDat[yP X] ;
+  module EDD = GX.EqDat[O1.D] ;
+
+  -- psi_p is full everywhere
+  fl (W : Ob) (f : Hom W X) : IsT (CL.full W f) =
+    CL.full-of-id W f (l0, pre-lands W W X f (p.ps l0).pQ (idH W)
+      (lands-eq W X (p.ps l0).pQ f (compH W W X f (idH W)) (symH (comp-idr W X f))
+         (lands-eq W X (p.ps l0).pQ (compH W X X (idH X) f) f (comp-idl W X f) (lands-comp W X X (p.ps l0).pQ (idH X) f il0)))) ;
+
+  module EFu = GExtFull.ExtFull[yP X, O2.AX, O1.psi, G.B, O2.al', fl] ;
+  module EQ = EFu.EqF[O2.FAX.k1, O2.eal', O2.FAX.k1e, O2.keal'] ;
+
+  x0 : W0.Ix (O1.D.ob X) = (idH X, fl X (idH X)) ;
+
+  secEq : Id (PSub[yP X, O1.D]) EFu.sec (yPt O1.D X x0) =
+    sub-ext (yP X) O1.D EFu.sec (yPt O1.D X x0)
+      (\ I f -> CL.res-eq I (f, fl I f) (O1.D.act I X f x0) (symH (comp-idl I X f))) ;
+
+  -- the glued data, and the same on A_X (along QA)
+  dG : (u : EDD.Tri) * EDD.EqOn u = ((G.B, (G.A, G.al)), O1.G2.eqOn) ;
+  dA : (u : EDD.Tri) * EDD.EqOn u = ((G.B, (subTy O1.D (yP X) O2.AX CL.inclR, O2.al')), (O2.eal', O2.keal')) ;
+
+  mvQ (T1 T2 : PTy[O1.D]) (Q : Id (PTy[O1.D]) T1 T2) (m : O2.MS T1)
+    : Id ((u : EDD.Tri) * EDD.EqOn u) ((G.B, (T1, m.1)), m.2) ((G.B, (T2, (subst (PTy[O1.D]) O2.MS T1 T2 Q m).1)), (subst (PTy[O1.D]) O2.MS T1 T2 Q m).2) =
+    idJ (PTy[O1.D]) T1
+      (\ T3 Q3 -> Id ((u : EDD.Tri) * EDD.EqOn u) ((G.B, (T1, m.1)), m.2)
+                     ((G.B, (T3, (subst (PTy[O1.D]) O2.MS T1 T3 Q3 m).1)), (subst (PTy[O1.D]) O2.MS T1 T3 Q3 m).2))
+      (refl ((G.B, (T1, m.1)), m.2)) T2 Q ;
+
+  dEq : Id ((u : EDD.Tri) * EDD.EqOn u) dG dA = mvQ G.A (subTy O1.D (yP X) O2.AX CL.inclR) O2.QA (G.al, O1.G2.eqOn) ;
+
+  -- the side value at the identity is kap at x0
+  q : UA.Q4 X = (p.ps l0).pv X (idH X) il0 ;
+
+  kapq : Id (UA.Q4 X) (O1.kap X x0) q =
+    p.pcs (O1.sel X x0).1 l0 X (idH X) (O1.sel X x0).2 il0 ;
+
+  -- the chain
+  chain : Id ((u : EDX.Tri) * EDX.EqOn u)
+             ((O3.ExtT, (O2.AX, GExt4[a].ExtB4[yP X, O2.AX, O1.psi, G.B, O2.al'].extMap)), (O3.E3.extEquiv, O3.E4.extEquiv-kesi))
+             (O1.G2.loc X q) =
+    transH EQ.eqFull
+     (transH (apH (\ z -> GEqLaws[a].eqDSub (yP X) O1.D EFu.sec z.1 z.2) (symH dEq))
+      (transH (apH (\ s -> GEqLaws[a].eqDSub (yP X) O1.D s dG.1 dG.2) secEq)
+       (transH GYonEq4[a].YL[O1.D, G.B, G.A, G.al, O1.G2.L, O1.G2.coh, X, x0].yonL
+        (transH O1.G2.Tx[X, x0].Wx (apH (O1.G2.loc X) kapq))))) ;
+
+  opaque fl ; opaque secEq ; opaque dEq ; opaque chain ;
+
+  ----------------------------------------------------------------------
+  -- in Q4: the data part by chain (and elYon), the codes of F and B by
+  -- paths of codes; the B code is given (HB, from the classifier: U4b)
+
+  mvE : Id ((u : EDX.Tri) * EDX.EqOn u)
+           ((O3.ExtT, (O2.AX, GExt4[a].ExtB4[yP X, O2.AX, O1.psi, G.B, O2.al'].extMap)), (O3.E3.extEquiv, O3.E4.extEquiv-kesi))
+           ((O3.ExtT, (F.1, O3.out.1)), O3.out.2) =
+    idJ (PTy[yP X]) O2.AX
+      (\ T3 Q3 -> Id ((u : EDX.Tri) * EDX.EqOn u)
+                     ((O3.ExtT, (O2.AX, GExt4[a].ExtB4[yP X, O2.AX, O1.psi, G.B, O2.al'].extMap)), (O3.E3.extEquiv, O3.E4.extEquiv-kesi))
+                     ((O3.ExtT, (T3, (subst (PTy[yP X]) O3.MS2 O2.AX T3 Q3
+                                       (GExt4[a].ExtB4[yP X, O2.AX, O1.psi, G.B, O2.al'].extMap, (O3.E3.extEquiv, O3.E4.extEquiv-kesi))).1)),
+                      (subst (PTy[yP X]) O3.MS2 O2.AX T3 Q3
+                         (GExt4[a].ExtB4[yP X, O2.AX, O1.psi, G.B, O2.al'].extMap, (O3.E3.extEquiv, O3.E4.extEquiv-kesi))).2))
+      (refl ((O3.ExtT, (O2.AX, GExt4[a].ExtB4[yP X, O2.AX, O1.psi, G.B, O2.al'].extMap)), (O3.E3.extEquiv, O3.E4.extEquiv-kesi)))
+      F.1 O2.YN.elYon ;
+
+  dataEq : Id (UA.EqS X) ((O3.ExtT, (F.1, O3.out.1)), O3.out.2) (O1.G2.loc X q) = transH (symH mvE) chain ;
+
+  FEq : Id (UA.UU.U0 X) F q.1 =
+    symH (transH ((p.ps l0).ppt X (idH X) il0) (UA.UU.uAct-id X F)) ;
+
+  -- kfull, given the B code
+  kfullQ (HB : Id (UA.UU.U0 X) O3.Bout q.2.1) : Id (UA.Q4 X) (F, O3.kop) q =
+    apH (UA.fromR X)
+      (GUnivEq.comb (yP X) (UA.R1 X) (\ y -> y.1.1.2.1) (Cl (yP X)) (UA.toR X (F, O3.kop)).1 (UA.toR X q).1 F.2 q.1.2
+         (GUnivEq.comb (yP X) (UA.EqS X) (\ ue -> ue.1.1) (Cl (yP X)) ((O3.ExtT, (F.1, O3.out.1)), O3.out.2) (O1.G2.loc X q)
+            O3.Bout.2 q.2.1.2 dataEq HB)
+         FEq) ;
+
+  opaque mvE ; opaque dataEq ; opaque FEq ; opaque kfullQ ;
+} ;

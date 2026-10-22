@@ -1,0 +1,151 @@
+-- GExtNat4.seg (inside IvBase, any base): Theorem 7 along a substitution,
+-- step B4, part 2 (GExtEquiv2/3 as GExtEquiv3.KU, along (s , Phi)).
+--
+-- Hypothesis HA1: the e1-filler of A[s] is the moved one of A.
+--   x0eq     the constant base line moves (s's naturality)
+--   s1Eq / s2Eq   the sides of p and of theta move (mvF-L; thS)
+--   (the A-filler at e1 moves: GExtNat4J)
+--   uS       the pair (a0 , B parts of theta) moves to the pair of the
+--            moved problem (pa-mv / pb-mv)
+--   glueS    glue commutes with Phi (by cases on full)
+--   extEqS   extEquiv(alpha[s]) extends as the moved extEquiv(alpha)
+--            (GFibMove.HTy): the result of B4
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+
+module N4 (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D'])
+  (fullS : (X : Ob) (d : W0.Ix (D'.ob X)) -> Id Bool (GP.CofL[D', psi'].full X d) (GP.CofL[G, psi].full X (s.nt X d))) {
+  module N3 = GExtNat3.N3[G, A, psi, B, al, D', s, psi', fullS] ;
+  module EM = N3.EM ;
+  module ES = N3.ES ;
+  module PS = N3.PS ;
+  module FMX = N3.FMX ;
+  module FMA = N3.FMA ;
+  module E4 = EM.E4 ;
+  module E4' = EM.E4' ;
+  module MA1 = GTransfer[a, a, a].TrM[D', ES.A', G, A, s.nt, s.nt-nat,
+      \ W d b -> b, \ W d b -> b, \ W d b -> refl b, \ W d b -> refl b, (liftP D' G A s).nt-nat, e1] ;
+  module FM = GFam[a] ;
+
+  -- the hypothesis on the e1-filler of A
+  HA1Ty (kA : LineFibP[GFam[a].famPath, G, A].FibAt e1) (kA' : LineFibP[GFam[a].famPath, D', ES.A'].FibAt e1) : U a =
+    (X : Ob) (x : MA1.CD.TV.EI X) (p : MA1.CD.PT.Partial[X, x])
+    -> Id (MA1.CD0.TS.EI X) (MA1.tsN X (x, kA'.kop X x p)) (MA1.tvN X x, kA.kop X (MA1.tvN X x) (MA1.mapP X x p)) ;
+
+  -- the generators of psi' at d and of psi at s d: the same list, or one
+  -- empty generator inserted (GExtSub2.HQ / GCofIns.hg-ins)
+  HgTy : U a+ = (X : Ob) (d : W0.Ix (D'.ob X))
+    -> GensIns X ES.CL.r (\ k -> ES.CL.Q X (s.nt X d) k) ES.CL'.r (\ k' -> ES.CL'.Q X d k') ;
+
+  -- glue commutes with Phi
+  qS (X : Ob) (d : W0.Ix (D'.ob X)) (q' : IsT (ES.CL'.full X d)) : IsT (ES.CL.full X (s.nt X d)) =
+    subst Bool (\ c -> IsT c) (ES.CL'.full X d) (ES.CL.full X (s.nt X d)) (ES.fullS X d) q' ;
+
+  glueB (X : Ob) (rho' : W0.Ix (D'.ob X)) (u' : ES.EB'.Pairs X rho') (e : IsT (ES.CL'.full X rho'))
+    : Id (PS.TX.EI X) (PS.PhiE X (E4'.glue X rho' u')) (E4.glue X (s.nt X rho') (PS.mvPair X rho' u')) =
+    calc (PS.TX.EI X) {
+        PS.PhiE X (E4'.glue X rho' u')
+      =< apH (PS.PhiE X) (E4'.glue-B X rho' u' e (E4'.qId X rho' e)) >
+        PS.PhiE X (PS.E3'.fromB X (ES.EB'.pb X rho' u' X (idH X) (E4'.qId X rho' e)))
+      =< PS.PhiB X (ES.EB'.pb X rho' u' X (idH X) (E4'.qId X rho' e)) >
+        PS.E3.fromB X (PS.LB.mV X (ES.EB'.pb X rho' u' X (idH X) (E4'.qId X rho' e)))
+      =< apH (PS.E3.fromB X)
+           (symH (PS.MV[X, rho', u'].pb-mv X (idH X) (E4.qId X (s.nt X rho') (qS X rho' e)) (E4'.qId X rho' e))) >
+        PS.E3.fromB X (ES.EB.pb X (s.nt X rho') (PS.mvPair X rho' u') X (idH X) (E4.qId X (s.nt X rho') (qS X rho' e)))
+      =< symH (E4.glue-B X (s.nt X rho') (PS.mvPair X rho' u') (qS X rho' e) (E4.qId X (s.nt X rho') (qS X rho' e))) >
+        E4.glue X (s.nt X rho') (PS.mvPair X rho' u') } ;
+
+  glueS' (X : Ob) (rho' : W0.Ix (D'.ob X)) (u' : ES.EB'.Pairs X rho')
+    : (c : Bool) (e : Id Bool (ES.CL'.full X rho') c)
+      -> Id (PS.TX.EI X) (PS.PhiE X (E4'.glue X rho' u')) (E4.glue X (s.nt X rho') (PS.mvPair X rho' u')) = split {
+    true -> \ e -> glueB X rho' u' e ;
+    false -> \ e ->
+      transH (apH (PS.PhiE X) (E4'.glue-P X rho' u' e))
+        (transH (PS.PhiP X rho' e u') (symH (E4.glue-P X (s.nt X rho') (PS.mvPair X rho' u') (PS.np X rho' e)))) } ;
+
+  glueS (X : Ob) (rho' : W0.Ix (D'.ob X)) (u' : ES.EB'.Pairs X rho')
+    : Id (PS.TX.EI X) (PS.PhiE X (E4'.glue X rho' u')) (E4.glue X (s.nt X rho') (PS.mvPair X rho' u')) =
+    glueS' X rho' u' (ES.CL'.full X rho') (refl (ES.CL'.full X rho')) ;
+
+  opaque glueS ;
+
+  module Eq (kA : LineFibP[GFam[a].famPath, G, A].FibAt e1)
+    (kA' : LineFibP[GFam[a].famPath, D', ES.A'].FibAt e1)
+    (eal : GEquiv[a].EquivOp ES.CL.resCtx B ES.ED.A' al)
+    (eal' : GEquiv[a].EquivOp ES.CL'.resCtx ES.B' ES.ED'.A' ES.al') {
+    module N3E = N3.Eq[kA, kA', eal, eal'] ;
+    module E1 = N3E.E1 ;
+    module E1' = N3E.E1' ;
+    module E2 = GExtEquiv2.ExtEq2[G, A, psi, B, al, kA, eal] ;
+    module E2' = GExtEquiv2.ExtEq2[D', ES.A', ES.psi', ES.B', ES.al', kA', eal'] ;
+
+    module Sx (Heal : FMA.HTy eal' eal) (X : Ob) (w' : FMX.HD.TA.EI X) (p' : E1'.PX.Partial[X, w']) {
+      module T3 = N3E.Sx[Heal, X, w', p'] ;
+      module ThX' = T3.ThX' ;
+      module ThX = T3.ThX ;
+
+      ------------------------------------------------------------------
+      -- the base point and the sides move
+
+      x0eq : Id (E2.KA.TV.EI X) (MA1.tvN X ThX'.x0) ThX.x0 =
+        E2.KA.tv-eq X (MA1.tvN X ThX'.x0) ThX.x0
+          (E2.FG.fam-eq X (MA1.tvN X ThX'.x0).1 ThX.x0.1 (\ W f j -> s.nt-nat W X f w'.1))
+          (transH (apH (MA1.PhE X) ThX'.x0-E) (symH ThX.x0-E)) ;
+
+      svPt (V : Ob) (f : Hom V X) (u : E2'.KA.TS.EI V) (v : E2.KA.TS.EI V)
+        (pu : Id (E2'.KA.TV.EI V) u.1 (E2'.KA.TV.E.act V X f ThX'.x0)) (pv : Id (E2.KA.TV.EI V) v.1 (E2.KA.TV.E.act V X f ThX.x0))
+        : Id (E2.KA.TV.EI V) (MA1.tsN V u).1 v.1 =
+        transH MA1.TSN[V, u].res-pt
+          (transH (apH (MA1.tvN V) pu)
+            (transH (MA1.tvN-act V X f ThX'.x0) (transH (apH (E2.KA.TV.E.act V X f) x0eq) (symH pv)))) ;
+
+      s1a (l : Fin p'.pr) (V : Ob) (f : Hom V X) (i : Lands V X (p'.ps l).pQ f) (W : Ob) (g : Hom W V) (j : Hom W Iv)
+        : Id (FMX.HG.TA.EI W) (MA1.PhE W (FM.famConn.levA D' ES.A' V (E2'.KA.lineL V (ThX'.S1[l].SO.sv V f i)) W g j))
+                              (FMX.PhA W (FMX.HD.fibL V ((p'.ps l).pv V f i) W g j)) =
+        apH (MA1.PhE W) (ThX'.S1[l].SO.sv-lev V f i W g j) ;
+
+      s1d (l : Fin p'.pr) (V : Ob) (f : Hom V X) (i' : Lands V X (p'.ps l).pQ f) (W : Ob) (g : Hom W V) (j : Hom W Iv)
+        : Id (FMX.HG.TA.EI W) (FMX.HG.fibL V (FMX.mvF V ((p'.ps l).pv V f i')) W g j)
+                              (FM.famConn.levA G A V (E2.KA.lineL V (ThX.S1[l].SO.sv V f i')) W g j) =
+        symH (ThX.S1[l].SO.sv-lev V f i' W g j) ;
+
+      s1Lev (l : Fin p'.pr) (V : Ob) (f : Hom V X) (i : Lands V X (p'.ps l).pQ f) (i' : Lands V X (p'.ps l).pQ f)
+        (W : Ob) (g : Hom W V) (j : Hom W Iv)
+        : Id (FMX.HG.TA.EI W) (MA1.PhE W (FM.famConn.levA D' ES.A' V (E2'.KA.lineL V (ThX'.S1[l].SO.sv V f i)) W g j))
+                              (FM.famConn.levA G A V (E2.KA.lineL V (ThX.S1[l].SO.sv V f i')) W g j) =
+        transH (s1a l V f i W g j)
+          (transH (apH (\ z -> FMX.PhA W (FMX.HD.fibL V z W g j)) (E1'.PX.pv-irr X w' (p'.ps l) V f i i'))
+            (transH (symH (FMX.mvF-L V ((p'.ps l).pv V f i') W g j)) (s1d l V f i' W g j))) ;
+
+      s1Eq (l : Fin p'.pr) (V : Ob) (f : Hom V X) (i : Lands V X (p'.ps l).pQ f) (i' : Lands V X (p'.ps l).pQ f)
+        : Id (E2.KA.TS.EI V) (MA1.tsN V (ThX'.S1[l].SO.sv V f i)) (ThX.S1[l].SO.sv V f i') =
+        E2.LA.ts-ext V (MA1.tsN V (ThX'.S1[l].SO.sv V f i)) (ThX.S1[l].SO.sv V f i')
+          (svPt V f (ThX'.S1[l].SO.sv V f i) (ThX.S1[l].SO.sv V f i') (ThX'.S1[l].SO.sv-pt V f i) (ThX.S1[l].SO.sv-pt V f i'))
+          (\ W g j -> transH (MA1.TSN[V, ThX'.S1[l].SO.sv V f i].res-lev W g j) (s1Lev l V f i i' W g j)) ;
+
+      s2Eq (k' : Fin ES.CL'.r) (k : Fin ES.CL.r) (V : Ob) (f : Hom V X) (i : Lands V X (ES.CL'.Q X w'.1 k') f)
+        (i' : Lands V X (ES.CL.Q X (s.nt X w'.1) k) f)
+        : Id (E2.KA.TS.EI V) (MA1.tsN V (ThX'.S2[k'].SO.sv V f i)) (ThX.S2[k].SO.sv V f i') =
+        E2.LA.ts-ext V (MA1.tsN V (ThX'.S2[k'].SO.sv V f i)) (ThX.S2[k].SO.sv V f i')
+          (svPt V f (ThX'.S2[k'].SO.sv V f i) (ThX.S2[k].SO.sv V f i') (ThX'.S2[k'].SO.sv-pt V f i) (ThX.S2[k].SO.sv-pt V f i'))
+          (\ W g j -> transH (MA1.TSN[V, ThX'.S2[k'].SO.sv V f i].res-lev W g j)
+             (transH (apH (MA1.PhE W) (ThX'.S2[k'].SO.sv-lev V f i W g j))
+               (transH (apH (\ z -> ES.ED.toEA W (E1.FA.fibL V z W g j))
+                          (T3.thS V f (ThX'.qOf V f k' i) (ThX.qOf V f k i')))
+                       (symH (ThX.S2[k].SO.sv-lev V f i' W g j))))) ;
+
+      opaque s1Eq ; opaque s2Eq ;
+    } ;
+  } ;
+} ;

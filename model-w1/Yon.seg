@@ -1,0 +1,17 @@
+-- Yon.seg: MODEL/Univ/Yon.agda.  Representable presheaves y X and the maps
+-- y f.  The category laws of posets hold definitionally, so y is a functor
+-- by the category laws (composition is locked after its pointwise equation).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Cat[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+
+yP (X : Ob) : PCtx = new PCtx[\ I -> homV I X, \ J I f g -> compH J I X g f, \ I g -> comp-idr I X g,
+  \ K J I f g x -> symH (comp-assoc K J I X x f g)] ;
+
+yH (Y X : Ob) (f : Hom Y X) : PSub[yP Y, yP X] =
+  new PSub[yP Y, yP X, \ I g -> compH I Y X f g, \ J I h g -> symH (comp-assoc J I Y X f g h)] ;

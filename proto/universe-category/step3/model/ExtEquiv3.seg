@@ -1,0 +1,202 @@
+-- ExtEquiv3.seg: MODEL/Poset/ExtEquiv.agda, part 3.  The equivalence
+-- structure: kopX (the fibre element v0 of ExtEquiv2), its sides (KS:
+-- the B component by ext-det, the path by FE-side1) and its uniformity
+-- (KU: the line box data restrict, FE-unif + FE-cong); extEquiv.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module FibM = Fib[a, a] ;
+open VCode[a] ;
+module CF = Cofib[a] ;
+open CF ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open ExtKit[a] ;
+
+module ExtEq3 (G : PCtx) (A : PTy[G]) (psi : CF.GP.Cof[G]) (B : PTy[CF.GP.CofL[G, psi].resCtx])
+  (al : PMap[CF.GP.CofL[G, psi].resCtx, B, subTy CF.GP.CofL[G, psi].resCtx G A CF.GP.CofL[G, psi].inclR])
+  (fA1 : FibM.FillDef[G, A].FillOp[e1])
+  (eal : EquivOp CF.GP.CofL[G, psi].resCtx B (subTy CF.GP.CofL[G, psi].resCtx G A CF.GP.CofL[G, psi].inclR) al) {
+  open CF.GP.CofL[G, psi] ;
+  open BaseP.GExt[a].ExtDef[G, A, psi] ;
+  open ExtB[B, al] ;
+  open BaseP.GExt2[a].ExtB2[G, A, psi, B, al] ;
+  open BaseP.GExt3[a].ExtB3[G, A, psi, B, al] ;
+  open BaseP.GExt4[a].ExtB4[G, A, psi, B, al] ;
+  open ExtEquiv[a].ExtEq[G, A, psi, B, al, fA1, eal] ;
+  open ExtEquiv2[a].ExtEq2[G, A, psi, B, al, fA1, eal] ;
+
+  module KF = FibM.Kit[EA, FX.FibT] ;
+
+  module V0 (X : Ob) (w : TA.EI X) (p : PX.Partial[X, w]) {
+    module T = Th[X, w, p] ;
+
+    v0-pt : Id (TA.EI X) T.v0.1 w =
+      FX.mkFibE-pt X w (glue X T.rho T.u) T.F (glue-pt X T.rho T.u) (refl T.F.1) T.vq0 (LB.FE-lid X T.rho p.pr r T.LD) ;
+
+    v0-B : Id (TX.EI X) (FX.fibB X T.v0) (glue X T.rho T.u) =
+      FX.mkFibE-B X w (glue X T.rho T.u) T.F (glue-pt X T.rho T.u) (refl T.F.1) T.vq0 (LB.FE-lid X T.rho p.pr r T.LD) ;
+
+    v0-P : Id (TA.EI (prodP X Iv)) (FX.fibP X T.v0) T.F =
+      FX.mkFibE-P X w (glue X T.rho T.u) T.F (glue-pt X T.rho T.u) (refl T.F.1) T.vq0 (LB.FE-lid X T.rho p.pr r T.LD) ;
+  } ;
+
+  kopX (X : Ob) (w : TA.EI X) (p : PX.Partial[X, w]) : FX.TF.T X w = FibM.PR.TyL[EA, FX.FibT].fromE X w Th[X, w, p].v0 V0[X, w, p].v0-pt ;
+
+  kopX-E (X : Ob) (w : TA.EI X) (p : PX.Partial[X, w]) : Id (FX.TF.EI X) (w, kopX X w p) Th[X, w, p].v0 =
+    FibM.PR.TyL[EA, FX.FibT].fromE-eq X w Th[X, w, p].v0 V0[X, w, p].v0-pt ;
+
+  opaque kopX ; opaque kopX-E ;
+
+  -- pb only depends on the map (equal maps, any proofs of fullness)
+  pb-hom (X : Ob) (rho : W0.Ix (G.ob X)) (u : Pairs X rho) (W : Ob) (f f' : Hom W X) (E : Id (Hom W X) f f')
+    (q : IsT (full W (G.act W X f rho))) (q' : IsT (full W (G.act W X f' rho)))
+    : Id (TB.EI W) (pb X rho u W f q) (pb X rho u W f' q') =
+    idJ (Hom W X) f (\ f2 E2 -> (q2 : IsT (full W (G.act W X f2 rho))) -> Id (TB.EI W) (pb X rho u W f q) (pb X rho u W f2 q2))
+      (\ q2 -> apH (pb X rho u W f) (isProp-IsT' (full W (G.act W X f rho)) q q2)) f' E q' ;
+
+  ----------------------------------------------------------------------
+  -- The sides
+
+  module KS (X : Ob) (w : TA.EI X) (p : PX.Partial[X, w]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f) {
+    module T = Th[X, w, p] ;
+    module VX = V0[X, w, p] ;
+
+    s : PX.PSide[X, w] = p.ps l ;
+    rho : W0.Ix (G.ob X) = w.1 ;
+    gl : TX.EI X = glue X rho T.u ;
+
+    module RB (V : Ob) (g : Hom V W) (q : IsT (full V (G.act V W g (EX.act W X f gl).1))) {
+      fg : Hom V X = compH V W X f g ;
+      rfg : W0.Ix (G.ob V) = G.act V X fg rho ;
+      module PAc = PAct[V, X, fg, rho, rfg, refl rfg] ;
+
+      qfg : IsT (full V rfg) =
+        full-eq V (G.act V W g (EX.act W X f gl).1) rfg
+          (transH (apH (G.act V W g) (apH (G.act W X f) (glue-pt X rho T.u))) (symH (G.act-o V W X f g rho))) q ;
+      q1 : IsT (full V rfg) = qfg ;
+      ifg : Lands V X s.pQ fg = lands-comp V W X s.pQ f g i ;
+      qq : IsT (full V (s.pv V fg ifg).1.1) = full-eq V rfg (s.pv V fg ifg).1.1 (symH (apH (\ z -> z.1) (s.ppt V fg ifg))) q1 ;
+
+      res : Id (TX.EI V) (EX.act V W g (EX.act W X f gl)) (EX.act V W g (FX.fibB W (s.pv W f i))) =
+        transH (TX.PE.actC V W X f g gl)
+         (transH (glue-act V X fg rho T.u)
+          (transH (glue-B V rfg (PAc.pact T.u) qfg (qId V rfg qfg))
+           -- pact-b reads u at  fg (idH V) , which is fg (comp-idr)
+           (transH (apH (fromB V) (transH (PAc.pact-b T.u V (idH V) (qId V rfg qfg))
+                                  (transH (pb-hom X rho T.u V (compH V V X fg (idH V)) fg (comp-idr V X fg)
+                                             (PAc.qTr V (idH V) (qId V rfg qfg)) q1)
+                                          (T.u-b V fg q1))))
+            (transH (apH (\ z -> fromB V (FA.fibB V z)) (T.th-full V fg q1 l ifg))
+             (transH (apH (fromB V) (toFA-B V (s.pv V fg ifg) qq))
+              (transH (fromB-toB V (FX.fibB V (s.pv V fg ifg)) qq)
+               (transH (apH (FX.fibB V) (symH (s.pnat V W g f i ifg)))
+                       (FX.fibB-act V W g (s.pv W f i))))))))) ;
+    } ;
+
+    extB : Id (TA.EI W) (extE W (EX.act W X f gl)) (extE W (FX.fibB W (s.pv W f i))) =
+      transH (extE-nat W X f gl)
+       (transH (apH (EA.act W X f) (transH T.u-ext T.a0-E))
+        (transH (symH (T.F-lid0 W f))
+         (transH (apH (EA.act W (prodP W Iv) (lid W e0)) (LB.FE-side1 X rho p.pr r T.LD l W f i))
+                 (FX.fibP-0 W (s.pv W f i))))) ;
+
+    eB : Id (TX.EI W) (FX.fibB W (EFX.act W X f T.v0)) (FX.fibB W (s.pv W f i)) =
+      transH (FX.fibB-act W X f T.v0)
+       (transH (apH (EX.act W X f) VX.v0-B)
+               (ext-det W (EX.act W X f gl) (FX.fibB W (s.pv W f i))
+                  (transH (apH (G.act W X f) (glue-pt X rho T.u)) (symH (apH (\ z -> z.1) (s.ppt W f i))))
+                  extB (\ V g q -> RB[V, g, q].res))) ;
+
+    eP : Id (TA.EI (prodP W Iv)) (FX.fibP W (EFX.act W X f T.v0)) (FX.fibP W (s.pv W f i)) =
+      transH (FX.fibP-act W X f T.v0)
+       (transH (apH (EA.act (prodP W Iv) (prodP X Iv) (cylH W X f)) VX.v0-P)
+               (LB.FE-side1 X rho p.pr r T.LD l W f i)) ;
+
+    side : Id (FX.TF.EI W) (EFX.act W X f (w, kopX X w p)) (s.pv W f i) =
+      transH (apH (EFX.act W X f) (kopX-E X w p))
+        (FX.fibE-eq W (EFX.act W X f T.v0) (s.pv W f i)
+          (transH (apH (EA.act W X f) VX.v0-pt) (symH (s.ppt W f i)))
+          eB eP) ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- Uniformity
+
+  module KU (Y X : Ob) (h : Hom Y X) (w : TA.EI X) (p : PX.Partial[X, w]) {
+    rho : W0.Ix (G.ob X) = w.1 ;
+    wY : TA.EI Y = EA.act Y X h w ;
+    pY : PX.Partial[Y, wY] = PX.restrictP Y X h w p ;
+    rY : W0.Ix (G.ob Y) = G.act Y X h rho ;
+
+    module ThX = Th[X, w, p] ;
+    module ThY = Th[Y, wY, pY] ;
+    module VX = V0[X, w, p] ;
+    module VY = V0[Y, wY, pY] ;
+    module PAc = PAct[Y, X, h, rho, rY, refl rY] ;
+
+    thR (V : Ob) (g : Hom V Y) (q1 : IsT (full V (G.act V X (compH V Y X h g) rho))) (q : IsT (full V (G.act V Y g rY)))
+      : Id (FA.TF.EI V) (ThX.th V (compH V Y X h g) q1) (ThY.th V g q) =
+      kE-cong V (EA.act V X (compH V Y X h g) w) (EA.act V Y g wY) (EA.act-o V Y X h g w) q1 q
+        (PX.restrictP V X (compH V Y X h g) w p) (PX.restrictP V Y g wY pY) (PX.restrictP-o V Y X g h w p) ;
+
+    FEeq : Id (TA.EI (prodP Y Iv)) (EA.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) ThX.F) ThY.F =
+      transH (LB.FE-unif Y X h rho p.pr r ThX.LD)
+        (LB.FE-cong Y rY p.pr r (LB.rLD Y X h rho p.pr r ThX.LD) ThY.LD (refl wY)
+          (\ l -> refl (pre Y X h (p.ps l).pQ))
+          (\ k -> (symH (psi.cnat Y X h rho k)))
+          (\ l V g i i' -> apH (FX.fibP V)
+             (PX.pv-irr X w (p.ps l) V (compH V Y X h g) (lands-pre V Y X h (p.ps l).pQ g i) (lands-pre V Y X h (p.ps l).pQ g i')))
+          (\ k V g i i' -> apH (\ z -> toEA (prodP V Iv) (FA.fibP V z))
+             (thR V g (ThX.qOf V (compH V Y X h g) k (lands-pre V Y X h ((Q X rho k)) g i)) (ThY.qOf V g k i')))) ;
+
+    a0eq : Id (TA.EI Y) (EA.act Y X h ThX.a0E) ThY.a0E =
+      transH (symH (ThX.F-lid0 Y h)) (apH (EA.act Y (prodP Y Iv) (lid Y e0)) FEeq) ;
+
+    Pa : Id (TA.T Y rY) (pa Y rY (PAc.pact ThX.u)) (pa Y rY ThY.u) =
+      transH (PAc.pact-a ThX.u)
+       (transH (apH (A.tact Y X h rho rY (refl rY)) ThX.u-a)
+        (transH (TA.pr-inj Y rY (A.tact Y X h rho rY (refl rY) ThX.a0) ThY.a0
+                   (transH (symH (TA.pr-tact Y X h rho rY (refl rY) ThX.a0))
+                    (transH (apH (EA.act Y X h) ThX.a0-E) (transH a0eq (symH ThY.a0-E)))))
+                (symH ThY.u-a))) ;
+
+    Pb (V : Ob) (g : Hom V Y) (q : IsT (full V (G.act V Y g rY))) : Id (TB.EI V) (pb Y rY (PAc.pact ThX.u) V g q) (pb Y rY ThY.u V g q) =
+      transH (PAc.pact-b ThX.u V g q)
+       (transH (ThX.u-b V (compH V Y X h g) (PAc.qTr V g q))
+        (transH (apH (FA.fibB V) (thR V g (PAc.qTr V g q) q))
+                (symH (ThY.u-b V g q)))) ;
+
+    pairsEq : Id (Pairs Y rY) (PAc.pact ThX.u) ThY.u = pairs-eq Y rY (PAc.pact ThX.u) ThY.u Pa Pb ;
+
+    v0eq : Id (FX.TF.EI Y) (EFX.act Y X h ThX.v0) ThY.v0 =
+      FX.fibE-eq Y (EFX.act Y X h ThX.v0) ThY.v0
+        (transH (apH (EA.act Y X h) VX.v0-pt) (symH VY.v0-pt))
+        (transH (FX.fibB-act Y X h ThX.v0)
+         (transH (apH (EX.act Y X h) VX.v0-B)
+          (transH (glue-act Y X h rho ThX.u)
+           (transH (apH (glue Y rY) pairsEq) (symH VY.v0-B)))))
+        (transH (FX.fibP-act Y X h ThX.v0)
+         (transH (apH (EA.act (prodP Y Iv) (prodP X Iv) (cylH Y X h)) VX.v0-P)
+                 (transH FEeq (symH VY.v0-P)))) ;
+
+    unif : Id (FX.TF.EI Y) (EFX.act Y X h (w, kopX X w p)) (wY, kopX Y wY pY) =
+      transH (apH (EFX.act Y X h) (kopX-E X w p)) (transH v0eq (symH (kopX-E Y wY pY))) ;
+  } ;
+
+  extEquiv : EquivOp G ExtT A extMap =
+    new PX.ContrOp[kopX, \ X w p l W f i -> KS[X, w, p, l, W, f, i].side, \ Y X h w p -> KU[Y, X, h, w, p].unif] ;
+} ;

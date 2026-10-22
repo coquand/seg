@@ -1,0 +1,193 @@
+-- GTE5.seg (inside IvBase.Cn): transport along a line, part 5: the B part
+-- (TranspB, in line form).  Given w = (x , a) in SA and a partial element p
+-- of the fibre of tr over w (sides Q_l, values v_l = (b_l , q_l)):
+--
+--   revK      the filler of A at tgt d from the reverse composition cb
+--             (GFillFib, by cases on d)
+--   Box.pB    the partial line over ln x with the total end a at tgt d and,
+--             on Q_l, the line omega v_l (from b_l to a; natural by GTE4)
+--   Box.Fb    its filler (at tgt d): a line over ln x ending at a
+--   Box.bnew  its value at src d: the new B part
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+-- the filler at the end tgt d from a composition from tgt d to src d
+revK (G : PCtx) (A : PTy[G]) : (d : Bool) -> CompAtP[GFam[lv].famPath, G, A, tgt d, src d].CompAt
+  -> LineFibP[GFam[lv].famPath, G, A].FibAt (tgt d) = split {
+  true -> \ c -> GFillFib[lv].FillLineFib[GFam[lv].famPath, GFam[lv].famConn, G, A, false, c].fibAt ;
+  false -> \ c -> GFillFib[lv].FillLineFib[GFam[lv].famPath, GFam[lv].famConn, G, A, true, c].fibAt } ;
+
+module BB (G : PCtx) (A : PTy[G]) (d : Bool) (ca : CompAtP[GFam[lv].famPath, G, A, src d, tgt d].CompAt)
+  (cb : CompAtP[GFam[lv].famPath, G, A, tgt d, src d].CompAt)
+  (c01 : CompAtP[GFam[lv].famPath, G, A, e0, e1].CompAt)
+  (D : PCtx) (ln : PSub[D, GFam[lv].famPath.pth G]) {
+  module FM = GFam[lv] ;
+  module O = GTE3[lv].Om[G, A, d, ca, c01, D, ln] ;
+  module N = GTE4[lv].OmN[G, A, d, ca, c01, D, ln] ;
+  module KK = O.KK ;
+  module T1 = O.T1 ;
+  module HF = O.HF ;
+  module TA = KK.TA ;
+  module EKt = EndKit[FM.famPath, G, A, tgt d] ;
+  module LT = LevKit[FM.famPath, FM.famConn, G, A, tgt d] ;
+  module E0 = EndKit[FM.famPath, G, A, src d] ;
+  module LS = LevKit[FM.famPath, FM.famConn, G, A, src d] ;
+
+  -- an element of SB is determined by its point and its image along ln
+  lbInj (W : Ob) (z z' : HF.TB.EI W) (P : Id (W0.Ix (D.ob W)) z.1 z'.1) (Q : Id (E0.TV.EI W) (T1.LB.nt W z) (T1.LB.nt W z'))
+    : Id (HF.TB.EI W) z z' =
+    idJ (W0.Ix (D.ob W)) z.1
+      (\ x2 P2 -> (b2 : W0.Ix (T1.SB.tob W x2)) -> Id (E0.TV.EI W) (T1.LB.nt W z) (T1.LB.nt W (x2, b2)) -> Id (HF.TB.EI W) z (x2, b2))
+      (\ b2 Q2 -> apH {W0.Ix (T1.SB.tob W z.1)} {HF.TB.EI W} (\ u -> (z.1, u)) (E0.TV.pr-inj W (ln.nt W z.1) z.2 b2 Q2))
+      z'.1 P z'.2 Q ;
+
+  opaque lbInj ;
+  module FA = FM.FT[G, A] ;
+  module FP = GCofib[lv].Partials[HF.EA, HF.FibT] ;
+
+  kb : LineFibP[FM.famPath, G, A].FibAt (tgt d) = revK G A d cb ;
+
+  module Box (X : Ob) (w : HF.TA.EI X) (p : FP.Partial[X, w]) {
+    zt : EKt.TV.EI X = T1.LA.nt X w ;
+
+    module SD (l : Fin p.pr) {
+      sd : FP.PSide[X, w] = p.ps l ;
+
+      v (W : Ob) (f : Hom W X) (h : Lands W X sd.pQ f) : HF.TF.EI W = sd.pv W f h ;
+
+      om (W : Ob) (f : Hom W X) (h : Lands W X sd.pQ f) : O.PC.CP.TV'.EI W = O.W[W, v W f h].omE ;
+
+      t (W : Ob) (f : Hom W X) (h : Lands W X sd.pQ f) (W' : Ob) (g : Hom W' W) (i : Hom W' Iv) : TA.EI W' =
+        (om W f h).2.1.1 W' g i ;
+
+      -- the point of K at the end e1 of the line of omega
+      y1 (W : Ob) (f : Hom W X) (h : Lands W X sd.pQ f) : W0.Ix (KK.K.ob W) = (om W f h).1.1 W (idH W) (ptH W e1) ;
+
+      -- its point in D is the point of w restricted
+      xEq (W : Ob) (f : Hom W X) (h : Lands W X sd.pQ f)
+        : Id (W0.Ix (D.ob W)) (y1 W f h).1.1 (D.act W X f w.1) =
+        transH (HF.fibL-pt W (v W f h) W (idH W) (ptH W e1))
+          (transH (D.act-id W (v W f h).1.1) (apH (\ z -> z.1) (sd.ppt W f h))) ;
+
+      lG (W : Ob) (f : Hom W X) : W0.Ix ((FM.famPath.pth G).ob W) = (EKt.TV.E.act W X f zt).1 ;
+
+      tp (W : Ob) (f : Hom W X) (h : Lands W X sd.pQ f) (W' : Ob) (g : Hom W' W) (i : Hom W' Iv)
+        : Id (W0.Ix (G.ob W')) (t W f h W' g i).1 ((lG W f).1 W' g i) =
+        transH ((om W f h).2.2.1 W' g i)
+          (apH (\ z -> z.1 W' g i) (transH (apH (ln.nt W) (xEq W f h)) (ln.nt-nat W X f w.1))) ;
+
+      tn (W : Ob) (f : Hom W X) (h : Lands W X sd.pQ f) (V' W' : Ob) (g' : Hom V' W') (g : Hom W' W) (i : Hom W' Iv)
+        : Id (TA.EI V') (TA.E.act V' W' g' (t W f h W' g i)) (t W f h V' (compH V' W' W g g') (compH V' W' Iv i g')) =
+        (om W f h).2.1.2 V' W' g' g i ;
+
+      L (W : Ob) (f : Hom W X) (h : Lands W X sd.pQ f) : EKt.TL.EI W =
+        (lG W f, FA.lamA W (lG W f) (t W f h) (tp W f h) (tn W f h)) ;
+
+      -- the line ends at a
+      Ql (W : Ob) (f : Hom W X) (h : Lands W X sd.pQ f)
+        : Id (TA.EI W) (EKt.endE W ((FM.famPath.pevA G A (tgt d)).mE W (L W f h))) (EKt.endE W (EKt.TV.E.act W X f zt)) =
+        calc (TA.EI W) {
+            EKt.endE W ((FM.famPath.pevA G A (tgt d)).mE W (L W f h))
+          =< LT.endL-lev W (L W f h) >
+            t W f h W (idH W) (ptH W (tgt d))
+          =< (om W f h).2.2.2.2 >
+            KK.bE W (y1 W f h)
+          =< apH (\ z -> EKt.endE W (T1.LA.nt W z)) (transH (HF.fibL-1 W (v W f h)) (sd.ppt W f h)) >
+            EKt.endE W (T1.LA.nt W (HF.TA.E.act W X f w))
+          =< apH (EKt.endE W) (T1.LA.nt-nat W X f w) >
+            EKt.endE W (EKt.TV.E.act W X f zt) } ;
+
+      pv : EKt.PT.PvTy X sd.pQ = \ W f h ->
+        EKt.mkTS W (EKt.TV.E.act W X f zt) (L W f h) (refl (lG W f)) (Ql W f h) ;
+
+      pv-pt (W : Ob) (f : Hom W X) (h : Lands W X sd.pQ f) : Id (EKt.TV.EI W) (pv W f h).1 (EKt.TV.E.act W X f zt) =
+        EKt.mkTS-pt W (EKt.TV.E.act W X f zt) (L W f h) (refl (lG W f)) (Ql W f h) ;
+
+      pv-lev (W : Ob) (f : Hom W X) (h : Lands W X sd.pQ f) (W' : Ob) (g : Hom W' W) (i : Hom W' Iv)
+        : Id (TA.EI W') (FM.famConn.levA G A W (EKt.lineL W (pv W f h)) W' g i) (t W f h W' g i) =
+        LT.mkTS-lev W (EKt.TV.E.act W X f zt) (L W f h) (refl (lG W f)) (Ql W f h) W' g i ;
+
+      pnat : EKt.PT.PnTy X sd.pQ pv = \ W' W g f h h' ->
+        LT.ts-ext W' (EKt.TS.E.act W' W g (pv W f h)) (pv W' (compH W' W X f g) h')
+          (transH (apH (EKt.TV.E.act W' W g) (pv-pt W f h))
+            (transH (EKt.TV.PE.actC W' W X f g zt) (symH (pv-pt W' (compH W' W X f g) h'))))
+          (\ V g' j ->
+             calc (TA.EI V) {
+                 FM.famConn.levA G A W' (EKt.lineL W' (EKt.TS.E.act W' W g (pv W f h))) V g' j
+               =< LT.line-act W' W g (pv W f h) V g' j >
+                 FM.famConn.levA G A W (EKt.lineL W (pv W f h)) V (compH V W' W g g') j
+               =< pv-lev W f h V (compH V W' W g g') j >
+                 t W f h V (compH V W' W g g') j
+               =< N.R[W', W, g, v W f h].omVN V g' j >
+                 O.W[W', HF.TF.E.act W' W g (v W f h)].omE.2.1.1 V g' j
+               =< apH (\ z -> O.W[W', z].omE.2.1.1 V g' j) (sd.pnat W' W g f h h') >
+                 t W' (compH W' W X f g) h' V g' j
+               =< symH (pv-lev W' (compH W' W X f g) h' V g' j) >
+                 FM.famConn.levA G A W' (EKt.lineL W' (pv W' (compH W' W X f g) h')) V g' j }) ;
+
+      side : EKt.PT.PSide[X, zt] = new EKt.PT.PSide[X, zt, sd.pQ, pv, pv-pt, pnat] ;
+
+      opaque pv ;
+    } ;
+
+    pcs : EKt.PT.PCsTy X zt p.pr (\ l -> SD[l].side) = \ l k W f h h' ->
+      LT.ts-ext W (SD[l].pv W f h) (SD[k].pv W f h')
+        (transH (SD[l].pv-pt W f h) (symH (SD[k].pv-pt W f h')))
+        (\ V g j -> transH (SD[l].pv-lev W f h V g j)
+           (transH (apH (\ z -> O.W[W, z].omE.2.1.1 V g j) (p.pcs l k W f h h')) (symH (SD[k].pv-lev W f h' V g j)))) ;
+
+    pB : EKt.PT.Partial[X, zt] = new EKt.PT.Partial[X, zt, p.pr, \ l -> SD[l].side, pcs] ;
+
+    -- the B-filler: a line over ln x ending at a
+    FbS : EKt.TS.EI X = (zt, kb.kop X zt pB) ;
+
+    -- its value at src d: the new B part
+    bnew : W0.Ix (T1.SB.tob X w.1) = ((FM.famPath.pevA G A (src d)).mE X (EKt.lineL X FbS)).2 ;
+
+    -- on a side, bnew is the B part of the side
+    module BS (l : Fin p.pr) (W : Ob) (f : Hom W X) (h : Lands W X (p.ps l).pQ f) {
+      module S = SD[l] ;
+
+      -- the start of omega v_l, read in E: the B part of v_l
+      omS : Id (TA.EI W) (S.t W f h W (idH W) (ptH W (src d))) (E0.endE W (T1.LB.nt W (HF.fibB W (S.v W f h)))) =
+        transH ((S.om W f h).2.2.2.1)
+          (apH (\ z -> E0.endE W (T1.LB.nt W z))
+             (transH (O.W[W, S.v W f h].L.lvB W (idH W) (ptH W e1)) (HF.TB.E.act-id W (HF.fibB W (S.v W f h))))) ;
+
+      imgEq : Id (E0.TV.EI W) (T1.LB.nt W (HF.TB.E.act W X f (w.1, bnew))) (T1.LB.nt W (HF.fibB W (S.v W f h))) =
+        E0.tv-eq W (T1.LB.nt W (HF.TB.E.act W X f (w.1, bnew))) (T1.LB.nt W (HF.fibB W (S.v W f h)))
+          (apH (ln.nt W) (symH (apH {HF.TA.EI W} {W0.Ix (D.ob W)} (\ z -> z.1) ((p.ps l).ppt W f h))))
+          (calc (TA.EI W) {
+              E0.endE W (T1.LB.nt W (HF.TB.E.act W X f (w.1, bnew)))
+            =< apH (E0.endE W) (T1.LB.nt-nat W X f (w.1, bnew)) >
+              E0.endE W (E0.TV.E.act W X f ((FM.famPath.pevA G A (src d)).mE X (EKt.lineL X FbS)))
+            =< apH (E0.endE W) (symH ((FM.famPath.pevA G A (src d)).mnat W X f (EKt.lineL X FbS))) >
+              E0.endE W ((FM.famPath.pevA G A (src d)).mE W (EKt.TL.E.act W X f (EKt.lineL X FbS)))
+            =< apH (\ z -> E0.endE W ((FM.famPath.pevA G A (src d)).mE W z))
+                 (transH (symH (EKt.lineL-act W X f FbS)) (apH (EKt.lineL W) (kb.kside X zt pB l W f h))) >
+              E0.endE W ((FM.famPath.pevA G A (src d)).mE W (EKt.lineL W (S.pv W f h)))
+            =< LS.endL-lev W (EKt.lineL W (S.pv W f h)) >
+              FM.famConn.levA G A W (EKt.lineL W (S.pv W f h)) W (idH W) (ptH W (src d))
+            =< S.pv-lev W f h W (idH W) (ptH W (src d)) >
+              S.t W f h W (idH W) (ptH W (src d))
+            =< omS >
+              E0.endE W (T1.LB.nt W (HF.fibB W (S.v W f h))) }) ;
+
+      bside : Id (HF.TB.EI W) (HF.TB.E.act W X f (w.1, bnew)) (HF.fibB W (S.v W f h)) =
+        lbInj W (HF.TB.E.act W X f (w.1, bnew)) (HF.fibB W (S.v W f h))
+          (symH (apH {HF.TA.EI W} {W0.Ix (D.ob W)} (\ z -> z.1) ((p.ps l).ppt W f h))) imgEq ;
+    } ;
+
+    opaque pcs ;
+  } ;
+} ;

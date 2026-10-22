@@ -1,0 +1,189 @@
+-- BCU.seg: MODEL/Univ/BCU.agda.  Base change of the transport
+-- construction, part 5: the moved packages (TranspUData.trPackIso, i.e.
+-- the beta and eB fields of trUData) are related.
+--
+-- Data as in BCK; targets A' over D', A over D with the identifications
+-- Po' : SA' = A', Po : SA = A (H1', H1), and PoAA : A' x = A (sR x)
+-- (fibrewise).  mBx = mBE (BCB), mAx = transport along PoAA.
+--   H3u   mAx (beta' w) = beta (mBx w)
+--   H4u   eB' and eB send related partials to related elements
+-- (through PackRel.packKopG on both sides, PM.packKopAt, and BCK.trH4').
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open Simp[a] ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module CN = Conn[a] ;
+open CN ;
+module CF = Cofib[a] ;
+open CF ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open PackRel[a] ;
+
+-- two transports between the same iterative sets agree
+substIx-trans (u v w : W0.V) (p : Id W0.V u v) (q : Id W0.V v w) (a0 : W0.Ix u)
+  : Id (W0.Ix w) (trIx v w q (trIx u v p a0)) (trIx u w (transH p q) a0) =
+  idJ W0.V u (\ v2 p2 -> (w2 : W0.V) (q2 : Id W0.V v2 w2) -> Id (W0.Ix w2) (trIx v2 w2 q2 (trIx u v2 p2 a0)) (trIx u w2 (transH p2 q2) a0))
+    (\ w2 q2 -> idJ W0.V u (\ w3 q3 -> Id (W0.Ix w3) (trIx u w3 q3 (trIx u u (refl u) a0)) (trIx u w3 (transH (refl u) q3) a0))
+                  (refl a0) w2 q2)
+    v p w q ;
+
+coeSq (u v v' w : W0.V) (p1 : Id W0.V u v) (p2 : Id W0.V v w) (q1 : Id W0.V u v') (q2 : Id W0.V v' w) (a0 : W0.Ix u)
+  : Id (W0.Ix w) (trIx v w p2 (trIx u v p1 a0)) (trIx v' w q2 (trIx u v' q1 a0)) =
+  transH (substIx-trans u v w p1 p2 a0)
+   (transH (apH (\ r -> trIx u w r a0) (W0.isSetV u w (transH p1 p2) (transH q1 q2))) (symH (substIx-trans u v' w q1 q2 a0))) ;
+
+opaque substIx-trans ; opaque coeSq ;
+
+module BCU (D' D : PCtx) (sR : PSub[D', D]) (L' L : PCtx) (sg : PSub[L', L]) (S : PTy[L])
+  (ln' : (W : Ob) -> W0.Ix (D'.ob W) -> W0.Ix (L'.ob (prodP W Iv)))
+  (lnat' : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D'.ob W))
+          -> Id (W0.Ix (L'.ob (prodP W' Iv))) (L'.act (prodP W' Iv) (prodP W Iv) (cylH W' W g) (ln' W x)) (ln' W' (D'.act W' W g x)))
+  (ln : (W : Ob) -> W0.Ix (D.ob W) -> W0.Ix (L.ob (prodP W Iv)))
+  (lnat : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D.ob W))
+          -> Id (W0.Ix (L.ob (prodP W' Iv))) (L.act (prodP W' Iv) (prodP W Iv) (cylH W' W g) (ln W x)) (ln W' (D.act W' W g x)))
+  (lnEq : (W : Ob) (x : W0.Ix (D'.ob W)) -> Id (W0.Ix (L.ob (prodP W Iv))) (sg.nt (prodP W Iv) (ln' W x)) (ln W (sR.nt W x)))
+  (d : Bool) (fS : FibM.FillDef[L, S].FillOp[src d]) (f0 : FibM.FillDef[L, S].FillOp[e0]) (fT : FibM.FillDef[L, S].FillOp[tgt d])
+  (fS' : FibM.FillDef[L', subTy L' L S sg].FillOp[src d]) (f0' : FibM.FillDef[L', subTy L' L S sg].FillOp[e0])
+  (fT' : FibM.FillDef[L', subTy L' L S sg].FillOp[tgt d])
+  (okS : LBSub[a].LBS[L', L, sg, S, src d].LBF[fS, fS'].FillSubOK)
+  (ok0 : LBSub[a].LBS[L', L, sg, S, e0].LBF[f0, f0'].FillSubOK)
+  (okT : LBSub[a].LBS[L', L, sg, S, tgt d].LBF[fT, fT'].FillSubOK)
+  (fesiS : EsiFill[a, a].FesiDef[L, S].FESI (src d) fS) (fesiT : EsiFill[a, a].FesiDef[L, S].FESI (tgt d) fT)
+  (fesiS' : EsiFill[a, a].FesiDef[L', subTy L' L S sg].FESI (src d) fS') (fesiT' : EsiFill[a, a].FesiDef[L', subTy L' L S sg].FESI (tgt d) fT')
+  (A' : PTy[D']) (A : PTy[D])
+  (Po' : (I : Ob) (x : W0.Ix (D'.ob I)) -> Id W0.V (Transp[a].Tp[D', L', subTy L' L S sg, ln', lnat', d, fS'].SA.tob I x) (A'.tob I x))
+  (H1' : H1Ty D' Transp[a].Tp[D', L', subTy L' L S sg, ln', lnat', d, fS'].SA A' Po')
+  (Po : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (Transp[a].Tp[D, L, S, ln, lnat, d, fS].SA.tob I x) (A.tob I x))
+  (H1 : H1Ty D Transp[a].Tp[D, L, S, ln, lnat, d, fS].SA A Po)
+  (PoAA : (W : Ob) (x : W0.Ix (D'.ob W)) -> Id W0.V (A'.tob W x) (A.tob W (sR.nt W x))) {
+  module BK = BCK[a].BCK[D', D, sR, L', L, sg, S, ln', lnat', ln, lnat, lnEq, d, fS, f0, fT, fS', f0', fT', okS, ok0, okT] ;
+  module BB = BK.BB ;
+  module PT = Transp[a].Tp[D', L', subTy L' L S sg, ln', lnat', d, fS'] ;
+  module UT = Transp[a].Tp[D, L, S, ln, lnat, d, fS] ;
+  module PMp = TranspUData[a].PM[D', L', subTy L' L S sg, ln', lnat', d, fS', f0', fT', fesiS', fesiT', A', Po', H1'] ;
+  module PMu = TranspUData[a].PM[D, L, S, ln, lnat, d, fS, f0, fT, fesiS, fesiT, A, Po, H1] ;
+  module PK' = PK[D', PT.SB, PT.SA] ;
+  module PKu = PK[D, UT.SB, UT.SA] ;
+
+  k' : EquivIso[a].EqvPack D' PT.SB PT.SA = PMp.k0 ;
+  k : EquivIso[a].EqvPack D UT.SB UT.SA = PMu.k0 ;
+  pk' : EquivIso[a].EqvPack D' PT.SB A' = PMp.k1 ;
+  pk : EquivIso[a].EqvPack D UT.SB A = PMu.k1 ;
+
+  mAx (W : Ob) (w : PR.TyL[D', A'].EI W) : PR.TyL[D, A].EI W = (sR.nt W w.1, trIx (A'.tob W w.1) (A.tob W (sR.nt W w.1)) (PoAA W w.1) w.2) ;
+
+  -- the moves along Po', Po
+  cP' (W : Ob) (w : PR.TyL[D', PT.SA].EI W) : PR.TyL[D', A'].EI W = coeE D' PT.SA A' Po' W w ;
+  cR' (W : Ob) (w : PR.TyL[D', A'].EI W) : PR.TyL[D', PT.SA].EI W = coeE D' A' PT.SA (symPo D' PT.SA A' Po') W w ;
+  cP (W : Ob) (w : PR.TyL[D, UT.SA].EI W) : PR.TyL[D, A].EI W = coeE D UT.SA A Po W w ;
+  cR (W : Ob) (w : PR.TyL[D, A].EI W) : PR.TyL[D, UT.SA].EI W = coeE D A UT.SA (symPo D UT.SA A Po) W w ;
+
+  module MB2 (PoB : BB.PoBTy) (PoA : BB.PoATy) {
+    module M = BB.MB[PoB, PoA] ;
+    module KK = BK.K[PoB, PoA] ;
+
+    mBx (W : Ob) (w : PT.SEs.TD.EI W) : UT.SEs.TD.EI W = M.mBE W w ;
+    mAt (W : Ob) (w : PT.SEt.TD.EI W) : UT.SEt.TD.EI W = M.mAE W w ;
+
+    module RU = RelGen[a].RG[D', D, sR, PT.SB, A', UT.SB, A, pk'.1, pk.1, mBx, mAx] ;
+
+    sqA (W : Ob) (z : PR.TyL[D', PT.SA].EI W) : Id (PR.TyL[D, A].EI W) (mAx W (cP' W z)) (cP W (mAt W z)) =
+      apH {W0.Ix (A.tob W (sR.nt W z.1))} {PR.TyL[D, A].EI W} (\ v -> (sR.nt W z.1, v))
+        (coeSq (PT.SA.tob W z.1) (A'.tob W z.1) (UT.SA.tob W (sR.nt W z.1)) (A.tob W (sR.nt W z.1))
+           (Po' W z.1) (PoAA W z.1) (PoA W z.1) (Po W (sR.nt W z.1)) z.2) ;
+
+    sqB (W : Ob) (z : PR.TyL[D', A'].EI W) : Id (PR.TyL[D, UT.SA].EI W) (cR W (mAx W z)) (mAt W (cR' W z)) =
+      apH {W0.Ix (UT.SA.tob W (sR.nt W z.1))} {PR.TyL[D, UT.SA].EI W} (\ v -> (sR.nt W z.1, v))
+        (coeSq (A'.tob W z.1) (A.tob W (sR.nt W z.1)) (PT.SA.tob W z.1) (UT.SA.tob W (sR.nt W z.1))
+           (PoAA W z.1) (symH (Po W (sR.nt W z.1))) (symH (Po' W z.1)) (PoA W z.1) z.2) ;
+
+    H3u : RU.H3Ty = \ W w ->
+      transH (apH (mAx W) (PMp.packMapAt W w))
+       (transH (sqA W (k'.1.mE W w))
+        (transH (apH (cP W) (KK.trH3 W w)) (symH (PMu.packMapAt W (mBx W w))))) ;
+
+    opaque sqA ; opaque sqB ; opaque H3u ;
+
+    -- the four moves along Po', Po
+    module Mpu' = MV[D', PT.SB, PT.SA, A', Po', H1', k'.1, pk'.1, PMp.packMapAt] ;
+    module Mpl' = MV[D', PT.SB, A', PT.SA, symPo D' PT.SA A' Po', H1sym D' PT.SA A' Po' H1', pk'.1, k'.1, PMp.hpullAt] ;
+    module Mpu = MV[D, UT.SB, UT.SA, A, Po, H1, k.1, pk.1, PMu.packMapAt] ;
+    module Mpl = MV[D, UT.SB, A, UT.SA, symPo D UT.SA A Po, H1sym D UT.SA A Po H1, pk.1, k.1, PMu.hpullAt] ;
+
+    module HU (X0 : Ob) (w' : PR.TyL[D', A'].EI X0) (p' : Mpl'.P1.Partial[X0, w']) (p : Mpl.P1.Partial[X0, mAx X0 w'])
+      (r : RU.PRel X0 w' p' p) {
+      q' : Mpl'.P2.Partial[X0, cR' X0 w'] = Mpl'.mapP X0 w' p' ;
+      q : Mpl.P2.Partial[X0, cR X0 (mAx X0 w')] = Mpl.mapP X0 (mAx X0 w') p ;
+
+      PRelAt (w1 : PR.TyL[D, UT.SA].EI X0) (qq : Mpl.P2.Partial[X0, w1]) : U a =
+        (e : Id Nat q'.pr qq.pr)
+        * (((l : Fin q'.pr) -> Id (Subset X0) (q'.ps l).pQ ((qq.ps (subst Nat (\ n -> Fin n) q'.pr qq.pr e l)).pQ))
+           * ((l : Fin q'.pr) (W : Ob) (f : Hom W X0) (i : Lands W X0 (q'.ps l).pQ f)
+              (i' : Lands W X0 (qq.ps (subst Nat (\ n -> Fin n) q'.pr qq.pr e l)).pQ f)
+              -> M.R.FRel W ((q'.ps l).pv W f i) ((qq.ps (subst Nat (\ n -> Fin n) q'.pr qq.pr e l)).pv W f i'))) ;
+
+      relJ (w1 : PR.TyL[D, UT.SA].EI X0) (P : Id (PR.TyL[D, UT.SA].EI X0) (mAt X0 (cR' X0 w')) w1) (qq : Mpl.P2.Partial[X0, w1])
+        (rr0 : PRelAt w1 qq) : M.R.FRel X0 (PK'.kopOf PT.SA k' X0 (cR' X0 w') q') (PKu.kopOf UT.SA k X0 w1 qq) =
+        idJ (PR.TyL[D, UT.SA].EI X0) (mAt X0 (cR' X0 w'))
+          (\ w2 P2 -> (qq2 : Mpl.P2.Partial[X0, w2]) -> PRelAt w2 qq2
+             -> M.R.FRel X0 (PK'.kopOf PT.SA k' X0 (cR' X0 w') q') (PKu.kopOf UT.SA k X0 w2 qq2))
+          (\ qq2 rr2 -> KK.trH4' X0 (cR' X0 w') q' qq2 rr2)
+          w1 P qq rr0 ;
+
+      frel (l : Fin q'.pr) (W : Ob) (f : Hom W X0) (i : Lands W X0 (q'.ps l).pQ f)
+        (i' : Lands W X0 (q.ps (subst Nat (\ n -> Fin n) p'.pr p.pr r.1 l)).pQ f)
+        : M.R.FRel W ((q'.ps l).pv W f i) ((q.ps (subst Nat (\ n -> Fin n) p'.pr p.pr r.1 l)).pv W f i') =
+        (transH (Mpl.mapV-pt W ((p.ps (subst Nat (\ n -> Fin n) p'.pr p.pr r.1 l)).pv W f i'))
+          (transH (apH (cR W) (r.2.2 l W f i i').1)
+           (transH (sqB W ((p'.ps l).pv W f i).1) (apH (mAt W) (symH (Mpl'.mapV-pt W ((p'.ps l).pv W f i)))))),
+         (transH (Mpl.mapV-B W ((p.ps (subst Nat (\ n -> Fin n) p'.pr p.pr r.1 l)).pv W f i'))
+           (transH (r.2.2 l W f i i').2.1 (apH (mBx W) (symH (Mpl'.mapV-B W ((p'.ps l).pv W f i))))),
+          transH (Mpl.mapV-P W ((p.ps (subst Nat (\ n -> Fin n) p'.pr p.pr r.1 l)).pv W f i'))
+           (transH (apH (cR (prodP W Iv)) (r.2.2 l W f i i').2.2)
+            (transH (sqB (prodP W Iv) (Mpl'.F1.fibP W ((p'.ps l).pv W f i)))
+                    (apH (mAt (prodP W Iv)) (symH (Mpl'.mapV-P W ((p'.ps l).pv W f i)))))))) ;
+
+      rr : PRelAt (cR X0 (mAx X0 w')) q = (r.1, (r.2.1, frel)) ;
+
+      fr : M.R.FRel X0 (PK'.kopOf PT.SA k' X0 (cR' X0 w') q') (PKu.kopOf UT.SA k X0 (cR X0 (mAx X0 w')) q) =
+        relJ (cR X0 (mAx X0 w')) (symH (sqB X0 w')) q rr ;
+
+      ek' : Id (Mpl'.F1.TF.EI X0) (PK'.kopOf A' pk' X0 w' p') (Mpu'.mapV X0 (PK'.kopOf PT.SA k' X0 (cR' X0 w') q')) =
+        PMp.packKopAt X0 w' p' ;
+
+      ek : Id (Mpl.F1.TF.EI X0) (PKu.kopOf A pk X0 (mAx X0 w') p) (Mpu.mapV X0 (PKu.kopOf UT.SA k X0 (cR X0 (mAx X0 w')) q)) =
+        PMu.packKopAt X0 (mAx X0 w') p ;
+
+      H4u : RU.FRel X0 (PK'.kopOf A' pk' X0 w' p') (PKu.kopOf A pk X0 (mAx X0 w') p) =
+        (refl (mAx X0 w'),
+         (transH (apH (Mpl.F1.fibB X0) ek)
+           (transH (Mpu.mapV-B X0 (PKu.kopOf UT.SA k X0 (cR X0 (mAx X0 w')) q))
+            (transH fr.2.1
+             (apH (mBx X0) (transH (symH (Mpu'.mapV-B X0 (PK'.kopOf PT.SA k' X0 (cR' X0 w') q')))
+                                   (apH (Mpl'.F1.fibB X0) (symH ek')))))),
+          transH (apH (Mpl.F1.fibP X0) ek)
+           (transH (Mpu.mapV-P X0 (PKu.kopOf UT.SA k X0 (cR X0 (mAx X0 w')) q))
+            (transH (apH (cP (prodP X0 Iv)) fr.2.2)
+             (transH (symH (sqA (prodP X0 Iv) (Mpu'.F1.fibP X0 (PK'.kopOf PT.SA k' X0 (cR' X0 w') q'))))
+                     (apH (mAx (prodP X0 Iv)) (transH (symH (Mpu'.mapV-P X0 (PK'.kopOf PT.SA k' X0 (cR' X0 w') q')))
+                                                       (apH (Mpl'.F1.fibP X0) (symH ek'))))))))) ;
+
+      opaque relJ ; opaque frel ; opaque rr ; opaque fr ; opaque ek' ; opaque ek ; opaque H4u ;
+    } ;
+  } ;
+} ;

@@ -1,0 +1,103 @@
+-- GTE13.seg (inside IvBase.Cn): transport along a line, part 13: the path
+-- part is uniform.  Along h : Y -> X, the path problem (GTE7, GTE9) of the
+-- restricted data is the restricted path problem: its line in K2 (the
+-- transport filler of bnew by GTE1.uF-nat and GTE12.bnN, the B-filler by
+-- GTE12.FbN), its start (the constant path at bnew) and its sides (the
+-- same fibre elements); so pnew is uniform (pathN).
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module PU (G : PCtx) (A : PTy[G]) (d : Bool) (ca : CompAtP[GFam[lv].famPath, G, A, src d, tgt d].CompAt)
+  (cb : CompAtP[GFam[lv].famPath, G, A, tgt d, src d].CompAt)
+  (c01 : CompAtP[GFam[lv].famPath, G, A, e0, e1].CompAt)
+  (D : PCtx) (ln : PSub[D, GFam[lv].famPath.pth G]) {
+  module FM = GFam[lv] ;
+  module PN = GTE9[lv].PNew[G, A, d, ca, cb, c01, D, ln] ;
+  module BU = GTE12[lv].BU[G, A, d, ca, cb, c01, D, ln] ;
+  module B = PN.B ;
+  module T1 = PN.T1 ;
+  module HF = PN.HF ;
+  module TA = PN.TA ;
+  module KP = PN.KP ;
+  module CP2 = PN.CP2 ;
+
+  module Un (Y X : Ob) (h : Hom Y X) (w : HF.TA.EI X) (p : B.FP.Partial[X, w]) {
+    module UB = BU.Un[Y, X, h, w, p] ;
+    module NX = PN.Bx[X, w, p] ;
+    module NY = PN.Bx[Y, HF.TA.E.act Y X h w, B.FP.restrictP Y X h w p] ;
+    module QX = NX.PX ;
+    module QY = NY.PX ;
+
+    -- the two lines of the path problem
+    uE (W : Ob) (g : Hom W Y) (i : Hom W Iv) : Id (TA.EI W) (QX.u W (compH W Y X h g) i) (QY.u W g i) =
+      transH (symH (B.LS.line-act Y X h QX.uS W g i))
+        (transH (apH (\ z -> FM.famConn.levA G A Y (B.E0.lineL Y z) W g i) (T1.uF-nat Y X h QX.xbn))
+                (apH (\ z -> FM.famConn.levA G A Y (B.E0.lineL Y (T1.uF Y z)) W g i) UB.bnN)) ;
+
+    u'E (W : Ob) (g : Hom W Y) (i : Hom W Iv) : Id (TA.EI W) (QX.u' W (compH W Y X h g) i) (QY.u' W g i) =
+      transH (symH (B.LT.line-act Y X h NX.BX.FbS W g i))
+        (apH (\ z -> FM.famConn.levA G A Y (B.EKt.lineL Y z) W g i) UB.FbN) ;
+
+    ellE : Id (W0.Ix (KP.FK2.ob Y)) (KP.FK2.actF Y X h QX.ell2) QY.ell2 =
+      KP.FK2.fam-eq Y (KP.FK2.actF Y X h QX.ell2) QY.ell2 (\ W g i ->
+        KP.k2Ext W (QX.L3.v3 W (compH W Y X h g) i) (QY.L3.v3 W g i) (uE W g i)
+          (transH (KP.mk3-b W (QX.u W (compH W Y X h g) i) (QX.u' W (compH W Y X h g) i) (QX.P W (compH W Y X h g) i))
+            (transH (u'E W g i) (symH (KP.mk3-b W (QY.u W g i) (QY.u' W g i) (QY.P W g i)))))) ;
+
+    -- bnew read in E is natural
+    bnE : Id (TA.EI Y) (TA.E.act Y X h QX.bnE) QY.bnE =
+      transH (symH (B.E0.endE-act Y X h (T1.LB.nt X QX.xbn)))
+        (transH (apH (B.E0.endE Y) (symH (T1.LB.nt-nat Y X h QX.xbn)))
+                (apH (\ z -> B.E0.endE Y (T1.LB.nt Y z)) UB.bnN)) ;
+
+    xhE : Id (CP2.TV.EI Y) (CP2.TV.E.act Y X h QX.xh2) QY.xh2 =
+      CP2.EK.tv-eq Y (CP2.TV.E.act Y X h QX.xh2) QY.xh2 ellE
+        (KP.PT2.tp-ext Y (CP2.EK.endE Y (CP2.TV.E.act Y X h QX.xh2)) (CP2.EK.endE Y QY.xh2)
+           (apH (\ z -> (KP.FK2.ev (src d)).nt Y z) ellE)
+           (\ W g j -> transH (symH (TA.PE.actC W Y X h g QX.bnE)) (apH (TA.E.act W Y g) bnE))) ;
+
+    -- the restricted sides are the new sides
+    sEq (l : Fin p.pr) (W : Ob) (g : Hom W Y) (i : Lands W Y (pre Y X h (p.ps l).pQ) g) (i' : Lands W Y (pre Y X h (p.ps l).pQ) g)
+      : Id (CP2.TS.EI W) NX.SL[l, W, compH W Y X h g, lands-pre W Y X h (p.ps l).pQ g i].pv NY.SL[l, W, g, i'].pv =
+      PN.L2K.ts-ext W NX.SL[l, W, compH W Y X h g, lands-pre W Y X h (p.ps l).pQ g i].pv NY.SL[l, W, g, i'].pv
+        (transH NX.SL[l, W, compH W Y X h g, lands-pre W Y X h (p.ps l).pQ g i].pv-pt
+          (transH (symH (CP2.TV.PE.actC W Y X h g QX.xh2))
+            (transH (apH (CP2.TV.E.act W Y g) xhE) (symH NY.SL[l, W, g, i'].pv-pt))))
+        (\ W' g' j ->
+           transH (NX.SL[l, W, compH W Y X h g, lands-pre W Y X h (p.ps l).pQ g i].pv-lev W' g' j)
+             (transH
+               (KP.PT2.tp-ext W' (NX.SL[l, W, compH W Y X h g, lands-pre W Y X h (p.ps l).pQ g i].tt W' g' j) (NY.SL[l, W, g, i'].tt W' g' j)
+                  (transH (apH (\ m -> QX.L3.v3 W' m j) (comp-assoc W' W Y X h g g'))
+                          (apH (\ z -> z.1 W' (compH W' W Y g g') j) ellE))
+                  (\ W'' g'' j' ->
+                     apH (\ z -> (FM.famConn.levA PN.KK.K PN.KK.PT.PathP W (PN.KK.PC.CP.EK.lineL W PN.O.W[W, z].omSq) W''
+                                    (compH W'' W' W g' g'') j').2.1.1 W'' (idH W'') (compH W'' W' Iv j g''))
+                         (B.FP.pv-irr X w (p.ps l) W (compH W Y X h g) (lands-pre W Y X h (p.ps l).pQ g i)
+                            (lands-pre W Y X h (p.ps l).pQ g i'))))
+               (symH (NY.SL[l, W, g, i'].pv-lev W' g' j)))) ;
+
+    pSE : Id (CP2.PT.Partial[Y, QY.xh2])
+             (subst (CP2.TV.EI Y) (\ z -> CP2.PT.Partial[Y, z]) (CP2.TV.E.act Y X h QX.xh2) QY.xh2 xhE (CP2.PT.restrictP Y X h QX.xh2 NX.pS))
+             NY.pS =
+      CP2.PT.partExtH Y (CP2.TV.E.act Y X h QX.xh2) QY.xh2 xhE (CP2.PT.restrictP Y X h QX.xh2 NX.pS) NY.pS (refl p.pr)
+        (\ l -> refl (pre Y X h (p.ps l).pQ)) (\ l W g i i' -> sEq l W g i i') ;
+
+    -- pnew is uniform
+    pathN : Id (CP2.TV'.EI Y) (CP2.TV'.E.act Y X h (QX.xh2.1, NX.pnew)) (QY.xh2.1, NY.pnew) =
+      transH (NX.pnew-cu Y h)
+        (transH (CP2.cop-cong KP.PC2.compAt Y (CP2.TV.E.act Y X h QX.xh2) QY.xh2 xhE (CP2.PT.restrictP Y X h QX.xh2 NX.pS) NY.pS pSE)
+                (apH {CP2.TV'.T Y QY.xh2.1} {CP2.TV'.EI Y} (\ z -> (QY.xh2.1, z)) (symH NY.pnew-eq))) ;
+
+    opaque uE ; opaque u'E ; opaque ellE ; opaque bnE ; opaque xhE ; opaque sEq ; opaque pSE ; opaque pathN ;
+  } ;
+} ;

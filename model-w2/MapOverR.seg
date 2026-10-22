@@ -1,0 +1,74 @@
+-- MapOverR.seg: MODEL/Poset/MapOverR.agda.  Mapping boxes commutes with
+-- restriction (mapBox-restr), and fillers built from corresponding
+-- compositions correspond (FillRel, fillRel, via FillOver).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+open Conn[a] ;
+open UMapOver[a] ;
+
+module MOR (G' G : PCtx) (sg : PSub[G', G]) (B' : PTy[G']) (B : PTy[G]) (m : EMap[G', G, sg, B', B]) {
+  open MapOver[G', G, sg, B', B, m] ;
+
+  module MR (eS : El Iv) (Y X : Ob) (h : Hom Y X) (b : B1.Box[eS, X]) {
+    module R1 = B1.Restrict[eS, Y, X, h] ;
+    module R2 = B2.Restrict[eS, Y, X, h] ;
+    module MY = MB[eS, Y, B1.restrict eS Y X h b] ;
+    module MX = MB[eS, X, b] ;
+
+    mr-u : Id (T2.EI Y) (B2.lidE eS Y MY.rho MY.u) (B2.lidE eS Y (R2.rrho MX.rho) (R2.ru MX.rho MX.u)) =
+      transH MY.u-E
+       (transH (apH (m.mE Y) (R1.ruE b.brho b.bu))
+        (transH (m.mE-act Y X h (B1.lidE eS X b.brho b.bu))
+         (transH (apH (T2.E.act Y X h) (symH MX.u-E))
+                 (symH (R2.ruE MX.rho MX.u))))) ;
+
+    mr-v (l : Fin b.br) (W : Ob) (psi : Hom W (prodP Y Iv)) (i : InQ W Y (MY.Sd l).sQ psi)
+      (i' : InQ W Y (R2.rside MX.rho (MX.Sd l)).sQ psi)
+      : Id (T2.EI W) ((MY.Sd l).svE W psi i) ((R2.rside MX.rho (MX.Sd l)).svE W psi i') =
+      transH (MY.S-E l W psi i)
+       (transH (apH (m.mE W) (R1.rsvE b.brho (b.bs l) W psi i))
+        (transH (symH (MX.S-E l W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi)
+                                 (inQ-cyl W Y X h (b.bs l).sQ psi i)))
+         (transH (apH ((MX.Sd l).svE W (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi))
+                      (isProp-InQ W X (b.bs l).sQ (compH W (prodP Y Iv) (prodP X Iv) (cylH Y X h) psi)
+                         (inQ-cyl W Y X h (b.bs l).sQ psi i) (inQ-cyl W Y X h (b.bs l).sQ psi i')))
+                 (symH (R2.rsvE MX.rho (MX.Sd l) W psi i'))))) ;
+
+    mapBox-restr : Id (B2.Box[eS, Y]) (mapBox eS Y (B1.restrict eS Y X h b)) (B2.restrict eS Y X h (mapBox eS X b)) =
+      B2.box-ext eS Y MY.rho (R2.rrho MX.rho) MY.u (R2.ru MX.rho MX.u) b.br MY.Sd (R2.rS (mapBox eS X b))
+        MY.cs (R2.rcs (mapBox eS X b)) MY.cb (R2.rcb (mapBox eS X b))
+        (sg.nt-nat (prodP Y Iv) (prodP X Iv) (cylH Y X h) b.brho)
+        mr-u
+        (\ l t -> refl ((MY.Sd l).sQ t))
+        mr-v ;
+  } ;
+
+  mapBox-restr (eS : El Iv) (Y X : Ob) (h : Hom Y X) (b : B1.Box[eS, X])
+    : Id (B2.Box[eS, Y]) (mapBox eS Y (B1.restrict eS Y X h b)) (B2.restrict eS Y X h (mapBox eS X b)) =
+    MR[eS, Y, X, h, b].mapBox-restr ;
+
+  opaque mapBox-restr ;
+
+  -- fillers related along m
+  FillRel (eS : El Iv) (f' : FibM.FillDef[G', B'].FillOp[eS]) (f : FibM.FillDef[G, B].FillOp[eS]) : U a =
+    (X : Ob) (b : B1.Box[eS, X])
+    -> Id (T2.EI (prodP X Iv)) (m.mE (prodP X Iv) (b.brho, f'.fop X b)) ((mapBox eS X b).brho, f.fop X (mapBox eS X b)) ;
+
+  -- the fillers of related compositions are related
+  fillRel (d : Bool) (co' : B1.CompOp[src d, tgt d]) (co : B2.CompOp[src d, tgt d]) (H : CopOver (src d) (tgt d) co' co)
+    : FillRel (src d) (FibM.MkFill[G', B', d, co'].fillOp) (FibM.MkFill[G, B, d, co].fillOp) =
+    \ X b -> FillOver[a].FO[G', G, sg, B', B, m, d, co', co, H].fillOverOK X b ;
+} ;

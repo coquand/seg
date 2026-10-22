@@ -1,0 +1,185 @@
+-- GCofOne.seg (inside IvBase, any base whose sieves have finite unions):
+-- a partial element is ONE sieve with a section on it (a PSide).  A list of
+-- compatible sides presents the side on the union of its sieves (side); a
+-- contractibility structure on sides (GCofib.ContrOp1) extends any list
+-- through it (Wrap), and then does not see an inserted empty side: the
+-- union is the same side (side-ins), so KESI is a congruence.
+--
+--   bigU      the union of a list of sieves (Un's parameters, with the
+--             characterisation of the maps landing in it)
+--   side      p's sieve qs and value vs (that of any side containing the map)
+--   side-restr  restriction commutes with taking the union
+--   side-ins    an inserted empty side does not change the union
+--   Wrap        kop p = k.kop (side p); kside, kunif, kesi
+
+level l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+open Axioms[l+].FunExtLemmas[fe @(l+)] ;
+module W0 = V[l] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[l] ;
+open GPR.PS ;
+module GCF = GCofib[l] ;
+module GCE = GCofEsi[l] ;
+
+module Un (bigU : (X : Ob) (r : Nat) (Q : Fin r -> Phi X) -> Phi X)
+  (bigU-in : (W X : Ob) (r : Nat) (Q : Fin r -> Phi X) (f : Hom W X) (k : Fin r) (i : Lands W X (Q k) f)
+             -> Lands W X (bigU X r Q) f)
+  (bigU-out : (W X : Ob) (r : Nat) (Q : Fin r -> Phi X) (f : Hom W X) (i : Lands W X (bigU X r Q) f)
+              -> (k : Fin r) * Lands W X (Q k) f) {
+
+  module One (D : PCtx) (C : PTy[D]) {
+    open GPR.TyL[D, C] ;
+    open GCF.Partials[D, C] ;
+    module PE = GCE.PartialsEsi[D, C] ;
+
+    ----------------------------------------------------------------------
+    -- the side of a list: the union of its sieves, the value of any side
+
+    qL (X : Ob) (x : Pt X) (p : Partial[X, x]) (k : Fin p.pr) : Phi X = (p.ps k).pQ ;
+
+    qs (X : Ob) (x : Pt X) (p : Partial[X, x]) : Phi X = bigU X p.pr (qL X x p) ;
+
+    -- the side containing f, chosen by bigU-out
+    wh (X : Ob) (x : Pt X) (p : Partial[X, x]) (W : Ob) (f : Hom W X) (i : Lands W X (qs X x p) f)
+      : (k : Fin p.pr) * Lands W X (p.ps k).pQ f = bigU-out W X p.pr (qL X x p) f i ;
+
+    vs (X : Ob) (x : Pt X) (p : Partial[X, x]) : PvTy X (qs X x p) = \ W f i ->
+      (p.ps (wh X x p W f i).1).pv W f (wh X x p W f i).2 ;
+
+    -- any side containing f gives the value
+    vs-at (X : Ob) (x : Pt X) (p : Partial[X, x]) (k : Fin p.pr) (W : Ob) (f : Hom W X)
+      (i : Lands W X (qs X x p) f) (i' : Lands W X (p.ps k).pQ f) : Id (EI W) (vs X x p W f i) ((p.ps k).pv W f i') =
+      p.pcs (wh X x p W f i).1 k W f (wh X x p W f i).2 i' ;
+
+    in-qs (X : Ob) (x : Pt X) (p : Partial[X, x]) (k : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps k).pQ f)
+      : Lands W X (qs X x p) f = bigU-in W X p.pr (qL X x p) f k i ;
+
+    vppt (X : Ob) (x : Pt X) (p : Partial[X, x]) : PptTy X x (qs X x p) (vs X x p) = \ W f i ->
+      (p.ps (wh X x p W f i).1).ppt W f (wh X x p W f i).2 ;
+
+    vpnat (X : Ob) (x : Pt X) (p : Partial[X, x]) : PnTy X (qs X x p) (vs X x p) = \ W' W chi f i i' ->
+      transH ((p.ps (wh X x p W f i).1).pnat W' W chi f (wh X x p W f i).2
+                (lands-comp W' W X (p.ps (wh X x p W f i).1).pQ f chi (wh X x p W f i).2))
+             (symH (vs-at X x p (wh X x p W f i).1 W' (compH W' W X f chi) i'
+                      (lands-comp W' W X (p.ps (wh X x p W f i).1).pQ f chi (wh X x p W f i).2))) ;
+
+    opaque vppt ; opaque vpnat ;
+
+    side (X : Ob) (x : Pt X) (p : Partial[X, x]) : PSide[X, x] =
+      new PSide[X, x, qs X x p, vs X x p, vppt X x p, vpnat X x p] ;
+
+    ----------------------------------------------------------------------
+    -- restriction commutes with the union
+
+    module Restr (Y X : Ob) (h : Hom Y X) (x : Pt X) (p : Partial[X, x]) {
+      p' : Partial[Y, D.act Y X h x] = restrictP Y X h x p ;
+
+      eQ : Id (Phi Y) (pre Y X h (qs X x p)) (qs Y (D.act Y X h x) p') =
+        phi-ext Y (pre Y X h (qs X x p)) (qs Y (D.act Y X h x) p')
+          (\ W g i -> in-qs Y (D.act Y X h x) p' (wh X x p W (compH W Y X h g) (lands-pre W Y X h (qs X x p) g i)).1 W g
+             (pre-lands W Y X h (p.ps (wh X x p W (compH W Y X h g) (lands-pre W Y X h (qs X x p) g i)).1).pQ g
+                (wh X x p W (compH W Y X h g) (lands-pre W Y X h (qs X x p) g i)).2))
+          (\ W g i -> pre-lands W Y X h (qs X x p) g
+             (in-qs X x p (wh Y (D.act Y X h x) p' W g i).1 W (compH W Y X h g)
+                (lands-pre W Y X h (p.ps (wh Y (D.act Y X h x) p' W g i).1).pQ g (wh Y (D.act Y X h x) p' W g i).2))) ;
+
+      eV : PvEq Y (pre Y X h (qs X x p)) (qs Y (D.act Y X h x) p')
+             (\ W g i -> vs X x p W (compH W Y X h g) (lands-pre W Y X h (qs X x p) g i)) (vs Y (D.act Y X h x) p') =
+        \ W g i i' -> vs-at X x p (wh Y (D.act Y X h x) p' W g i').1 W (compH W Y X h g) (lands-pre W Y X h (qs X x p) g i)
+                        (lands-pre W Y X h (p.ps (wh Y (D.act Y X h x) p' W g i').1).pQ g (wh Y (D.act Y X h x) p' W g i').2) ;
+
+      res : Id (PSide[Y, D.act Y X h x]) (RestrictP[Y, X, h, x].rside (side X x p)) (side Y (D.act Y X h x) p') =
+        psideExt Y (D.act Y X h x) (RestrictP[Y, X, h, x].rside (side X x p)) (side Y (D.act Y X h x) p') eQ eV ;
+    } ;
+
+    side-restr (Y X : Ob) (h : Hom Y X) (x : Pt X) (p : Partial[X, x])
+      : Id (PSide[Y, D.act Y X h x]) (RestrictP[Y, X, h, x].rside (side X x p)) (side Y (D.act Y X h x) (restrictP Y X h x p)) =
+      Restr[Y, X, h, x, p].res ;
+
+    opaque side-restr ;
+
+    ----------------------------------------------------------------------
+    -- an inserted empty side does not change the union
+
+    module Ins (X : Ob) (x : Pt X) (k : Nat) (p p' : Partial[X, x]) (ins : PE.InsP[X, x, k, p, p']) {
+      ltR (n : Nat) (h : IsT (ltb n p'.pr)) : IsT (ltb n (suc p.pr)) = substH (\ m -> IsT (ltb n m)) ins.insp-r h ;
+      ltL (n : Nat) (h : IsT (ltb n (suc p.pr))) : IsT (ltb n p'.pr) = substH (\ m -> IsT (ltb n m)) (symH ins.insp-r) h ;
+
+      -- the index of p a side of p' comes from, when it holds somewhere
+      module Back (W : Ob) (f : Hom W X) (l' : Fin p'.pr) (i : Lands W X (p'.ps l').pQ f) (ne : IsT (not (eqN l'.1 k))) {
+        n : Nat = unsk k l'.1 ;
+        h : IsT (ltb n p.pr) = unsk-lt k l'.1 p.pr ins.insp-k (ltR l'.1 l'.2) ne ;
+        h' : IsT (ltb (skipN k n) p'.pr) = ltL (skipN k n) (skipN-lt k n p.pr ins.insp-k h) ;
+        e : Id (Fin p'.pr) l' (skipN k n, h') = fin-eq p'.pr l' (skipN k n, h') (symH (skipN-unsk k l'.1 ne)) ;
+        i2 : Lands W X (p'.ps (skipN k n, h')).pQ f = substH (\ z -> Lands W X (p'.ps z).pQ f) e i ;
+        i3 : Lands W X (p.ps (n, h)).pQ f = lands-sub W X (p'.ps (skipN k n, h')).pQ (p.ps (n, h)).pQ (ins.insp-Q n h h') f i2 ;
+      } ;
+
+      -- the inserted side holds nowhere
+      noK (W : Ob) (f : Hom W X) (l' : Fin p'.pr) (i : Lands W X (p'.ps l').pQ f) (e : Id Nat l'.1 k) : Empty =
+        empty-lands W X f
+          (lands-sub W X (p'.ps (k, substH (\ z -> IsT (ltb z p'.pr)) e l'.2)).pQ (emptyS X)
+             (ins.insp-e (substH (\ z -> IsT (ltb z p'.pr)) e l'.2)) f
+             (substH (\ z -> Lands W X (p'.ps z).pQ f) (fin-eq p'.pr l' (k, substH (\ z -> IsT (ltb z p'.pr)) e l'.2) e) i)) ;
+
+      fwdI (n : Fin p.pr) : Fin p'.pr = (skipN k n.1, ltL (skipN k n.1) (skipN-lt k n.1 p.pr ins.insp-k n.2)) ;
+
+      -- a side of p' holding at f is a side of p (the inserted one holds nowhere)
+      BkTy (W : Ob) (f : Hom W X) : U a =
+        (n : Fin p.pr) * (Lands W X (p'.ps (fwdI n)).pQ f * Lands W X (p.ps n).pQ f) ;
+
+      bk (W : Ob) (f : Hom W X) (l' : Fin p'.pr) (i : Lands W X (p'.ps l').pQ f) : BkTy W f =
+        eqN-dec (BkTy W f) l'.1 k
+          (\ e -> absurd (BkTy W f) (noK W f l' i e))
+          (\ ne -> ((Back[W, f, l', i, ne].n, Back[W, f, l', i, ne].h), (Back[W, f, l', i, ne].i2, Back[W, f, l', i, ne].i3))) ;
+
+      bkU (W : Ob) (f : Hom W X) (i : Lands W X (qs X x p') f) : BkTy W f = bk W f (wh X x p' W f i).1 (wh X x p' W f i).2 ;
+
+      eQ : Id (Phi X) (qs X x p') (qs X x p) =
+        phi-ext X (qs X x p') (qs X x p)
+          (\ W f i -> in-qs X x p (bkU W f i).1 W f (bkU W f i).2.2)
+          (\ W f i -> in-qs X x p' (fwdI (wh X x p W f i).1) W f
+             (lands-sub W X (p.ps (wh X x p W f i).1).pQ (p'.ps (fwdI (wh X x p W f i).1)).pQ
+                (symH (ins.insp-Q (wh X x p W f i).1.1 (wh X x p W f i).1.2 (fwdI (wh X x p W f i).1).2)) f (wh X x p W f i).2)) ;
+
+      eV : PvEq X (qs X x p') (qs X x p) (vs X x p') (vs X x p) = \ W f i i' ->
+        transH (vs-at X x p' (fwdI (bkU W f i).1) W f i (bkU W f i).2.1)
+          (transH (ins.insp-v (bkU W f i).1.1 (bkU W f i).1.2 (fwdI (bkU W f i).1).2 W f (bkU W f i).2.1 (bkU W f i).2.2)
+                  (symH (vs-at X x p (bkU W f i).1 W f i' (bkU W f i).2.2))) ;
+
+      res : Id (PSide[X, x]) (side X x p') (side X x p) = psideExt X x (side X x p') (side X x p) eQ eV ;
+    } ;
+
+    side-ins (X : Ob) (x : Pt X) (k : Nat) (p p' : Partial[X, x]) (ins : PE.InsP[X, x, k, p, p'])
+      : Id (PSide[X, x]) (side X x p') (side X x p) = Ins[X, x, k, p, p', ins].res ;
+
+    opaque side-ins ;
+
+    ----------------------------------------------------------------------
+    -- a contractibility structure on sides, extended to lists
+
+    module Wrap (k : ContrOp1) {
+      kop (X : Ob) (x : Pt X) (p : Partial[X, x]) : T X x = k.kop X x (side X x p) ;
+
+      kside (X : Ob) (x : Pt X) (p : Partial[X, x]) (l : Fin p.pr) (W : Ob) (f : Hom W X) (i : Lands W X (p.ps l).pQ f)
+        : Id (EI W) (E.act W X f (x, kop X x p)) ((p.ps l).pv W f i) =
+        transH (k.kside X x (side X x p) W f (in-qs X x p l W f i))
+               (vs-at X x p l W f (in-qs X x p l W f i) i) ;
+
+      kunif (Y X : Ob) (h : Hom Y X) (x : Pt X) (p : Partial[X, x])
+        : Id (EI Y) (E.act Y X h (x, kop X x p)) (D.act Y X h x, kop Y (D.act Y X h x) (restrictP Y X h x p)) =
+        transH (k.kunif Y X h x (side X x p))
+               (apH {PSide[Y, D.act Y X h x]} {EI Y} (\ z -> (D.act Y X h x, k.kop Y (D.act Y X h x) z)) (side-restr Y X h x p)) ;
+
+      contr : ContrOp = new ContrOp[kop, kside, kunif] ;
+
+      -- KESI: the union does not see an inserted empty side
+      kesi : PE.KESI contr = \ X x n p p' ins -> apH (k.kop X x) (side-ins X x n p p' ins) ;
+    } ;
+  } ;
+} ;

@@ -1,0 +1,59 @@
+-- GEquivSub.seg (inside IvBase, any base): maps along a substitution
+-- s : D -> G (step G1 of the univalence plan, CYLINDER.md "Strictness =
+-- equality of codes").
+--
+--   SubMap    a map al : B -> A over G gives al[s] : B[s] -> A[s] over D
+--             (read in A, al[s] is al: mE-V)
+-- (SubE and ContrSub, the moves of points and of contractibility
+-- structures along s, are in GCofib.)
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+module GCF = GCofib[lv] ;
+
+------------------------------------------------------------------------
+-- maps along a substitution
+
+module SubMap (D G : PCtx) (s : PSub[D, G]) (B A : PTy[G]) (al : PMap[G, B, A]) {
+  module SB = GCF.SubE[D, G, s, B] ;
+  module SA = GCF.SubE[D, G, s, A] ;
+
+  mE (X : Ob) (w : SB.TS.EI X) : SA.TS.EI X =
+    (w.1, SA.TC.fromE X (s.nt X w.1) (al.mE X (SB.mV X w)) (al.mpt X (SB.mV X w))) ;
+
+  -- read in A, the map is al
+  mE-V (X : Ob) (w : SB.TS.EI X) : Id (SA.TC.EI X) (SA.mV X (mE X w)) (al.mE X (SB.mV X w)) =
+    SA.TC.fromE-eq X (s.nt X w.1) (al.mE X (SB.mV X w)) (al.mpt X (SB.mV X w)) ;
+
+  mnat (Y X : Ob) (h : Hom Y X) (w : SB.TS.EI X)
+    : Id (SA.TS.EI Y) (mE Y (SB.TS.E.act Y X h w)) (SA.TS.E.act Y X h (mE X w)) =
+    SA.mV-inj Y (mE Y (SB.TS.E.act Y X h w)) (SA.TS.E.act Y X h (mE X w)) (refl (D.act Y X h w.1))
+      (calc (SA.TC.EI Y) {
+          SA.mV Y (mE Y (SB.TS.E.act Y X h w))
+        =< mE-V Y (SB.TS.E.act Y X h w) >
+          al.mE Y (SB.mV Y (SB.TS.E.act Y X h w))
+        =< apH (al.mE Y) (SB.mV-nat Y X h w) >
+          al.mE Y (SB.TC.E.act Y X h (SB.mV X w))
+        =< al.mnat Y X h (SB.mV X w) >
+          SA.TC.E.act Y X h (al.mE X (SB.mV X w))
+        =< apH (SA.TC.E.act Y X h) (symH (mE-V X w)) >
+          SA.TC.E.act Y X h (SA.mV X (mE X w))
+        =< symH (SA.mV-nat Y X h (mE X w)) >
+          SA.mV Y (SA.TS.E.act Y X h (mE X w)) }) ;
+
+  opaque mnat ;
+
+  subMap : PMap[D, subTy D G B s, subTy D G A s] = new PMap[D, subTy D G B s, subTy D G A s, mE, \ X w -> refl w.1, mnat] ;
+} ;
+
+------------------------------------------------------------------------
+-- contractibility structures along a substitution

@@ -1,0 +1,194 @@
+-- GPathRes.seg (inside IvBase): the composition problem of a path type
+-- over a line (GPathProb) under restriction.
+--   R1: along g : V -> W, the problem at (W , f , i) restricted is the
+--       problem at (V , f g , i g)   (the composite path is natural)
+--   R2: along h : Y -> X, the problem of the restricted path problem at
+--       (W , f , i) is the problem at (W , h f , i)   (uniformity)
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+
+module PathOverRes (K H : PCtx) (A : PTy[H]) (dd : Bool)
+  (s : (X : Ob) -> W0.Ix (K.ob X) -> (W : Ob) -> Hom W X -> Hom W Iv -> W0.Ix (H.ob W))
+  (sN : (J I : Ob) (h : Hom J I) (x : W0.Ix (K.ob I)) (y : W0.Ix (K.ob J)) (e : Id (W0.Ix (K.ob J)) (K.act J I h x) y)
+        (W : Ob) (f : Hom W J) (i : Hom W Iv) -> Id (W0.Ix (H.ob W)) (s I x W (compH W J I h f) i) (s J y W f i))
+  (sF : (X : Ob) (y : W0.Ix (K.ob X)) (V W : Ob) (g : Hom V W) (f : Hom W X) (i : Hom W Iv)
+        -> Id (W0.Ix (H.ob V)) (H.act V W g (s X y W f i)) (s X y V (compH V W X f g) (compH V W Iv i g)))
+  (aE bE : (W : Ob) -> W0.Ix (K.ob W) -> GPR.TyL[H, A].EI W)
+  (aE-act : (W X : Ob) (f : Hom W X) (x : W0.Ix (K.ob X))
+            -> Id (GPR.TyL[H, A].EI W) (GPR.TyL[H, A].E.act W X f (aE X x)) (aE W (K.act W X f x)))
+  (bE-act : (W X : Ob) (f : Hom W X) (x : W0.Ix (K.ob X))
+            -> Id (GPR.TyL[H, A].EI W) (GPR.TyL[H, A].E.act W X f (bE X x)) (bE W (K.act W X f x)))
+  (aE-pt : (W : Ob) (y : W0.Ix (K.ob W)) -> Id (W0.Ix (H.ob W)) (aE W y).1 (s W y W (idH W) (ptH W (src dd))))
+  (bE-pt : (W : Ob) (y : W0.Ix (K.ob W)) -> Id (W0.Ix (H.ob W)) (bE W y).1 (s W y W (idH W) (ptH W (tgt dd))))
+  (e e' : IPt) (ca : CompAtP[GFam[lv].famPath, H, A, e, e'].CompAt) {
+  module PP = GPathProb[lv].PathOverProb[K, H, A, dd, s, sN, sF, aE, bE, aE-act, bE-act, aE-pt, bE-pt, e, e', ca] ;
+  module PT = PP.PT ;
+  module FM = GFam[lv] ;
+  module FG = PP.FG ;
+  module CA = PP.CA ;
+  module CP = PP.CP ;
+  module KA' = PP.KA' ;
+  module LA = PP.LA ;
+  module TA = PP.TA ;
+
+  ----------------------------------------------------------------------
+  -- R1: along g : V -> W
+
+  module R1 (X : Ob) (xh : CP.TV.EI X) (P : CP.PT.Partial[X, xh]) (W : Ob) (f : Hom W X) (i : Hom W Iv) (V : Ob) (g : Hom V W) {
+    module PW = PP.Prob[X, xh, P, W, f, i] ;
+    module PV = PP.Prob[X, xh, P, V, compH V W X f g, compH V W Iv i g] ;
+
+    -- f ((g g') g'') = (f g) (g' g'')
+    a3 (V' : Ob) (g' : Hom V' V) (V'' : Ob) (g'' : Hom V'' V')
+      : Id (Hom V'' X) (compH V'' W X f (compH V'' V' W (compH V' V W g g') g'')) (compH V'' V X (compH V W X f g) (compH V'' V' V g' g'')) =
+      transH (apH (\ k -> compH V'' W X f k) (comp-assoc V'' V' V W g g' g''))
+             (symH (comp-assoc V'' V W X f g (compH V'' V' V g' g''))) ;
+
+    pt : Id (CA.TV.EI V) (CA.TV.E.act V W g PW.x') PV.x' =
+      CA.EK.tv-eq V (CA.TV.E.act V W g PW.x') PV.x'
+        (FG.fam-eq V (FG.actF V W g PW.gW) PV.gW (\ V' g' j ->
+           PP.sEq V' _ _ (apH (\ k -> xh.1.1 V' k j) (symH (comp-assoc V' V W X f g g'))) _ _ (symH (comp-assoc V' V W Iv i g g'))))
+        (transH (PW.endP V g) (symH PV.x'-E)) ;
+
+    module RP = CA.PT.RestrictP[V, W, g, PW.x'] ;
+
+    -- the subsets
+    eQ1 : (n : Nat) (hn : IsT (ltb (suc n) (suc (suc P.pr)))) -> Id (Phi V) (pre V W g (PW.S1 n hn).pQ) (PV.S1 n hn).pQ = split {
+      zero -> \ hn -> pre-comp V W Iv g i (ptS (tgt dd)) ;
+      suc k -> \ hn -> pre-comp V W X g f (P.ps (k, hn)).pQ } ;
+
+    eQ : (n : Nat) (hn : IsT (ltb n (suc (suc P.pr)))) -> Id (Phi V) (pre V W g (PW.S'' n hn).pQ) (PV.S'' n hn).pQ = split {
+      zero -> \ hn -> pre-comp V W Iv g i (ptS (src dd)) ;
+      suc n -> \ hn -> eQ1 n hn } ;
+
+    -- the values
+    LevR (n : Nat) (hn : IsT (ltb n (suc (suc P.pr)))) : U lv =
+      (V' : Ob) (g' : Hom V' V) (h : Lands V' V (RP.rside (PW.S'' n hn)).pQ g') (h' : Lands V' V (PV.S'' n hn).pQ g')
+      (V'' : Ob) (g'' : Hom V'' V') (j : Hom V'' Iv)
+      -> Id (TA.EI V'') (FM.famConn.levA H A V' (CA.EK.lineL V' ((RP.rside (PW.S'' n hn)).pv V' g' h)) V'' g'' j)
+                        (FM.famConn.levA H A V' (CA.EK.lineL V' ((PV.S'' n hn).pv V' g' h')) V'' g'' j) ;
+
+    ev1 : (n : Nat) (hn : IsT (ltb (suc n) (suc (suc P.pr)))) -> LevR (suc n) hn = split {
+      zero -> \ hn V' g' h h' V'' g'' j ->
+        transH (PW.B1.pv-lev V' (compH V' V W g g') (lands-pre V' V W g PW.B1.Q g' h) V'' g'' j)
+          (transH (PT.bE-eq V'' _ _ (apH (\ k -> xh.1.1 V'' k j) (a3 V' g' V'' g'')))
+                  (symH (PV.B1.pv-lev V' g' h' V'' g'' j))) ;
+      suc k -> \ hn V' g' h h' V'' g'' j ->
+        transH (PW.SL[(k, hn)].pv-lev V' (compH V' V W g g') (lands-pre V' V W g PW.SL[(k, hn)].Q g' h) V'' g'' j)
+          (transH (apH (\ w -> (PP.lvP V' w V'' g'' j).2.1.1 V'' (idH V'') (PW.ic V' (compH V' V W g g') V'' g''))
+                       (CP.PT.pv-hom X xh (P.ps (k, hn)) V' (compH V' W X f (compH V' V W g g')) (compH V' V X (compH V W X f g) g')
+                          (symH (comp-assoc V' V W X f g g'))
+                          (PW.SL[(k, hn)].hl V' (compH V' V W g g') (lands-pre V' V W g PW.SL[(k, hn)].Q g' h))
+                          (PV.SL[(k, hn)].hl V' g' h')))
+            (transH (apH (\ k' -> (PP.lvP V' (PV.SL[(k, hn)].u V' g' h') V'' g'' j).2.1.1 V'' (idH V'') (compH V'' V' Iv k' g''))
+                         (symH (comp-assoc V' V W Iv i g g')))
+                    (symH (PV.SL[(k, hn)].pv-lev V' g' h' V'' g'' j)))) } ;
+
+    ev : (n : Nat) (hn : IsT (ltb n (suc (suc P.pr)))) -> LevR n hn = split {
+      zero -> \ hn V' g' h h' V'' g'' j ->
+        transH (PW.B0.pv-lev V' (compH V' V W g g') (lands-pre V' V W g PW.B0.Q g' h) V'' g'' j)
+          (transH (PT.aE-eq V'' _ _ (apH (\ k -> xh.1.1 V'' k j) (a3 V' g' V'' g'')))
+                  (symH (PV.B0.pv-lev V' g' h' V'' g'' j))) ;
+      suc n -> \ hn -> ev1 n hn } ;
+
+    ptR (n : Nat) (hn : IsT (ltb n (suc (suc P.pr)))) (V' : Ob) (g' : Hom V' V)
+      (h : Lands V' V (RP.rside (PW.S'' n hn)).pQ g') (h' : Lands V' V (PV.S'' n hn).pQ g')
+      : Id (CA.TV.EI V') ((RP.rside (PW.S'' n hn)).pv V' g' h).1 ((PV.S'' n hn).pv V' g' h').1 =
+      transH ((RP.rside (PW.S'' n hn)).ppt V' g' h)
+        (transH (apH (CA.TV.E.act V' V g') pt) (symH ((PV.S'' n hn).ppt V' g' h'))) ;
+
+    RPeq : Id (CA.PT.Partial[V, PV.x'])
+              (subst (CA.TV.EI V) (\ z -> CA.PT.Partial[V, z]) (CA.TV.E.act V W g PW.x') PV.x' pt (CA.PT.restrictP V W g PW.x' PW.pA)) PV.pA =
+      CA.PT.partExtH V (CA.TV.E.act V W g PW.x') PV.x' pt (CA.PT.restrictP V W g PW.x' PW.pA) PV.pA
+        (refl (suc (suc P.pr)))
+        (\ l -> eQ l.1 l.2)
+        (\ l V' g' h h' -> LA.ts-ext V' ((RP.rside (PW.S'' l.1 l.2)).pv V' g' h) ((PV.S'' l.1 l.2).pv V' g' h')
+                             (ptR l.1 l.2 V' g' h h') (ev l.1 l.2 V' g' h h')) ;
+
+    cE-nat : Id (TA.EI V) (TA.E.act V W g PW.cE) PV.cE =
+      calc (TA.EI V) {
+          TA.E.act V W g (KA'.endE W (PW.x'.1, ca.cop W PW.x' PW.pA))
+        =< symH (KA'.endE-act V W g (PW.x'.1, ca.cop W PW.x' PW.pA)) >
+          KA'.endE V (CA.TV'.E.act V W g (PW.x'.1, ca.cop W PW.x' PW.pA))
+        =< apH (KA'.endE V)
+             (transH (ca.cunif V W g PW.x' PW.pA)
+                     (CA.cop-cong ca V (CA.TV.E.act V W g PW.x') PV.x' pt (CA.PT.restrictP V W g PW.x' PW.pA) PV.pA RPeq)) >
+          KA'.endE V (PV.x'.1, ca.cop V PV.x' PV.pA) } ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- R2: along h : Y -> X
+
+  module R2 (Y X : Ob) (h : Hom Y X) (xh : CP.TV.EI X) (P : CP.PT.Partial[X, xh]) (W : Ob) (f : Hom W Y) (i : Hom W Iv) {
+    module PY = PP.Prob[Y, CP.TV.E.act Y X h xh, CP.PT.restrictP Y X h xh P, W, f, i] ;
+    module PX = PP.Prob[X, xh, P, W, compH W Y X h f, i] ;
+
+    a2 (V' : Ob) (g' : Hom V' W) : Id (Hom V' X) (compH V' Y X h (compH V' W Y f g')) (compH V' W X (compH W Y X h f) g') =
+      symH (comp-assoc V' W Y X h f g') ;
+
+    pt : Id (CA.TV.EI W) PY.x' PX.x' =
+      CA.EK.tv-eq W PY.x' PX.x' (FG.fam-eq W PY.gW PX.gW (\ V' g' j -> PP.sEq V' _ _ (apH (\ k -> xh.1.1 V' k j) (a2 V' g')) _ _ (refl (compH V' W Iv i g'))))
+        (transH PY.x'-E (symH PX.x'-E)) ;
+
+    eQ1 : (n : Nat) (hn : IsT (ltb (suc n) (suc (suc P.pr)))) -> Id (Phi W) (PY.S1 n hn).pQ (PX.S1 n hn).pQ = split {
+      zero -> \ hn -> refl (pre W Iv i (ptS (tgt dd))) ;
+      suc k -> \ hn -> pre-comp W Y X f h (P.ps (k, hn)).pQ } ;
+
+    eQ : (n : Nat) (hn : IsT (ltb n (suc (suc P.pr)))) -> Id (Phi W) (PY.S'' n hn).pQ (PX.S'' n hn).pQ = split {
+      zero -> \ hn -> refl (pre W Iv i (ptS (src dd))) ;
+      suc n -> \ hn -> eQ1 n hn } ;
+
+    LevR (n : Nat) (hn : IsT (ltb n (suc (suc P.pr)))) : U lv =
+      (V : Ob) (g : Hom V W) (hh : Lands V W (PY.S'' n hn).pQ g) (hh' : Lands V W (PX.S'' n hn).pQ g)
+      (V' : Ob) (g' : Hom V' V) (j : Hom V' Iv)
+      -> Id (TA.EI V') (FM.famConn.levA H A V (CA.EK.lineL V ((PY.S'' n hn).pv V g hh)) V' g' j)
+                       (FM.famConn.levA H A V (CA.EK.lineL V ((PX.S'' n hn).pv V g hh')) V' g' j) ;
+
+    -- h (f (g g')) = (h f) (g g')
+    a3 (V : Ob) (g : Hom V W) (V' : Ob) (g' : Hom V' V)
+      : Id (Hom V' X) (compH V' Y X h (compH V' W Y f (compH V' V W g g'))) (compH V' W X (compH W Y X h f) (compH V' V W g g')) =
+      a2 V' (compH V' V W g g') ;
+
+    ev1 : (n : Nat) (hn : IsT (ltb (suc n) (suc (suc P.pr)))) -> LevR (suc n) hn = split {
+      zero -> \ hn V g hh hh' V' g' j ->
+        transH (PY.B1.pv-lev V g hh V' g' j)
+          (transH (PT.bE-eq V' _ _ (apH (\ k -> xh.1.1 V' k j) (a3 V g V' g'))) (symH (PX.B1.pv-lev V g hh' V' g' j))) ;
+      suc k -> \ hn V g hh hh' V' g' j ->
+        transH (PY.SL[(k, hn)].pv-lev V g hh V' g' j)
+          (transH (apH (\ w -> (PP.lvP V w V' g' j).2.1.1 V' (idH V') (PX.ic V g V' g'))
+                       (CP.PT.pv-hom X xh (P.ps (k, hn)) V (compH V Y X h (compH V W Y f g)) (compH V W X (compH W Y X h f) g)
+                          (a2 V g) (lands-pre V Y X h (P.ps (k, hn)).pQ (compH V W Y f g) (PY.SL[(k, hn)].hl V g hh))
+                          (PX.SL[(k, hn)].hl V g hh')))
+                  (symH (PX.SL[(k, hn)].pv-lev V g hh' V' g' j))) } ;
+
+    ev : (n : Nat) (hn : IsT (ltb n (suc (suc P.pr)))) -> LevR n hn = split {
+      zero -> \ hn V g hh hh' V' g' j ->
+        transH (PY.B0.pv-lev V g hh V' g' j)
+          (transH (PT.aE-eq V' _ _ (apH (\ k -> xh.1.1 V' k j) (a3 V g V' g'))) (symH (PX.B0.pv-lev V g hh' V' g' j))) ;
+      suc n -> \ hn -> ev1 n hn } ;
+
+    ptR (n : Nat) (hn : IsT (ltb n (suc (suc P.pr)))) (V : Ob) (g : Hom V W)
+      (hh : Lands V W (PY.S'' n hn).pQ g) (hh' : Lands V W (PX.S'' n hn).pQ g)
+      : Id (CA.TV.EI V) ((PY.S'' n hn).pv V g hh).1 ((PX.S'' n hn).pv V g hh').1 =
+      transH ((PY.S'' n hn).ppt V g hh) (transH (apH (CA.TV.E.act V W g) pt) (symH ((PX.S'' n hn).ppt V g hh'))) ;
+
+    RPeq : Id (CA.PT.Partial[W, PX.x']) (subst (CA.TV.EI W) (\ z -> CA.PT.Partial[W, z]) PY.x' PX.x' pt PY.pA) PX.pA =
+      CA.PT.partExtH W PY.x' PX.x' pt PY.pA PX.pA (refl (suc (suc P.pr)))
+        (\ l -> eQ l.1 l.2)
+        (\ l V g hh hh' -> LA.ts-ext V ((PY.S'' l.1 l.2).pv V g hh) ((PX.S'' l.1 l.2).pv V g hh')
+                             (ptR l.1 l.2 V g hh hh') (ev l.1 l.2 V g hh hh')) ;
+
+    cE-eq : Id (TA.EI W) PY.cE PX.cE =
+      apH (KA'.endE W) (CA.cop-cong ca W PY.x' PX.x' pt PY.pA PX.pA RPeq) ;
+  } ;
+} ;

@@ -1,0 +1,139 @@
+-- GExtSub2.seg (inside IvBase, any base): Ext along a substitution, the
+-- local data (step (A) of Ext in local-data form).
+--
+-- For s : D' -> G, the data alpha = (A , psi , B , al) over G have a
+-- substituted version over D': A[s], psi[s] (generator-wise: the
+-- DEFINITION of substitution on the list form of cofibrations), B along
+-- the lift sR : D'|psi[s] -> G|psi, al along sR.  Their local data at d
+-- are the local data of alpha at s d (ldEq, by LD-ext): the points differ
+-- only by s's naturality, full only by fullS (read through full-id /
+-- full-of-id, never by generator index).
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+open VCode[a] ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+module GSB = GEquivSub[a] ;
+module GL = GEqLaws[a] ;
+
+------------------------------------------------------------------------
+-- moving values along paths of points
+
+-- transport along a path of codes is transport along the path of points
+mvPt (D : PCtx) (C : PTy[D]) (W : Ob) (x x' : W0.Ix (D.ob W)) (P : Id (W0.Ix (D.ob W)) x x') (Q : Id W0.V (C.tob W x) (C.tob W x'))
+  (b : W0.Ix (C.tob W x)) : Id (W0.Ix (C.tob W x')) (substIx (C.tob W x) (C.tob W x') Q b) (PR.TyL[D, C].coeT W x x' P b) =
+  transH (apH (\ q -> substIx (C.tob W x) (C.tob W x') q b) (W0.isSetV (C.tob W x) (C.tob W x') Q (ap (W0.Ix (D.ob W)) W0.V (C.tob W) x x' P)))
+         (symH (subst-ap (W0.Ix (D.ob W)) W0.V (C.tob W) (\ v -> W0.Ix v) x x' P b)) ;
+
+-- the action, moved at its target ...
+tactMove (D : PCtx) (C : PTy[D]) (J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) (y y' : W0.Ix (D.ob J))
+  (e : Id (W0.Ix (D.ob J)) (D.act J I f x) y) (e' : Id (W0.Ix (D.ob J)) (D.act J I f x) y') (p : Id (W0.Ix (D.ob J)) y y') (b : W0.Ix (C.tob I x))
+  : Id (W0.Ix (C.tob J y')) (PR.TyL[D, C].coeT J y y' p (C.tact J I f x y e b)) (C.tact J I f x y' e' b) =
+  idJ (W0.Ix (D.ob J)) y
+    (\ y2 p2 -> (e2 : Id (W0.Ix (D.ob J)) (D.act J I f x) y2)
+       -> Id (W0.Ix (C.tob J y2)) (PR.TyL[D, C].coeT J y y2 p2 (C.tact J I f x y e b)) (C.tact J I f x y2 e2 b))
+    (\ e2 -> tact-irr D C J I f x y e e2 b) y' p e' ;
+
+-- ... and at its source
+tactSrc (D : PCtx) (C : PTy[D]) (J I : Ob) (f : Hom J I) (x x' : W0.Ix (D.ob I)) (y : W0.Ix (D.ob J)) (p : Id (W0.Ix (D.ob I)) x x')
+  (e : Id (W0.Ix (D.ob J)) (D.act J I f x') y) (e' : Id (W0.Ix (D.ob J)) (D.act J I f x) y) (b : W0.Ix (C.tob I x))
+  : Id (W0.Ix (C.tob J y)) (C.tact J I f x' y e (PR.TyL[D, C].coeT I x x' p b)) (C.tact J I f x y e' b) =
+  idJ (W0.Ix (D.ob I)) x
+    (\ x2 p2 -> (e2 : Id (W0.Ix (D.ob J)) (D.act J I f x2) y)
+       -> Id (W0.Ix (C.tob J y)) (C.tact J I f x2 y e2 (PR.TyL[D, C].coeT I x x2 p2 b)) (C.tact J I f x y e' b))
+    (\ e2 -> tact-irr D C J I f x y e2 e' b) x' p e ;
+
+opaque mvPt ; opaque tactMove ; opaque tactSrc ;
+
+------------------------------------------------------------------------
+-- the substituted data.  The cofibration on D' is any psi' with the extent
+-- of psi along s (fullS): ExtSub reads full only through fullS.  The
+-- generator-wise form (cQ2 , cnat2) with GQ (generators equal to psi's along
+-- s) gives one (PQ); the default is psi[s] generator-wise (Dflt).  A
+-- re-presentation of psi (same extent, another list) is the case s = id.
+
+module Dflt (G : PCtx) (psi : GP.Cof[G]) (D' : PCtx) (s : PSub[D', G]) {
+  cQ2 (X : Ob) (d : W0.Ix (D'.ob X)) (l : Fin psi.cr) : Phi X = psi.cQ X (s.nt X d) l ;
+  cnat2 (Y X : Ob) (h : Hom Y X) (d : W0.Ix (D'.ob X)) (l : Fin psi.cr) : Id (Phi Y) (cQ2 Y (D'.act Y X h d) l) (pre Y X h (cQ2 X d l)) =
+    transH (apH (\ z -> psi.cQ Y z l) (s.nt-nat Y X h d)) (psi.cnat Y X h (s.nt X d) l) ;
+  GQ (X : Ob) (d : W0.Ix (D'.ob X)) (l : Fin psi.cr) : Id (Phi X) (cQ2 X d l) (psi.cQ X (s.nt X d) l) = refl (psi.cQ X (s.nt X d) l) ;
+} ;
+
+-- the generator-wise form: psi' from (cQ2 , cnat2), fullS from GQ
+module PQ (G : PCtx) (psi : GP.Cof[G]) (D' : PCtx) (s : PSub[D', G])
+  (cQ2 : (X : Ob) (d : W0.Ix (D'.ob X)) (l : Fin psi.cr) -> Phi X)
+  (cnat2 : (Y X : Ob) (h : Hom Y X) (d : W0.Ix (D'.ob X)) (l : Fin psi.cr) -> Id (Phi Y) (cQ2 Y (D'.act Y X h d) l) (pre Y X h (cQ2 X d l)))
+  (GQ : (X : Ob) (d : W0.Ix (D'.ob X)) (l : Fin psi.cr) -> Id (Phi X) (cQ2 X d l) (psi.cQ X (s.nt X d) l)) {
+  module CL = GP.CofL[G, psi] ;
+
+  psi' : GP.Cof[D'] = GP.mkCof D' psi.cr cQ2 cnat2 ;
+
+  module CL' = GP.CofL[D', psi'] ;
+
+  fullS (X : Ob) (d : W0.Ix (D'.ob X)) : Id Bool (CL'.full X d) (CL.full X (s.nt X d)) =
+    bool-ext (CL'.full X d) (CL.full X (s.nt X d))
+      (\ hq -> CL.full-of-id X (s.nt X d) ((CL'.full-id X d hq).1,
+                  substH (\ R -> Lands X X R (idH X)) (GQ X d (CL'.full-id X d hq).1) (CL'.full-id X d hq).2))
+      (\ hq -> CL'.full-of-id X d ((CL.full-id X (s.nt X d) hq).1,
+                  substH (\ R -> Lands X X R (idH X)) (symH (GQ X d (CL.full-id X (s.nt X d) hq).1)) (CL.full-id X (s.nt X d) hq).2)) ;
+} ;
+
+
+module ExtSub (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D'])
+  (fullS : (X : Ob) (d : W0.Ix (D'.ob X)) -> Id Bool (GP.CofL[D', psi'].full X d) (GP.CofL[G, psi].full X (s.nt X d))) {
+  module CL = GP.CofL[G, psi] ;
+  module ED = GExt[a].ExtDef[G, A, psi] ;
+  module EB = ED.ExtB[B, al] ;
+
+  module CL' = GP.CofL[D', psi'] ;
+
+  -- the lift of s to the extents
+  sRnt (X : Ob) (w : W0.Ix (CL'.resCtx.ob X)) : W0.Ix (CL.resCtx.ob X) =
+    (s.nt X w.1, subst Bool (\ c -> IsT c) (CL'.full X w.1) (CL.full X (s.nt X w.1)) (fullS X w.1) w.2) ;
+
+  sR : PSub[CL'.resCtx, CL.resCtx] =
+    new PSub[CL'.resCtx, CL.resCtx, sRnt, \ Y X h w -> CL.res-eq Y (sRnt Y (CL'.resCtx.act Y X h w)) (CL.resCtx.act Y X h (sRnt X w)) (s.nt-nat Y X h w.1)] ;
+
+  A' : PTy[D'] = subTy D' G A s ;
+  B' : PTy[CL'.resCtx] = subTy CL'.resCtx CL.resCtx B sR ;
+
+  AL1 : PTy[CL'.resCtx] = subTy CL'.resCtx CL.resCtx (subTy CL.resCtx G A CL.inclR) sR ;
+  AL2 : PTy[CL'.resCtx] = subTy CL'.resCtx D' A' CL'.inclR ;
+
+  QA : Id (PTy[CL'.resCtx]) AL1 AL2 =
+    ty-ext2 CL'.resCtx AL1 AL2 (refl AL1.tob)
+      (\ J I f x y e b -> tact-irr G A J I f (s.nt I x.1) (s.nt J y.1) _ _ b) ;
+
+  module SM = GSB.SubMap[CL'.resCtx, CL.resCtx, sR, B, subTy CL.resCtx G A CL.inclR, al] ;
+
+  al' : PMap[CL'.resCtx, B', AL2] = subst (PTy[CL'.resCtx]) (\ T -> PMap[CL'.resCtx, B', T]) AL1 AL2 QA SM.subMap ;
+
+  -- read in A, al' is SubMap's map
+  al'-mE (W : Ob) (w : PR.TyL[CL'.resCtx, B'].EI W) : Id (PR.TyL[CL'.resCtx, AL2].EI W) (al'.mE W w) (SM.mE W w) =
+    transH (idJ (PTy[CL'.resCtx]) AL1
+              (\ T2 Q2 -> Id (PR.TyL[CL'.resCtx, T2].EI W)
+                             ((subst (PTy[CL'.resCtx]) (\ T -> PMap[CL'.resCtx, B', T]) AL1 T2 Q2 SM.subMap).mE W w)
+                             (GL.TriL[CL'.resCtx].trE W AL1 T2 Q2 (SM.mE W w)))
+              (refl (SM.mE W w)) AL2 QA)
+           (GL.TriL[CL'.resCtx].trE-tob W AL1 AL2 QA (refl AL1.tob) (SM.mE W w)) ;
+
+  module ED' = GExt[a].ExtDef[D', A', psi'] ;
+  module EB' = ED'.ExtB[B', al'] ;
+
+  -- al' read as a value is al at the lifted point
+  alFeq (W : Ob) (z : W0.Ix (CL'.resCtx.ob W)) (b : W0.Ix (B.tob W (sRnt W z)))
+    : Id (W0.Ix (A.tob W (s.nt W z.1))) (EB'.alF W z b) (EB.alF W (sRnt W z) b) =
+    PR.TyL[CL'.resCtx, AL2].pr-inj W z (EB'.alF W z b) (EB.alF W (sRnt W z) b)
+      (transH (PR.TyL[CL'.resCtx, AL2].fromE-eq W z (al'.mE W (z, b)) (al'.mpt W (z, b))) (al'-mE W (z, b))) ;
+
+  opaque al'-mE ; opaque alFeq ;
+} ;

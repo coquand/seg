@@ -1,0 +1,544 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.6cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{enumitem}
+\usepackage{xspace}
+\usepackage[T1]{fontenc}
+\setlist{itemsep=1pt,topsep=3pt}
+
+% the name of the system: change it here
+\newcommand{\sys}{\textsf{Unit}\xspace}
+
+\newcommand{\kw}[1]{\texttt{#1}}
+\newcommand{\U}{\mathsf{U}}
+\newcommand{\Id}{\mathsf{Id}}
+
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+\title{\sys: a small dependent type checker\\with segments as modules}
+\author{}
+\date{19 October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+\sys is a prototype proof checker for a dependent type theory with
+$\Pi$, $\Sigma$, records, labelled sums, an identity type with its
+eliminator, and a hierarchy of cumulative universes indexed by level
+expressions. Its module system is based on the segments of
+\textsc{Automath}, in the form given in~\cite{Wang}: a module is a list of
+declarations, its parameters are the declarations without a body, and
+an instance only binds the parameters, without copying the body. Records
+are declared apart from modules, with the same syntax for their bodies:
+a record type has fields, one constructor and an eliminator, and its
+elements are compared by their fields, without $\eta$. The prototype has been used to
+formalise a model of univalent type theory over posets and simplicial
+sets, about 200 files. This note describes the type theory, the module
+system, and the choices made to keep checking predictable and fast. The
+name \sys refers to the units, the declarations of which every file,
+segment and local block is a list.
+\end{abstract}
+
+\tableofcontents
+
+%======================================================================
+\section{Overview}
+
+A file is a list of \emph{units}. A unit is a declaration of one of the
+following kinds:
+\begin{center}
+\begin{tabular}{ll}
+\kw{x (tel) : A ;} & a parameter (at the top level: a primitive notion)\\
+\kw{x (tel) : A = e ;} & a definition\\
+\kw{data D (tel) = c$_1$ (tel$_1$) | \dots ;} & a labelled sum (a definition)\\
+\kw{level a b ;} & level variables\\
+\kw{constraint a < b ;} & constraints between levels\\
+\kw{module M (tel) \{ units \} ;} & a segment\\
+\kw{module N = M[args] ;} & an instance of a segment\\
+\kw{record R (tel) \{ units \} ;} & a record type\\
+\kw{opaque f ;}\quad\kw{transparent f ;} & the unfolding strategy
+\end{tabular}
+\end{center}
+(The scoping declarations \kw{open} and \kw{import} are read before
+checking; see Section~\ref{sec:notation}.)
+Checking a list of units threads a \emph{context of units}: each unit is
+checked in the context of the units before it, and is then added to it.
+A definition stays a definition in the context: its body is available for
+computation. The body of a \kw{let} is a list of units as
+well. The scope is sequential: a definition sees only the units before
+it, never itself or a later one, so ordinary definitions cannot form
+cycles. Recursion comes only from the eliminators of labelled sums
+(Section~\ref{sec:tt}).
+
+Two design principles run through the system. First, \emph{nothing is
+guessed}: there is no unification, and the few arguments that may be
+omitted are found by a deterministic matching procedure
+(Section~\ref{sec:hidden}). Second, \emph{nothing is copied}: a
+definition has one identity wherever it is used, and two uses are
+compared by that identity before anything is unfolded
+(Section~\ref{sec:conv}).
+
+%======================================================================
+\section{The type theory}\label{sec:tt}
+
+\subsection{Terms}
+
+The terms are those of a dependent type theory with definitions:
+\begin{center}
+\begin{tabular}{ll}
+\kw{U l} & the universe at level \kw{l}\\
+\kw{(x : A) -> B},\quad \kw{\textbackslash\ x -> t},\quad \kw{t u} & dependent functions\\
+\kw{(x : A) * B},\quad \kw{(t, u)},\quad \kw{t.1},\quad \kw{t.2} & dependent pairs\\
+\kw{R[args]},\quad \kw{new R[args]},\quad \kw{t.l},\quad \kw{split \{ R x$_1$\dots -> t \}} & records\\
+\kw{sig \{ l$_1$ : A$_1$ ; \dots \}},\quad \kw{struct \{ l$_1$ = t$_1$ ; \dots \}} & anonymous records\\
+\kw{c t$_1$ \dots t$_n$},\quad \kw{split \{ c$_1$ x$_1$\dots -> t$_1$ ; \dots \}} & constructors and case analysis\\
+\kw{Id A a b},\quad \kw{refl a},\quad \kw{idJ A a C d b p} & the identity type\\
+\kw{[a] A},\quad \kw{<a> t},\quad \kw{t @l} & products over levels\\
+\kw{[a < b] A} & products over constraints\\
+\kw{let \{ units \} in t} & local definitions\\
+\kw{M[args].x} & a member of a segment instance
+\end{tabular}
+\end{center}
+
+\paragraph{Labelled sums.} A \kw{data} declaration introduces a type with
+named constructors, each with a telescope of arguments. A function out of
+a sum is written \kw{split}, a list of branches, one per constructor;
+\kw{split} is not a term on its own but is checked against a function
+type $(x:D)\to P\,x$ whose domain is a sum. Recursion is not by name:
+\sys has \emph{primitive recursion}, through the eliminators of the sums.
+A branch may bind, after its pattern variables, one \emph{recursive
+result} for each recursive field of the constructor:
+\begin{verbatim}
+  data N = zero | suc (n : N) ;
+  plus : N -> N -> N =
+    split { zero -> \ n -> n ; suc m | r -> \ n -> suc (r n) } ;
+\end{verbatim}
+For a field $m : D$ the result has type $P\,m$; for a function field
+$f : (y:\Psi)\to D$, as in \kw{sup (A : U l) (f : A -> M)}, it has type
+$(y:\Psi)\to P\,(f\,y)$. The motive $P$ contains everything after the
+argument split, so the result is a function when the split is followed by
+further arguments, as $r : N\to N$ above. The arguments before the split
+are fixed. A nested split has its own results: in Ackermann's function
+\begin{verbatim}
+  ack : N -> N -> N = split {
+    zero -> \ n -> suc n ;
+    suc m | r -> split { zero -> r (suc zero) ; suc n | s -> r s } } ;
+\end{verbatim}
+\kw{s} is \kw{ack (suc m) n} and \kw{r} is \kw{ack m}. This is primitive
+recursion at higher types, as in G\"odel's system~T: since a recursive
+result may be a function, Ackermann's function is definable. Mutual recursion
+is written as one recursion computing a pair, and course-of-values
+recursion likewise. The list of results may be omitted when a branch does
+not use them; when present it is complete, and \kw{\_} names an unused
+result.
+
+The sums are restricted so that these eliminators are the usual ones. A
+data type sees its own name only in its constructor fields, never in its
+parameters or type, so there are no mutual sums. A field mentions the
+type only as $D\,\vec p$ or $(y:\Psi)\to D\,\vec p$, where $\Psi$ does not
+mention $D$ and $\vec p$ are exactly the parameters of $D$: the sums are
+strictly positive, with uniform parameters, and there are no nested or
+indexed inductive families. Every recursive computation then starts from
+an eliminator whose recursive results the checker constructs, on a
+recursive field of a constructor value: every recursion is structural.
+
+A \kw{split} or a \kw{data} may occur only at a \emph{definition
+position}: as the body of a definition, after its $\lambda$s, or inside
+the branches of such a \kw{split}. Elsewhere, for instance as the
+argument of a function, it is rejected. A \kw{split} is then written
+back as its definition applied to the values of the variables on its
+path, a term in the current scope, provided its recursive results are
+those that path determines; otherwise (for instance under the abstract
+results of a branch being compared) it is not written back.
+
+\paragraph{The identity type.} \kw{Id A a b} is a primitive type with
+\kw{refl a : Id A a a} and the eliminator
+\[
+\frac{C : (y:A)\to\Id\,A\,a\,y\to\U\,l\qquad d : C\,a\,(\mathsf{refl}\,a)\qquad p:\Id\,A\,a\,b}
+     {\mathsf{idJ}\,A\,a\,C\,d\,b\,p : C\,b\,p}
+\]
+with the computation rule $\mathsf{idJ}\,A\,a\,C\,d\,a\,(\mathsf{refl}\,a)=d$.
+Since there is no pattern matching on \kw{refl}, there is no way to derive
+uniqueness of identity proofs. With strictly positive sums and recursion
+only through their eliminators, the theory is meant to be compatible with
+univalence, which a development may assume as a parameter
+(Section~\ref{sec:params}).
+
+\subsection{Universes and levels}\label{sec:univ}
+
+The universes follow the system of~\cite{BCDE}.
+Levels are expressions
+\[
+l \;::=\; a \;\mid\; l^{+} \;\mid\; l\vee m
+\]
+in level variables $a$, a successor and a maximum. There is no level $0$ for
+the user. Level variables are declared by \kw{level a}, and may be
+constrained by \kw{constraint} units ($l<m$, $l\le m$, $l=m$).
+
+The universes are \emph{\`a la Russell}: an element of \kw{U l} is itself a
+type. The rules are
+\begin{itemize}
+\item $\U\,l : \U\,l^{+}$;
+\item $\Pi$, $\Sigma$, records and $\Id$ lie in the maximum of the levels
+  of their components;
+\item cumulativity: if $A:\U\,l$ and $l\le m$ then $A:\U\,m$.
+  Cumulativity applies to the whole type and not under a binder: a
+  function into $\U\,l$ is not silently a function into $\U\,m$, and one
+  writes $\lambda b.\,T\,b$ when needed;
+\item a sum declared without a universe, like \kw{N} above, is
+  \emph{small}: it lies in every universe. A sum may also be declared at a
+  given level, \kw{data D : U l = \dots}.
+\end{itemize}
+
+\paragraph{Products over levels and constraints.} A type may be
+polymorphic in a level: \kw{[a] A} is the type of the \kw{<a> t}, applied
+to a level by \kw{t @l}. A type may also depend on a constraint:
+\kw{[a < b] A}. A constraint product is introduced and eliminated
+silently: a term of type $[\psi]A$ is used as a term of type $A$ wherever
+$\psi$ holds in the current context. Both kinds of products are
+\emph{large}: they lie in no universe.
+
+\paragraph{Deciding constraints.} Whether a constraint follows from those
+of the context is decided by the algorithm of Bezem and Coquand for
+join-semilattices with an inflationary endomorphism: constraints become
+Horn clauses, and the question is answered by computing a least model by
+forward reasoning~\cite{BC}. The same algorithm detects \emph{loops}, contexts
+whose constraints force $l<l$. A context with a loop is inconsistent, and
+in it every two terms are convertible. In practice this signals an error
+in the constraints, and the checker warns.
+
+\subsection{Definitional equality}\label{sec:conv}
+
+Definitional equality is generated by
+\begin{itemize}
+\item $\beta$ for functions, pairs, level abstractions, projections and
+  \kw{split} applied to a constructor (of a sum or of a record); for a
+  sum, the recursive results of the branch are the same \kw{split}
+  applied to the recursive fields;
+\item the computation rule of \kw{idJ} on \kw{refl};
+\item the unfolding of definitions (but see \kw{opaque} below);
+\item $\eta$ for functions and pairs.
+\end{itemize}
+There is no $\eta$ for records: an element \kw{t} of a record type and
+\kw{new R[ps, t.x$_1$, \dots]} are not convertible. They are equal in
+$\Id$, by the eliminator (Section~\ref{sec:segtypes}).
+
+The checker tests it as follows (a time budget remains as a safeguard,
+Section~\ref{sec:checker}). Two values are first compared
+\emph{structurally}, without any computation. A use of a definition is
+represented by its name together with its environment: the values of all
+the variables and levels in scope where it is declared (its
+\emph{arguments}), not only those its body uses. Two uses of the same
+definition with convertible arguments are equal without unfolding. Only
+when this fails are both sides brought to head normal form, unfolding
+definitions, and compared component by component.
+
+Two occurrences of the same \kw{split} are compared in the same way, by
+their environments. When these differ, the checker compares the branches
+instead, with fresh variables for the pattern variables and for the
+recursive results. This rule is kept as an experiment: it is counted, and
+its justification, which must cover dependent motives and the fresh
+recursive results, is still to be written.
+
+Taking the whole environment is a deliberate choice: it is simple and
+needs no analysis of the bodies. Its consequence is visible under
+\kw{opaque}: an opaque definition is never unfolded, so two uses of it
+that differ in a variable its body does not use are different.
+
+\paragraph{Record types are compared by name.} Two record types are
+equal when they come from the same declaration with equal parameters;
+their fields are never compared. Two different declarations are
+different types even if their fields agree. This is the rule of the
+proof checker \textsc{Half}~\cite{Ced} and of Gofer, and it avoids
+comparing large records field by field. An anonymous \kw{sig\{\dots\}} is
+a record declared at its occurrence. Dependent pairs $(x:A)*B$ are
+compared structurally. Elements of a record type are compared by their
+constructor: two elements built by \kw{new} are equal when their
+parameters and fields are convertible, wherever they are written.
+
+\paragraph{The unfolding strategy.} \kw{opaque f} declares that, from this
+point on, \kw{f} is not unfolded: it behaves as a constant, though its
+body has not changed. \kw{transparent f} undoes this. The strategy is a
+property of the checking run and not of the values: a value is computed
+in the same way whatever the strategy, and only the comparison consults
+it. In particular an \kw{opaque} declaration placed after a segment
+applies to every instance of it. Making a definition opaque can only make
+fewer terms convertible, so it never makes an incorrect proof correct.
+The intended use is to lock a construction right after the lemmas that
+characterise it, as one does in informal mathematics.
+
+%======================================================================
+\section{The module system}\label{sec:modules}
+
+\subsection{Segments}
+
+A segment is a named list of units:
+\begin{verbatim}
+  module Mon (A : U a) (e : A) (op : A -> A -> A) {
+    twice (x : A) : A = op x x ;
+    four (x : A) : A = twice (twice x) ;
+  } ;
+\end{verbatim}
+The \emph{parameters} of a segment are its units without a body: the
+telescope in the header and the parameters declared in the body. The
+level variables and the constraints of its body belong to it as well. A
+segment is checked once, where it is declared, with its parameters as
+unknowns.
+
+An \emph{instance} \kw{Mon[N, zero, plus]} gives values to the parameters,
+in order. Each argument is checked against the type of its parameter, in
+which the earlier arguments have been substituted; a level parameter
+takes a level; a constraint of the segment must hold for the given
+levels. Members are then accessed as \kw{Mon[N, zero, plus].four}, or
+through an alias \kw{module NM = Mon[N, zero, plus] ;} as \kw{NM.four}. Arguments may also be
+given by name, \kw{Mon[A := N, \dots]}.
+
+Segments nest. A segment declared inside another sees the parameters of
+the enclosing one lexically, and needs no arguments for them:
+\begin{verbatim}
+  module Outer (A : U a) {
+    module Inner { k (x : A) : A = x ; } ;
+    kk (x : A) : A = Inner.k (Inner.k x) ;
+  } ;
+\end{verbatim}
+A development spread over several files is a nest of segments: each file
+becomes a segment (Section~\ref{sec:notation}), and a file included inside
+a segment sees the enclosing parameters.
+
+\subsection{Instances share}
+
+An instance does not copy the body of the segment. It only records the
+values of the parameters, in an environment; the members are evaluated
+in that environment when they are used. A member therefore keeps a single
+identity, its qualified name, and two occurrences of a member are
+compared by this name and the values of the parameters of its
+environment. In particular \kw{Mon[N, zero, plus].twice} reached through two
+different aliases is one object, and the
+equation
+\begin{verbatim}
+  share : Id (N -> N) (Mon[N, zero, plus].twice) (NM.twice) = refl NM.twice ;
+\end{verbatim}
+holds without unfolding \kw{twice}. When a large development instantiates
+the same segment many times, as a formalisation of a model typically does
+(a construction made over an abstract base, then applied to each
+instance), this is what keeps checking fast: equal things are recognised
+as equal by their names.
+
+\subsection{Parameters stated once}\label{sec:params}
+
+Because segments nest and share, assumptions of a whole development are
+stated once, as parameters of one outer segment. For instance the model
+formalised with \sys assumes function extensionality and univalence for
+the metatheory; the main file reads
+\begin{verbatim}
+  module Model (fe : [b] Axioms[b].FunExt) (univ : [b] Axioms[b].Univalence) {
+    import V ;
+    import Presheaf ;
+    ...
+  } ;
+\end{verbatim}
+where each \kw{import} inserts a file as a sub-segment
+(Section~\ref{sec:notation}), so that every file sees \kw{fe} and \kw{univ}. Likewise the abstract
+base of the model (a category with an interval and a presheaf of
+cofibrations) is one segment whose parameters are the data of the base;
+the generic constructions are imported inside it, and an instance of the
+base (posets, or simplicial sets) is one instance of that segment, after
+which every generic construction is a member of the instance. Excluded
+middle, used at one place, is the parameter of a separate segment, so the
+files that may use it are exactly those imported inside that segment.
+
+\paragraph{Changing the assumptions.} Function extensionality follows from
+univalence. Once this is proved, as a segment \kw{FunExtUA} producing, from
+univalence at a level $b$, function extensionality at $b$, the whole
+development is obtained under univalence alone by one instance:
+\begin{verbatim}
+  module ModelUA (univ : [b] Axioms[b].Univalence) {
+    feU : [b] Axioms[b].FunExt = <b> FunExtUA[b].FE[univ @b].fe ;
+    module M = Model[feU, univ] ;
+  } ;
+\end{verbatim}
+Every result of the development is then available as
+\kw{ModelUA[univ].M.\dots}. Since an instance only binds the parameters,
+checking it checks the two arguments and nothing of the body: the
+development is neither copied nor checked again.
+
+\subsection{Records}\label{sec:segtypes}
+
+A segment is never a type. A record is declared like a segment, with the
+keyword \kw{record}:
+\begin{verbatim}
+  record Mon (l : Level) {
+    A : U l ;  op : A -> A -> A ;
+    sq (x : A) : A = op x x ;
+    e : A ;  sqe : Id A (sq e) e ;
+  } ;
+\end{verbatim}
+Its parameters are those of the header; the declarations of the body
+without a definition are its \emph{fields}, and its definitions are its
+\emph{derived members}. A field type may use the earlier fields and
+derived members.
+\begin{itemize}
+\item \emph{Formation.} \kw{Mon[a]} is a type: all parameters are given,
+  the fields are not. It lies in the maximum of the universes of its
+  fields.
+\item \emph{Construction.} \kw{new Mon[a, N, plus, zero, refl zero]}, with
+  the parameters and then the fields, is an element; \kw{new} is the only
+  constructor.
+\item \emph{Projection.} For \kw{M : Mon[a]}, \kw{M.op} is a field, and
+  \kw{(new Mon[a, N, plus, \dots]).op} computes to \kw{plus}.
+\item \emph{Derived members.} \kw{M.sq} is the definition \kw{sq} applied
+  to the element \kw{M}. Like any definition, it unfolds unless it is
+  \kw{opaque}, on a constructed element and on a variable alike, and two
+  uses are equal when they apply it to equal elements.
+\item \emph{Elimination.} \kw{split \{ Mon A op e sqe -> b \}} binds the
+  fields (the parameters are given by the type) and computes on an element
+  built by \kw{new}. It proves $\eta$:
+\begin{verbatim}
+  etaM : (M : Mon[a]) -> Id (Mon[a]) M (new Mon[a, M.A, M.op, M.e, M.sqe]) =
+    split { Mon A op e sqe -> refl (new Mon[a, A, op, e, sqe]) } ;
+\end{verbatim}
+\end{itemize}
+A record comes with a constructor \kw{mkR}, the function of its
+parameters and fields returning \kw{new R[\dots]}, defined right after it;
+it is not generated when a field type uses a derived member, as \kw{sqe}
+does here. A record may be declared inside a segment and use
+its parameters; its identity then includes the values of these
+parameters. The body of a record may \kw{open} an instance of a segment,
+which may depend on earlier fields: this only gives short names to the
+members of the instance, which keep their identities.
+
+\paragraph{Fixed fields.} \kw{Mon[a, N]} or \kw{Mon[l := a, A := N]} is
+the type of the elements of \kw{Mon[a]} whose field \kw{A} is \kw{N}. For
+\kw{M : Mon[a, N]}, a projection \kw{M.A} is read as \kw{N} where it is
+checked, and the types of the later projections use \kw{N}: \kw{M.e : N}.
+A field may be fixed only together with the fields its type mentions.
+Fixing more fields gives a subtype: \kw{Mon[a, N]} is a subtype of
+\kw{Mon[a]}. Since the fixed value comes from the type of the projection,
+it is lost when an element is used at the larger type: for
+\kw{pass (M : Mon[a, N]) : Mon[a] = M}, \kw{(pass M).A} is not
+convertible to \kw{N}, though the two are equal in $\Id$, by the
+eliminator.
+
+%======================================================================
+\section{The checker}\label{sec:checker}
+
+The checker is written in Haskell, about 6000 lines, with no library
+beyond the base. Its parts are: levels and the decision of constraints;
+evaluation into values with closures; head normalisation under the
+unfolding strategy; conversion; type checking of units; the filling of
+holes, which also records in each \kw{split} the positions of the
+recursive fields (evaluation reads only this record); and the parser and
+scope resolution, which also enforces the sequential scope, checks that
+the sums are strictly positive with uniform parameters, and computes, for
+each definition, the variables it depends on.
+
+The context after a unit does not depend on whether the unit checked:
+definitions enter the context by their types and bodies, not by their
+proofs of correctness. Hence the result of each declaration can be
+computed separately, with a time budget (ten seconds per declaration;
+an overrun counts as a failure), and one file can be checked while the
+others are trusted. The checker also runs as a server that loads a
+development once and, after an edit, checks only the files whose content
+changed and those depending on them; the 210 files of the model (about
+12000 declarations) check from scratch in about 54 seconds, and each file
+separately, the others trusted, in under five seconds.
+
+Moving to recursion through eliminators changed little in the model: of
+174 recursive definitions, 161 were rewritten mechanically, a call
+\kw{f m} becoming the recursive result for \kw{m}; 12 helpers that were
+mutually recursive with their caller now take the recursive result as an
+argument; and one proof (equality of lifts of iterative sets) was
+restated as a recursion on one argument. Checking time did not change.
+A hidden argument whose filling failed, and a recursive result whose
+positions were not recorded, are errors when used, so that they make no
+equality in a run that trusts the definition.
+
+\begin{remark}
+What \sys does not have: no unification and no implicit arguments beyond
+the matching of Section~\ref{sec:hidden}; no indexed inductive families;
+no recursion by name (only primitive recursion, through the
+eliminators); no mutual, nested or indexed inductive types;
+no pattern matching on \kw{refl}; no
+proof irrelevance. These omissions are deliberate: each would make
+checking less predictable, and the formalisation did not need them.
+\end{remark}
+
+%======================================================================
+\section{Notation read before checking}\label{sec:notation}
+
+The following conveniences are not part of the core language: they are
+translated into core terms before checking, and the core never sees them.
+
+\subsection{Omitted arguments}\label{sec:hidden}
+
+A parameter written in braces, \kw{f \{x : A\} (y : B) : C}, is
+\emph{hidden}: the type of \kw{f} is the ordinary
+$(x:A)\to(y:B)\to C$, and a use \kw{f u} is read as \kw{f \_ u}, where
+\kw{\_} is a hole. A hole may also be written explicitly anywhere, and a
+hidden argument may be given explicitly as \kw{\{e\}}. Holes are filled
+before the term is checked, by one-way \emph{matching}, never by
+unification:
+\begin{itemize}
+\item the inferred type of each explicit argument is matched against the
+  corresponding domain, with the holes as unknowns; two applications are
+  matched argument by argument only when they have the same head;
+  otherwise both are computed and matching continues on their head normal
+  forms;
+\item the expected type only fills holes left open by the explicit
+  arguments;
+\item two different solutions for one hole are an error, so the result
+  does not depend on the order;
+\item a solution is written back as a term in the current scope, using
+  names only.
+\end{itemize}
+A hole that is not determined this way is an error that asks for an
+explicit \kw{\{e\}}. This works well for lemmas about paths, such as
+\kw{transH p (symH q)}, whose endpoints are determined by the explicit
+arguments, and it is deliberately not clever.
+
+\subsection{Equational chains} The notation
+\begin{verbatim}
+  calc A { a0 =< p1 > a1 =< p2 > a2 ... =< pn > an }
+\end{verbatim}
+proves $\Id\,A\,a_0\,a_n$. It stands for the right-nested composite of
+the paths $p_i$; each $p_i$ is checked against $\Id\,A\,a_{i-1}\,a_i$, so
+every point is written once and an error is reported at its step.
+
+
+
+\subsection{Scoping}
+\kw{open M ;} (or \kw{open M[args] ;}) makes the members of a segment
+available by their short names. The resolver replaces every short name by
+the qualified name it stands for, \kw{M[args].x}, so the core only sees
+qualified names. For a variable \kw{c} of a record type, \kw{open c} gives
+short names to \kw{c.x}. \kw{import F ;} is expanded when the files are
+read: the file \kw{F.seg} is inserted as \kw{module F \{ \dots \} ;}, once.
+A \kw{where} block is a \kw{let}, sequential like every list of units:
+its definitions see the earlier ones and the parameters of the
+definition, but not the definition itself. The constructor \kw{mkR} of a record
+(Section~\ref{sec:segtypes}) is an ordinary definition added by the
+resolver after the record. The resolver also separates segments from
+records: a segment used as a type, \kw{new} applied to a segment, or a
+member of a record reached without an element, is an error.
+
+
+\begin{thebibliography}{9}
+\bibitem{BC} M.~Bezem and T.~Coquand. Loop-checking and the uniform word
+  problem for join-semilattices with an inflationary endomorphism.
+  \emph{Theoretical Computer Science} 913, 2022.
+\bibitem{BCDE} M.~Bezem, T.~Coquand, P.~Dybjer and M.~Escard\'o. Type theory
+  with explicit universe polymorphism. arXiv:2212.03284, 2022 (revised and
+  extended version, 2024).
+\bibitem{Ced} J.~Cederquist. \emph{A Pointfree Approach to Constructive
+  Analysis in Type Theory}. PhD thesis, Chalmers University of Technology and
+  University of G\"oteborg, 1997. Section~7.1 describes the proof checker
+  \textsc{Half}.
+\bibitem{Wang} Q.~Wang. \emph{A Haskell Implementation for a Dependent Type
+  Theory with Definitions}. Master's thesis, Chalmers University of Technology
+  and University of Gothenburg, 2021.
+\end{thebibliography}
+
+\end{document}

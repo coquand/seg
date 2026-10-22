@@ -1,0 +1,12 @@
+-- UnivCtx.seg: the POSET universe as the instance of IvBase.GUniv (the
+-- universe over a fibrancy classifier), at the box classifier UAct.ClB
+-- (compositions both ways with ESI) and its code UEnc.EncCl.encClB.
+-- Users `open UnivCtx[a].PU` (U0, uAct, uAct-id / -o, codeU, UCtx, UTy,
+-- EGen, fib0, tactG, ...).
+
+level a ;
+open Base ;
+module BaseP = Constr[a].PosB ;
+
+module PU = BaseP.GUniv.Univ[UAct[a].ClB, UAct[a].clSubB, UAct[a].clSub-idB, UAct[a].clSub-oB,
+  \ X A -> UEnc[a].EncCl[X, A].encClB] ;

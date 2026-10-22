@@ -1,0 +1,31 @@
+-- GEquivSub3.seg (inside IvBase, any base): empty-side invariance (KESI)
+-- is preserved by the moves of GEquivSub / GEquivSub2 (step G1).
+--
+--   EqSubEsi  KESI of EqSub's equivalence structure
+-- (from GCofEsi's RetEsi and SubEsi).
+
+level lv ;
+constraint a <= lv ;
+open Base ;
+open Prelude[lv+] ;
+open Paths[lv+] ;
+module W0 = V[lv] ;
+open Trees[a] ;
+open Arith[a] ;
+module GPR = GPre[lv] ;
+open GPR.PS ;
+open GLine[lv] ;
+module GCF = GCofib[lv] ;
+module GCE = GCofEsi[lv] ;
+module GQ = GEquiv[lv] ;
+module GSB = GEquivSub[lv] ;
+module GSB2 = GEquivSub2[lv] ;
+
+module EqSubEsi (D G : PCtx) (s : PSub[D, G]) (B A : PTy[G]) (al : PMap[G, B, A]) (eal : GQ.EquivOp G B A al)
+  (ke : GCE.PartialsEsi[GQ.HFib[G, B, A, al].EA, GQ.HFib[G, B, A, al].FibT].KESI eal) {
+  module ES = GSB2.EqSub[D, G, s, B, A, al, eal] ;
+
+  eqSubEsi : GCE.PartialsEsi[ES.HD.EA, ES.HD.FibT].KESI ES.eqSub =
+    GCE.RetEsi[ES.HD.EA, ES.C, ES.HD.FibT, ES.r, \ W v -> refl v.1, ES.rnat, ES.s', \ W v -> refl v.1, ES.snat, ES.rs, ES.CS.contr,
+           GCE.SubEsi[ES.HD.EA, ES.HG.EA, ES.ls, ES.HG.FibT, eal, ke].subEsi].retEsi ;
+} ;

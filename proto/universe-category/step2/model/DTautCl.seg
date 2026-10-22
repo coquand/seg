@@ -1,0 +1,144 @@
+-- DTautCl.seg: the tautological classifier of Delta (a parameter of the
+-- generic univalence operation, GUaOp9): for a code map c : D -> U0
+-- (natural, cnat), El along c (GElC.Fam.ElTy) has a horn filling operation,
+-- the codes' own, moved along c.  A horn of ElTy at rho is moved to a horn
+-- of El at the code c rho (the fibres are the same, fib0 (c rho)), filled
+-- by DElHorn.elFib, and the filler read back (linj: the map of totals
+-- (x , b) |-> (c x , b) is injective over equal points).
+--
+--   tautCl        the classifier
+--   tautCl-fill   its filler is elFib's at c rho (by definition; tautCl is
+--                 locked after it)
+--   tautCl-sub    (ElTy[s] , clSub s tautCl) = (ElTy along c o s , tautCl):
+--                 the same objects, the actions agree (tactG-irr), and the
+--                 fillers are elFib's at the same code on horn data with the
+--                 same values (DeltaClassifier.FExt.isFibExt)
+--
+-- Never through fibToHorn o hornToFib.  Constructive (cE / eE, El's
+-- fibrancy, are parameters: they enter only the type of ElTy's module).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+module V1 = V[a+] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ;
+module DBm = DeltaBase[a] ;
+module DB = DBm.DB ;
+module DS = DBm.DS ;
+module PS = DB.GPre[a].PS ;
+module DCl = DeltaClassifier[a] ;
+module DU = DCl.DU ;
+module DHm = DeltaHorn[a] ;
+module YO = DB.GYon[a] ;
+
+module TA (cE : DB.GFibE[a+].FE[DU.UCtx, DU.EGen].Comp) (eE : DB.GFibE[a+].FE[DU.UCtx, DU.EGen].ESIC cE) {
+  module EC = DB.GElC.ElC[DCl.ClD, DCl.clSubD, DCl.clSub-idD, DCl.clSub-oD, \ X A -> DCl.encClD (YO.yP X) A, cE, eE] ;
+  module HEl = DHornFib[a, a+].DH[DU.UCtx, DU.EGen] ;
+  module TE = DB.GPre[a+].TyL[DU.UCtx, DU.EGen] ;
+  module PPE = DB.GCofib[a+].Partials[DU.UCtx, DU.EGen] ;
+
+  -- horn data of El with the same values are equal
+  hdE (m k : Nat) (F : DU.U0 (suc m)) (h h' : HEl.HornData m k F) (P : Id (PPE.PvTy (suc m) (DHm.hornS m k)) h.1 h'.1)
+    : Id (HEl.HornData m k F) h h' =
+    Sigma-eq (PPE.PvTy (suc m) (DHm.hornS m k))
+      (\ v -> PPE.PptTy (suc m) F (DHm.hornS m k) v * PPE.PnTy (suc m) (DHm.hornS m k) v) h.1 h'.1 h.2 h'.2 P
+      (isProp-Sigma (PPE.PptTy (suc m) F (DHm.hornS m k) h'.1) (\ z -> PPE.PnTy (suc m) (DHm.hornS m k) h'.1)
+         (PPE.isProp-Ppt (suc m) F (DHm.hornS m k) h'.1) (\ z -> PPE.isProp-Pn (suc m) (DHm.hornS m k) h'.1)) ;
+
+  module T (D : PS.PCtx) (c : (Y : Nat) -> W0.Ix (D.ob Y) -> DU.U0 Y)
+    (cnat : (Y' Y : Nat) (h : Hom (lin Y') (lin Y)) (x : W0.Ix (D.ob Y)) -> Id (DU.U0 Y') (c Y' (D.act Y' Y h x)) (DU.uAct Y' Y h (c Y x))) {
+    module F = EC.Fam[D, c, cnat] ;
+    module TB = DB.GPre[a].TyL[D, F.ElTy] ;
+    module H = DHornFib[a, a].DH[D, F.ElTy] ;
+
+    -- the map of totals to El
+    L (W : Nat) (w : TB.EI W) : TE.EI W = (c W w.1, w.2) ;
+
+    linj (W : Nat) (w w' : TB.EI W) (p : Id (W0.Ix (D.ob W)) w.1 w'.1) (q : Id (TE.EI W) (L W w) (L W w')) : Id (TB.EI W) w w' =
+      idJ (W0.Ix (D.ob W)) w.1
+        (\ d P -> (a2 : W0.Ix (F.ElTy.tob W d)) -> Id (TE.EI W) (L W w) (c W d, a2) -> Id (TB.EI W) w (d, a2))
+        (\ a2 Q -> apH {W0.Ix (F.ElTy.tob W w.1)} {TB.EI W} (\ z -> (w.1, z)) (TE.pr-inj W (c W w.1) w.2 a2 Q))
+        w'.1 p w'.2 q ;
+
+    -- horn data moved along c
+    mv (m k : Nat) (rho : W0.Ix (D.ob (suc m))) (h : H.HornData m k rho) : HEl.HornData m k (c (suc m) rho) =
+      (\ W f i -> L W (h.1 W f i),
+       (\ W f i -> transH (apH (c W) (h.2.1 W f i)) (cnat W (suc m) f rho),
+        \ W' W chi f i i' -> transH (symH (F.PhN W' W chi (h.1 W f i))) (apH (L W') (h.2.2 W' W chi f i i')))) ;
+
+    module E1 (m k : Nat) (hk : IsT (leb k (suc m))) (rho : W0.Ix (D.ob (suc m))) (h : H.HornData m k rho) {
+      ex : HEl.Ext m k (c (suc m) rho) (mv m k rho h) = DElHorn[a].elFib m k hk (c (suc m) rho) (mv m k rho h) ;
+
+      cond (W : Nat) (f : Hom (lin W) (lin (suc m))) (i : DS.Lands W (suc m) (DHm.hornS m k) f)
+        : Id (TB.EI W) (TB.E.act W (suc m) f (rho, ex.1)) (h.1 W f i) =
+        linj W (TB.E.act W (suc m) f (rho, ex.1)) (h.1 W f i) (symH (h.2.1 W f i))
+          (transH (F.PhN W (suc m) f (rho, ex.1)) (ex.2 W f i)) ;
+
+      res : H.Ext m k rho h = (ex.1, cond) ;
+    } ;
+
+    cl : DCl.ClD D F.ElTy = \ m k hk rho h -> E1[m, k, hk, rho, h].res ;
+  } ;
+
+  tautCl (D : PS.PCtx) (c : (Y : Nat) -> W0.Ix (D.ob Y) -> DU.U0 Y)
+    (cnat : (Y' Y : Nat) (h : Hom (lin Y') (lin Y)) (x : W0.Ix (D.ob Y)) -> Id (DU.U0 Y') (c Y' (D.act Y' Y h x)) (DU.uAct Y' Y h (c Y x)))
+    : DCl.ClD D EC.Fam[D, c, cnat].ElTy = T[D, c, cnat].cl ;
+
+  -- the filler is El's at the code c rho
+  tautCl-fill (D : PS.PCtx) (c : (Y : Nat) -> W0.Ix (D.ob Y) -> DU.U0 Y)
+    (cnat : (Y' Y : Nat) (h : Hom (lin Y') (lin Y)) (x : W0.Ix (D.ob Y)) -> Id (DU.U0 Y') (c Y' (D.act Y' Y h x)) (DU.uAct Y' Y h (c Y x)))
+    (m k : Nat) (hk : IsT (leb k (suc m))) (rho : W0.Ix (D.ob (suc m))) (h : T[D, c, cnat].H.HornData m k rho)
+    : Id (W0.Ix (DU.fib0 (suc m) (c (suc m) rho))) (tautCl D c cnat m k hk rho h).1
+         (DElHorn[a].elFib m k hk (c (suc m) rho) (T[D, c, cnat].mv m k rho h)).1 =
+    refl (DElHorn[a].elFib m k hk (c (suc m) rho) (T[D, c, cnat].mv m k rho h)).1 ;
+
+  opaque tautCl ;
+
+  ----------------------------------------------------------------------
+  -- substitution
+
+  module S (D : PS.PCtx) (c : (Y : Nat) -> W0.Ix (D.ob Y) -> DU.U0 Y)
+    (cnat : (Y' Y : Nat) (h : Hom (lin Y') (lin Y)) (x : W0.Ix (D.ob Y)) -> Id (DU.U0 Y') (c Y' (D.act Y' Y h x)) (DU.uAct Y' Y h (c Y x)))
+    (D' : PS.PCtx) (s : PS.PSub[D', D]) {
+    c' (Y : Nat) (x : W0.Ix (D'.ob Y)) : DU.U0 Y = c Y (s.nt Y x) ;
+    cnat' (Y' Y : Nat) (h : Hom (lin Y') (lin Y)) (x : W0.Ix (D'.ob Y)) : Id (DU.U0 Y') (c' Y' (D'.act Y' Y h x)) (DU.uAct Y' Y h (c' Y x)) =
+      transH (apH (c Y') (s.nt-nat Y' Y h x)) (cnat Y' Y h (s.nt Y x)) ;
+
+    module F = EC.Fam[D, c, cnat] ;
+    module F' = EC.Fam[D', c', cnat'] ;
+    T1 : PS.PTy[D'] = PS.subTy D' D F.ElTy s ;
+    module FX = DCl.FExt[D', T1] ;
+
+    res : Id ((A' : PS.PTy[D']) * DCl.ClD D' A') (T1, DCl.clSubD D' D s F.ElTy (tautCl D c cnat)) (F'.ElTy, tautCl D' c' cnat') =
+      FX.isFibExt (DCl.clSubD D' D s F.ElTy (tautCl D c cnat)) (F'.ElTy.tact, (F'.ElTy.tact-id, F'.ElTy.tact-o))
+        (\ J I f x y e b -> EC.tactG-irr J I f (c I (s.nt I x)) (c J (s.nt J y))
+           (F.ep J I f (s.nt I x) (s.nt J y) (PS.ntEq D' D s J I f x y e)) (F'.ep J I f x y e) b)
+        (tautCl D' c' cnat')
+        (\ m k hk rho v pp pnA pnB ->
+           transH (tautCl-fill D c cnat m k hk (s.nt (suc m) rho) (DCl.Sub[D', D, s, F.ElTy, tautCl D c cnat].mv m k rho (v, (pp, pnA))))
+             (transH (apH {HEl.HornData m k (c (suc m) (s.nt (suc m) rho))} {W0.Ix (DU.fib0 (suc m) (c (suc m) (s.nt (suc m) rho)))}
+                        (\ hd -> (DElHorn[a].elFib m k hk (c (suc m) (s.nt (suc m) rho)) hd).1)
+                        (hdE m k (c (suc m) (s.nt (suc m) rho))
+                           (T[D, c, cnat].mv m k (s.nt (suc m) rho) (DCl.Sub[D', D, s, F.ElTy, tautCl D c cnat].mv m k rho (v, (pp, pnA))))
+                           (T[D', c', cnat'].mv m k rho (v, (pp, pnB)))
+                           (refl (T[D', c', cnat'].mv m k rho (v, (pp, pnB))).1)))
+                     (symH (tautCl-fill D' c' cnat' m k hk rho (v, (pp, pnB)))))) ;
+  } ;
+
+  tautCl-sub (D : PS.PCtx) (c : (Y : Nat) -> W0.Ix (D.ob Y) -> DU.U0 Y)
+    (cnat : (Y' Y : Nat) (h : Hom (lin Y') (lin Y)) (x : W0.Ix (D.ob Y)) -> Id (DU.U0 Y') (c Y' (D.act Y' Y h x)) (DU.uAct Y' Y h (c Y x)))
+    (D' : PS.PCtx) (s : PS.PSub[D', D])
+    : Id ((A' : PS.PTy[D']) * DCl.ClD D' A')
+         (PS.subTy D' D EC.Fam[D, c, cnat].ElTy s, DCl.clSubD D' D s EC.Fam[D, c, cnat].ElTy (tautCl D c cnat))
+         (EC.Fam[D', \ Y x -> c Y (s.nt Y x), \ Y' Y h x -> transH (apH (c Y') (s.nt-nat Y' Y h x)) (cnat Y' Y h (s.nt Y x))].ElTy,
+          tautCl D' (\ Y x -> c Y (s.nt Y x)) (\ Y' Y h x -> transH (apH (c Y') (s.nt-nat Y' Y h x)) (cnat Y' Y h (s.nt Y x)))) =
+    S[D, c, cnat, D', s].res ;
+
+  opaque tautCl-sub ;
+} ;

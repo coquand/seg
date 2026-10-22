@@ -1,0 +1,54 @@
+-- GExtRes.seg (inside IvBase, any base): Ext over its full extent is B.
+--   tyRes   Id (PTy[G|psi]) (Ext(alpha)[inclR]) B, by TyEqPw: the codes by
+--           extOb-B, the actions through toB (toB-act); B's fibres are
+--           Ext's at full points on the nose of the identification.
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+
+module ExtRes (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR]) {
+  module CL = GP.CofL[G, psi] ;
+  module E2 = GExt2.ExtB2[G, A, psi, B, al] ;
+  module E3 = GExt3.ExtB3[G, A, psi, B, al] ;
+  module TX = PR.TyL[G, E2.ExtT] ;
+  module TB = PR.TyL[CL.resCtx, B] ;
+
+  ER : PTy[CL.resCtx] = subTy CL.resCtx G E2.ExtT CL.inclR ;
+
+  Po (I : Ob) (x : W0.Ix (CL.resCtx.ob I)) : Id W0.V (ER.tob I x) (B.tob I x) = E3.extOb-B I x.1 x.2 ;
+
+  H1 (J I : Ob) (f : Hom J I) (x : W0.Ix (CL.resCtx.ob I)) (y : W0.Ix (CL.resCtx.ob J)) (e : Id (W0.Ix (CL.resCtx.ob J)) (CL.resCtx.act J I f x) y)
+    (a0 : W0.Ix (ER.tob I x))
+    : Id (W0.Ix (B.tob J y)) (subst W0.V (\ z -> W0.Ix z) (ER.tob J y) (B.tob J y) (Po J y) (ER.tact J I f x y e a0))
+                             (B.tact J I f x y e (subst W0.V (\ z -> W0.Ix z) (ER.tob I x) (B.tob I x) (Po I x) a0)) =
+    TB.pr-inj J y (subst W0.V (\ z -> W0.Ix z) (ER.tob J y) (B.tob J y) (Po J y) (ER.tact J I f x y e a0))
+                  (B.tact J I f x y e (subst W0.V (\ z -> W0.Ix z) (ER.tob I x) (B.tob I x) (Po I x) a0))
+      (calc (TB.EI J) {
+          (y, subst W0.V (\ z -> W0.Ix z) (ER.tob J y) (B.tob J y) (Po J y) (ER.tact J I f x y e a0))
+        =< apH {TB.T J y} {TB.EI J} (\ v -> (y, v)) (E3.extOb-B-sub J y.1 y.2 (ER.tact J I f x y e a0)) >
+          E3.toB J (y.1, ER.tact J I f x y e a0) y.2
+        =< E3.toB-cong J (y.1, ER.tact J I f x y e a0) (TX.E.act J I f (x.1, a0)) (symH (TX.pr-tact J I f x.1 y.1 eG a0)) y.2 qA >
+          E3.toB J (TX.E.act J I f (x.1, a0)) qA
+        =< E3.toB-act J I f (x.1, a0) x.2 qA >
+          TB.E.act J I f (E3.toB I (x.1, a0) x.2)
+        =< TB.pr-tact J I f x y e (E3.toB I (x.1, a0) x.2).2 >
+          (y, B.tact J I f x y e (E3.toB I (x.1, a0) x.2).2)
+        =< apH {TB.T I x} {TB.EI J} (\ v -> (y, B.tact J I f x y e v)) (symH (E3.extOb-B-sub I x.1 x.2 a0)) >
+          (y, B.tact J I f x y e (subst W0.V (\ z -> W0.Ix z) (ER.tob I x) (B.tob I x) (Po I x) a0)) })
+   where {
+     eG : Id (W0.Ix (G.ob J)) (G.act J I f x.1) y.1 = ntEq CL.resCtx G CL.inclR J I f x y e ;
+     qA : IsT (CL.full J (G.act J I f x.1)) = CL.full-act J I f x.1 x.2 ; } ;
+
+  tyRes : Id (PTy[CL.resCtx]) ER B = GEqLaws[a].TyEqPw[CL.resCtx, ER, B, Po, H1].tyEq ;
+
+  opaque H1 ; opaque tyRes ;
+} ;

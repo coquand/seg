@@ -1,0 +1,91 @@
+-- GExtNat5.seg (inside IvBase, any base): Theorem 7 along a substitution,
+-- step B4, part 3: the result of B4.
+--   uS       the pair (a0 , B parts of theta) of alpha[s], moved, is the
+--            pair of the moved problem (pairs-eq: pa-mv + FvS at e0,
+--            pb-mv + thS)
+--   v0S      the extension moves (fibE-eq: glueS, uS, FvS)
+--   extEqS   extEquiv(alpha[s]) extends as the moved extEquiv(alpha)
+--            (GFibMove.HTy), given Heal and HA1, the generators (Hg:
+--            the same, or one empty one inserted) and kA's KESI
+
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+module PR = GPre[a] ;
+open PR.PS ;
+module GP = GCofib[a] ;
+open GLine[a] ;
+
+module N5 (G : PCtx) (A : PTy[G]) (psi : GP.Cof[G]) (B : PTy[GP.CofL[G, psi].resCtx])
+  (al : PMap[GP.CofL[G, psi].resCtx, B, subTy GP.CofL[G, psi].resCtx G A GP.CofL[G, psi].inclR])
+  (D' : PCtx) (s : PSub[D', G]) (psi' : GP.Cof[D'])
+  (fullS : (X : Ob) (d : W0.Ix (D'.ob X)) -> Id Bool (GP.CofL[D', psi'].full X d) (GP.CofL[G, psi].full X (s.nt X d))) {
+  module N4 = GExtNat4.N4[G, A, psi, B, al, D', s, psi', fullS] ;
+  module EM = N4.EM ;
+  module ES = N4.ES ;
+  module PS = N4.PS ;
+  module FMX = N4.FMX ;
+  module FMA = N4.FMA ;
+  module MA1 = N4.MA1 ;
+
+  module Eq (kA : LineFibP[GFam[a].famPath, G, A].FibAt e1)
+    (kA' : LineFibP[GFam[a].famPath, D', ES.A'].FibAt e1)
+    (eal : GEquiv[a].EquivOp ES.CL.resCtx B ES.ED.A' al)
+    (eal' : GEquiv[a].EquivOp ES.CL'.resCtx ES.B' ES.ED'.A' ES.al') {
+    module N4E = N4.Eq[kA, kA', eal, eal'] ;
+    module E1 = N4E.E1 ;
+    module E1' = N4E.E1' ;
+    module E3 = GExtEquiv3.ExtEq3[G, A, psi, B, al, kA, eal] ;
+    module E3' = GExtEquiv3.ExtEq3[D', ES.A', ES.psi', ES.B', ES.al', kA', eal'] ;
+
+    module Sx (Heal : FMA.HTy eal' eal) (HA1 : N4.HA1Ty kA kA') (Hg : N4.HgTy)
+      (kAe : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, e1].TV.E, EndKit[GFam[a].famPath, G, A, e1].SFm.SF].KESI kA)
+      (X : Ob) (w' : FMX.HD.TA.EI X) (p' : E1'.PX.Partial[X, w']) {
+      module S4 = GExtNat4J.N4J[G, A, psi, B, al, D', s, psi', fullS].Eq[kA, kA', eal, eal'].Sx[Heal, HA1, Hg, kAe, X, w', p'] ;
+      module ThX' = S4.ThX' ;
+      module ThX = S4.ThX ;
+
+      rho' : W0.Ix (D'.ob X) = w'.1 ;
+
+      a0V : Id (W0.Ix (A.tob X (s.nt X rho'))) ThX'.a0 ThX.a0 =
+        EM.TA.pr-inj X (s.nt X rho') ThX'.a0 ThX.a0
+          (transH (apH (MA1.PhE X) ThX'.a0-E) (transH (S4.FvS X (idH X) (ptH X e0)) (symH ThX.a0-E))) ;
+
+      PaS : Id (W0.Ix (A.tob X (s.nt X rho'))) (ES.EB.pa X (s.nt X rho') (PS.mvPair X rho' ThX'.u)) (ES.EB.pa X (s.nt X rho') ThX.u) =
+        transH (PS.MV[X, rho', ThX'.u].pa-mv) (transH ThX'.u-a (transH a0V (symH ThX.u-a))) ;
+
+      PbS (V : Ob) (g : Hom V X) (q : IsT (ES.CL.full V (G.act V X g (s.nt X rho'))))
+        : Id (PS.TB.EI V) (ES.EB.pb X (s.nt X rho') (PS.mvPair X rho' ThX'.u) V g q) (ES.EB.pb X (s.nt X rho') ThX.u V g q) =
+        transH (PS.MV[X, rho', ThX'.u].pb-mv V g q (qB V g q))
+          (transH (apH (PS.LB.mV V) (ThX'.u-b V g (qB V g q)))
+            (transH (symH (FMA.mvF-B V (ThX'.th V g (qB V g q))))
+              (transH (apH (E1.FA.fibB V) (S4.T3.thS V g (qB V g q) q)) (symH (ThX.u-b V g q)))))
+       where {
+         qB (V2 : Ob) (g2 : Hom V2 X) (q2 : IsT (ES.CL.full V2 (G.act V2 X g2 (s.nt X rho')))) : IsT (ES.CL'.full V2 (D'.act V2 X g2 rho')) =
+           subst Bool (\ c -> IsT c) (ES.CL.full V2 (G.act V2 X g2 (s.nt X rho'))) (ES.CL'.full V2 (D'.act V2 X g2 rho'))
+             (symH (EM.AS.fullT V2 X g2 rho')) q2 ; } ;
+
+      uS : Id (ES.EB.Pairs X (s.nt X rho')) (PS.mvPair X rho' ThX'.u) ThX.u =
+        ES.EB.pairs-eq X (s.nt X rho') (PS.mvPair X rho' ThX'.u) ThX.u PaS PbS ;
+
+      v0S : Id (E1.FX.TF.EI X) (FMX.mvF X ThX'.v0) ThX.v0 =
+        E1.FX.fibE-eq X (FMX.mvF X ThX'.v0) ThX.v0 (FMX.mvF-pt X ThX'.v0)
+          (transH (FMX.mvF-B X ThX'.v0)
+            (transH (apH (PS.PhiE X) ThX'.gb-E)
+              (transH (N4.glueS X rho' ThX'.u)
+                (transH (apH (EM.E4.glue X (s.nt X rho')) uS) (symH ThX.gb-E)))))
+          (\ W f i -> transH (FMX.mvF-L X ThX'.v0 W f i) (S4.FvS W f i)) ;
+
+      opaque a0V ; opaque uS ; opaque v0S ;
+    } ;
+
+    -- the result of B4
+    extEqS (Heal : FMA.HTy eal' eal) (HA1 : N4.HA1Ty kA kA') (Hg : N4.HgTy)
+      (kAe : GCofEsi[a].PartialsEsi[EndKit[GFam[a].famPath, G, A, e1].TV.E, EndKit[GFam[a].famPath, G, A, e1].SFm.SF].KESI kA)
+      : FMX.HTy E3'.extEquiv E3.extEquiv =
+      \ X w' p' -> Sx[Heal, HA1, Hg, kAe, X, w', p'].v0S ;
+  } ;
+} ;

@@ -1,0 +1,193 @@
+-- ExtComp4U.seg: MODEL/Poset/ExtComp4.agda, second half (split for the
+-- 10 s rule).  Uniformity of the composite (cunif3: the final line box
+-- restricts, FE-unif + FE-congH, then ext-det) and, on a full line, the
+-- composite is the top of the B-filler (cop3-full).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module CN = Conn[a] ;
+open CN ;
+open VCode[a] ;
+module CF = Cofib[a] ;
+open CF ;
+open Equiv[a] ;
+open ExtKit[a] ;
+
+module C4U (G : PCtx) (A : PTy[G]) (psi : CF.Cof[G]) (B : PTy[CF.CofL[G, psi].resCtx])
+  (al : PMap[CF.CofL[G, psi].resCtx, B, subTy CF.CofL[G, psi].resCtx G A CF.CofL[G, psi].inclR]) (d : Bool)
+  (fAS : FibM.FillDef[G, A].FillOp[src d]) (fBS : FibM.FillDef[CF.CofL[G, psi].resCtx, B].FillOp[src d])
+  (eal : EquivOp CF.CofL[G, psi].resCtx B (subTy CF.CofL[G, psi].resCtx G A CF.CofL[G, psi].inclR) al)
+  (fA1 : FibM.FillDef[G, A].FillOp[e1]) {
+  open CF.CofL[G, psi] ;
+  open Ext[a].ExtDef[G, A, psi] ;
+  open ExtB[B, al] ;
+  open Ext2[a].ExtB2[G, A, psi, B, al] ;
+  open Ext3[a].ExtB3[G, A, psi, B, al] ;
+  open Ext4[a].ExtB4[G, A, psi, B, al] ;
+  open ExtComp1[a].C1[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp1E[a].C1E[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp1b[a].C1b[G, A, psi, B, al, d, fAS, fBS] ;
+  open ExtComp2[a].C2[G, A, psi, B, al, d, fAS, fBS, eal] ;
+  open ExtComp2T[a].C2T[G, A, psi, B, al, d, fAS, fBS, eal] ;
+  open ExtComp3[a].C3[G, A, psi, B, al, d, fAS, fBS, eal, fA1] ;
+  open ExtComp4[a].C4[G, A, psi, B, al, d, fAS, fBS, eal, fA1] ;
+
+  thF-comp (V Y X : Ob) (h : Hom Y X) (g : Hom V Y) (c : BX.Box[eS, X])
+    (q1 : IsT (full V (G.act V X (compH V Y X h g) (rho1 X c))))
+    (q2 : IsT (full V (G.act V Y g (rho1 Y (BX.restrict eS Y X h c)))))
+    : Id (FA.TF.EI V) (thF V X (compH V Y X h g) c q1) (thF V Y g (BX.restrict eS Y X h c) q2) =
+    th-cong V (BX.restrict eS V X (compH V Y X h g) c) (BX.restrict eS V Y g (BX.restrict eS Y X h c)) (symH (BX.restrict-o eS V Y X g h c))
+      (qR V X (compH V Y X h g) c q1) (qR V Y g (BX.restrict eS Y X h c) q2) ;
+
+  cst-unif (Y X : Ob) (h : Hom Y X) (c : BX.Box[eS, X]) (V : Ob) (g : Hom V Y)
+    : Id (TA.EI (prodP V Iv)) (cst X c V (compH V Y X h g)) (cst Y (BX.restrict eS Y X h c) V g) =
+    sym (TA.EI (prodP V Iv)) (cst Y (BX.restrict eS Y X h c) V g) (cst X c V (compH V Y X h g))
+      (trans (TA.EI (prodP V Iv)) (cst Y (BX.restrict eS Y X h c) V g) (EA.act (prodP V Iv) Y (compH (prodP V Iv) V Y g (pX V)) (EA.act Y X h (a1E X c))) (cst X c V (compH V Y X h g))
+        (ap (TA.EI Y) (TA.EI (prodP V Iv)) (EA.act (prodP V Iv) Y (compH (prodP V Iv) V Y g (pX V))) (a1E Y (BX.restrict eS Y X h c)) (EA.act Y X h (a1E X c)) (sym (TA.EI Y) (EA.act Y X h (a1E X c)) (a1E Y (BX.restrict eS Y X h c)) (a1-unif Y X h c)))
+        ((TA.PE.actTri (prodP V Iv) Y X h (compH (prodP V Iv) V Y g (pX V)) (compH (prodP V Iv) V X (compH V Y X h g) (pX V)) (\ s -> refl (app (prodP V Iv) X (compH (prodP V Iv) V X (compH V Y X h g) (pX V)) s).1) (a1E X c)))) ;
+
+  module FU (Y X : Ob) (h : Hom Y X) (c : BX.Box[eS, X]) {
+    module FX = Fin3[X, c] ;
+    module FY = Fin3[Y, (BX.restrict eS Y X h c)] ;
+
+    eQ2 (k : Fin r) (t : Tree) : Id Bool (pre Y X h (nrm X (Q X (rho1 X c) k)) t) (nrm Y (Q Y (rho1 Y (BX.restrict eS Y X h c)) k) t) =
+      pre-nrm Y X h (Q X (rho1 X c) k) (Q Y (rho1 Y (BX.restrict eS Y X h c)) k)
+        (\ s -> trans Bool (Q Y (rho1 Y (BX.restrict eS Y X h c)) k s.1) (Q Y (G.act Y X h (rho1 X c)) k s.1) (Q X (rho1 X c) k (app Y X h s).1)
+                  (ap (W0.Ix (G.ob Y)) Bool (\ z -> Q Y z k s.1) (rho1 Y (BX.restrict eS Y X h c)) (G.act Y X h (rho1 X c))
+                     (sym (W0.Ix (G.ob Y)) (G.act Y X h (rho1 X c)) (rho1 Y (BX.restrict eS Y X h c)) (rho1-restr Y X h c)))
+                  (psi.cnat Y X h (rho1 X c) k s)) t ;
+
+    res : Id (TA.EI (prodP Y Iv)) (EA.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) FX.F) FY.F =
+      trans (TA.EI (prodP Y Iv)) (EA.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) FX.F)
+        (LB.FE Y (G.act Y X h (rho1 X c)) c.br r (LB.rLD Y X h (rho1 X c) c.br r FX.LD)) FY.F
+        (LB.FE-unif Y X h (rho1 X c) c.br r FX.LD)
+        (LB.FE-congH Y (G.act Y X h (rho1 X c)) (rho1 Y (BX.restrict eS Y X h c)) c.br r (rho1-restr Y X h c)
+           (LB.rLD Y X h (rho1 X c) c.br r FX.LD) FY.LD (a1-unif Y X h c)
+           (\ l t -> refl (pre Y X h (c.bs l).sQ t))
+           eQ2
+           (\ l V g i i' -> cst-unif Y X h c V g)
+           (\ k V g i i' -> ap (FA.TF.EI V) (TA.EI (prodP V Iv)) (\ z -> toEA (prodP V Iv) (FA.fibP V z))
+              (thF V X (compH V Y X h g) c (FX.qOf V (compH V Y X h g) k (lands-pre V Y X h (nrm X (Q X (rho1 X c) k)) g i)))
+              (thF V Y g (BX.restrict eS Y X h c) (FY.qOf V g k i'))
+              (thF-comp V Y X h g c (FX.qOf V (compH V Y X h g) k (lands-pre V Y X h (nrm X (Q X (rho1 X c) k)) g i)) (FY.qOf V g k i')))) ;
+  } ;
+
+  F-unif (Y X : Ob) (h : Hom Y X) (c : BX.Box[eS, X])
+    : Id (TA.EI (prodP Y Iv)) (EA.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) Fin3[X, c].F) Fin3[Y, (BX.restrict eS Y X h c)].F = FU[Y, X, h, c].res ;
+
+  a0E-unif (Y X : Ob) (h : Hom Y X) (c : BX.Box[eS, X])
+    : Id (TA.EI Y) (EA.act Y X h Fin3[X, c].a0E) Fin3[Y, (BX.restrict eS Y X h c)].a0E =
+    trans (TA.EI Y) (EA.act Y X h Fin3[X, c].a0E)
+      (EA.act Y (prodP Y Iv) (lid Y e0) (EA.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) Fin3[X, c].F)) Fin3[Y, (BX.restrict eS Y X h c)].a0E
+      (sym (TA.EI Y) (EA.act Y (prodP Y Iv) (lid Y e0) (EA.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) Fin3[X, c].F)) (EA.act Y X h Fin3[X, c].a0E)
+         (Fin3[X, c].F-lid0 Y h))
+      (ap (TA.EI (prodP Y Iv)) (TA.EI Y) (EA.act Y (prodP Y Iv) (lid Y e0))
+         (EA.act (prodP Y Iv) (prodP X Iv) (cylH Y X h) Fin3[X, c].F) Fin3[Y, (BX.restrict eS Y X h c)].F (F-unif Y X h c)) ;
+
+  opaque thF-comp ; opaque cst-unif ; opaque F-unif ; opaque a0E-unif ;
+
+  module UO (Y X : Ob) (h : Hom Y X) (c : BX.Box[eS, X]) {
+    q1 (V : Ob) (g : Hom V Y) (q : IsT (full V (G.act V Y g (EX.act Y X h L[X, c].out).1)))
+      : IsT (full V (G.act V X (compH V Y X h g) (rho1 X c))) =
+      full-eq V (G.act V Y g (EX.act Y X h L[X, c].out).1) (G.act V X (compH V Y X h g) (rho1 X c)) (L[X, c].out-ptf V Y h g) q ;
+
+    q2 (V : Ob) (g : Hom V Y) (q : IsT (full V (G.act V Y g (EX.act Y X h L[X, c].out).1)))
+      : IsT (full V (G.act V Y g (rho1 Y (BX.restrict eS Y X h c)))) =
+      full-eq V (G.act V X (compH V Y X h g) (rho1 X c)) (G.act V Y g (rho1 Y (BX.restrict eS Y X h c)))
+        (transH (symH (GL.actC V Y X h g (rho1 X c))) (apH (G.act V Y g) (rho1-restr Y X h c))) (q1 V g q) ;
+
+    res : Id (TX.EI Y) (EX.act Y X h L[X, c].out) L[Y, (BX.restrict eS Y X h c)].out =
+      ext-det Y (EX.act Y X h L[X, c].out) L[Y, (BX.restrict eS Y X h c)].out
+        (trans (W0.Ix (G.ob Y)) (EX.act Y X h L[X, c].out).1 (G.act Y X h (rho1 X c)) L[Y, (BX.restrict eS Y X h c)].out.1
+          (ap (W0.Ix (G.ob X)) (W0.Ix (G.ob Y)) (G.act Y X h) L[X, c].out.1 (rho1 X c) L[X, c].out-pt)
+          (trans (W0.Ix (G.ob Y)) (G.act Y X h (rho1 X c)) (rho1 Y (BX.restrict eS Y X h c)) L[Y, (BX.restrict eS Y X h c)].out.1
+            (rho1-restr Y X h c)
+            ((sym (W0.Ix (G.ob Y)) L[Y, (BX.restrict eS Y X h c)].out.1 (rho1 Y (BX.restrict eS Y X h c)) L[Y, (BX.restrict eS Y X h c)].out-pt))))
+        (trans (TA.EI Y) (extE Y (EX.act Y X h L[X, c].out)) (EA.act Y X h (extE X L[X, c].out)) (extE Y L[Y, (BX.restrict eS Y X h c)].out)
+          (extE-nat Y X h L[X, c].out)
+          (trans (TA.EI Y) (EA.act Y X h (extE X L[X, c].out)) (EA.act Y X h Fin3[X, c].a0E) (extE Y L[Y, (BX.restrict eS Y X h c)].out)
+            (ap (TA.EI X) (TA.EI Y) (EA.act Y X h) (extE X L[X, c].out) Fin3[X, c].a0E Fin3[X, c].u-ext)
+            (trans (TA.EI Y) (EA.act Y X h Fin3[X, c].a0E) Fin3[Y, (BX.restrict eS Y X h c)].a0E (extE Y L[Y, (BX.restrict eS Y X h c)].out)
+              (a0E-unif Y X h c)
+              ((sym (TA.EI Y) (extE Y L[Y, (BX.restrict eS Y X h c)].out) Fin3[Y, (BX.restrict eS Y X h c)].a0E Fin3[Y, (BX.restrict eS Y X h c)].u-ext)))))
+        (\ V g q -> trans (TX.EI V) (EX.act V Y g (EX.act Y X h L[X, c].out)) (EX.act V X (compH V Y X h g) L[X, c].out) (EX.act V Y g L[Y, (BX.restrict eS Y X h c)].out)
+            (TX.PE.actC V Y X h g L[X, c].out)
+            (trans (TX.EI V) (EX.act V X (compH V Y X h g) L[X, c].out) (fromB V (FA.fibB V (thF V X (compH V Y X h g) c (q1 V g q)))) (EX.act V Y g L[Y, (BX.restrict eS Y X h c)].out)
+              (L[X, c].out-full V (compH V Y X h g) (q1 V g q))
+              (trans (TX.EI V) (fromB V (FA.fibB V (thF V X (compH V Y X h g) c (q1 V g q)))) (fromB V (FA.fibB V (thF V Y g (BX.restrict eS Y X h c) (q2 V g q)))) (EX.act V Y g L[Y, (BX.restrict eS Y X h c)].out)
+                (ap (FA.TF.EI V) (TX.EI V) (\ z -> fromB V (FA.fibB V z)) (thF V X (compH V Y X h g) c (q1 V g q)) (thF V Y g (BX.restrict eS Y X h c) (q2 V g q)) (thF-comp V Y X h g c (q1 V g q) (q2 V g q)))
+                ((sym (TX.EI V) (EX.act V Y g L[Y, (BX.restrict eS Y X h c)].out) (fromB V (FA.fibB V (thF V Y g (BX.restrict eS Y X h c) (q2 V g q)))) (L[Y, (BX.restrict eS Y X h c)].out-full V g (q2 V g q))))))) ;
+  } ;
+
+  unif-out (Y X : Ob) (h : Hom Y X) (c : BX.Box[eS, X]) : Id (TX.EI Y) (EX.act Y X h L[X, c].out) L[Y, (BX.restrict eS Y X h c)].out = UO[Y, X, h, c].res ;
+
+  cunif3 (Y X : Ob) (h : Hom Y X) (c : BX.Box[eS, X])
+    : Id (TX.EI Y) (EX.act Y X h (BX.topE eT X c.brho (cop3 X c))) (BX.topE eT Y (BX.restrict eS Y X h c).brho (cop3 Y (BX.restrict eS Y X h c))) =
+    trans (TX.EI Y) (EX.act Y X h (BX.topE eT X c.brho (cop3 X c))) (EX.act Y X h L[X, c].out) (BX.topE eT Y (BX.restrict eS Y X h c).brho (cop3 Y (BX.restrict eS Y X h c)))
+      (ap (TX.EI X) (TX.EI Y) (EX.act Y X h) (BX.topE eT X c.brho (cop3 X c)) L[X, c].out (cop3-E X c))
+      (trans (TX.EI Y) (EX.act Y X h L[X, c].out) L[Y, (BX.restrict eS Y X h c)].out (BX.topE eT Y (BX.restrict eS Y X h c).brho (cop3 Y (BX.restrict eS Y X h c)))
+         (unif-out Y X h c) (sym (TX.EI Y) (BX.topE eT Y (BX.restrict eS Y X h c).brho (cop3 Y (BX.restrict eS Y X h c))) L[Y, (BX.restrict eS Y X h c)].out (cop3-E Y (BX.restrict eS Y X h c)))) ;
+
+  opaque unif-out ; opaque cunif3 ;
+
+  ----------------------------------------------------------------------
+  -- On a full line the composite is the top of the B-filler
+
+  topB-id2 (X : Ob) (c : BX.Box[eS, X]) (p : IsT (full (prodP X Iv) c.brho))
+    (p1 : IsT (full (prodP X Iv) (BX.restrict eS X X (idH X) c).brho)) (pA : IsT (full (prodP X Iv) (BX.restrict eS X X (idH X) (BX.restrict eS X X (idH X) c)).brho))
+    : Id (TB.EI X) (topB X (BX.restrict eS X X (idH X) (BX.restrict eS X X (idH X) c)) pA) (topB X c p) =
+    trans (TB.EI X) (topB X (BX.restrict eS X X (idH X) (BX.restrict eS X X (idH X) c)) pA) (EB.act X X (idH X) (topB X (BX.restrict eS X X (idH X) c) p1)) (topB X c p)
+      (sym (TB.EI X) (EB.act X X (idH X) (topB X (BX.restrict eS X X (idH X) c) p1)) (topB X (BX.restrict eS X X (idH X) (BX.restrict eS X X (idH X) c)) pA) (topB-nat X X (idH X) (BX.restrict eS X X (idH X) c) p1 pA))
+      (trans (TB.EI X) (EB.act X X (idH X) (topB X (BX.restrict eS X X (idH X) c) p1)) (topB X (BX.restrict eS X X (idH X) c) p1) (topB X c p)
+        (EB.act-id X (topB X (BX.restrict eS X X (idH X) c) p1))
+        (trans (TB.EI X) (topB X (BX.restrict eS X X (idH X) c) p1) (EB.act X X (idH X) (topB X c p)) (topB X c p)
+          (sym (TB.EI X) (EB.act X X (idH X) (topB X c p)) (topB X (BX.restrict eS X X (idH X) c) p1) (topB-nat X X (idH X) c p p1))
+          ((EB.act-id X (topB X c p))))) ;
+
+  module CFl (X : Ob) (c : BX.Box[eS, X]) (p : IsT (full (prodP X Iv) c.brho)) {
+    qX : IsT (full X (G.act X X (idH X) (rho1 X c))) =
+      full-act X X (idH X) (rho1 X c) (full-act X (prodP X Iv) (lid X eT) c.brho p) ;
+    q1 : IsT (full X (rho1 X (BX.restrict eS X X (idH X) c))) = qR X X (idH X) c qX ;
+    p1 : IsT (full (prodP X Iv) (BX.restrict eS X X (idH X) c).brho) = full-act (prodP X Iv) (prodP X Iv) (cylH X X (idH X)) c.brho p ;
+    kD : (k : Fin r) * Lands X X (dQ X (BX.restrict eS X X (idH X) c).brho k) (idH X) =
+      full-dQ X X (idH X) (BX.restrict eS X X (idH X) c).brho (full-act (prodP X Iv) (prodP X Iv) (cylH X X (idH X)) (BX.restrict eS X X (idH X) c).brho p1) ;
+    iD : Lands X X (nrm X (dQ X (BX.restrict eS X X (idH X) c).brho kD.1)) (idH X) = lands-nrm X X (dQ X (BX.restrict eS X X (idH X) c).brho kD.1) (idH X) kD.2 ;
+
+    vd : FA.TF.EI X = PEm[X, (BX.restrict eS X X (idH X) c), q1].vAt (inr kD.1) X (idH X) iD ;
+    bd : TB.EI X = bD X (BX.restrict eS X X (idH X) c) kD.1 X (idH X) iD ;
+
+    eB : Id (TB.EI X) (Fin3[X, c].bE X (idH X) qX) (topB X c p) =
+      trans (TB.EI X) (Fin3[X, c].bE X (idH X) qX) (FA.fibB X vd) (topB X c p)
+        (ap (FA.TF.EI X) (TB.EI X) (FA.fibB X) (thF X X (idH X) c qX) vd (th-full X (BX.restrict eS X X (idH X) c) q1 (inr kD.1) iD))
+        (trans (TB.EI X) (FA.fibB X vd) bd (topB X c p)
+           (constFib-B X (xg X (BX.restrict eS X X (idH X) c) q1 X (idH X)) bd (ptD X (BX.restrict eS X X (idH X) c) q1 kD.1 X (idH X) iD) (eD X (BX.restrict eS X X (idH X) c) q1 kD.1 X (idH X) iD))
+           (topB-id2 X c p p1 (pfull X X (idH X) (BX.restrict eS X X (idH X) c) kD.1 iD))) ;
+
+    res : Id (TX.EI X) (BX.topE eT X c.brho (cop3 X c)) (fromB X (topB X c p)) =
+      trans (TX.EI X) (BX.topE eT X c.brho (cop3 X c)) L[X, c].out (fromB X (topB X c p))
+        (cop3-E X c)
+        (trans (TX.EI X) L[X, c].out (EX.act X X (idH X) L[X, c].out) (fromB X (topB X c p))
+          (sym (TX.EI X) (EX.act X X (idH X) L[X, c].out) L[X, c].out (EX.act-id X L[X, c].out))
+          (trans (TX.EI X) (EX.act X X (idH X) L[X, c].out) (fromB X (Fin3[X, c].bE X (idH X) qX)) (fromB X (topB X c p))
+            (L[X, c].out-full X (idH X) qX)
+            ((ap (TB.EI X) (TX.EI X) (fromB X) (Fin3[X, c].bE X (idH X) qX) (topB X c p) eB)))) ;
+  } ;
+
+  cop3-full (X : Ob) (c : BX.Box[eS, X]) (p : IsT (full (prodP X Iv) c.brho))
+    : Id (TX.EI X) (BX.topE eT X c.brho (cop3 X c)) (fromB X (topB X c p)) = CFl[X, c, p].res ;
+
+  opaque topB-id2 ; opaque cop3-full ;
+} ;

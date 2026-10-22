@@ -1,0 +1,104 @@
+-- DeltaFibIff.seg (inside Classical.Cl): on Delta, the horn filling
+-- operation and the fibrancy structure FibEL (line composition with line
+-- ESI, both directions, at the family path object) give each other.
+--
+--   hornToFib   isFib A -> FibEL : for each direction, the normalised
+--               fillers (DNormE, with the classical decision
+--               DeltaHornBox.HB1.deg) are a uniform filling structure;
+--               read on one-side partials (DOneSide) it has KESI; its ends
+--               give the composition with CESI (GLine.FromFib)
+--   fibToHorn   FibEL -> isFib A : constructive (DeltaRetr)
+--
+-- The only classical step is DeltaHornBox.decDeg.
+
+level a lz ;
+constraint a <= lz ;
+open Base ;
+open Prelude[lz+] ;
+open Paths[lz+] ;
+module W0 = V[lz] ;
+open Trees[a] ;
+open Arith[a] ;
+open DLvl[a, lz] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ;
+module DBm = DeltaBase[a] ;
+module DB = DBm.DB ;
+module DHn = DHornFib[a, lz] ;
+module DHm = DeltaHorn[a] ;
+module PFm = DPrismFill[a, lz] ;
+module FM = DB.GFam[lz] ;
+
+module FI (G : DB.GPre[lz].PS.PCtx) (A : DB.GPre[lz].PS.PTy[G]) {
+  ----------------------------------------------------------------------
+  -- one direction: from the end e (eN its number) to the end e'
+
+  module Dir (e : El Iv) (eN : Nat) (eE : Id Tree e.1 (leaf eN)) (e' : El Iv) (hf : DHn.DH[G, A].isFib)
+    (tot : (N : Nat) (gt : (W : Nat) -> Hom (lin W) (lin N) -> Hom (lin W) Iv -> W0.Ix (G.ob W))
+           (gn : (V W : Nat) (g : Hom (lin V) (lin W)) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv)
+                 -> Id (W0.Ix (G.ob V)) (G.act V W g (gt W f j)) (gt V (compH (lin V) (lin W) (lin N) f g) (compH (lin V) (lin W) Iv j g)))
+           (L0 : DGlue[a, lz].PL[G, A, N, gt, gn].PLine[DCapBase[a].S0 N eN])
+           (W : Nat) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv) -> DB.GPre[lz].TyL[G, A].EI W)
+    (tot-pt : (N : Nat) (gt : (W : Nat) -> Hom (lin W) (lin N) -> Hom (lin W) Iv -> W0.Ix (G.ob W))
+           (gn : (V W : Nat) (g : Hom (lin V) (lin W)) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv)
+                 -> Id (W0.Ix (G.ob V)) (G.act V W g (gt W f j)) (gt V (compH (lin V) (lin W) (lin N) f g) (compH (lin V) (lin W) Iv j g)))
+           (L0 : DGlue[a, lz].PL[G, A, N, gt, gn].PLine[DCapBase[a].S0 N eN])
+           (W : Nat) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv) -> Id (W0.Ix (G.ob W)) (tot N gt gn L0 W f j).1 (gt W f j))
+    (tot-nat : (N : Nat) (gt : (W : Nat) -> Hom (lin W) (lin N) -> Hom (lin W) Iv -> W0.Ix (G.ob W))
+           (gn : (V W : Nat) (g : Hom (lin V) (lin W)) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv)
+                 -> Id (W0.Ix (G.ob V)) (G.act V W g (gt W f j)) (gt V (compH (lin V) (lin W) (lin N) f g) (compH (lin V) (lin W) Iv j g)))
+           (L0 : DGlue[a, lz].PL[G, A, N, gt, gn].PLine[DCapBase[a].S0 N eN])
+           (V W : Nat) (g : Hom (lin V) (lin W)) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv)
+           -> Id (DB.GPre[lz].TyL[G, A].EI V) (DB.GPre[lz].TyL[G, A].E.act V W g (tot N gt gn L0 W f j))
+                                            (tot N gt gn L0 V (compH (lin V) (lin W) (lin N) f g) (compH (lin V) (lin W) Iv j g)))
+    (tot-S0 : (N : Nat) (gt : (W : Nat) -> Hom (lin W) (lin N) -> Hom (lin W) Iv -> W0.Ix (G.ob W))
+           (gn : (V W : Nat) (g : Hom (lin V) (lin W)) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv)
+                 -> Id (W0.Ix (G.ob V)) (G.act V W g (gt W f j)) (gt V (compH (lin V) (lin W) (lin N) f g) (compH (lin V) (lin W) Iv j g)))
+           (L0 : DGlue[a, lz].PL[G, A, N, gt, gn].PLine[DCapBase[a].S0 N eN])
+           (W : Nat) (f : Hom (lin W) (lin N)) (j : Hom (lin W) Iv) (t : IsT ((DCapBase[a].S0 N eN).1 W f j))
+           -> Id (DB.GPre[lz].TyL[G, A].EI W) (tot N gt gn L0 W f j) (L0.v W f j t)) {
+    module HB = DeltaHornBox[a, lz].HB1[G, A, e] ;
+    module NEm = DNormE[a, lz].NE[G, A, e, eN, eE, tot, tot-pt, tot-nat, tot-S0, HB.deg] ;
+    module KA = DB.GLine[lz].EndKit[FM.famPath, G, A, e] ;
+    module OSm = DOneSide[a, lz].OS[KA.TV.E, KA.SFm.SF] ;
+    module KOm = OSm.KO[NEm.fibAt] ;
+    module FF = DB.GLine[lz].CompAtP[FM.famPath, G, A, e, e'].FromFib[KOm.ko] ;
+
+    -- the filling structure at e, with KESI
+    fib : DB.GLine[lz].LineFibP[FM.famPath, G, A].FibAt e = KOm.ko ;
+    fib-kesi : OSm.PE.KESI KOm.ko = KOm.kesi ;
+
+    -- composition from e to e', with line ESI
+    ca : DB.GLine[lz].CompAtP[FM.famPath, G, A, e, e'].CompAt = FF.ca ;
+    ce : DB.GLine[lz].CompAtP[FM.famPath, G, A, e, e'].CESI ca = FF.cesi KOm.kesi ;
+  } ;
+
+  ----------------------------------------------------------------------
+  -- horn filling -> fibrancy structure
+
+  module H2F (hf : DHn.DH[G, A].isFib) {
+    module D01 = Dir[e0, zero, refl (leaf zero), e1, hf,
+      \ N gt gn L0 -> PFm.PF[G, A, hf, N, gt, gn].FT[L0].tot,
+      \ N gt gn L0 -> PFm.PF[G, A, hf, N, gt, gn].FT[L0].tot-pt,
+      \ N gt gn L0 -> PFm.PF[G, A, hf, N, gt, gn].FT[L0].tot-nat,
+      \ N gt gn L0 -> PFm.PF[G, A, hf, N, gt, gn].FT[L0].tot-S0] ;
+    module D10 = Dir[e1, suc zero, refl (leaf (suc zero)), e0, hf,
+      \ N gt gn L0 -> PFm.PF[G, A, hf, N, gt, gn].FF[L0].tot,
+      \ N gt gn L0 -> PFm.PF[G, A, hf, N, gt, gn].FF[L0].tot-pt,
+      \ N gt gn L0 -> PFm.PF[G, A, hf, N, gt, gn].FF[L0].tot-nat,
+      \ N gt gn L0 -> PFm.PF[G, A, hf, N, gt, gn].FF[L0].tot-S0] ;
+
+    res : DB.GFibE[lz].FibEL G = (A, ((D01.ca, D10.ca), (D01.ce, D10.ce))) ;
+  } ;
+
+  hornToFib (hf : DHn.DH[G, A].isFib) : DB.GFibE[lz].FibEL G = H2F[hf].res ;
+
+  hornToFib-ty (hf : DHn.DH[G, A].isFib) : Id (DB.GPre[lz].PS.PTy[G]) (hornToFib hf).1 A = refl A ;
+} ;
+
+------------------------------------------------------------------------
+-- fibrancy structure -> horn filling (constructive)
+
+fibToHorn (G : DB.GPre[lz].PS.PCtx) (F : DB.GFibE[lz].FibEL G) : DHn.DH[G, F.1].isFib =
+  DeltaRetr[a, lz].BoxToHorn[G, F.1, F.2.1.1, F.2.1.2].isFib-of-comp ;

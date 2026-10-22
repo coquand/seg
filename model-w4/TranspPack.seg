@@ -1,0 +1,40 @@
+-- TranspPack.seg: MODEL/Univ/TranspPack.agda.  The transport equivalence
+-- packaged with types written with the base definitions (Tp.enS ...):
+--   trPack      (tr , trEquiv , trKesi) : EqvPack D SB SA
+--   trB         the source end S [enS s] as an ESI-fibrant type
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Cat[a] ;
+open Constr[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module FibM = Fib[a, a] ;
+module CN = Conn[a] ;
+open CN ;
+open EquivIso[a] ;
+open UnivOp[a] ;
+
+trPack (D L : PCtx) (S : PTy[L])
+  (ln : (W : Ob) -> W0.Ix (D.ob W) -> W0.Ix (L.ob (prodP W Iv)))
+  (lnat : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D.ob W))
+          -> Id (W0.Ix (L.ob (prodP W' Iv))) (L.act (prodP W' Iv) (prodP W Iv) (cylH W' W g) (ln W x)) (ln W' (D.act W' W g x)))
+  (d : Bool) (fS : FibM.FillDef[L, S].FillOp[src d]) (f0 : FibM.FillDef[L, S].FillOp[e0]) (fT : FibM.FillDef[L, S].FillOp[tgt d])
+  (fesiS : EsiFill[a, a].FesiDef[L, S].FESI (src d) fS) (fesiT : EsiFill[a, a].FesiDef[L, S].FESI (tgt d) fT)
+  : EqvPack D Transp[a].Tp[D, L, S, ln, lnat, d, fS].SB Transp[a].Tp[D, L, S, ln, lnat, d, fS].SA =
+  (Transp[a].Tp[D, L, S, ln, lnat, d, fS].tr,
+   (TranspEquiv2[a].TEq2[D, L, S, ln, lnat, d, fS, f0, fT].trEquiv,
+    TranspKesi[a].TK[D, L, S, ln, lnat, d, fS, f0, fT, fesiS, fesiT].trKesiC)) ;
+
+-- the source end as an ESI-fibrant type
+trB (D L : PCtx) (S : PTy[L])
+  (ln : (W : Ob) -> W0.Ix (D.ob W) -> W0.Ix (L.ob (prodP W Iv)))
+  (lnat : (W' W : Ob) (g : Hom W' W) (x : W0.Ix (D.ob W))
+          -> Id (W0.Ix (L.ob (prodP W' Iv))) (L.act (prodP W' Iv) (prodP W Iv) (cylH W' W g) (ln W x)) (ln W' (D.act W' W g x)))
+  (d : Bool) (fS : FibM.FillDef[L, S].FillOp[src d]) (c : BXm.Boxes[L, S].Comp) (ec : Esi[a, a].EsiDef[L, S].ESIC c)
+  : FibExt[a, a].FibE D =
+  (Transp[a].Tp[D, L, S, ln, lnat, d, fS].SB, (subFibE D L (S, (c, ec)) (Transp[a].Tp[D, L, S, ln, lnat, d, fS].enS (src d))).2) ;

@@ -1,0 +1,165 @@
+-- FibExtV.seg: MODEL/Univ/FibExtV.agda.  Extensionality for ESI-fibrant
+-- types whose objects parts are only PROPOSITIONALLY equal (FibExt.fibExt
+-- needs them equal on the nose).  Used for Ext(alpha)|psi = B, where the
+-- fibre of Ext at a point is B's fibre only after a case on the
+-- (decidable) extent.
+--
+-- Data: A with (c , ec), A' = (mkTy G o' h' hi' ho') with (c' , ec'),
+-- and Po I x : o' I x = A.tob I x.  Transport along Po is the map
+--     mOf : A' -> A,   (x , a') |-> (x , subst Ix (Po I x) a')
+-- (a PMap: natural by H1).  If
+--   H1   transport commutes with the actions,
+--   H2   the composites of A on boxes of A' mapped along mOf (ExtBox.
+--        MapBox) are the images of the composites of A'  (both directions),
+-- then (A' , c' , ec') = (A , c , ec) in FibE G.
+--
+-- Proof: J on funext Po (o' becomes A.tob), then Po is a family of loops
+-- in the set V, hence refl (isSetV), and mOf is the identity; conclude
+-- with fibExt (mapB of the identity map = boxTr, box-ext).  Agda's
+-- matches on refl are idJ.
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+open Axioms[a+].FunExtLemmas[fe @(a+)] ;
+module W0 = V[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, a] ;
+open PR.PS ;
+module BXm = Box[a, a] ;
+module ES = Esi[a, a] ;
+open Equiv[a] ;
+open ExtBox[a] ;
+module FE = FibExt[a, a] ;
+
+module FEV0 (G : PCtx) (A : PTy[G]) {
+  module TA = PR.TyL[G, A] ;
+  module BA = BXm.Boxes[G, A] ;
+  module FX = FE.FX[G] ;
+
+  trIx (u v : W0.V) (P : Id W0.V u v) (w : W0.Ix u) : W0.Ix v = subst W0.V (\ z -> W0.Ix z) u v P w ;
+
+  PoTy (o' : TOb G) : U a+ = (I : Ob) (x : W0.Ix (G.ob I)) -> Id W0.V (o' I x) (A.tob I x) ;
+
+  H1Ty (o' : TOb G) (h' : TactTy G o') (Po : PoTy o') : U a =
+    (J I : Ob) (f : Hom J I) (x : W0.Ix (G.ob I)) (y : W0.Ix (G.ob J)) (e : Id (W0.Ix (G.ob J)) (G.act J I f x) y)
+    (w : W0.Ix (o' I x)) -> Id (W0.Ix (A.tob J y)) (trIx (o' J y) (A.tob J y) (Po J y) (h' J I f x y e w))
+                                                  (A.tact J I f x y e (trIx (o' I x) (A.tob I x) (Po I x) w)) ;
+
+  module Tr (o' : TOb G) (h' : TactTy G o') (hi' : IdLaw G o' h') (ho' : OLaw G o' h') (Po : PoTy o') (H1 : H1Ty o' h' Po) {
+    A' : PTy[G] = mkTy G o' h' hi' ho' ;
+
+    module TA' = PR.TyL[G, A'] ;
+    module B2 = BXm.Boxes[G, A'] ;
+
+    mOfE (I : Ob) (w : TA'.EI I) : TA.EI I = (w.1, trIx (o' I w.1) (A.tob I w.1) (Po I w.1) w.2) ;
+
+    mOf : PMap[G, A', A] = new PMap[G, A', A, mOfE, \ I w -> refl w.1,
+      \ Y X h w -> apH {W0.Ix (A.tob Y (G.act Y X h w.1))} {TA.EI Y} (\ v -> (G.act Y X h w.1, v))
+                     (H1 Y X h w.1 (G.act Y X h w.1) (refl (G.act Y X h w.1)) w.2)] ;
+
+    H2Ty (eS eT : El Iv) (co : BA.CompOp[eS, eT]) (co' : B2.CompOp[eS, eT]) : U a =
+      (X : Ob) (b : B2.Box[eS, X])
+      -> Id (TA.EI X) (BA.topE eT X b.brho (co.cop X (MapBox[G, A', A, mOf, eS].mapB X b)))
+                      (mOfE X (B2.topE eT X b.brho (co'.cop X b))) ;
+  } ;
+
+  -- the statement, at objects part o' and transport Po
+  Concl (o' : TOb G) (h' : TactTy G o') (hi' : IdLaw G o' h') (ho' : OLaw G o' h') (Po : PoTy o') (H1 : H1Ty o' h' Po) : U a+ =
+    (c : BA.Comp) (ec : ES.EsiDef[G, A].ESIC c)
+    (c' : BXm.Boxes[G, Tr[o', h', hi', ho', Po, H1].A'].Comp) (ec' : ES.EsiDef[G, Tr[o', h', hi', ho', Po, H1].A'].ESIC c')
+    -> Tr[o', h', hi', ho', Po, H1].H2Ty e0 e1 c.1 c'.1
+    -> Tr[o', h', hi', ho', Po, H1].H2Ty e1 e0 c.2 c'.2
+    -> Id (FE.FibE G) (Tr[o', h', hi', ho', Po, H1].A', (c', ec')) (A, (c, ec)) ;
+
+  rPo : PoTy A.tob = \ I x -> refl (A.tob I x) ;
+
+  -- the case o' = A.tob, Po = refl
+  module Core (h' : TactTy G A.tob) (hi' : IdLaw G A.tob h') (ho' : OLaw G A.tob h') (H1 : H1Ty A.tob h' rPo) {
+    module T = Tr[A.tob, h', hi', ho', rPo, H1] ;
+    module BQ = T.B2 ;
+
+    Ht : FE.HtTy G A h' = \ J I f x y e w -> symH (H1 J I f x y e w) ;
+
+    module BT = FE.BoxTr[G, A, h', hi', ho', Ht] ;
+
+    bEq (eS : El Iv) (X : Ob) (b : BQ.Box[eS, X]) : Id (BA.Box[eS, X]) (BT.boxTr eS X b) (MapBox[G, T.A', A, T.mOf, eS].mapB X b) =
+      BA.box-ext eS X b.brho (MapBox[G, T.A', A, T.mOf, eS].mapB X b).brho b.bu (MapBox[G, T.A', A, T.mOf, eS].mapB X b).bu b.br
+        (BT.boxTr eS X b).bs (MapBox[G, T.A', A, T.mOf, eS].mapB X b).bs
+        (BT.boxTr eS X b).bcs (MapBox[G, T.A', A, T.mOf, eS].mapB X b).bcs
+        (BT.boxTr eS X b).bcb (MapBox[G, T.A', A, T.mOf, eS].mapB X b).bcb
+        (refl b.brho) (symH (MapBox[G, T.A', A, T.mOf, eS].mapB-lid X b)) (\ j t -> refl ((b.bs j).sQ t))
+        (\ j W psi i i' ->
+           transH (apH (\ k -> (b.bs j).svE W psi k) (isProp-InQ W X (b.bs j).sQ psi i i'))
+                  (symH (MapBox[G, T.A', A, T.mOf, eS].mapB-sv X b j W psi i'))) ;
+
+    agree (eS eT : El Iv) (co : BA.CompOp[eS, eT]) (co' : BQ.CompOp[eS, eT]) (H : T.H2Ty eS eT co co') (X : Ob) (b : BQ.Box[eS, X])
+      : Id (TA.EI X) (BA.topE eT X b.brho (co.cop X (BT.boxTr eS X b))) (BA.topE eT X b.brho (co'.cop X b)) =
+      transH (apH (\ bb -> BA.topE eT X bb.brho (co.cop X bb)) (bEq eS X b)) (H X b) ;
+
+    res : Concl A.tob h' hi' ho' rPo H1 = \ c ec c' ec' H01 H10 ->
+      symH (FX.fibExt A c ec h' hi' ho' Ht c' ec' (agree e0 e1 c.1 c'.1 H01, agree e1 e0 c.2 c'.2 H10)) ;
+  } ;
+
+  -- loops in V are refl
+  loops (h' : TactTy G A.tob) (hi' : IdLaw G A.tob h') (ho' : OLaw G A.tob h') (Po : PoTy A.tob) (L : Id (PoTy A.tob) rPo Po)
+    (H1 : H1Ty A.tob h' Po) : Concl A.tob h' hi' ho' Po H1 =
+    idJ (PoTy A.tob) rPo (\ Po2 L2 -> (H2 : H1Ty A.tob h' Po2) -> Concl A.tob h' hi' ho' Po2 H2)
+      (\ H2 -> Core[h', hi', ho', H2].res) Po L H1 ;
+
+  gen (o' : TOb G) (P : Id (TOb G) A.tob o') (h' : TactTy G o') (hi' : IdLaw G o' h') (ho' : OLaw G o' h')
+    (Po : PoTy o') (H1 : H1Ty o' h' Po) : Concl o' h' hi' ho' Po H1 =
+    idJ (TOb G) A.tob
+      (\ o2 P2 -> (h2 : TactTy G o2) (hi2 : IdLaw G o2 h2) (ho2 : OLaw G o2 h2) (Po2 : PoTy o2) (H2 : H1Ty o2 h2 Po2) -> Concl o2 h2 hi2 ho2 Po2 H2)
+      (\ h2 hi2 ho2 Po2 H2 -> loops h2 hi2 ho2 Po2
+         (funext Ob (\ I -> (x : W0.Ix (G.ob I)) -> Id W0.V (A.tob I x) (A.tob I x)) rPo Po2 (\ I ->
+            funext (W0.Ix (G.ob I)) (\ x -> Id W0.V (A.tob I x) (A.tob I x)) (rPo I) (Po2 I) (\ x ->
+              W0.isSetV (A.tob I x) (A.tob I x) (refl (A.tob I x)) (Po2 I x)))) H2)
+      o' P h' hi' ho' Po H1 ;
+
+  -- the principle
+  fibExtV (o' : TOb G) (h' : TactTy G o') (hi' : IdLaw G o' h') (ho' : OLaw G o' h') (Po : PoTy o') (H1 : H1Ty o' h' Po)
+    : Concl o' h' hi' ho' Po H1 =
+    gen o' (symH (funext Ob (\ I -> W0.Ix (G.ob I) -> W0.V) o' A.tob (\ I -> funext (W0.Ix (G.ob I)) (\ x -> W0.V) (o' I) (A.tob I) (\ x -> Po I x))))
+      h' hi' ho' Po H1 ;
+} ;
+
+------------------------------------------------------------------------
+-- The principle for a type A' given as a whole (a segment variable):
+-- Po and H1 are stated with A'.tob and A'.tact; FEV0's Tr.A' is
+-- mkTy G A'.tob A'.tact .., equal to A' by eta for segment variables.
+
+module FEV (G : PCtx) (A A' : PTy[G]) {
+  module V0 = FEV0[G, A] ;
+  module TA = PR.TyL[G, A] ;
+  module TA' = PR.TyL[G, A'] ;
+  module BA = BXm.Boxes[G, A] ;
+  module B2 = BXm.Boxes[G, A'] ;
+
+  PoTy : U a+ = (I : Ob) (x : W0.Ix (G.ob I)) -> Id W0.V (A'.tob I x) (A.tob I x) ;
+
+  H1Ty (Po : PoTy) : U a =
+    (J I : Ob) (f : Hom J I) (x : W0.Ix (G.ob I)) (y : W0.Ix (G.ob J)) (e : Id (W0.Ix (G.ob J)) (G.act J I f x) y)
+    (w : W0.Ix (A'.tob I x)) -> Id (W0.Ix (A.tob J y)) (V0.trIx (A'.tob J y) (A.tob J y) (Po J y) (A'.tact J I f x y e w))
+                                                       (A.tact J I f x y e (V0.trIx (A'.tob I x) (A.tob I x) (Po I x) w)) ;
+
+  mOfE (Po : PoTy) (H1 : H1Ty Po) (I : Ob) (w : TA'.EI I) : TA.EI I = (w.1, V0.trIx (A'.tob I w.1) (A.tob I w.1) (Po I w.1) w.2) ;
+
+  mOf (Po : PoTy) (H1 : H1Ty Po) : PMap[G, A', A] = V0.Tr[A'.tob, A'.tact, A'.tact-id, A'.tact-o, Po, H1].mOf ;
+
+  H2Ty (Po : PoTy) (H1 : H1Ty Po) (eS eT : El Iv) (co : BA.CompOp[eS, eT]) (co' : B2.CompOp[eS, eT]) : U a =
+    (X : Ob) (b : B2.Box[eS, X])
+    -> Id (TA.EI X) (BA.topE eT X b.brho (co.cop X (MapBox[G, A', A, mOf Po H1, eS].mapB X b)))
+                    (mOfE Po H1 X (B2.topE eT X b.brho (co'.cop X b))) ;
+
+  Concl (Po : PoTy) (H1 : H1Ty Po) : U a+ =
+    (c : BA.Comp) (ec : ES.EsiDef[G, A].ESIC c) (c' : B2.Comp) (ec' : ES.EsiDef[G, A'].ESIC c')
+    -> H2Ty Po H1 e0 e1 c.1 c'.1 -> H2Ty Po H1 e1 e0 c.2 c'.2
+    -> Id (FE.FibE G) (A', (c', ec')) (A, (c, ec)) ;
+
+  -- the principle
+  fibExtV (Po : PoTy) (H1 : H1Ty Po) : Concl Po H1 = V0.fibExtV A'.tob A'.tact A'.tact-id A'.tact-o Po H1 ;
+} ;

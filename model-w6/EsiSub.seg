@@ -1,0 +1,60 @@
+-- EsiSub.seg: MODEL/Lv/EsiSub.agda.  ESI is stable under substitution:
+-- the box MB sends an inserted empty side to an inserted empty side
+-- (insG), and Ls reflects the equation of the composites.
+--
+-- Posets at a, presheaves at l.  Agda's anonymous module is the segment ES1.
+
+level a l ;
+constraint a <= l ;
+open Base ;
+open Prelude[l+] ;
+open Paths[l+] ;
+open Trees[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open BoxBase[a] ;
+module PR = PreL[a, l] ;
+open PR.PS ;
+module BXm = Box[a, l] ;
+module FS = FibSub[a, l] ;
+module ES = Esi[a, l] ;
+
+module EsiSub (D G : PCtx) (A : PTy[G]) (s : PSub[D, G]) (eS eT : El Iv)
+  (co : BXm.Boxes[G, A].CompOp[eS, eT]) (esi : ES.EsiDef[G, A].ESI eS eT co) {
+  open FS.SubComp[D, G, A, s, eS, eT, co] ;
+  module ED' = ES.EsiDef[D, A'] ;
+  module EG' = ES.EsiDef[G, A] ;
+
+  module ES1 (X : Ob) (k : Nat) (b b' : BD.Box[eS, X]) (ins : ED'.InsE[eS, X, k, b, b']) {
+    module Mb = MB[eS, X, b] ;
+    module Mb' = MB[eS, X, b'] ;
+
+    insG : EG'.InsE[eS, X, k, Mb.box, Mb'.box] = new EG'.InsE[eS, X, k, Mb.box, Mb'.box,
+      ins.ins-r,
+      ins.ins-k,
+      apH (s.nt (prodP X Iv)) ins.ins-rho,
+      transH (KG.fromE-eq X (G.act X (prodP X Iv) (lid X eS) Mb'.rho) Mb'.uE Mb'.upt)
+       (transH (apH (Ls X) ins.ins-lid) (symH (KG.fromE-eq X (G.act X (prodP X Iv) (lid X eS) Mb.rho) Mb.uE Mb.upt))),
+      ins.ins-e,
+      ins.ins-Q,
+      \ n h h' W psi i i' ->
+        transH (Mb'.S-E (ES.skipN k n, h') W psi i)
+         (transH (apH (Ls W) (ins.ins-v n h h' W psi i i'))
+                 (symH (Mb.S-E (n, h) W psi i')))] ;
+
+    esiS : Id (TD.EI X) (BD.topE eT X b'.brho (subComp.cop X b')) (BD.topE eT X b.brho (subComp.cop X b)) =
+      Ls-inj X (BD.topE eT X b'.brho (subComp.cop X b')) (BD.topE eT X b.brho (subComp.cop X b))
+        (apH (D.act X (prodP X Iv) (lid X eT)) ins.ins-rho)
+        (transH (copS-E X b')
+         (transH (esi X k Mb.box Mb'.box insG)
+                 (symH (copS-E X b)))) ;
+
+    opaque esiS ;
+  } ;
+
+  esiSub : ED'.ESI eS eT subComp = \ X k b b' ins -> ES1[X, k, b, b', ins].esiS ;
+} ;
+
+esiSubC (D G : PCtx) (A : PTy[G]) (s : PSub[D, G]) (c : BXm.Boxes[G, A].Comp) (e : ES.EsiDef[G, A].ESIC c)
+  : ES.EsiDef[D, subTy D G A s].ESIC (FS.subCompC D G A s c) =
+  (EsiSub[D, G, A, s, e0, e1, c.1, e.1].esiSub, EsiSub[D, G, A, s, e1, e0, c.2, e.2].esiSub) ;

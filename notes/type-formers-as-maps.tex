@@ -1,0 +1,118 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.6cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{xcolor}
+\newcommand{\seg}[1]{\textcolor{gray}{\texttt{\small #1}}}
+\newcommand{\El}{\mathrm{El}}
+\newcommand{\Ext}{\mathrm{Ext}}
+\newcommand{\U}{\mathcal{U}}
+\newcommand{\LD}{\mathcal{L}}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\title{Type formers as maps out of classifying presheaves:\\
+a more modular presentation of the model}
+\date{15 October 2026}
+\author{}
+
+\begin{document}
+\maketitle
+
+\section{The situation}
+
+In \texttt{seg/model} each construction is made on an arbitrary context and
+its stability under substitution is then proved for that construction: $\El$
+along a code map (\seg{GElC}), $\Ext(\alpha)$ and its fibration (Theorem 7,
+\seg{GExtSub*}, \seg{GExtNat*}), the glued type and its classifier
+(\seg{GUaOp6}, \seg{GUaOp8}), the side data of the composition of the
+universe (\seg{GCompU2}, \seg{GCompU3}).  Each such proof compares two
+constructions that agree only up to equations, and transports the
+structures (compositions, fillers, equivalences, classifiers) along them.
+Measured over the 88 files of the univalence development (about 9800
+lines): 36\% is the mathematics proper, 39\% proves that substitution
+commutes with a construction, 15\% transports structures along equations
+of types, 8\% moves structures between universe levels.
+
+\section{The idea}
+
+A type former is defined \emph{once}, on a presheaf that classifies its
+data, and every instance is obtained from it by substitution.  This is the
+point of view of natural models (Awodey) and of universe categories
+(Voevodsky), and it is how local universes (Lumsdaine--Warren) obtain
+type formers that are strictly stable under substitution.
+
+\paragraph{El.}  The universe $\U$ is a presheaf of codes, and $\El$ is one
+type over $\U$, with small fibres $\El(F)$.  A family given by a code map
+$c : \Gamma \to \U$ is $\El[c]$, the substitution of $\El$ along $c$.  Then
+\[ \El[c][s] = \El[c \circ s] \]
+is the composition law of substitution, proved once for all types, and not
+a property of $\El$.  The fibration of $\El[c]$ is the fibration of $\El$
+substituted along $c$; its stability is again the composition law, now for
+fibrations, proved once.
+
+\paragraph{Ext.}  The type $\Ext(\alpha)$ at a point $\rho$ of $\Gamma$
+depends only on the data of $\alpha$ restricted to $\rho$ (we already use
+this ``local-data form'').  Let $\LD$ be the presheaf of such local data:
+at stage $I$, a fibrant type $A$ over $I$, a cofibration $\psi$, a fibrant
+type $B$ over the restriction to $\psi$, a map $\alpha : B \to A$ and an
+equivalence structure on it.  Define $\Ext_{\U}$ once as a type over $\LD$,
+with its fibration (Theorem 7, once), and for data $\alpha$ over $\Gamma$
+with local data map $\ell_\alpha : \Gamma \to \LD$,
+\[ \Ext(\alpha) := \Ext_{\U}[\ell_\alpha]. \]
+Stability under $s : \Delta \to \Gamma$ then reduces to two facts:
+\[ \Ext_{\U}[\ell_\alpha][s] = \Ext_{\U}[\ell_\alpha \circ s]
+   \qquad\text{and}\qquad \ell_{\alpha[s]} = \ell_\alpha \circ s . \]
+The first is the composition law, once for all types.  The second is one
+equation between data (the restriction of the data of $\alpha[s]$ to a
+point is the restriction of the data of $\alpha$ to its image), the only
+thing left to prove for $\Ext$.  The same applies to the glued type, to
+the data of the univalence operation (already a presheaf of data,
+\seg{GUnivEq.UaU.Q4}), and to the side data of the composition of $\U$.
+
+\paragraph{Levels.}  $\U$ is a presheaf at level $a{+}1$ whose types have
+fibres at level $a$.  The operation needed is substitution of a
+\emph{small} type over a \emph{large} context along a map from a small
+context.  Defined once, it takes the place of the present transfer
+layers, which move each structure down a level separately.
+
+\section{What has been checked}
+
+On a copy of the model, without changing the type theory:
+\begin{itemize}
+\item \seg{GSmall}: small types over large contexts, maps into them, and
+  substitution along these maps, with the composition law proved once for
+  all small types (22 declarations).
+\item \seg{GSmallEl}: $\El$ defined once as a small type over $\U$.  The
+  present $\El$ along a code map (\seg{GElC.Fam}) is \emph{by definition}
+  $\El$ substituted along it (checked by \texttt{refl}), and the present
+  lemma \seg{elSub}, with its exact statement, is an instance of the
+  general composition law.
+\end{itemize}
+Not yet checked: the same for fibrations (mechanical), and $\Ext$ over a
+presheaf of local data, which needs a coding of $\LD$ at level $a{+}1$ as
+for $\U$.
+
+\section{What the presentation would look like}
+
+\begin{enumerate}
+\item The base: a category, cofibrations, an interval with connections.
+\item A universe: a presheaf of codes $\U$ with $\El$ fibrant.
+\item For each type former $F$: a presheaf $\LD_F$ classifying its data, a
+  type $F_{\U}$ over $\LD_F$ with its structure (for $\Ext$: Theorem 7),
+  and the equation $\ell_{\alpha[s]} = \ell_\alpha\circ s$.
+\item Generic substitution laws, once: for types, for fibrations, for
+  equivalence data.
+\end{enumerate}
+The results stay abstract (any base satisfying (1)); what disappears is the
+proof, for each construction, that it commutes with substitution.
+
+\begin{remark}
+This is the semantic counterpart of Ehrhard's presentation of categories
+with families compared with Dybjer's: there the lifted substitution is
+taken primitive so that composite substitutions coincide by construction;
+here each type former is taken primitive on its classifying presheaf so
+that its instances coincide by construction, and only the equations of
+data remain.
+\end{remark}
+
+\end{document}

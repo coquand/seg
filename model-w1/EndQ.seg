@@ -1,0 +1,102 @@
+-- EndQ.seg: MODEL/Univ/EndQ.agda.  The subset {i = e} of V * [1] for an
+-- end point e, as a box side:
+--   endQ e V             the subset
+--   end-tree, lands-end  a map landing in it is lid e (pX f)
+--   end-disj             {i = src d} and {i = tgt d} are disjoint
+--   endQ-pre             inverse image along g * [1]
+--   lid-lands            lid e g lands in it
+-- Agda's matches on trees are split helpers (etA/etN, aux/aux2).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Trees[a] ;
+open Arith[a] ;
+open Cat[a] ;
+open Constr[a] ;
+open Simp[a] ;
+open BoxBase[a] ;
+module CN = Conn[a] ;
+open CN ;
+open Cofib[a] ;
+
+endQ (e : El Iv) (V : Ob) : Subset (prodP V Iv) = \ z -> and (car (prodP V Iv) z) (eqN (ivN (pr2T z)) (ivN e.1)) ;
+
+eIvA : (t : Tree) (h : IsT (car Iv t)) -> Id Tree t (leaf (ivN t)) = split {
+  leaf n -> \ h -> refl (leaf n) ;
+  node s t -> \ h -> absurd (Id Tree (node s t) (leaf zero)) (false-true h) } ;
+
+eIv (e : El Iv) : Id Tree e.1 (leaf (ivN e.1)) = eIvA e.1 e.2 ;
+
+module ET (V : Ob) (e : El Iv) {
+  Goal (t : Tree) : U a = IsT (car (prodP V Iv) t) -> IsT (endQ e V t) -> Id Tree t (node (pr1T t) e.1) ;
+
+  etN (v : Tree) : (w : Tree) -> Goal (node v w) = split {
+    leaf n -> \ h q ->
+      apH {Tree} {Tree} (\ y -> node v y) (transH (apH {Nat} {Tree} (\ m -> leaf m) (eqN-sound n (ivN e.1)
+                                        (and-r (car (prodP V Iv) (node v (leaf n))) (eqN n (ivN e.1)) q)))
+                           (symH (eIv e))) ;
+    node a b -> \ h q -> absurd (Id Tree (node v (node a b)) (node v e.1)) (false-true (and-r (car V v) false h)) } ;
+
+  etA : (t : Tree) -> Goal t = split {
+    leaf n -> \ h q -> absurd (Id Tree (leaf n) (node (pr1T (leaf n)) e.1)) (false-true h) ;
+    node v w -> etN v w } ;
+} ;
+
+end-tree (V : Ob) (e : El Iv) (z : El (prodP V Iv)) (q : IsT (endQ e V z.1)) : Id Tree z.1 (node (pr1T z.1) e.1) =
+  ET[V, e].etA z.1 z.2 q ;
+
+end-N (V : Ob) (e : El Iv) (z : El (prodP V Iv)) (q : IsT (endQ e V z.1)) : Id Nat (ivN (pr2T z.1)) (ivN e.1) =
+  eqN-sound (ivN (pr2T z.1)) (ivN e.1) (and-r (car (prodP V Iv) z.1) (eqN (ivN (pr2T z.1)) (ivN e.1)) q) ;
+
+lands-end (W V : Ob) (e : El Iv) (f : Hom W (prodP V Iv)) (i : Lands W (prodP V Iv) (endQ e V) f)
+  : PW W (prodP V Iv) f (compH W V (prodP V Iv) (lid V e) (compH W (prodP V Iv) V (pX V) f)) = \ s ->
+  transH (end-tree V e (app W (prodP V Iv) f s) (i s))
+         (apH (\ y -> node y e.1) (symH (pr1-T V (app W (prodP V Iv) f s)))) ;
+
+sN-tN : (d : Bool) -> Id Nat (sN d) (tN d) -> Empty = split {
+  true -> \ P -> zero-suc zero P ;
+  false -> \ P -> zero-suc zero (symH P) } ;
+
+end-disj (W V : Ob) (d : Bool) (f : Hom W (prodP V Iv))
+  (i : Lands W (prodP V Iv) (endQ (src d) V) f) (i' : Lands W (prodP V Iv) (endQ (tgt d) V) f) : Empty =
+  sN-tN d (trans Nat (sN d) (ivN (pr2T (app W (prodP V Iv) f (pt W, pt-car W)).1)) (tN d)
+             (symH (end-N V (src d) (app W (prodP V Iv) f (pt W, pt-car W)) (i (pt W, pt-car W))))
+             (end-N V (tgt d) (app W (prodP V Iv) f (pt W, pt-car W)) (i' (pt W, pt-car W)))) ;
+
+-- lid e g lands in {i = e}
+lid-lands (W V : Ob) (e : El Iv) (g : Hom W V) : Lands W (prodP V Iv) (endQ e V) (compH W V (prodP V Iv) (lid V e) g) = \ s ->
+  and-i (car (prodP V Iv) (node (app W V g s).1 e.1)) (eqN (ivN e.1) (ivN e.1))
+    (and-i (car V (app W V g s).1) (car Iv e.1) (app W V g s).2 e.2) (eqN-refl (ivN e.1)) ;
+
+-- the inverse image along g * [1]
+module EP (e : El Iv) (Z X : Ob) (h : Hom Z X) {
+  G2 (t : Tree) : U a = (q : Id Bool (car (prodP Z Iv) t) true)
+    -> Id Bool (endQ e X (app (prodP Z Iv) (prodP X Iv) (cylH Z X h) (t, q)).1) (endQ e Z t) ;
+
+  aux3 (z : Tree) : (w : Tree) -> G2 (node z w) = split {
+    leaf a -> \ q ->
+      transH (apH (\ c -> and c (eqN a (ivN e.1)))
+                  (and-i (car X (app Z X h (z, and-l (car Z z) (leb a (suc zero)) q)).1) (leb a (suc zero))
+                     (app Z X h (z, and-l (car Z z) (leb a (suc zero)) q)).2 (and-r (car Z z) (leb a (suc zero)) q)))
+             (symH (apH (\ c -> and c (eqN a (ivN e.1))) q)) ;
+    node i k -> \ q -> absurd (Id Bool (endQ e X (app (prodP Z Iv) (prodP X Iv) (cylH Z X h) (node z (node i k), q)).1)
+                                      (endQ e Z (node z (node i k))))
+                        (false-true (and-r (car Z z) false q)) } ;
+
+  aux2 : (t : Tree) -> G2 t = split {
+    leaf n -> \ q -> absurd (Id Bool (endQ e X (app (prodP Z Iv) (prodP X Iv) (cylH Z X h) (leaf n, q)).1) (endQ e Z (leaf n)))
+                       (false-true q) ;
+    node z w -> aux3 z w } ;
+
+  aux (t : Tree) : (b : Bool) (q : Id Bool (car (prodP Z Iv) t) b)
+    -> Id Bool (Pre[prodP Z Iv, prodP X Iv, cylH Z X h, endQ e X].preB t b q) (endQ e Z t) = split {
+    false -> \ q -> symH (apH (\ c -> and c (eqN (ivN (pr2T t)) (ivN e.1))) q) ;
+    true -> \ q -> aux2 t q } ;
+} ;
+
+endQ-pre (e : El Iv) (Z X : Ob) (h : Hom Z X) (t : Tree)
+  : Id Bool (pre (prodP Z Iv) (prodP X Iv) (cylH Z X h) (endQ e X) t) (endQ e Z t) =
+  EP[e, Z, X, h].aux t (car (prodP Z Iv) t) (refl (car (prodP Z Iv) t)) ;

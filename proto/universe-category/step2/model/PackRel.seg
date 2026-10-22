@@ -1,0 +1,213 @@
+-- PackRel.seg: MODEL/Univ/PackRel.agda.  The equivalence structure of a
+-- package moved along an identification of its codomain (EquivIso.pack)
+-- in terms of the original one.
+--
+-- MV: for Po : tob A1 = tob A2 (with H1) and maps al1, al2 with
+--   al2 = coe al1, fibre elements and partial elements of al1 are moved to
+--   those of al2 (mapV, mapP; coe on the A components, B fixed).
+-- PK.packKopG: the extension of the moved package at (w' , p') is the
+--   extension of the original package at the moved-back data, moved
+--   forward:  (w' , kop' w' p') = mapV (w , kop w (mapP p')).
+
+level a ;
+open Base ;
+open Prelude[a+] ;
+open Paths[a+] ;
+module W0 = V[a] ;
+open Cat[a] ;
+open SmallCat[a].Objs[obV] ; open SmallCat[a].Homs[obV, homV] ;
+open Constr[a] ; open PosB ; open PCyl ; open PSv ;
+open BoxBase[a] ;
+module BaseP = Constr[a].PosB ;
+module PR = BaseP.GPre[a] ;
+open PR.PS ;
+module CF = Cofib[a] ;
+open CF ;
+open Equiv[a] ;
+open BaseP.GLine[a] ;
+open EquivIso[a] ;
+
+trIx (u v : W0.V) (q : Id W0.V u v) (b : W0.Ix u) : W0.Ix v = subst W0.V (\ z -> W0.Ix z) u v q b ;
+
+H1Ty (D : PCtx) (A1 A2 : PTy[D]) (Po : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A1.tob I x) (A2.tob I x)) : U a =
+  (J I : Ob) (f : Hom J I) (x : W0.Ix (D.ob I)) (y : W0.Ix (D.ob J)) (e : Id (W0.Ix (D.ob J)) (D.act J I f x) y) (a0 : W0.Ix (A1.tob I x))
+  -> Id (W0.Ix (A2.tob J y)) (trIx (A1.tob J y) (A2.tob J y) (Po J y) (A1.tact J I f x y e a0))
+                             (A2.tact J I f x y e (trIx (A1.tob I x) (A2.tob I x) (Po I x) a0)) ;
+
+-- transport along an identification of fibres, in the total presheaf
+coeE (D : PCtx) (A1 A2 : PTy[D]) (Po : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A1.tob I x) (A2.tob I x))
+  (W : Ob) (w : PR.TyL[D, A1].EI W) : PR.TyL[D, A2].EI W = (w.1, trIx (A1.tob W w.1) (A2.tob W w.1) (Po W w.1) w.2) ;
+
+-- the identification backwards
+symPo (D : PCtx) (A1 A2 : PTy[D]) (Po : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A1.tob I x) (A2.tob I x))
+  (I : Ob) (x : W0.Ix (D.ob I)) : Id W0.V (A2.tob I x) (A1.tob I x) = symH (Po I x) ;
+
+substIx-sym-l (u v : W0.V) (q : Id W0.V u v) (b : W0.Ix v) : Id (W0.Ix v) (trIx u v q (trIx v u (symH q) b)) b =
+  idJ W0.V u (\ v2 q2 -> (b2 : W0.Ix v2) -> Id (W0.Ix v2) (trIx u v2 q2 (trIx v2 u (symH q2) b2)) b2) (\ b2 -> refl b2) v q b ;
+
+substIx-sym-r (u v : W0.V) (q : Id W0.V u v) (a0 : W0.Ix u) : Id (W0.Ix u) (trIx v u (symH q) (trIx u v q a0)) a0 =
+  idJ W0.V u (\ v2 q2 -> Id (W0.Ix u) (trIx v2 u (symH q2) (trIx u v2 q2 a0)) a0) (refl a0) v q ;
+
+H1sym (D : PCtx) (A1 A2 : PTy[D]) (Po : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A1.tob I x) (A2.tob I x))
+  (H1 : H1Ty D A1 A2 Po) : H1Ty D A2 A1 (symPo D A1 A2 Po) = \ J I f x y e a0 ->
+  transH (apH (\ z -> trIx (A2.tob J y) (A1.tob J y) (symH (Po J y)) (A2.tact J I f x y e z))
+              (symH (substIx-sym-l (A1.tob I x) (A2.tob I x) (Po I x) a0)))
+   (transH (apH (trIx (A2.tob J y) (A1.tob J y) (symH (Po J y)))
+                (symH (H1 J I f x y e (trIx (A2.tob I x) (A1.tob I x) (symH (Po I x)) a0))))
+           (substIx-sym-r (A1.tob J y) (A2.tob J y) (Po J y) (A1.tact J I f x y e (trIx (A2.tob I x) (A1.tob I x) (symH (Po I x)) a0)))) ;
+
+opaque substIx-sym-l ; opaque substIx-sym-r ; opaque H1sym ;
+
+------------------------------------------------------------------------
+-- Moving fibre elements and partial elements
+
+module MV (D : PCtx) (B A1 A2 : PTy[D]) (Po : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A1.tob I x) (A2.tob I x))
+  (H1 : H1Ty D A1 A2 Po) (al1 : PMap[D, B, A1]) (al2 : PMap[D, B, A2])
+  (hal : (W : Ob) (w : PR.TyL[D, B].EI W) -> Id (PR.TyL[D, A2].EI W) (al2.mE W w) (coeE D A1 A2 Po W (al1.mE W w))) {
+  module F1 = FibTy[D, B, A1, al1] ;
+  module F2 = FibTy[D, B, A2, al2] ;
+  module P1 = CF.GP.Partials[F1.EA, F1.FibT] ;
+  module P2 = CF.GP.Partials[F2.EA, F2.FibT] ;
+
+  cE (W : Ob) (w : F1.TA.EI W) : F2.TA.EI W = coeE D A1 A2 Po W w ;
+
+  cE-act (V W : Ob) (f : Hom V W) (w : F1.TA.EI W) : Id (F2.TA.EI V) (cE V (F1.EA.act V W f w)) (F2.EA.act V W f (cE W w)) =
+    apH {W0.Ix (A2.tob V (D.act V W f w.1))} {F2.TA.EI V} (\ z -> (D.act V W f w.1, z))
+        (H1 V W f w.1 (D.act V W f w.1) (refl (D.act V W f w.1)) w.2) ;
+
+  q0V (X : Ob) (v : F1.TF.EI X)
+    : Id (F2.TA.EI X) (F2.EA.act X (prodP X Iv) (lid X e0) (cE (prodP X Iv) (F1.fibP X v))) (al2.mE X (F1.fibB X v)) =
+    transH (symH (cE-act X (prodP X Iv) (lid X e0) (F1.fibP X v)))
+     (transH (apH (cE X) (F1.fibP-0 X v)) (symH (hal X (F1.fibB X v)))) ;
+
+  q1V (X : Ob) (v : F1.TF.EI X)
+    : Id (F2.TA.EI X) (F2.EA.act X (prodP X Iv) (lid X e1) (cE (prodP X Iv) (F1.fibP X v))) (cE X v.1) =
+    transH (symH (cE-act X (prodP X Iv) (lid X e1) (F1.fibP X v))) (apH (cE X) (F1.fibP-1 X v)) ;
+
+  opaque q0V ; opaque q1V ;
+
+  mapV (X : Ob) (v : F1.TF.EI X) : F2.TF.EI X =
+    F2.mkFibE X (cE X v.1) (F1.fibB X v) (cE (prodP X Iv) (F1.fibP X v)) (refl v.1.1) (refl (cE (prodP X Iv) (F1.fibP X v)).1) (q0V X v) (q1V X v) ;
+
+  mapV-pt (X : Ob) (v : F1.TF.EI X) : Id (F2.TA.EI X) (mapV X v).1 (cE X v.1) =
+    F2.mkFibE-pt X (cE X v.1) (F1.fibB X v) (cE (prodP X Iv) (F1.fibP X v)) (refl v.1.1) (refl (cE (prodP X Iv) (F1.fibP X v)).1) (q0V X v) (q1V X v) ;
+
+  mapV-B (X : Ob) (v : F1.TF.EI X) : Id (F2.TB.EI X) (F2.fibB X (mapV X v)) (F1.fibB X v) =
+    F2.mkFibE-B X (cE X v.1) (F1.fibB X v) (cE (prodP X Iv) (F1.fibP X v)) (refl v.1.1) (refl (cE (prodP X Iv) (F1.fibP X v)).1) (q0V X v) (q1V X v) ;
+
+  mapV-P (X : Ob) (v : F1.TF.EI X) : Id (F2.TA.EI (prodP X Iv)) (F2.fibP X (mapV X v)) (cE (prodP X Iv) (F1.fibP X v)) =
+    F2.mkFibE-P X (cE X v.1) (F1.fibB X v) (cE (prodP X Iv) (F1.fibP X v)) (refl v.1.1) (refl (cE (prodP X Iv) (F1.fibP X v)).1) (q0V X v) (q1V X v) ;
+
+  mapV-act (Y X : Ob) (h : Hom Y X) (v : F1.TF.EI X) : Id (F2.TF.EI Y) (F2.EF.act Y X h (mapV X v)) (mapV Y (F1.EF.act Y X h v)) =
+    F2.fibE-eq Y (F2.EF.act Y X h (mapV X v)) (mapV Y (F1.EF.act Y X h v))
+      (transH (apH (F2.EA.act Y X h) (mapV-pt X v))
+       (transH (symH (cE-act Y X h v.1)) (symH (mapV-pt Y (F1.EF.act Y X h v)))))
+      (transH (F2.fibB-act Y X h (mapV X v))
+       (transH (apH (F2.EB.act Y X h) (mapV-B X v))
+        (transH (symH (F1.fibB-act Y X h v)) (symH (mapV-B Y (F1.EF.act Y X h v))))))
+      (transH (F2.fibP-act Y X h (mapV X v))
+       (transH (apH (F2.EA.act (prodP Y Iv) (prodP X Iv) (cylH Y X h)) (mapV-P X v))
+        (transH (symH (cE-act (prodP Y Iv) (prodP X Iv) (cylH Y X h) (F1.fibP X v)))
+         (transH (apH (cE (prodP Y Iv)) (symH (F1.fibP-act Y X h v))) (symH (mapV-P Y (F1.EF.act Y X h v))))))) ;
+
+  opaque mapV-pt ; opaque mapV-B ; opaque mapV-P ; opaque mapV-act ;
+
+  mppt (X : Ob) (w : F1.TA.EI X) (s : P1.PSide[X, w]) : P2.PptTy X (cE X w) s.pQ (\ W f i -> mapV W (s.pv W f i)) = \ W f i ->
+    transH (mapV-pt W (s.pv W f i)) (transH (apH (cE W) (s.ppt W f i)) (cE-act W X f w)) ;
+
+  mpnat (X : Ob) (w : F1.TA.EI X) (s : P1.PSide[X, w]) : P2.PnTy X s.pQ (\ W f i -> mapV W (s.pv W f i)) = \ W' W chi f i i' ->
+    transH (mapV-act W' W chi (s.pv W f i)) (apH (mapV W') (s.pnat W' W chi f i i')) ;
+
+  opaque mppt ; opaque mpnat ;
+
+  mapS (X : Ob) (w : F1.TA.EI X) (s : P1.PSide[X, w]) : P2.PSide[X, cE X w] =
+    new P2.PSide[X, cE X w, s.pQ, \ W f i -> mapV W (s.pv W f i), mppt X w s, mpnat X w s] ;
+
+  mapP (X : Ob) (w : F1.TA.EI X) (p : P1.Partial[X, w]) : P2.Partial[X, cE X w] =
+    new P2.Partial[X, cE X w, p.pr, \ l -> mapS X w (p.ps l), \ l j W f i i' -> apH (mapV W) (p.pcs l j W f i i')] ;
+} ;
+
+------------------------------------------------------------------------
+-- The moved package
+
+module PK (D : PCtx) (B A : PTy[D]) {
+  kopOf (A' : PTy[D]) (k : EqvPack D B A') (X : Ob) (w : PR.TyL[D, A'].EI X)
+    (p : CF.GP.Partials[extP D A', FibTy[D, B, A', k.1].FibT].Partial[X, w]) : FibTy[D, B, A', k.1].TF.EI X =
+    (w, k.2.1.kop X w p) ;
+
+  loopE (A1 : PTy[D]) (Po : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A1.tob I x) (A1.tob I x)) (W : Ob) (w : PR.TyL[D, A1].EI W)
+    : Id (PR.TyL[D, A1].EI W) (coeE D A1 A1 Po W w) w =
+    apH {W0.Ix (A1.tob W w.1)} {PR.TyL[D, A1].EI W} (\ z -> (w.1, z))
+        (apH (\ q -> trIx (A1.tob W w.1) (A1.tob W w.1) q w.2) (W0.isSetV (A1.tob W w.1) (A1.tob W w.1) (Po W w.1) (refl (A1.tob W w.1)))) ;
+
+  -- the refl case
+  module R0 (k : EqvPack D B A) (Po Po' : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A.tob I x) (A.tob I x))
+    (H1 : H1Ty D A A Po) (H1' : H1Ty D A A Po')
+    (hpush : (W : Ob) (w : PR.TyL[D, B].EI W) -> Id (PR.TyL[D, A].EI W) (k.1.mE W w) (coeE D A A Po W (k.1.mE W w)))
+    (hpull : (W : Ob) (w : PR.TyL[D, B].EI W) -> Id (PR.TyL[D, A].EI W) (k.1.mE W w) (coeE D A A Po' W (k.1.mE W w))) {
+    module Mpush = MV[D, B, A, A, Po, H1, k.1, k.1, hpush] ;
+    module Mpull = MV[D, B, A, A, Po', H1', k.1, k.1, hpull] ;
+    module F = FibTy[D, B, A, k.1] ;
+    module PX = CF.GP.Partials[F.EA, F.FibT] ;
+
+    vloop (M : (Z : Ob) -> F.TF.EI Z -> F.TF.EI Z) (Pt : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A.tob I x) (A.tob I x))
+      (mpt : (X : Ob) (v : F.TF.EI X) -> Id (F.TA.EI X) (M X v).1 (coeE D A A Pt X v.1))
+      (mB : (X : Ob) (v : F.TF.EI X) -> Id (F.TB.EI X) (F.fibB X (M X v)) (F.fibB X v))
+      (mP : (X : Ob) (v : F.TF.EI X) -> Id (F.TA.EI (prodP X Iv)) (F.fibP X (M X v)) (coeE D A A Pt (prodP X Iv) (F.fibP X v)))
+      (X : Ob) (v : F.TF.EI X) : Id (F.TF.EI X) (M X v) v =
+      F.fibE-eq X (M X v) v (transH (mpt X v) (loopE A Pt X v.1)) (mB X v) (transH (mP X v) (loopE A Pt (prodP X Iv) (F.fibP X v))) ;
+
+    kopJ (X : Ob) (w1 w : F.TA.EI X) (P : Id (F.TA.EI X) w1 w) (q : PX.Partial[X, w1]) (p : PX.Partial[X, w])
+      (R : Id (PX.Partial[X, w]) (subst (F.TA.EI X) (\ z -> PX.Partial[X, z]) w1 w P q) p)
+      : Id (F.TF.EI X) (kopOf A k X w1 q) (kopOf A k X w p) =
+      idJ (F.TA.EI X) w1
+        (\ w2 P2 -> (p2 : PX.Partial[X, w2]) -> Id (PX.Partial[X, w2]) (subst (F.TA.EI X) (\ z -> PX.Partial[X, z]) w1 w2 P2 q) p2
+           -> Id (F.TF.EI X) (kopOf A k X w1 q) (kopOf A k X w2 p2))
+        (\ p2 R2 -> apH {PX.Partial[X, w1]} {F.TF.EI X} (\ z -> kopOf A k X w1 z) R2)
+        w P p R ;
+
+    main (X : Ob) (w' : F.TA.EI X) (p' : PX.Partial[X, w'])
+      : Id (F.TF.EI X) (kopOf A k X w' p') (Mpush.mapV X (kopOf A k X (coeE D A A Po' X w') (Mpull.mapP X w' p'))) =
+      symH (transH (vloop Mpush.mapV Po Mpush.mapV-pt Mpush.mapV-B Mpush.mapV-P X (kopOf A k X (coeE D A A Po' X w') (Mpull.mapP X w' p')))
+                   (kopJ X (coeE D A A Po' X w') w' (loopE A Po' X w') (Mpull.mapP X w' p') p'
+                      (PX.partExtH X (coeE D A A Po' X w') w' (loopE A Po' X w') (Mpull.mapP X w' p') p' (refl p'.pr)
+                         (\ l -> refl ((p'.ps l).pQ))
+                         (\ l W f i i' -> transH (vloop Mpull.mapV Po' Mpull.mapV-pt Mpull.mapV-B Mpull.mapV-P W ((p'.ps l).pv W f i))
+                                                 (PX.pv-irr X w' (p'.ps l) W f i i'))))) ;
+  } ;
+
+  PushTy (A' : PTy[D]) (Q : Id (PTy[D]) A A') (k : EqvPack D B A)
+    (Po : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A.tob I x) (A'.tob I x)) : U a =
+    (W : Ob) (w : PR.TyL[D, B].EI W)
+    -> Id (PR.TyL[D, A'].EI W) ((subst (PTy[D]) (\ A2 -> EqvPack D B A2) A A' Q k).1.mE W w) (coeE D A A' Po W (k.1.mE W w)) ;
+
+  PullTy (A' : PTy[D]) (Q : Id (PTy[D]) A A') (k : EqvPack D B A)
+    (Po' : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A'.tob I x) (A.tob I x)) : U a =
+    (W : Ob) (w : PR.TyL[D, B].EI W)
+    -> Id (PR.TyL[D, A].EI W) (k.1.mE W w) (coeE D A' A Po' W ((subst (PTy[D]) (\ A2 -> EqvPack D B A2) A A' Q k).1.mE W w)) ;
+
+  ConclTy (A' : PTy[D]) (Q : Id (PTy[D]) A A') (k : EqvPack D B A)
+    (Po : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A.tob I x) (A'.tob I x)) (Po' : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A'.tob I x) (A.tob I x))
+    (H1 : H1Ty D A A' Po) (H1' : H1Ty D A' A Po') (hpush : PushTy A' Q k Po) (hpull : PullTy A' Q k Po') : U a+ =
+    (X : Ob) (w' : PR.TyL[D, A'].EI X)
+    (p' : CF.GP.Partials[extP D A', FibTy[D, B, A', (subst (PTy[D]) (\ A2 -> EqvPack D B A2) A A' Q k).1].FibT].Partial[X, w'])
+    -> Id (FibTy[D, B, A', (subst (PTy[D]) (\ A2 -> EqvPack D B A2) A A' Q k).1].TF.EI X)
+          (kopOf A' (subst (PTy[D]) (\ A2 -> EqvPack D B A2) A A' Q k) X w' p')
+          (MV[D, B, A, A', Po, H1, k.1, (subst (PTy[D]) (\ A2 -> EqvPack D B A2) A A' Q k).1, hpush].mapV X
+             (kopOf A k X (coeE D A' A Po' X w')
+                (MV[D, B, A', A, Po', H1', (subst (PTy[D]) (\ A2 -> EqvPack D B A2) A A' Q k).1, k.1, hpull].mapP X w' p'))) ;
+
+  packKopG (A' : PTy[D]) (Q : Id (PTy[D]) A A') (k : EqvPack D B A)
+    (Po : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A.tob I x) (A'.tob I x)) (Po' : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A'.tob I x) (A.tob I x))
+    (H1 : H1Ty D A A' Po) (H1' : H1Ty D A' A Po') (hpush : PushTy A' Q k Po) (hpull : PullTy A' Q k Po')
+    : ConclTy A' Q k Po Po' H1 H1' hpush hpull =
+    idJ (PTy[D]) A
+      (\ A3 Q3 -> (Po3 : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A.tob I x) (A3.tob I x))
+         (Po3' : (I : Ob) (x : W0.Ix (D.ob I)) -> Id W0.V (A3.tob I x) (A.tob I x))
+         (H13 : H1Ty D A A3 Po3) (H13' : H1Ty D A3 A Po3') (hpush3 : PushTy A3 Q3 k Po3) (hpull3 : PullTy A3 Q3 k Po3')
+         -> ConclTy A3 Q3 k Po3 Po3' H13 H13' hpush3 hpull3)
+      (\ Po3 Po3' H13 H13' hpush3 hpull3 -> R0[k, Po3, Po3', H13, H13', hpush3, hpull3].main)
+      A' Q Po Po' H1 H1' hpush hpull ;
+
+  opaque packKopG ;
+} ;
